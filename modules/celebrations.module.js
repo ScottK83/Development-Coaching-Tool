@@ -283,17 +283,43 @@
         // numbers never land — so "out of 126" would overstate a metric only
         // 84 people were ranked on.
         var rankedCountByMetric = {};
+        // Placings are re-derived at the precision people actually read. Center
+        // ranking splits ties at 1e-9, so 99.96% and 100% land on separate ranks
+        // while both print as "100.0%" — and the higher one gets told nobody
+        // else matched a number three other names are visibly sitting on. Two
+        // associates whose scores display identically are tied, full stop.
+        var displayRankByMetric = {};
         Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
-            var counts = {};
-            var ranked = 0;
+            var rows = [];
             data.rankings.forEach(function(r) {
                 var rank = r.metricRanks?.[metricKey];
                 if (!rank) return;
-                counts[rank] = (counts[rank] || 0) + 1;
-                ranked++;
+                var val = getRankedValue(r, metricKey);
+                rows.push({
+                    name: r.name,
+                    rank: rank,
+                    // No display value means nothing to compare, so it never ties.
+                    display: (val === null || val === undefined) ? null : formatMetricValue(metricKey, val)
+                });
             });
+            rows.sort(function(a, b) { return a.rank - b.rank; });
+
+            var ranksByName = {};
+            var counts = {};
+            var lastRank = 0, lastDisplay = null;
+            rows.forEach(function(row, idx) {
+                // Standard competition ranking (1-1-3) over the displayed value.
+                var tiedWithPrev = idx > 0 && row.display !== null && row.display === lastDisplay;
+                var rank = tiedWithPrev ? lastRank : idx + 1;
+                ranksByName[row.name] = rank;
+                counts[rank] = (counts[rank] || 0) + 1;
+                lastRank = rank;
+                lastDisplay = row.display;
+            });
+
+            displayRankByMetric[metricKey] = ranksByName;
             rankCountsByMetric[metricKey] = counts;
-            rankedCountByMetric[metricKey] = ranked;
+            rankedCountByMetric[metricKey] = rows.length;
             rank1CountsByMetric[metricKey] = counts[1] || 0;
         });
 
@@ -317,7 +343,7 @@
             // Check each individual metric rank
             Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
                 if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
-                var metricRank = r.metricRanks?.[metricKey];
+                var metricRank = displayRankByMetric[metricKey]?.[r.name] || r.metricRanks?.[metricKey];
                 if (!metricRank || metricRank > maxTier) return;
 
                 var meta = METRIC_RANK_LABELS[metricKey];
@@ -639,25 +665,28 @@
     // can (and do) get recognized for the same metric at other values. Copy
     // that says "the only one for AHT" reads as a contradiction the moment a
     // second AHT card shows up, so every line points at the value itself.
+    // Standing alone in the whole building is the rarest thing this tool can
+    // find, so it gets said at full volume: not "nobody else matched it", but
+    // nobody else in the Call Center.
     var ONLY_ONE_LINES = [
-        function(label, val) { return '\uD83E\uDD47 ' + label + ' at ' + val + ' \u2014 nobody else matched that number!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + ', and no one else got there!'; },
-        function(label, val) { return '\uD83C\uDFC6 ' + label + ' at ' + val + '. Nobody else put up that number!'; },
-        function(label, val) { return '\uD83D\uDCA5 One person hit ' + val + ' on ' + label + '. ONE. And it was them!'; },
-        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + ' \u2014 untouched by anyone else!'; },
-        function(label, val) { return '\uD83C\uDF1F ' + label + ' at ' + val + ', and that number belongs to them alone!'; },
-        function(label, val) { return '\uD83E\uDD47 Solo mission \u2014 ' + val + ' on ' + label + ', matched by nobody!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + ' \u2014 nobody else could match it!'; },
-        function(label, val) { return '\uD83D\uDCA5 ' + val + ' on ' + label + '. Nobody came close!'; },
-        function(label, val) { return '\uD83C\uDFC6 Set the bar at ' + val + ' on ' + label + ' and stood there alone!'; },
-        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. One name on that number, and it\'s theirs!'; }
+        function(label, val) { return '\uD83E\uDD47 ' + label + ' at ' + val + '. Nobody else in the Call Center achieved this!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Not one other person in the Call Center got there!'; },
+        function(label, val) { return '\uD83C\uDFC6 ' + label + ' at ' + val + '. Nobody else in the entire Call Center put up that number!'; },
+        function(label, val) { return '\uD83D\uDCA5 One person in the whole Call Center hit ' + val + ' on ' + label + '. ONE. And it was them!'; },
+        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. Untouched by anyone else in the Call Center!'; },
+        function(label, val) { return '\uD83C\uDF1F ' + label + ' at ' + val + ', and that number belongs to them alone in this Call Center!'; },
+        function(label, val) { return '\uD83E\uDD47 Solo mission. ' + val + ' on ' + label + ', matched by nobody in the Call Center!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + '. Nobody else in the Call Center could match it!'; },
+        function(label, val) { return '\uD83D\uDCA5 ' + val + ' on ' + label + '. Nobody in the Call Center came close!'; },
+        function(label, val) { return '\uD83C\uDFC6 Set the bar at ' + val + ' on ' + label + ' and stood there alone in the whole Call Center!'; },
+        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. One name in the Call Center on that number, and it\'s theirs!'; }
     ];
     // Fallback when a value is somehow missing \u2014 never claim uniqueness of
     // the metric itself, only of the performance.
     var ONLY_ONE_NO_VALUE_LINES = [
-        function(label) { return '\uD83E\uDD47 Nobody else matched this ' + label + ' performance!'; },
-        function(label) { return '\uD83D\uDC51 No one else put up a ' + label + ' number like this!'; },
-        function(label) { return '\uD83C\uDFC6 This ' + label + ' performance went unmatched!'; }
+        function(label) { return '\uD83E\uDD47 Nobody else in the Call Center matched this ' + label + ' performance!'; },
+        function(label) { return '\uD83D\uDC51 No one else in the Call Center put up a ' + label + ' number like this!'; },
+        function(label) { return '\uD83C\uDFC6 This ' + label + ' performance went unmatched across the whole Call Center!'; }
     ];
 
     var STANDOUT_LINES = [
@@ -862,7 +891,7 @@
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
                 if (a.soloRank1) {
-                    msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '') + ' \u2014 nobody else matched it!\n';
+                    msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '') + '. Nobody else in the Call Center achieved this!\n';
                 } else {
                     if (valStr) {
                         msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!' + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
@@ -942,7 +971,7 @@
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
             if (a.soloRank1) {
-                lines.push('\uD83E\uDD47 You\'re the only associate to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '')
+                lines.push('\uD83E\uDD47 You\'re the only associate in the Call Center to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '')
                     + fieldSentence(a));
             } else {
                 if (valStr) {
@@ -1124,7 +1153,7 @@
                     // "Only one" is about the number, not the metric — other
                     // cards can show the same metric at a different value.
                     html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>' + (valStr ? ': ' + valStr : '') +
-                        ' <span style="color:var(--text-secondary);">— nobody else matched it</span>';
+                        ' <span style="color:var(--text-secondary);">— nobody else in the Call Center achieved this</span>';
                 } else {
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';

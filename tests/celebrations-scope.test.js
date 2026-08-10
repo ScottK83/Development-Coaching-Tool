@@ -159,7 +159,41 @@ suite('celebrations: tie counts come off the real rankings', (t) => {
     // The public post is where this was overstating things.
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post names the tie', post.indexOf('one of 3 associates at') > -1);
-    t.check('and still calls the solo win out as unmatched', post.indexOf('nobody else matched it') > -1);
+    t.check('and still calls the solo win out across the center', post.indexOf('Nobody else in the Call Center achieved this') > -1);
+});
+
+suite('celebrations: numbers that read the same are tied', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    // Center ranking splits ties at 1e-9, so 99.96 and 100 hold separate ranks
+    // even though both print as "100.0%". Calling the top one unmatched told
+    // Jadyn nobody else hit a number three other names were showing.
+    const data = () => ({
+        periodKey: '2026-08-03|2026-08-09',
+        totalEmployees: 126,
+        teamMembers: new Set(['Jadyn Reed', 'Alyssa Dimes']),
+        rankings: [
+            { name: 'Jadyn Reed', rank: 1, metricRanks: { managingEmotions: 1 }, extraValues: { managingEmotions: 100 } },
+            { name: 'Alyssa Dimes', rank: 2, metricRanks: { managingEmotions: 2 }, extraValues: { managingEmotions: 99.96 } },
+            { name: 'Someone Else', rank: 3, metricRanks: { managingEmotions: 3 }, extraValues: { managingEmotions: 99.99 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-08-03|2026-08-09');
+    const jadyn = result.celebrations.find(c => c.name === 'Jadyn Reed');
+    const alyssa = result.celebrations.find(c => c.name === 'Alyssa Dimes');
+
+    t.equal('everyone showing the same number is counted in the tie', jadyn.achievements[0].tiedCount, 3);
+    t.check('and none of them is called solo', jadyn.achievements[0].soloRank1 === false);
+    t.equal('the one behind on raw value shares the placing', alyssa.achievements[0].rank, 1);
+
+    const post = celebrations.generateAllShoutOuts(result.celebrations, '');
+    t.check('the post never claims the center was unmatched', post.indexOf('Nobody else in the Call Center') === -1);
+    t.check('it names the shared number instead', post.indexOf('one of 3 associates at 100.0%') > -1);
 });
 
 suite('celebrations: says why someone came up empty', (t) => {
