@@ -36,7 +36,7 @@ fcr,Read the customer's notes from last 3 interactions before you even greet the
 fcr,Ask 'What have you tried so far?' so you don't repeat steps they already did
 fcr,If you need to escalate - do it INSIDE the call not as a callback
 fcr,Verify understanding with 'Tell me in your own words what we're doing next'
-fcr,Send a follow-up email summarizing resolution so customer has it in writing
+fcr,Tell the customer what to do if it happens again so they can handle it without calling back
 fcr,When account notes are unclear - ask previous rep via chat before calling customer back
 fcr,Build a personal 'gotcha list' of things that tripped you up - review it weekly
 fcr,If customer mentions 2 issues - tackle the bigger one first but address both before ending
@@ -66,7 +66,7 @@ transfers,Resist the urge to transfer just because a call is getting hard - that
 transfers,If you keep transferring because you don't have access to something - ask your supe whether you can get that access
 transfers,Apologize in advance for any wait: 'They may have a short wait - thanks for hanging in'
 transfers,Track your personal transfer rate daily - awareness alone reduces it
-transfers,Before transferring ask yourself 'What would a senior rep do here?'
+transfers,Before transferring ask yourself 'Have I done everything I can to help them?'
 transfers,If same transfer type happens 3+ times in a week - request training on that topic
 transfers,Some transfers ARE appropriate - don't feel bad about proper escalations
 transfers,Do a 20-second brief: customer name - issue summary - attempt history
@@ -91,7 +91,7 @@ aht,If you realize mid-call you took the wrong path - pivot fast - don't compoun
 aht,If you need to look up 3 things - look them all up in one trip instead of bouncing back and forth between screens
 aht,Know which wrap fields actually matter - fill those in well and don't gold-plate the rest
 aht,Stop multi-tasking on simple calls - focus equals speed
-aht,Save your common follow-up emails as reusable text you can paste - beats retyping the same thing every call
+aht,Keep a notepad of your common call types and the notes you use for them - beats retyping the same thing every call
 aht,Listen fully the first time so customer doesn't have to repeat themselves
 aht,Role-play your top 3 call types with a peer weekly - muscle memory wins
 acw,Start documentation DURING the call not after - fill in account notes while talking
