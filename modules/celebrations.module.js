@@ -62,11 +62,18 @@
     // among them. Best transfer discipline on the floor is a real thing to say.
     var TARGET_EXEMPT_METRICS = { transfers: true };
 
-    // The survey metrics a "perfect week" covers, and the sample it takes
-    // before the phrase is allowed. Both match the highlights engine, which
-    // owns the rule — one perfect survey has never been a perfect week.
+    // The survey metrics a "perfect week" covers. Across the board means across
+    // the board: every one of them that came back has to be at 100.
     var SURVEY_METRIC_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
-    var MIN_SURVEYS_FOR_PERFECT = 3;
+
+    // How many surveys it takes before the phrase is allowed.
+    //
+    // Three, until Scott asked for any amount on 2026-08-12. The check-in
+    // windows this runs over are two days long and almost nobody clears three
+    // surveys in two days, so the callout never fired. One flawless survey is a
+    // smaller thing than six flawless surveys and the copy says which it was —
+    // the count is always named, so nobody reads one as the other.
+    var MIN_SURVEYS_FOR_PERFECT = 1;
 
     // Metrics a light call week says nothing about.
     //
@@ -122,11 +129,22 @@
         var engine = window.DevCoachModules?.highlights;
         if (!engine?.findPerfectSurveys || !row) return null;
 
+        // Read the raw survey scores, not the ranking ones. Center ranking
+        // blanks a survey metric below three surveys so it cannot win a
+        // placing, which is right — but this callout is not a placing, and
+        // reading the blanked values meant a flawless two-survey week looked
+        // like a week with no surveys in it at all.
+        var raw = row.surveyValues || {};
+        var pick = function(surveyKey, rankKey) {
+            var val = raw[surveyKey];
+            return (val === null || val === undefined) ? getRankedValue(row, rankKey) : val;
+        };
+
         var found = engine.findPerfectSurveys({
             surveyTotal: row.surveyTotal,
-            cxRepOverall: getRankedValue(row, 'associateOverall'),
-            fcr: getRankedValue(row, 'fcr'),
-            overallExperience: getRankedValue(row, 'overallExperience')
+            cxRepOverall: pick('cxRepOverall', 'associateOverall'),
+            fcr: pick('fcr', 'fcr'),
+            overallExperience: pick('overallExperience', 'overallExperience')
         }, { surveyMetricKeys: SURVEY_METRIC_KEYS, minSurveys: MIN_SURVEYS_FOR_PERFECT });
 
         return found ? { count: found.value } : null;
@@ -965,12 +983,15 @@
         return '';
     }
 
-    // A flawless set of surveys, and how many were behind it. The count is the
-    // whole proof — "perfect surveys" off three reads very differently from
-    // off eleven, and both are worth saying.
+    // A flawless set of surveys, and how many were behind it.
+    //
+    // The count is the whole proof and is never left out: one perfect survey
+    // reads very differently from eleven, and with no floor on the sample any
+    // more the reader has to be able to tell which one they are looking at.
     function perfectSurveyLine(perfect) {
         var n = perfect && perfect.count;
         if (!n) return '';
+        if (n === 1) return 'PERFECT survey — the one that came in this week was flawless!';
         return 'PERFECT surveys — all ' + n + ' of them this week, not one off the mark!';
     }
 

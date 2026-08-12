@@ -333,6 +333,24 @@
         return out;
     }
 
+    // Survey scores exactly as uploaded, with nothing withheld.
+    //
+    // buildExtraRankValues deliberately blanks these below the ranking floor so
+    // 100% off a single response cannot out-rank a real week — right for a
+    // placing, wrong for everything else, because the number is still true.
+    // Callouts that judge against 100 rather than against the floor read from
+    // here instead, and the sample size travels with them as surveyTotal.
+    var SURVEY_VALUE_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
+
+    function buildSurveyValues(emp) {
+        var out = {};
+        SURVEY_VALUE_KEYS.forEach(function (k) {
+            var raw = parseFloat(emp[k]);
+            out[k] = isFinite(raw) ? raw : null;
+        });
+        return out;
+    }
+
     function scoreEmployee(emp, year) {
         var onOff = window.DevCoachModules?.onOffTracker;
         if (!onOff?.calculateYearEndOnOffMirror) return null;
@@ -519,6 +537,7 @@
 
             rankings.push({
                 extraValues: buildExtraRankValues(emp, score.surveyTotal),
+                surveyValues: buildSurveyValues(emp),
                 name: emp.name,
                 kpisMet: score.kpisMet,
                 scoreSum: score.scoreSum,

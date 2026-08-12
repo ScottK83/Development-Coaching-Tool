@@ -360,3 +360,41 @@ suite('rankings view: nothing is left on a light background in dark mode', (t) =
     t.check('while light mode keeps the pale panels it was designed with',
         PALE.test(light.dom.shell()));
 });
+
+/* ── Survey values ── */
+
+suite('rankings view: a thin survey sample is hidden from ranking, not erased', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+
+    // Two surveys is below the ranking floor, so the survey metrics are blanked
+    // for placing purposes — 100% off two responses must not out-rank a real
+    // week. The scores themselves are still true, and callouts that judge
+    // against 100 rather than against the floor read them from surveyValues.
+    const rows = cr.scoreAndRankEmployees([
+        { name: 'Thin Sample', aht: 400, scheduleAdherence: 96, overallSentiment: 92,
+          cxRepOverall: 100, fcr: 100, overallExperience: 100, surveyTotal: 2, totalCalls: 80 },
+        { name: 'Full Sample', aht: 410, scheduleAdherence: 95, overallSentiment: 91,
+          cxRepOverall: 100, fcr: 100, overallExperience: 100, surveyTotal: 9, totalCalls: 90 }
+    ], 2026);
+
+    const thin = rows.find((r) => r.name === 'Thin Sample');
+    const full = rows.find((r) => r.name === 'Full Sample');
+
+    t.equal('the thin sample is withheld from the ranking values', thin.extraValues.fcr, null);
+    t.equal('and so is its overall experience', thin.extraValues.overallExperience, null);
+    t.equal('but the score itself survives', thin.surveyValues.fcr, 100);
+    t.equal('all of them do', thin.surveyValues.overallExperience, 100);
+    t.equal('rep satisfaction included', thin.surveyValues.cxRepOverall, 100);
+    t.equal('and the sample size travels with them', thin.surveyTotal, 2);
+
+    t.equal('a real sample is not withheld anywhere', full.extraValues.fcr, 100);
+    t.equal('and reads the same either way', full.surveyValues.fcr, 100);
+
+    // A metric that was never uploaded stays absent rather than turning into a
+    // zero somebody could be congratulated for.
+    const missing = cr.scoreAndRankEmployees([
+        { name: 'No Surveys', aht: 400, scheduleAdherence: 96, overallSentiment: 92,
+          surveyTotal: 0, totalCalls: 80 }
+    ], 2026)[0];
+    t.equal('an unscored survey metric is null, not zero', missing.surveyValues.fcr, null);
+});

@@ -515,16 +515,30 @@ suite('celebrations: a flawless survey week is called out on its own', (t) => {
     const data = () => ({
         periodKey: '2026-08-10|2026-08-11',
         totalEmployees: 126,
-        teamMembers: new Set(['Perfect Person', 'Thin Person']),
+        teamMembers: new Set(['Perfect Person', 'Thin Person', 'Small Sample', 'Single Survey', 'Nearly Person']),
         rankings: [
             { name: 'Perfect Person', totalCalls: 80, surveyTotal: 6,
               metricRanks: {}, values: {},
-              extraValues: { fcr: 100, overallExperience: 100 } },
+              surveyValues: { cxRepOverall: 100, fcr: 100, overallExperience: 100 } },
             // Same flawless surveys, but eleven calls. No claim about "the week"
             // gets made off a week that was barely worked.
             { name: 'Thin Person', totalCalls: 11, surveyTotal: 6,
               metricRanks: {}, values: {},
-              extraValues: { fcr: 100, overallExperience: 100 } }
+              surveyValues: { cxRepOverall: 100, fcr: 100, overallExperience: 100 } },
+            // Two surveys, both flawless. Center ranking blanks the survey
+            // metrics below three so they cannot win a placing; this callout
+            // is not a placing, and reads the raw scores instead.
+            { name: 'Small Sample', totalCalls: 70, surveyTotal: 2,
+              metricRanks: {}, values: {}, extraValues: { fcr: null, overallExperience: null },
+              surveyValues: { cxRepOverall: 100, fcr: 100, overallExperience: 100 } },
+            // One survey, and it was perfect. Named as the one it was.
+            { name: 'Single Survey', totalCalls: 70, surveyTotal: 1,
+              metricRanks: {}, values: {}, extraValues: { fcr: null, overallExperience: null },
+              surveyValues: { cxRepOverall: 100, fcr: 100, overallExperience: 100 } },
+            // Across the board means across the board.
+            { name: 'Nearly Person', totalCalls: 70, surveyTotal: 5,
+              metricRanks: {}, values: {},
+              surveyValues: { cxRepOverall: 100, fcr: 100, overallExperience: 96 } }
         ]
     });
     global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
@@ -539,18 +553,29 @@ suite('celebrations: a flawless survey week is called out on its own', (t) => {
     t.check('a barely-worked week makes no claim about the week',
         !result.celebrations.some(c => c.name === 'Thin Person'));
 
+    // Any sample counts now, so the count has to carry the weight the floor
+    // used to. It is always named, and a single survey is named as a single.
+    const small = result.celebrations.find(c => c.name === 'Small Sample');
+    t.equal('two flawless surveys still count', small.perfectSurveys.count, 2);
+    const single = result.celebrations.find(c => c.name === 'Single Survey');
+    t.equal('and so does one', single.perfectSurveys.count, 1);
+
+    t.check('one short of the board is not across the board',
+        !result.celebrations.some(c => c.name === 'Nearly Person'));
+
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post says it plainly', post.indexOf('PERFECT surveys') > -1);
     t.check('and shows what it was measured on', post.indexOf('all 6 of them this week') > -1);
+    t.check('a single survey does not read as "all 1 of them"', post.indexOf('all 1 of them') === -1);
+    t.check('it is named as the one it was', post.indexOf('the one that came in this week') > -1);
 
-    // One perfect survey has never been a perfect week — the rule lives in the
-    // highlights engine and is borrowed, not re-derived.
-    t.check('two surveys is too thin to call a week',
-        celebrations.perfectSurveyWeek({ surveyTotal: 2, extraValues: { fcr: 100, overallExperience: 100 } }) === null);
-    t.check('and one metric at 100 is not a set',
-        celebrations.perfectSurveyWeek({ surveyTotal: 9, extraValues: { fcr: 100 } }) === null);
+    // Across the board, on whatever came back.
+    t.check('one metric at 100 is not a set',
+        celebrations.perfectSurveyWeek({ surveyTotal: 9, surveyValues: { fcr: 100 } }) === null);
     t.check('nor is a set with something off the mark',
-        celebrations.perfectSurveyWeek({ surveyTotal: 9, extraValues: { fcr: 100, overallExperience: 96 } }) === null);
+        celebrations.perfectSurveyWeek({ surveyTotal: 9, surveyValues: { fcr: 100, overallExperience: 96 } }) === null);
+    t.check('and no surveys at all is nothing to be perfect about',
+        celebrations.perfectSurveyWeek({ surveyTotal: 0, surveyValues: { fcr: 100, overallExperience: 100 } }) === null);
 });
 
 suite('celebrations: a light call week does not erase the schedule', (t) => {
