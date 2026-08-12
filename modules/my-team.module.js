@@ -289,9 +289,9 @@
     }
 
     /**
-     * The whole-team view. Two things, because two things are what a team day
-     * is for: something public for the Teams channel that names people, and
-     * the private per-person round.
+     * The whole-team view. Three things, because three things are what a team
+     * day is for: something public for the Teams channel that names people, the
+     * private per-person round, and praise on its own for everybody.
      */
     function renderTeamDay(container, plan) {
         if (!container) return;
@@ -305,6 +305,10 @@
                 `<div style="font-weight:700; color:#4527a0; margin-bottom:4px;">✉️ Private round</div>` +
                 `<div style="font-size:0.86em; color:var(--text-secondary);">One ${escapeHtml(plan.label)} per associate, sent to them directly. Anyone already sent is pulled out.</div>` +
             `</button>` +
+            `<button type="button" id="myTeamHighFiveAll" style="text-align:left; padding:16px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
+                `<div style="font-weight:700; color:#2e7d32; margin-bottom:4px;">🎉 High five round</div>` +
+                `<div style="font-size:0.86em; color:var(--text-secondary);">One high five per associate, written in a single pass. Copy them one at a time.</div>` +
+            `</button>` +
         `</div>` +
         `<div id="myTeamShoutOutSlot" style="margin-top:14px;"></div>`;
 
@@ -314,6 +318,130 @@
         });
 
         container.querySelector('#myTeamShoutOut')?.addEventListener('click', () => renderShoutOut());
+        container.querySelector('#myTeamHighFiveAll')?.addEventListener('click', () => renderHighFiveRound());
+    }
+
+    /**
+     * A high five for everyone on the roster, written in one pass.
+     *
+     * The single-person high five has always been here, but running the whole
+     * team meant picking eighteen names out of a dropdown one after another.
+     * This writes the round in one go and then hands them over one at a time,
+     * because one at a time is how they get sent — there is no bulk send, and a
+     * high five pasted into the wrong chat is worse than one never sent.
+     *
+     * Whoever the week cannot back is listed rather than dropped. A round of
+     * fourteen against a roster of eighteen looks like a bug unless the other
+     * four are named.
+     */
+    async function buildHighFiveRound(onProgress) {
+        const pulse = mods().morningPulse;
+        if (!pulse?.generateHighFiveMessage) return { ready: [], skipped: [], blocked: 'noModule' };
+
+        const roster = mods().teamScope?.getMyTeamRoster?.() || [];
+        if (!roster.length) return { ready: [], skipped: [], blocked: 'noRoster' };
+
+        const periods = pulse.resolveCheckinPeriods?.();
+        const ready = [];
+        const skipped = [];
+
+        for (let i = 0; i < roster.length; i++) {
+            const name = roster[i];
+            if (onProgress) onProgress(i + 1, roster.length, name);
+            let message = '';
+            try {
+                message = await pulse.generateHighFiveMessage(name, periods?.latestKey, periods?.baselineKey) || '';
+            } catch (e) {
+                // One associate the generator chokes on must not take the other
+                // seventeen with it. They land in skipped like any thin week.
+                message = '';
+            }
+            (message ? ready : skipped).push({ name: name, message: message });
+        }
+
+        return { ready: ready, skipped: skipped, blocked: null };
+    }
+
+    function highFiveNotice(text) {
+        return `<div style="padding:20px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); color:var(--text-secondary);">${escapeHtml(text)}</div>`;
+    }
+
+    async function renderHighFiveRound() {
+        const slot = document.getElementById('myTeamShoutOutSlot');
+        if (!slot) return;
+
+        // Eighteen of these takes long enough that a panel sitting still reads
+        // as a broken one, so the count moves while they're being written.
+        const round = await buildHighFiveRound((done, total) => {
+            slot.innerHTML = `<div style="padding:20px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface); color:#2e7d32; font-weight:600;">` +
+                `🎉 Writing high fives… ${done} of ${total}</div>`;
+        });
+
+        if (round.blocked === 'noModule') {
+            slot.innerHTML = highFiveNotice('The weekly pulse module is not loaded, so nothing can be written.');
+            return;
+        }
+        if (round.blocked === 'noRoster') {
+            slot.innerHTML = highFiveNotice('There is nobody on your roster yet. Add your team under Settings first.');
+            return;
+        }
+        if (!round.ready.length) {
+            slot.innerHTML = highFiveNotice(`Nothing in the latest week backs a high five for anyone on the roster yet — all ${round.skipped.length} came back empty.`);
+            return;
+        }
+
+        const rows = round.ready.map((entry, idx) =>
+            `<div style="border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--bg-surface); margin-bottom:10px;">` +
+                `<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">` +
+                    `<strong style="color:var(--text-primary);">${escapeHtml(entry.name)}</strong>` +
+                    `<button type="button" class="mt-hf-copy" data-idx="${idx}" ` +
+                        `style="margin-left:auto; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
+                `</div>` +
+                `<textarea class="mt-hf-text" data-idx="${idx}" style="width:100%; min-height:130px; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(entry.message)}</textarea>` +
+            `</div>`
+        ).join('');
+
+        const skippedHtml = round.skipped.length
+            ? `<div style="margin-top:4px; padding:10px 14px; border:1px dashed var(--border-strong); border-radius:8px; color:var(--text-secondary); font-size:0.88em;">` +
+                `<strong>${round.skipped.length} skipped</strong> — not enough in the latest week to praise honestly: ` +
+                escapeHtml(round.skipped.map(s => s.name).join(', ')) +
+            `</div>`
+            : '';
+
+        slot.innerHTML = `<div style="padding:14px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface);">` +
+            `<div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap;">` +
+                `<div style="font-weight:700; color:#2e7d32;">🎉 High five round — ${round.ready.length} ready</div>` +
+                `<div id="myTeamHighFiveProgress" style="font-size:0.85em; color:var(--text-tertiary);">0 of ${round.ready.length} copied</div>` +
+                `<button type="button" id="myTeamHighFiveRerun" style="margin-left:auto; background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">🔄 Rewrite all</button>` +
+            `</div>` +
+            rows +
+            skippedHtml +
+        `</div>`;
+
+        // A tick per row, so a long list reads as a queue you are working down
+        // rather than eighteen identical buttons you have lost your place in.
+        const copied = {};
+        const progressEl = slot.querySelector('#myTeamHighFiveProgress');
+
+        slot.querySelectorAll('.mt-hf-copy').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = btn.dataset.idx;
+                const box = slot.querySelector('.mt-hf-text[data-idx="' + idx + '"]');
+                const value = box ? box.value : '';
+                if (typeof window.copyToClipboard === 'function') {
+                    window.copyToClipboard(value, { message: `Copied ${round.ready[idx].name}` });
+                }
+                copied[idx] = true;
+                btn.textContent = '✓ Copied';
+                btn.style.background = '#c8e6c9';
+                btn.style.color = '#2e7d32';
+                if (progressEl) {
+                    progressEl.textContent = `${Object.keys(copied).length} of ${round.ready.length} copied`;
+                }
+            });
+        });
+
+        slot.querySelector('#myTeamHighFiveRerun')?.addEventListener('click', () => renderHighFiveRound());
     }
 
     /**
@@ -374,6 +502,8 @@
         renderDayTabs,
         renderToneRow,
         renderShoutOut,
+        buildHighFiveRound,
+        renderHighFiveRound,
         buildContextHtml,
         activeDayId,
         setActiveDay
