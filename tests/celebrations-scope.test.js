@@ -502,6 +502,47 @@ suite('celebrations: the post says where in the building they landed', (t) => {
     t.equal('past that there is no badge to give', celebrations.tierBadge({ rank: 11 }), '');
 });
 
+suite('celebrations: the post is spaced evenly and the names are mentionable', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    t.loadModule('modules/highlights.module.js');
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const people = [
+        { name: 'Sabrina Ochoa', firstName: 'Sabrina', perfectSurveys: null, achievements: [
+            { key: 'adherence', label: 'Schedule Adherence', value: 100, rank: 1, tiedCount: 1, soloRank1: true }] },
+        { name: 'Esperanza Ruiz', firstName: 'Esperanza', perfectSurveys: null, achievements: [
+            { key: 'managingEmotions', label: 'Managing Emotions', value: 98.6, rank: 6, tiedCount: 1, soloRank1: false }] },
+        { name: 'Matrece Bell', firstName: 'Matrece', perfectSurveys: { count: 1 }, achievements: [] }
+    ];
+    const post = celebrations.generateAllShoutOuts(people, 'Aug 10, 2026 - Aug 11, 2026');
+
+    // Every block already ends in a newline, so a separator that opened with
+    // two more left a double gap above the rule and a single one below it.
+    t.check('no gap anywhere is more than one blank line', post.indexOf('\n\n\n') === -1);
+    t.check('the rule has a blank line above it', post.indexOf('!\n\n---\n') > -1);
+    t.check('and one below it', post.indexOf('\n---\n\n') > -1);
+
+    // Posted as written, every name should be pickable as a real mention
+    // rather than retyped by hand.
+    t.check('a top-spot name is written as a mention', post.indexOf(' @Sabrina\n') > -1);
+    t.check('so is a placing name', post.indexOf(' @Esperanza\n') > -1);
+    t.check('and so is someone carried by their surveys alone', post.indexOf(' @Matrece\n') > -1);
+
+    // The header emoji used to be the same one as the line under it whenever
+    // surveys were the whole story, which read as a stutter. (Counting the
+    // emoji outright would be flaky — a randomly picked closer can carry one.)
+    t.check('the hundred never heads a name', post.indexOf('\u{1F4AF} @') === -1);
+
+    const single = celebrations.generateShoutOut(people[1], '');
+    t.check('the single-person post mentions them too', single.indexOf('@Esperanza') > -1);
+
+    // The one-to-one message is already addressed to them, so it stays a name.
+    const dm = celebrations.generateDirectMessage(people[1], '');
+    t.check('the private message does not tag anybody', dm.indexOf('@') === -1);
+});
+
 suite('celebrations: a flawless survey week is called out on its own', (t) => {
     t.installFakeBrowser();
     t.loadModule('modules/metrics-registry.module.js');

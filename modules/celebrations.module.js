@@ -1004,7 +1004,9 @@
 
     function generateShoutOut(person, dateRange) {
         var lines = [];
-        lines.push(pick(SHOUTOUT_OPENERS)(person.firstName));
+        // Same reason as the batch post: this goes in the channel, so the name
+        // is written the way a mention is written.
+        lines.push(pick(SHOUTOUT_OPENERS)('@' + person.firstName));
         if (dateRange) lines.push('📅 ' + dateRange);
         lines.push('');
         if (person.perfectSurveys) {
@@ -1042,10 +1044,17 @@
         // were reading a week-old shout-out as if it were today's.
         if (dateRange) msg += '\uD83D\uDCC5 ' + dateRange + '\n\n';
         celebrations.forEach(function(person, idx) {
-            if (idx > 0) msg += '\n\n---\n\n';
-            var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51'
-                : (person.perfectSurveys ? '\uD83D\uDCAF' : '\uD83C\uDFC5');
-            msg += emoji + ' ' + person.firstName + '\n';
+            // One blank line either side of the rule. Every block already ends
+            // in a newline, so the old separator opened with two more and left
+            // a double gap above the rule and a single one below it.
+            if (idx > 0) msg += '\n---\n\n';
+            // \uD83D\uDCAF as a header emoji only ever sat above a \uD83D\uDCAF line, which read as
+            // a stutter. The header says whether they took a top spot; the
+            // lines underneath say what for.
+            var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
+            // Named with an @ so the post can go up as written and each name is
+            // picked up as a real mention instead of being retyped.
+            msg += emoji + ' @' + person.firstName + '\n';
             // Leads, because there is no better thing on the board than a week
             // where every customer who was asked came back with a top score.
             if (person.perfectSurveys) {
