@@ -401,28 +401,28 @@ suite('celebrations: a shared top spot says so instead of contradicting itself',
     // missing half of the sentence.
     t.equal('a sixteen-way tie is named, not hidden behind the rank',
         celebrations.describePlacement({ key: 'associateOverall', rank: 1, tiedCount: 16, rankedCount: 19, value: 100 }),
-        '100 — one of 16 tied at the top, out of 19 scored on it');
+        '100 — one of 16 tied for first in call center');
 
     t.equal('holding the top alone still reads as winning it',
         celebrations.describePlacement({ key: 'associateOverall', rank: 1, tiedCount: 1, rankedCount: 19, value: 100 }),
-        '100 — best of 19 scored on it');
+        '100 — best in call center');
 
     t.equal('and a placing further down keeps its ordinal',
         celebrations.describePlacement({ key: 'fcr', rank: 4, tiedCount: 1, rankedCount: 111, value: 92 }),
-        '92 — 4th of 111 scored on it');
+        '92 — 4th in call center');
     t.equal('shared, further down, too',
         celebrations.describePlacement({ key: 'fcr', rank: 3, tiedCount: 5, rankedCount: 111, value: 92 }),
-        '92 — tied for 3rd, out of 111 scored on it');
+        '92 — tied for 3rd in call center');
     t.equal('the eleventh is not the eleven-st',
         celebrations.describePlacement({ rank: 11, tiedCount: 1, rankedCount: 60 }),
-        '11th of 60 scored on it');
+        '11th in call center');
 
-    // The pool is per-metric, and saying so is the whole point: it is what
-    // explains a field of 19 sitting under a header that says 126.
-    t.check('the pool is described as who was scored on that metric',
-        celebrations.describePlacement({ rank: 1, tiedCount: 1, rankedCount: 19 }).indexOf('scored on it') > -1);
-    t.equal('a missing pool drops the field rather than inventing one',
-        celebrations.describePlacement({ key: 'fcr', rank: 1, tiedCount: 1, value: 92 }), '92 — best');
+    // Nobody says "6th of 109 scored on it" out loud. The placing is said the
+    // way it is said on the floor.
+    t.check('the placing names the center rather than counting the pool',
+        celebrations.describePlacement({ rank: 1, tiedCount: 1, rankedCount: 19 }).indexOf('in call center') > -1);
+    t.equal('a field of one is not a center to be best in',
+        celebrations.describePlacement({ key: 'fcr', rank: 1, tiedCount: 1, rankedCount: 1, value: 92 }), '92 — best');
     t.equal('and nothing at all stays silent', celebrations.describePlacement(null), '');
 });
 

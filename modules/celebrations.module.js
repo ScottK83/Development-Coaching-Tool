@@ -818,8 +818,12 @@
      * "#1 in Center · better than 3 of 19 associates" was two true facts that
      * read as a contradiction, because the thing standing between them — a
      * sixteen-way tie at 100% — was never said out loud. So the tie goes in the
-     * sentence, and the pool is named as what it actually is: the people scored
-     * on that one metric, not the whole center.
+     * sentence.
+     *
+     * The pool used to be spelled out too — "6th of 109 scored on it" — and it
+     * was accurate but nobody reads a placing that way. "6th in call center" is
+     * how the placing gets said out loud, so that is how it is written. The tie
+     * still carries the caveat, which was the half that actually mattered.
      */
     function describePlacement(achievement) {
         if (!achievement) return '';
@@ -831,15 +835,12 @@
 
         var place;
         if (!rank || !isFinite(rank)) place = '';
-        else if (rank === 1) place = tied > 1 ? 'one of ' + tied + ' tied at the top' : 'best';
+        else if (rank === 1) place = tied > 1 ? 'one of ' + tied + ' tied for first' : 'best';
         else place = tied > 1 ? 'tied for ' + ordinal(rank) : ordinal(rank);
 
-        // A shared placing needs a comma, or "one of 16 tied at the top of 19"
-        // reads as sixteen people out of nineteen sitting on top of something.
-        var field = '';
-        if (typeof pool === 'number' && isFinite(pool) && pool > 1 && place) {
-            field = (tied > 1 ? ', out of ' : ' of ') + pool + ' scored on it';
-        }
+        // A field of one is not a center, so it stays a bare placing rather than
+        // claiming a win over nobody.
+        var field = (place && pool !== 1) ? ' in call center' : '';
 
         var placing = place + field;
         if (!placing) return value;
