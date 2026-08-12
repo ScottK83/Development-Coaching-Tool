@@ -62,6 +62,12 @@
     // among them. Best transfer discipline on the floor is a real thing to say.
     var TARGET_EXEMPT_METRICS = { transfers: true };
 
+    // The survey metrics a "perfect week" covers, and the sample it takes
+    // before the phrase is allowed. Both match the highlights engine, which
+    // owns the rule — one perfect survey has never been a perfect week.
+    var SURVEY_METRIC_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
+    var MIN_SURVEYS_FOR_PERFECT = 3;
+
     // Metrics a light call week says nothing about.
     //
     // Schedule adherence is measured against the schedule, not the phone. Twelve
@@ -101,6 +107,29 @@
         var scorecard = row?.values?.[metricKey];
         if (scorecard !== undefined && scorecard !== null) return scorecard;
         return row?.extraValues?.[metricKey] ?? null;
+    }
+
+    /**
+     * A week of surveys with nothing off the mark.
+     *
+     * The rule lives in the highlights engine and is borrowed rather than
+     * copied: at least three surveys, at least two survey metrics scored, and
+     * every one of them at 100. Without that module loaded the callout simply
+     * does not appear, which is the right failure — a claim this strong should
+     * never be made on a guess.
+     */
+    function perfectSurveyWeek(row) {
+        var engine = window.DevCoachModules?.highlights;
+        if (!engine?.findPerfectSurveys || !row) return null;
+
+        var found = engine.findPerfectSurveys({
+            surveyTotal: row.surveyTotal,
+            cxRepOverall: getRankedValue(row, 'associateOverall'),
+            fcr: getRankedValue(row, 'fcr'),
+            overallExperience: getRankedValue(row, 'overallExperience')
+        }, { surveyMetricKeys: SURVEY_METRIC_KEYS, minSurveys: MIN_SURVEYS_FOR_PERFECT });
+
+        return found ? { count: found.value } : null;
     }
 
     function celebrationYear(periodKey) {
@@ -423,21 +452,37 @@
                 });
             });
 
-            if (achievements.length > 0) {
+            // A perfect survey week is target-based, not a placing, so the
+            // saturation rules above have nothing to say about it — and it is
+            // worth the post on its own. Someone whose only win is a flawless
+            // set of surveys was previously left out entirely, because a top
+            // spot shared with half the floor is the exact case that gets
+            // suppressed. A thin week still gets no claim about "the week".
+            var perfect = volume.ok ? perfectSurveyWeek(r) : null;
+
+            if (achievements.length > 0 || perfect) {
                 achievements.sort(function(a, b) {
                     return a.rank - b.rank;
                 });
                 results.push({
                     name: r.name,
                     firstName: _getFirstName(r.name),
+                    perfectSurveys: perfect,
                     achievements: achievements
                 });
             }
         });
 
+        // Best placing first. Someone carried by a perfect survey week holds no
+        // placing at all, so they sort to the end rather than comparing two
+        // infinities against each other and handing the engine a NaN.
+        var bestRank = function(entry) {
+            if (!entry.achievements.length) return Infinity;
+            return Math.min.apply(null, entry.achievements.map(function(x) { return x.rank; }));
+        };
         results.sort(function(a, b) {
-            var bestA = Math.min.apply(null, a.achievements.map(function(x) { return x.rank; }));
-            var bestB = Math.min.apply(null, b.achievements.map(function(x) { return x.rank; }));
+            var bestA = bestRank(a), bestB = bestRank(b);
+            if (bestA === bestB) return 0;
             return bestA - bestB;
         });
 
@@ -879,6 +924,56 @@
         return value ? value + ' — ' + placing : placing;
     }
 
+    /**
+     * Where the placing sits in the building, said out loud.
+     *
+     * The shout-out used to name the number and stop there, on the reasoning
+     * that a rank is a comparison and comparisons belong in private. The floor
+     * reads it the other way round: "6th best in the Call Center" is the part
+     * that makes the number mean something, and it is what gets said when
+     * people talk about it anyway.
+     */
+    function centerPlacement(achievement) {
+        var rank = achievement && achievement.rank;
+        if (!rank || !isFinite(rank)) return '';
+        var shared = (achievement.tiedCount || 1) > 1;
+        if (rank === 1) return shared ? 'tied for #1 in the Call Center' : '#1 in the Call Center';
+        return (shared ? 'tied for ' : '') + ordinal(rank) + ' best in the Call Center';
+    }
+
+    // The placing as a sentence of its own, ready to append to a line that has
+    // already closed. Empty when there is no rank worth naming.
+    function sentencePlacement(achievement) {
+        var placing = centerPlacement(achievement);
+        if (!placing) return '';
+        return ' ' + placing.charAt(0).toUpperCase() + placing.slice(1) + '.';
+    }
+
+    /**
+     * The tier badge that goes with a placing.
+     *
+     * Everything that reaches a shout-out is inside the top ten already, so the
+     * badge exists to say which half of it. #1 gets nothing — the placing has
+     * said it more strongly than a tier ever could, and "Top 5!" under "#1 in
+     * the Call Center" reads as a downgrade.
+     */
+    function tierBadge(achievement) {
+        var rank = achievement && achievement.rank;
+        if (!rank || !isFinite(rank) || rank === 1) return '';
+        if (rank <= 5) return 'Top 5!';
+        if (rank <= 10) return 'Top 10!';
+        return '';
+    }
+
+    // A flawless set of surveys, and how many were behind it. The count is the
+    // whole proof — "perfect surveys" off three reads very differently from
+    // off eleven, and both are worth saying.
+    function perfectSurveyLine(perfect) {
+        var n = perfect && perfect.count;
+        if (!n) return '';
+        return 'PERFECT surveys — all ' + n + ' of them this week, not one off the mark!';
+    }
+
     // The same fact as its own sentence, for lines that already close with
     // their own punctuation.
     function fieldSentence(achievement) {
@@ -891,18 +986,26 @@
         lines.push(pick(SHOUTOUT_OPENERS)(person.firstName));
         if (dateRange) lines.push('📅 ' + dateRange);
         lines.push('');
+        if (person.perfectSurveys) {
+            lines.push('\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys));
+        }
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? ' ' + formatMetricValue(a.key, a.value) : '';
+            var placing = sentencePlacement(a);
+            var badge = tierBadge(a);
             if (a.soloRank1) {
                 lines.push(valStr
                     ? pick(ONLY_ONE_LINES)(a.label, valStr.trim())
                     : pick(ONLY_ONE_NO_VALUE_LINES)(a.label));
             } else {
-                // Lead with the fact/value
+                // Lead with the fact/value, then say where in the building it
+                // put them \u2014 that is the half people repeat to each other.
                 if (valStr) {
-                    lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!' + tieClause(describeTie(a, valStr.trim()), ' \u2014 ', '.'));
+                    lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!' + placing
+                        + (badge ? ' ' + badge : '')
+                        + tieClause(describeTie(a, valStr.trim()), ' (', ')'));
                 } else {
-                    lines.push(pick(STANDOUT_LINES)(a.label));
+                    lines.push(pick(STANDOUT_LINES)(a.label) + placing);
                 }
             }
         });
@@ -919,17 +1022,29 @@
         if (dateRange) msg += '\uD83D\uDCC5 ' + dateRange + '\n\n';
         celebrations.forEach(function(person, idx) {
             if (idx > 0) msg += '\n\n---\n\n';
-            var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
+            var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51'
+                : (person.perfectSurveys ? '\uD83D\uDCAF' : '\uD83C\uDFC5');
             msg += emoji + ' ' + person.firstName + '\n';
+            // Leads, because there is no better thing on the board than a week
+            // where every customer who was asked came back with a top score.
+            if (person.perfectSurveys) {
+                msg += '   \uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys) + '\n';
+            }
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
+                var placing = sentencePlacement(a);
+                var badge = tierBadge(a);
                 if (a.soloRank1) {
-                    msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '') + '. Nobody else in the Call Center achieved this!\n';
+                    msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '')
+                        + '. #1 in the Call Center \u2014 nobody else got there!\n';
                 } else {
                     if (valStr) {
-                        msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!' + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
+                        msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!' + placing
+                            + (badge ? ' ' + badge : '')
+                            + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
                     } else {
-                        msg += '   \u2B50 Outstanding ' + a.label + '!\n';
+                        msg += '   \u2B50 Outstanding ' + a.label + '!' + placing
+                            + (badge ? ' ' + badge : '') + '\n';
                     }
                 }
             });
@@ -1001,18 +1116,22 @@
         // What "this" covers, said before the numbers rather than after them.
         if (dateRange) lines.push('\uD83D\uDCC5 ' + dateRange);
         lines.push('');
+        if (person.perfectSurveys) {
+            lines.push('\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys));
+        }
         person.achievements.forEach(function(a) {
             var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
+            var placing = sentencePlacement(a);
             if (a.soloRank1) {
                 lines.push('\uD83E\uDD47 You\'re the only associate in the Call Center to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '')
                     + fieldSentence(a));
             } else {
                 if (valStr) {
-                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!'
+                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!' + placing
                         + tieClause(describeTie(a, valStr), ' You are ', ', great company to be in.')
                         + fieldSentence(a));
                 } else {
-                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!' + fieldSentence(a));
+                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!' + placing + fieldSentence(a));
                 }
             }
         });
@@ -1176,22 +1295,32 @@
 
             // Achievement list — fact-based, no ranking numbers
             html += '<div style="display:flex; flex-direction:column; gap:6px;">';
+            if (person.perfectSurveys) {
+                html += '<div style="padding:8px 12px; background:#f0fdf4; border-left:3px solid #22c55e; border-radius:4px; font-size:0.9em;">' +
+                    '\uD83D\uDCAF ' + _escapeHtml(perfectSurveyLine(person.perfectSurveys)) + '</div>';
+            }
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? _escapeHtml(formatMetricValue(a.key, a.value)) : '';
                 var emoji = a.soloRank1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
                 var bg = a.soloRank1 ? '#fffbeb' : '#f0f9ff';
                 var border = a.soloRank1 ? '#fbbf24' : '#93c5fd';
+                var placing = centerPlacement(a);
                 html += '<div style="padding:8px 12px; background:' + bg + '; border-left:3px solid ' + border + '; border-radius:4px; font-size:0.9em;">';
                 if (a.soloRank1) {
                     // "Only one" is about the number, not the metric — other
                     // cards can show the same metric at a different value.
                     html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>' + (valStr ? ': ' + valStr : '') +
-                        ' <span style="color:var(--text-secondary);">— nobody else in the Call Center achieved this</span>';
+                        ' <span style="color:var(--text-secondary);">— #1 in the Call Center, nobody else got there</span>';
                 } else {
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
                     } else {
                         html += emoji + ' Outstanding <strong>' + _escapeHtml(a.label) + '</strong>!';
+                    }
+                    // The placing, said on the card the same way the post says it.
+                    if (placing) {
+                        html += ' <span style="color:var(--text-secondary);">' +
+                            _escapeHtml(placing.charAt(0).toUpperCase() + placing.slice(1)) + '.</span>';
                     }
                 }
                 html += '</div>';
@@ -1560,6 +1689,10 @@
         tieClause: tieClause,
         describeField: describeField,
         describePlacement: describePlacement,
+        centerPlacement: centerPlacement,
+        tierBadge: tierBadge,
+        perfectSurveyWeek: perfectSurveyWeek,
+        perfectSurveyLine: perfectSurveyLine,
         fieldSentence: fieldSentence,
         explainNoCelebration: explainNoCelebration,
         meetsCelebrationTarget: meetsCelebrationTarget,

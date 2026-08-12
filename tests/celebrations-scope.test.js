@@ -159,7 +159,8 @@ suite('celebrations: tie counts come off the real rankings', (t) => {
     // The public post is where this was overstating things.
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post names the tie', post.indexOf('one of 3 associates at') > -1);
-    t.check('and still calls the solo win out across the center', post.indexOf('Nobody else in the Call Center achieved this') > -1);
+    t.check('and still calls the solo win out across the center', post.indexOf('#1 in the Call Center') > -1);
+    t.check('naming it as the thing nobody else reached', post.indexOf('nobody else got there') > -1);
 });
 
 suite('celebrations: numbers that read the same are tied', (t) => {
@@ -467,6 +468,89 @@ suite('celebrations: a week you did not work is not an achievement', (t) => {
     // A file with no call-count column must not silently suppress everything.
     t.check('an unknown count does not block a celebration', celebrations.volumeVerdict({}).ok === true);
     t.check('and is marked as unknown rather than counted', celebrations.volumeVerdict({}).known === false);
+});
+
+suite('celebrations: the post says where in the building they landed', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    t.loadModule('modules/highlights.module.js');
+
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    // The placing is the half that makes the number mean something, and it is
+    // what people repeat to each other anyway.
+    t.equal('a solo top spot is named as such',
+        celebrations.centerPlacement({ rank: 1, tiedCount: 1 }), '#1 in the Call Center');
+    t.equal('a shared one says so',
+        celebrations.centerPlacement({ rank: 1, tiedCount: 3 }), 'tied for #1 in the Call Center');
+    t.equal('sixth is sixth best',
+        celebrations.centerPlacement({ rank: 6, tiedCount: 1 }), '6th best in the Call Center');
+    t.equal('and a shared sixth still says shared',
+        celebrations.centerPlacement({ rank: 6, tiedCount: 2 }), 'tied for 6th best in the Call Center');
+    t.equal('the eleventh is not the eleven-st here either',
+        celebrations.centerPlacement({ rank: 11, tiedCount: 1 }), '11th best in the Call Center');
+    t.equal('no rank names no place', celebrations.centerPlacement({}), '');
+
+    // Everything that reaches a shout-out is inside the top ten, so the badge
+    // says which half of it — and never undersells the person on top.
+    t.equal('first place needs no consolation badge', celebrations.tierBadge({ rank: 1 }), '');
+    t.equal('fourth is a top five', celebrations.tierBadge({ rank: 4 }), 'Top 5!');
+    t.equal('fifth still is', celebrations.tierBadge({ rank: 5 }), 'Top 5!');
+    t.equal('sixth is a top ten', celebrations.tierBadge({ rank: 6 }), 'Top 10!');
+    t.equal('and tenth is the last one that counts', celebrations.tierBadge({ rank: 10 }), 'Top 10!');
+    t.equal('past that there is no badge to give', celebrations.tierBadge({ rank: 11 }), '');
+});
+
+suite('celebrations: a flawless survey week is called out on its own', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    t.loadModule('modules/highlights.module.js');
+
+    // A perfect set of surveys is measured against 100, not against the floor,
+    // so the saturation rules that suppress a shared top spot have nothing to
+    // say about it. Someone whose only win is a flawless week now makes the
+    // post on that alone.
+    const data = () => ({
+        periodKey: '2026-08-10|2026-08-11',
+        totalEmployees: 126,
+        teamMembers: new Set(['Perfect Person', 'Thin Person']),
+        rankings: [
+            { name: 'Perfect Person', totalCalls: 80, surveyTotal: 6,
+              metricRanks: {}, values: {},
+              extraValues: { fcr: 100, overallExperience: 100 } },
+            // Same flawless surveys, but eleven calls. No claim about "the week"
+            // gets made off a week that was barely worked.
+            { name: 'Thin Person', totalCalls: 11, surveyTotal: 6,
+              metricRanks: {}, values: {},
+              extraValues: { fcr: 100, overallExperience: 100 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-08-10|2026-08-11');
+    const perfect = result.celebrations.find(c => c.name === 'Perfect Person');
+
+    t.check('a flawless week earns the post with no placing at all', !!perfect);
+    t.equal('and the survey count is what proves it', perfect.perfectSurveys.count, 6);
+    t.equal('no placing came with it', perfect.achievements.length, 0);
+    t.check('a barely-worked week makes no claim about the week',
+        !result.celebrations.some(c => c.name === 'Thin Person'));
+
+    const post = celebrations.generateAllShoutOuts(result.celebrations, '');
+    t.check('the post says it plainly', post.indexOf('PERFECT surveys') > -1);
+    t.check('and shows what it was measured on', post.indexOf('all 6 of them this week') > -1);
+
+    // One perfect survey has never been a perfect week — the rule lives in the
+    // highlights engine and is borrowed, not re-derived.
+    t.check('two surveys is too thin to call a week',
+        celebrations.perfectSurveyWeek({ surveyTotal: 2, extraValues: { fcr: 100, overallExperience: 100 } }) === null);
+    t.check('and one metric at 100 is not a set',
+        celebrations.perfectSurveyWeek({ surveyTotal: 9, extraValues: { fcr: 100 } }) === null);
+    t.check('nor is a set with something off the mark',
+        celebrations.perfectSurveyWeek({ surveyTotal: 9, extraValues: { fcr: 100, overallExperience: 96 } }) === null);
 });
 
 suite('celebrations: a light call week does not erase the schedule', (t) => {
