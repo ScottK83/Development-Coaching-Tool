@@ -52,6 +52,24 @@
     // else — rankings, Attendance, meeting prep.
     var SHOUTOUT_EXCLUDED_METRICS = { reliability: true };
 
+    // Metrics the meets-target gate is switched off for.
+    //
+    // The gate exists so nobody is congratulated for a number they are failing.
+    // That holds where the target is a bar each associate is individually
+    // expected to clear. Transfers is not that: 6% assumes a call mix the floor
+    // does not get, the whole center sits above it, and so the gate was quietly
+    // throwing out every transfers win on the board — a 4th-in-center placing
+    // among them. Best transfer discipline on the floor is a real thing to say.
+    var TARGET_EXEMPT_METRICS = { transfers: true };
+
+    // Metrics a light call week says nothing about.
+    //
+    // Schedule adherence is measured against the schedule, not the phone. Twelve
+    // calls and a hundred calls are equally good evidence that somebody worked
+    // the hours they were rostered for, so a thin week is no reason to throw the
+    // number out. Everything else here is call-driven and stays behind the guard.
+    var VOLUME_INDEPENDENT_METRICS = { adherence: true, reliability: true };
+
     /**
      * Was this associate actually here, and enough to judge?
      *
@@ -335,14 +353,24 @@
             if (scope?.isInScope && !scope.isInScope(r.name)) return;
 
             // A week they did not work produces numbers that look like wins.
+            //
+            // A week they worked lightly is a different thing. Taking eleven
+            // calls does not stop schedule adherence from being real — you were
+            // still where you were meant to be — so a thin week only takes the
+            // call-driven metrics down with it. No calls at all still takes
+            // everything, because then there is no evidence of the week at all.
             var volume = volumeVerdict(r);
-            if (!volume.ok) { thinVolume[r.name] = volume; return; }
+            if (!volume.ok) {
+                thinVolume[r.name] = volume;
+                if (volume.reason !== 'thin') return;
+            }
 
             var achievements = [];
 
             // Check each individual metric rank
             Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
                 if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
+                if (!volume.ok && !VOLUME_INDEPENDENT_METRICS[metricKey]) return;
                 var metricRank = displayRankByMetric[metricKey]?.[r.name] || r.metricRanks?.[metricKey];
                 if (!metricRank || metricRank > maxTier) return;
 
@@ -351,7 +379,8 @@
                 var metricValue = getRankedValue(r, metricKey);
                 if (metricValue === null || metricValue === undefined) return;
                 // Ranking well on a number you are failing is not a win.
-                if (!meetsCelebrationTarget(metricKey, metricValue, celebrationYear(data.periodKey || periodKey))) return;
+                if (!TARGET_EXEMPT_METRICS[metricKey]
+                    && !meetsCelebrationTarget(metricKey, metricValue, celebrationYear(data.periodKey || periodKey))) return;
 
                 var tiedCount = rankCountsByMetric[metricKey]?.[metricRank] || 1;
                 var rankedCount = rankedCountByMetric[metricKey] || 0;
@@ -486,8 +515,11 @@
             // misleading case, so it wins the explanation.
             if (rank <= maxTier && !hasValue && (!withheld || rank < withheld.rank)) withheld = entry;
             // Ranked well but failing the number: worth saying out loud, because
-            // it reads as an oversight otherwise.
-            if (rank <= maxTier && hasValue && !meetsCelebrationTarget(metricKey, value, year)
+            // it reads as an oversight otherwise. Metrics the gate is off for
+            // are skipped here too — explaining a suppression that no longer
+            // happens is worse than saying nothing.
+            if (rank <= maxTier && hasValue && !TARGET_EXEMPT_METRICS[metricKey]
+                && !meetsCelebrationTarget(metricKey, value, year)
                 && (!belowTarget || rank < belowTarget.rank)) belowTarget = entry;
         });
 

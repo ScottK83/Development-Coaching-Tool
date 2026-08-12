@@ -468,3 +468,92 @@ suite('celebrations: a week you did not work is not an achievement', (t) => {
     t.check('an unknown count does not block a celebration', celebrations.volumeVerdict({}).ok === true);
     t.check('and is marked as unknown rather than counted', celebrations.volumeVerdict({}).known === false);
 });
+
+suite('celebrations: a light call week does not erase the schedule', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    // Eleven calls over two days is too thin to judge a call-driven number by,
+    // and the guard was correctly dropping her sentiment for it. It was also
+    // dropping 100% schedule adherence, which eleven calls says nothing about —
+    // she was where she was rostered to be, and that is the whole measure.
+    const data = () => ({
+        periodKey: '2026-08-10|2026-08-11',
+        totalEmployees: 126,
+        teamMembers: new Set(['Sabrina Ochoa', 'Betty Yanez']),
+        rankings: [
+            { name: 'Sabrina Ochoa', rank: 2, totalCalls: 11,
+              metricRanks: { adherence: 1, sentiment: 1 },
+              values: { adherence: 100, sentiment: 96 } },
+            { name: 'Betty Yanez', rank: 1, totalCalls: 140,
+              metricRanks: { adherence: 2, sentiment: 2 },
+              values: { adherence: 97, sentiment: 94 } }
+        ]
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-08-10|2026-08-11');
+    const sabrina = result.celebrations.find(c => c.name === 'Sabrina Ochoa');
+
+    t.check('the thin week still celebrates the schedule', !!sabrina);
+    t.equal('adherence is what carries it', sabrina.achievements[0].key, 'adherence');
+    t.equal('and it is the only thing that survives', sabrina.achievements.length, 1);
+    t.check('the call-driven number stays out',
+        sabrina.achievements.every(a => a.key !== 'sentiment'));
+    t.check('a full week is still celebrated on everything',
+        result.celebrations.find(c => c.name === 'Betty Yanez').achievements.length === 2);
+});
+
+suite('celebrations: best on a floor that misses the goal is still best', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    // The 2026 transfers goal is 6% and the entire center sits above it, so the
+    // meets-target gate was throwing out every transfers placing on the board.
+    // Fourth-best transfer discipline in the building is a real thing to say.
+    const field = [
+        { name: 'Esther Salas', transfers: 8.1, managingEmotions: 98.3, calls: 90 },
+        { name: 'Betty Yanez', transfers: 6.5, managingEmotions: 99.5, calls: 140 }
+    ];
+    for (let i = 0; i < 12; i++) {
+        field.push({ name: 'Filler ' + i, transfers: 7 + i, managingEmotions: 99.4 - i * 0.1, calls: 120 });
+    }
+    // Rank each metric by its own order so the fixture matches what center
+    // ranking would have produced.
+    const rankBy = (key, reverse) => {
+        const order = field.slice().sort((a, b) => reverse ? a[key] - b[key] : b[key] - a[key]);
+        const out = {};
+        order.forEach((p, i) => { out[p.name] = i + 1; });
+        return out;
+    };
+    const transferRanks = rankBy('transfers', true);
+    const emotionRanks = rankBy('managingEmotions', false);
+
+    const data = () => ({
+        periodKey: '2026-08-10|2026-08-11',
+        totalEmployees: 126,
+        teamMembers: new Set(['Esther Salas']),
+        rankings: field.map(p => ({
+            name: p.name,
+            totalCalls: p.calls,
+            metricRanks: { transfers: transferRanks[p.name], managingEmotions: emotionRanks[p.name] },
+            extraValues: { transfers: p.transfers, managingEmotions: p.managingEmotions }
+        }))
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const result = celebrations.detectCelebrations('2026-08-10|2026-08-11');
+    const esther = result.celebrations.find(c => c.name === 'Esther Salas');
+
+    t.equal('she is fourth on transfers despite missing the goal', transferRanks['Esther Salas'], 4);
+    t.check('and the placing survives the target gate', !!esther);
+    t.equal('the better placing leads', esther.achievements[0].key, 'transfers');
+    t.equal('which is what the panel shows',
+        celebrations.describePlacement(esther.achievements[0]), '8.1% — 4th in call center');
+    t.check('nobody is told they were held back by a gate that no longer fires',
+        !result.missed.some(m => m.reason === 'belowTarget'));
+});
