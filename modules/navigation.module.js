@@ -298,8 +298,18 @@
 
         if (sectionId === 'coachingEmailSection') {
             showOnlySection('coachingEmailSection');
-            var subId = state.myTeamSubSectionId || 'subSectionMorningPulse';
-            var btnId = MY_TEAM_SUB_TO_BTN[subId] || 'subNavMorningPulse';
+            var subId = state.myTeamSubSectionId || 'subSectionMyTeamDay';
+            var btnId = MY_TEAM_SUB_TO_BTN[subId];
+            // The day hub has no sub-nav button — it replaced that row, and the
+            // row it replaced is hidden. Restoring by clicking a button meant an
+            // unmapped id fell through to a Celebrations default, so a refresh
+            // landed on Weekly Pulse while clicking My Team landed on the day
+            // hub. Same state, two different screens.
+            if (!btnId) {
+                showMyTeamSubSection('subSectionMyTeamDay', 'subNavHighlights');
+                window.DevCoachModules?.myTeam?.initializeMyTeam?.();
+                return;
+            }
             var btn = document.getElementById(btnId);
             if (btn) btn.click();
             return;
