@@ -292,57 +292,75 @@
         }
     }
 
+    /**
+     * Put a sub-section back after a reload.
+     *
+     * Clicking the tab's own button is the right thing where there is one: the
+     * click handler runs the tab's initializer as well as revealing it, and
+     * duplicating that here would be a second copy to keep in step.
+     *
+     * Where there isn't one, the button is shown directly. My Team broke on
+     * exactly this — the day hub replaced its nav row, so its saved id mapped
+     * to no button and fell through to a default that clicked a *hidden*
+     * button, landing on a different screen than the one clicking into the
+     * section shows. Falling through to a section's own default is the same bug
+     * wearing a different tab's name, so it doesn't happen any more.
+     */
+    function restoreSub(savedSubId, buttonMap, showFn, defaultSubId, defaultBtnId) {
+        var subId = savedSubId || defaultSubId;
+        var btnId = buttonMap[subId];
+        if (!btnId) {
+            // An id from a build that no longer exists, or a tab that has no
+            // button of its own. Either way, show the section's default rather
+            // than clicking something that belongs to a different tab.
+            showFn(defaultSubId, defaultBtnId);
+            return;
+        }
+        var btn = document.getElementById(btnId);
+        if (btn) btn.click();
+        else showFn(subId, btnId);
+    }
+
     function restoreLastViewedSection() {
         var state = loadUiNavState();
         var sectionId = state.sectionId || 'dashboardSection';
 
         if (sectionId === 'coachingEmailSection') {
             showOnlySection('coachingEmailSection');
-            var subId = state.myTeamSubSectionId || 'subSectionMyTeamDay';
-            var btnId = MY_TEAM_SUB_TO_BTN[subId];
             // The day hub has no sub-nav button — it replaced that row, and the
-            // row it replaced is hidden. Restoring by clicking a button meant an
-            // unmapped id fell through to a Celebrations default, so a refresh
-            // landed on Weekly Pulse while clicking My Team landed on the day
-            // hub. Same state, two different screens.
-            if (!btnId) {
-                showMyTeamSubSection('subSectionMyTeamDay', 'subNavHighlights');
+            // row it replaced is hidden. Its own initializer stands in for the
+            // click handler the other tabs get.
+            restoreSub(state.myTeamSubSectionId, MY_TEAM_SUB_TO_BTN, function(subId, btnId) {
+                showMyTeamSubSection(subId, btnId);
                 window.DevCoachModules?.myTeam?.initializeMyTeam?.();
-                return;
-            }
-            var btn = document.getElementById(btnId);
-            if (btn) btn.click();
+            }, 'subSectionMyTeamDay', 'subNavHighlights');
             return;
         }
 
         if (sectionId === 'trendsAnalysisSection') {
             showOnlySection('trendsAnalysisSection');
-            var subId = state.trendsSubSectionId || 'subSectionTaTrendIntelligence';
-            var btnId = TRENDS_SUB_TO_BTN[subId] || 'subNavTaIntelligence';
-            var btn = document.getElementById(btnId);
-            if (btn) btn.click();
+            restoreSub(state.trendsSubSectionId, TRENDS_SUB_TO_BTN, showTrendsSubSection,
+                'subSectionTaTrendIntelligence', 'subNavTaIntelligence');
             return;
         }
 
         if (sectionId === 'reviewPrepSection') {
             showOnlySection('reviewPrepSection');
-            var subId = state.reviewPrepSubSectionId || 'subSectionOnOffTracker';
-            var btnId = REVIEW_SUB_TO_BTN[subId] || 'subNavRpScoreCard';
-            var btn = document.getElementById(btnId);
-            if (btn) btn.click();
+            restoreSub(state.reviewPrepSubSectionId, REVIEW_SUB_TO_BTN, showReviewPrepSubSection,
+                'subSectionOnOffTracker', 'subNavRpScoreCard');
             return;
         }
 
         if (sectionId === 'manageDataSection') {
             showOnlySection('manageDataSection');
-            var subId = state.settingsSubSectionId || 'subSectionTeamMembers';
-            var btn = document.getElementById('subNavTeamMembers');
-            // Find the right button
+            // Settings pairs button to sub-section by name rather than a map,
+            // so its map is derived rather than maintained twice.
+            var settingsMap = {};
             SETTINGS_NAV_BUTTONS.forEach(function(id) {
-                var expectedSub = id.replace('subNav', 'subSection');
-                if (expectedSub === subId) btn = document.getElementById(id);
+                settingsMap[id.replace('subNav', 'subSection')] = id;
             });
-            if (btn) btn.click();
+            restoreSub(state.settingsSubSectionId, settingsMap, showManageDataSubSection,
+                'subSectionTeamMembers', 'subNavTeamMembers');
             return;
         }
 

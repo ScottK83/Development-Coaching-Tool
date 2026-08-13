@@ -91,3 +91,75 @@ suite('navigation: a refresh lands where clicking My Team lands', (t) => {
     t.equal('the default state agrees with all of it',
         fresh.nav.getDefaultUiNavState().myTeamSubSectionId, 'subSectionMyTeamDay');
 });
+
+/* ── The same shape, in the other three sections ── */
+
+// Trends does not pair button to section by name — subNavTaRankings shows
+// subSectionTaCenterRanking — so the wiring is spelled out rather than derived,
+// the same way navigation.module.js has to spell it out.
+const TRENDS_PAIRS = {
+    subNavTaIntelligence: 'subSectionTaTrendIntelligence',
+    subNavTaMetricCharts: 'subSectionTaMetricTrends',
+    subNavTaRankings: 'subSectionTaCenterRanking'
+};
+const TRENDS_BUTTONS = Object.keys(TRENDS_PAIRS);
+const TRENDS_SECTIONS = Object.keys(TRENDS_PAIRS).map((b) => TRENDS_PAIRS[b]);
+const SETTINGS_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSyncBackup', 'subNavDeleteData'];
+const SETTINGS_SECTIONS = ['subSectionTeamMembers', 'subSectionCoachingTips', 'subSectionSyncBackup', 'subSectionDeleteData'];
+
+function loadOther(t, savedState, buttons, sections, wire) {
+    const { store, els } = t.installFakeBrowser();
+    const clicked = [];
+
+    function makeEl(id) {
+        return {
+            id, style: {}, dataset: {}, _listeners: [],
+            addEventListener(type, fn) { if (type === 'click') this._listeners.push(fn); },
+            click() { clicked.push(this.id); this._listeners.forEach((fn) => fn()); }
+        };
+    }
+    [].concat(TOP_SECTIONS, sections, buttons).forEach((id) => { els[id] = makeEl(id); });
+    if (savedState) store['devCoachingTool_uiNavState'] = JSON.stringify(savedState);
+
+    const nav = t.loadModule('modules/navigation.module.js').navigation;
+    buttons.forEach((btnId) => {
+        els[btnId].addEventListener('click', () => wire(nav, btnId));
+    });
+
+    const visible = () => sections.filter((id) => els[id].style.display === 'block');
+    return { nav, els, clicked, visible };
+}
+
+suite('navigation: an id from a build that is gone lands on the section default', (t) => {
+    // My Team broke because an unmapped id fell through to a default that
+    // clicked a button belonging to a different tab. Every section restored
+    // that way; these are the ones that had not been bitten yet.
+    const wireTrends = (nav, btnId) => nav.showTrendsSubSection(TRENDS_PAIRS[btnId], btnId);
+
+    const known = loadOther(t, { sectionId: 'trendsAnalysisSection', trendsSubSectionId: 'subSectionTaCenterRanking' },
+        TRENDS_BUTTONS, TRENDS_SECTIONS, wireTrends);
+    known.nav.restoreLastViewedSection();
+    t.equal('a known trends tab comes back as itself', known.visible().join(','), 'subSectionTaCenterRanking');
+    t.equal('through its own button', known.clicked.join(','), 'subNavTaRankings');
+
+    const gone = loadOther(t, { sectionId: 'trendsAnalysisSection', trendsSubSectionId: 'subSectionTaRetired' },
+        TRENDS_BUTTONS, TRENDS_SECTIONS, wireTrends);
+    gone.nav.restoreLastViewedSection();
+    t.equal('a retired one falls back to the section default',
+        gone.visible().join(','), 'subSectionTaTrendIntelligence');
+    t.check('without clicking somebody else\'s button', gone.clicked.length === 0);
+
+    const wireSettings = (nav, btnId) => nav.showManageDataSubSection('subSection' + btnId.slice('subNav'.length));
+
+    const settings = loadOther(t, { sectionId: 'manageDataSection', settingsSubSectionId: 'subSectionSyncBackup' },
+        SETTINGS_BUTTONS, SETTINGS_SECTIONS, wireSettings);
+    settings.nav.restoreLastViewedSection();
+    t.equal('settings pairs its buttons by name and still works',
+        settings.visible().join(','), 'subSectionSyncBackup');
+
+    const settingsGone = loadOther(t, { sectionId: 'manageDataSection', settingsSubSectionId: 'subSectionOldThing' },
+        SETTINGS_BUTTONS, SETTINGS_SECTIONS, wireSettings);
+    settingsGone.nav.restoreLastViewedSection();
+    t.equal('and falls back to its own default too',
+        settingsGone.visible().join(','), 'subSectionTeamMembers');
+});

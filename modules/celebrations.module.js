@@ -737,6 +737,42 @@
 
     function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+    /**
+     * A picker that will not repeat itself until it has to.
+     *
+     * Someone with four solo top spots got the same closing sentence four times
+     * running, which reads as a form letter and takes the shine off all four.
+     * Hands back a function that walks a shuffled copy of the pool and only
+     * starts over once every line has been used.
+     */
+    function rotator(pool) {
+        var order = pool.slice();
+        for (var i = order.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var swap = order[i]; order[i] = order[j]; order[j] = swap;
+        }
+        var next = 0;
+        return function() {
+            var value = order[next % order.length];
+            next++;
+            return value;
+        };
+    }
+
+    // Tails for a top spot nobody else reached, in the batch post. The placing
+    // itself is stated every time — that is the fact — and only the way it is
+    // said out loud changes.
+    var SOLO_TOP_TAILS = [
+        '#1 in the Call Center — nobody else got there!',
+        '#1 in the Call Center, and not one other person matched it!',
+        '#1 in the Call Center. Untouched by anybody else!',
+        '#1 in the Call Center — that number belongs to them alone!',
+        '#1 in the Call Center, and nobody else came close!',
+        '#1 in the Call Center. One name on that number, and it is theirs!',
+        '#1 in the Call Center — they set the bar and stood there alone!',
+        '#1 in the Call Center, matched by nobody on the floor!'
+    ];
+
     var SHOUTOUT_OPENERS = [
         function(name) { return '\uD83C\uDF89\uD83C\uDF89\uD83C\uDF89 HUGE shout-out to ' + name + '! \uD83C\uDF89\uD83C\uDF89\uD83C\uDF89'; },
         function(name) { return '\uD83D\uDE80\uD83C\uDF1F ' + name + ' is CRUSHING it! \uD83C\uDF1F\uD83D\uDE80'; },
@@ -1060,13 +1096,16 @@
             if (person.perfectSurveys) {
                 msg += '   \uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys) + '\n';
             }
+            // Fresh per person, so four top spots read as four wins rather than
+            // one sentence stamped four times.
+            var soloTail = rotator(SOLO_TOP_TAILS);
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
                 var placing = sentencePlacement(a);
                 var badge = tierBadge(a);
                 if (a.soloRank1) {
                     msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '')
-                        + '. #1 in the Call Center \u2014 nobody else got there!\n';
+                        + '. ' + soloTail() + '\n';
                 } else {
                     if (valStr) {
                         msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!' + placing
@@ -1721,6 +1760,7 @@
         describePlacement: describePlacement,
         centerPlacement: centerPlacement,
         tierBadge: tierBadge,
+        rotator: rotator,
         perfectSurveyWeek: perfectSurveyWeek,
         perfectSurveyLine: perfectSurveyLine,
         fieldSentence: fieldSentence,

@@ -20,6 +20,10 @@
     const PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     const DAY_KEY = PREFIX + 'myTeamDay';
 
+    // The high five is not a weekday post, so it gets its own id in the shared
+    // outreach send log rather than borrowing a day's.
+    const HIGH_FIVE_PLAN_ID = 'highfive';
+
     function mods() { return window.DevCoachModules || {}; }
 
     // Which private message you're looking at for one person: their day post,
@@ -104,9 +108,15 @@
      * how the week is actually trending. Scoped to whoever is selected, and
      * silent rather than apologetic when there is nothing to show.
      */
+    // How many celebrated people the panel lists before it starts summarising.
+    // Whatever is cut gets counted out loud — a list that silently stops at
+    // four reads as "these four are all there were".
+    const CONTEXT_ROW_LIMIT = 6;
+
     function buildContextHtml(person) {
         const rows = [];
         let header = '';
+        let footer = '';
 
         const celebrations = mods().celebrations;
         if (celebrations?.detectCelebrations) {
@@ -122,9 +132,18 @@
                     header = `<div style="padding:0 0 8px; font-size:0.85em; color:var(--text-secondary); font-weight:600;">${headerBits.join(' · ')}</div>`;
                 }
 
-                (result.celebrations || []).slice(0, 4).forEach(entry => {
+                const all = result.celebrations || [];
+                all.slice(0, CONTEXT_ROW_LIMIT).forEach(entry => {
                     const best = entry.achievements?.[0];
-                    if (!best) return;
+                    // Somebody carried by a flawless survey week holds no
+                    // placing at all, and that is still worth a line.
+                    if (!best) {
+                        if (entry.perfectSurveys && celebrations.perfectSurveyLine) {
+                            rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ` +
+                                `<span style="color:var(--text-tertiary);">${escapeHtml(celebrations.perfectSurveyLine(entry.perfectSurveys))}</span>`);
+                        }
+                        return;
+                    }
                     // The placing says the rank, the tie and the pool in one
                     // breath. Pairing a bare "#1 in Center" with a beaten-count
                     // that excluded ties read as a contradiction.
@@ -134,23 +153,63 @@
                         : '';
                     rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.label)}${tail}`);
                 });
-                // Near misses are deliberately NOT listed here. This panel sits
-                // directly under the shout-outs, and only one or two misses are
-                // shown, so whoever came closest ends up the lone name under a list
-                // of winners — it reads as calling them out for not making it, which
-                // is the opposite of the intent. The rankings and coaching views are
-                // where "five off the top ten" belongs.
+
+                const hidden = all.length - Math.min(all.length, CONTEXT_ROW_LIMIT);
+                if (hidden > 0) {
+                    footer += `<div style="padding:6px 0 0; font-size:0.85em; color:var(--text-tertiary);">` +
+                        `+ ${hidden} more not shown — the shout-out post has all ${all.length}.</div>`;
+                }
+
+                // Near misses are deliberately NOT listed inline. This panel sits
+                // directly under the shout-outs, so whoever came closest would end
+                // up the lone name under a list of winners — it reads as calling
+                // them out for not making it, which is the opposite of the intent.
                 //
-                // describeNoCelebration still exists and is still used elsewhere;
-                // it is this placement that was wrong, not the sentence.
+                // Folded away is a different thing. "Why isn't she in here?" was
+                // otherwise unanswerable without reading the source, and the
+                // sentences already exist; they just had nowhere to be shown.
+                footer += buildMissedHtml(celebrations, result);
             } catch (e) { /* context is optional — never block the message on it */ }
         }
 
-        if (!rows.length) {
+        if (!rows.length && !footer) {
             return `<div style="font-size:0.9em; color:var(--text-tertiary);">Nothing standing out in the rankings for this period yet.</div>`;
         }
+        if (!rows.length) {
+            return header +
+                `<div style="font-size:0.9em; color:var(--text-tertiary);">Nothing standing out in the rankings for this period yet.</div>` +
+                footer;
+        }
 
-        return header + rows.map(r => `<div style="padding:5px 0; font-size:0.9em; color:var(--text-primary);">${r}</div>`).join('');
+        return header + rows.map(r => `<div style="padding:5px 0; font-size:0.9em; color:var(--text-primary);">${r}</div>`).join('') + footer;
+    }
+
+    /**
+     * Everyone in scope who didn't make the post, and why — folded shut.
+     *
+     * detectCelebrations has always worked this out and nothing ever rendered
+     * it, so the only way to answer "why isn't Sabrina in here" was to read four
+     * modules. Each reason calls for a different response: a thin week is a
+     * roster question, a withheld value is an upload question, and "ranks #4 but
+     * is short of target" is a coaching conversation.
+     */
+    function buildMissedHtml(celebrations, result) {
+        const missed = result?.missed || [];
+        if (!missed.length || !celebrations?.describeNoCelebration) return '';
+
+        const lines = missed.map(info => {
+            let sentence = '';
+            try { sentence = celebrations.describeNoCelebration(info) || ''; } catch (e) { sentence = ''; }
+            return sentence ? `<div style="padding:4px 0; font-size:0.88em; color:var(--text-secondary);">${escapeHtml(sentence)}</div>` : '';
+        }).filter(Boolean);
+
+        if (!lines.length) return '';
+
+        return `<details style="margin-top:12px; border-top:1px solid var(--border); padding-top:10px;">` +
+            `<summary style="cursor:pointer; font-size:0.85em; color:var(--text-tertiary);">` +
+                `Who didn't make it, and why (${lines.length})</summary>` +
+            `<div style="margin-top:8px;">${lines.join('')}</div>` +
+        `</details>`;
     }
 
     // --- The day page ---
@@ -341,6 +400,11 @@
         const roster = mods().teamScope?.getMyTeamRoster?.() || [];
         if (!roster.length) return { ready: [], skipped: [], blocked: 'noRoster' };
 
+        // Which of these already went out, from the same log the day posts use.
+        // The ticks were session-only, so getting pulled away nine names into
+        // eighteen meant coming back and guessing.
+        const sent = highFiveSentState();
+
         const periods = pulse.resolveCheckinPeriods?.();
         const ready = [];
         const skipped = [];
@@ -356,10 +420,37 @@
                 // seventeen with it. They land in skipped like any thin week.
                 message = '';
             }
-            (message ? ready : skipped).push({ name: name, message: message });
+            const entry = { name: name, message: message, sent: sent.isSent(name) };
+            (message ? ready : skipped).push(entry);
         }
 
         return { ready: ready, skipped: skipped, blocked: null };
+    }
+
+    /**
+     * The high five's corner of the outreach send log.
+     *
+     * It isn't a weekday post, so it carries its own plan id and shares the
+     * week stamp — "have I high-fived Alyssa this week" is the same shape of
+     * question as "have I sent Alyssa her Tuesday post". Returns null-safe
+     * no-ops when the outreach module isn't loaded, so the round still works
+     * without them; it just forgets.
+     */
+    function highFiveSentState() {
+        const outreach = mods().dailyOutreach;
+        if (!outreach) {
+            return { isSent: () => false, mark: () => {}, clear: () => {}, clearAll: () => {}, available: false };
+        }
+        const todayIso = outreach.isoDate(new Date());
+        const stamp = outreach.stampFor(outreach.PLANS.monday, { todayIso });
+        const log = outreach.loadSentLog();
+        return {
+            available: true,
+            isSent: (name) => Boolean(outreach.getSentEntry(log, HIGH_FIVE_PLAN_ID, stamp, name)),
+            mark: (name) => outreach.markSent(HIGH_FIVE_PLAN_ID, stamp, name, new Date().toISOString()),
+            clear: (name) => outreach.clearSent(HIGH_FIVE_PLAN_ID, stamp, name),
+            clearAll: () => outreach.clearAllSentForStamp(HIGH_FIVE_PLAN_ID, stamp)
+        };
     }
 
     function highFiveNotice(text) {
@@ -391,11 +482,14 @@
         }
 
         const rows = round.ready.map((entry, idx) =>
-            `<div style="border:1px solid var(--border); border-radius:10px; padding:12px 14px; background:var(--bg-surface); margin-bottom:10px;">` +
+            `<div class="mt-hf-row" data-idx="${idx}" style="border:1px solid ${entry.sent ? '#a5d6a7' : 'var(--border)'}; border-radius:10px; padding:12px 14px; background:var(--bg-surface); margin-bottom:10px; opacity:${entry.sent ? '0.72' : '1'};">` +
                 `<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">` +
                     `<strong style="color:var(--text-primary);">${escapeHtml(entry.name)}</strong>` +
                     `<button type="button" class="mt-hf-copy" data-idx="${idx}" ` +
-                        `style="margin-left:auto; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
+                        `style="margin-left:auto; background:${entry.sent ? '#c8e6c9' : 'linear-gradient(135deg,#10b981,#059669)'}; color:${entry.sent ? '#2e7d32' : '#fff'}; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-weight:bold;">` +
+                        `${entry.sent ? '✓ Sent' : '📋 Copy'}</button>` +
+                    `<button type="button" class="mt-hf-undo" data-idx="${idx}" title="Mark as not sent" ` +
+                        `style="display:${entry.sent ? 'inline-block' : 'none'}; background:none; border:1px solid #81c784; color:#2e7d32; border-radius:6px; padding:8px 12px; cursor:pointer;">↩</button>` +
                 `</div>` +
                 `<textarea class="mt-hf-text" data-idx="${idx}" style="width:100%; min-height:130px; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(entry.message)}</textarea>` +
             `</div>`
@@ -408,20 +502,47 @@
             `</div>`
             : '';
 
+        const sentState = highFiveSentState();
+        const doneCount = () => round.ready.filter(e => e.sent).length;
+
         slot.innerHTML = `<div style="padding:14px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface);">` +
             `<div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap;">` +
                 `<div style="font-weight:700; color:#2e7d32;">🎉 High five round — ${round.ready.length} ready</div>` +
-                `<div id="myTeamHighFiveProgress" style="font-size:0.85em; color:var(--text-tertiary);">0 of ${round.ready.length} copied</div>` +
-                `<button type="button" id="myTeamHighFiveRerun" style="margin-left:auto; background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">🔄 Rewrite all</button>` +
+                `<div id="myTeamHighFiveProgress" style="font-size:0.85em; color:var(--text-tertiary);">${doneCount()} of ${round.ready.length} sent this week</div>` +
+                `<span style="margin-left:auto; display:flex; gap:8px;">` +
+                    `<button type="button" id="myTeamHighFiveClear" style="background:var(--bg-surface-raised); color:var(--text-secondary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">↩ Clear ticks</button>` +
+                    `<button type="button" id="myTeamHighFiveRerun" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">🔄 Rewrite all</button>` +
+                `</span>` +
             `</div>` +
             rows +
             skippedHtml +
         `</div>`;
 
-        // A tick per row, so a long list reads as a queue you are working down
-        // rather than eighteen identical buttons you have lost your place in.
-        const copied = {};
+        // The tick is the send log, not a session flag, so a long list survives
+        // a reload halfway through and still reads as a queue you are working
+        // down rather than eighteen identical buttons you have lost your place in.
         const progressEl = slot.querySelector('#myTeamHighFiveProgress');
+        const refreshProgress = () => {
+            if (progressEl) progressEl.textContent = `${doneCount()} of ${round.ready.length} sent this week`;
+        };
+
+        const paintRow = (idx) => {
+            const entry = round.ready[idx];
+            const row = slot.querySelector('.mt-hf-row[data-idx="' + idx + '"]');
+            const copyBtn = slot.querySelector('.mt-hf-copy[data-idx="' + idx + '"]');
+            const undoBtn = slot.querySelector('.mt-hf-undo[data-idx="' + idx + '"]');
+            if (row) {
+                row.style.border = '1px solid ' + (entry.sent ? '#a5d6a7' : 'var(--border)');
+                row.style.opacity = entry.sent ? '0.72' : '1';
+            }
+            if (copyBtn) {
+                copyBtn.textContent = entry.sent ? '✓ Sent' : '📋 Copy';
+                copyBtn.style.background = entry.sent ? '#c8e6c9' : 'linear-gradient(135deg,#10b981,#059669)';
+                copyBtn.style.color = entry.sent ? '#2e7d32' : '#fff';
+            }
+            if (undoBtn) undoBtn.style.display = entry.sent ? 'inline-block' : 'none';
+            refreshProgress();
+        };
 
         slot.querySelectorAll('.mt-hf-copy').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -431,14 +552,26 @@
                 if (typeof window.copyToClipboard === 'function') {
                     window.copyToClipboard(value, { message: `Copied ${round.ready[idx].name}` });
                 }
-                copied[idx] = true;
-                btn.textContent = '✓ Copied';
-                btn.style.background = '#c8e6c9';
-                btn.style.color = '#2e7d32';
-                if (progressEl) {
-                    progressEl.textContent = `${Object.keys(copied).length} of ${round.ready.length} copied`;
-                }
+                // Copying is the send here — there is no other button to press
+                // between the clipboard and the chat window.
+                round.ready[idx].sent = true;
+                sentState.mark(round.ready[idx].name);
+                paintRow(idx);
             });
+        });
+
+        slot.querySelectorAll('.mt-hf-undo').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = btn.dataset.idx;
+                round.ready[idx].sent = false;
+                sentState.clear(round.ready[idx].name);
+                paintRow(idx);
+            });
+        });
+
+        slot.querySelector('#myTeamHighFiveClear')?.addEventListener('click', () => {
+            sentState.clearAll();
+            round.ready.forEach((entry, idx) => { entry.sent = false; paintRow(idx); });
         });
 
         slot.querySelector('#myTeamHighFiveRerun')?.addEventListener('click', () => renderHighFiveRound());

@@ -160,7 +160,10 @@ suite('celebrations: tie counts come off the real rankings', (t) => {
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post names the tie', post.indexOf('one of 3 associates at') > -1);
     t.check('and still calls the solo win out across the center', post.indexOf('#1 in the Call Center') > -1);
-    t.check('naming it as the thing nobody else reached', post.indexOf('nobody else got there') > -1);
+    // The tail is picked from a pool now, so the placing is what gets asserted;
+    // the wording around it is deliberately free to vary.
+    t.check('and says nobody else reached it, however it words it',
+        /#1 in the Call Center[.,—]/.test(post));
 });
 
 suite('celebrations: numbers that read the same are tied', (t) => {
@@ -541,6 +544,53 @@ suite('celebrations: the post is spaced evenly and the names are mentionable', (
     // The one-to-one message is already addressed to them, so it stays a name.
     const dm = celebrations.generateDirectMessage(people[1], '');
     t.check('the private message does not tag anybody', dm.indexOf('@') === -1);
+});
+
+suite('celebrations: a big week does not read as a form letter', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    t.loadModule('modules/highlights.module.js');
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    // Four solo top spots used to close with the same sentence four times
+    // running, which takes the shine off all four.
+    const solo = (key, label, value) =>
+        ({ key, label, value, rank: 1, tiedCount: 1, soloRank1: true });
+    const person = {
+        name: 'Oceane Ingram', firstName: 'Oceane', perfectSurveys: null,
+        achievements: [
+            solo('sentiment', 'Overall Sentiment', 97.6),
+            solo('negativeWord', 'Negative Word Usage', 98.2),
+            solo('fcr', 'First Call Resolution', 100),
+            solo('managingEmotions', 'Managing Emotions', 99.1)
+        ]
+    };
+
+    // Randomised, so this runs enough times to catch a pool that repeats.
+    let sawRepeat = false;
+    for (let run = 0; run < 40; run++) {
+        const lines = celebrations.generateAllShoutOuts([person], '')
+            .split('\n')
+            .filter(l => l.indexOf('#1 in the Call Center') > -1)
+            .map(l => l.slice(l.indexOf('#1 in the Call Center')));
+        if (lines.length !== 4) { sawRepeat = true; break; }
+        if (new Set(lines).size !== lines.length) { sawRepeat = true; break; }
+    }
+    t.check('four top spots get four different closings, every time', !sawRepeat);
+
+    // The variation is in the wording only. The placing is the fact and is
+    // stated on every one of them.
+    const post = celebrations.generateAllShoutOuts([person], '');
+    t.equal('every line still names the placing',
+        (post.match(/#1 in the Call Center/g) || []).length, 4);
+
+    // A pool that runs out has to keep going rather than hand back nothing.
+    const rotate = celebrations.rotator(['a', 'b']);
+    t.equal('a rotator wraps rather than running dry',
+        [rotate(), rotate(), rotate()].filter(Boolean).length, 3);
+    t.equal('and only repeats once it has used everything',
+        new Set([rotate(), rotate()]).size, 2);
 });
 
 suite('celebrations: a flawless survey week is called out on its own', (t) => {
