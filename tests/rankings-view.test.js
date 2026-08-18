@@ -984,8 +984,13 @@ suite('rankings view: the month-over-month email is addressed and readable', (t)
 
     t.check('the average is spelled out rather than left to be inferred',
         /Average\s+[\d.]+ ->\s+[\d.]+\s+out of 3\.0/.test(mail.body));
-    t.check('and the placing is a placing, not a beaten-count',
-        /In the call center you (moved (up|down) \d+ places|placed \d+ out of \d+)/.test(mail.body));
+    // No placing, no rank, no count of anybody else. Where someone landed
+    // against the rest of the centre is a management number; this note is about
+    // whether their own numbers moved.
+    t.check('no rank or placing appears at all',
+        !/place|rank|out of \d+ |#\d/.test(mail.body));
+    t.check('but the overall direction is still named',
+        /Overall that (is a better month|is a step back|holds you about where)/.test(mail.body));
 
     // Short enough that a mail client will not truncate the body.
     t.check('it fits in a mailto', mail.body.length < 1800);

@@ -1458,15 +1458,20 @@
         lines.push(col('Average', prev.kpiScore.toFixed(1), cur.kpiScore.toFixed(1), 'out of 3.0'));
         lines.push(col('Overall', prev.trackLabel, cur.trackLabel, ''));
 
-        // Placing, not a beaten-count. This one is written to the person.
-        if (Number.isFinite(cur.rank)) {
-            lines.push('');
-            if (Number.isFinite(prev.rank) && Number.isFinite(cur.delta) && cur.delta !== 0) {
-                lines.push('In the call center you moved ' + (cur.delta > 0 ? 'up' : 'down') + ' ' +
-                    Math.abs(cur.delta) + ' places, ' + prev.rank + ' to ' + cur.rank + '.');
-            } else {
-                lines.push('In the call center you placed ' + cur.rank + ' out of ' + cur.total + '.');
-            }
+        /* No placing, no rank, no count of anybody else.
+
+           Where someone landed against the rest of the centre is a management
+           number. What the person needs from this note is whether their own
+           numbers moved, and the table above already says which way for each
+           one — so the closing line names the overall direction and stops. */
+        var swing = cur.kpiScore - prev.kpiScore;
+        lines.push('');
+        if (Math.abs(swing) < 0.05) {
+            lines.push('Overall that holds you about where you were in ' + prev.label + '.');
+        } else if (swing > 0) {
+            lines.push('Overall that is a better month than ' + prev.label + '. Nice work.');
+        } else {
+            lines.push('Overall that is a step back from ' + prev.label + '.');
         }
 
         lines.push('');
