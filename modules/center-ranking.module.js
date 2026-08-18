@@ -1330,7 +1330,19 @@
             });
         });
 
-        html += '</tbody></table></div></div>';
+        html += '</tbody></table>';
+
+        // Inside the scroller, so a tall picture scrolls with the table instead
+        // of squeezing it out of the modal. Filled in by _openTrajectory once the
+        // modal is in the document; a canvas cannot be built from an HTML string.
+        html += '<div id="rankTrajectoryImageBlock" style="margin-top: 16px;">' +
+            '<div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 6px;">' +
+            'This is the picture that goes in the email. Right-click it to copy if the button will not.</div>' +
+            '<div id="rankTrajectoryImage" style="overflow: auto; border: 1px solid var(--border); ' +
+            'border-radius: 8px; background: #fff; padding: 6px;"></div></div>';
+
+        html += '</div></div>';
+
         if (geom.width > 620) {
             html += '<p style="flex: 0 0 auto; margin: 8px 0 0 0; color: var(--text-tertiary); font-size: 0.78em;">' +
                 'Scroll sideways for the rest of the year.</p>';
@@ -1737,33 +1749,63 @@
        Falls back to downloading the file where the clipboard will not take an
        image — Firefox and Safari still refuse — because a picture in the
        downloads folder is recoverable and a silent failure is not. */
-    function _copyYearImage(name, done) {
-        var model = buildYearImageModel(name);
-        var canvas = model && _drawYearCard(model);
-        if (!canvas || typeof canvas.toBlob !== 'function') { done(false); return; }
+    function _canvasBlob(canvas) {
+        return new Promise(function (resolve, reject) {
+            if (!canvas || typeof canvas.toBlob !== 'function') { reject(new Error('no canvas')); return; }
+            canvas.toBlob(function (blob) {
+                if (blob) resolve(blob); else reject(new Error('no blob'));
+            }, 'image/png');
+        });
+    }
 
-        canvas.toBlob(function (blob) {
-            if (!blob) { done(false); return; }
-            var save = function () {
-                try {
-                    var url = URL.createObjectURL(blob);
-                    var a = document.createElement('a');
-                    a.href = url;
-                    a.download = String(name).replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-year.png';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-                    done('downloaded');
-                } catch (err) { done(false); }
-            };
-            if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
-                navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })])
-                    .then(function () { done('copied'); }, save);
-            } else {
-                save();
-            }
-        }, 'image/png');
+    function _downloadCanvas(canvas, name) {
+        return _canvasBlob(canvas).then(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = String(name).replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-year.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+            return 'downloaded';
+        });
+    }
+
+    /* Copy the picture, and say plainly when it could not be copied.
+
+       The ClipboardItem is built with the blob PROMISE rather than the blob, so
+       it is constructed inside the click and keeps the user activation the
+       clipboard demands; waiting for toBlob first loses it and the write is
+       refused. Where the clipboard will not take an image at all — Firefox and
+       Safari still refuse — the file downloads, and if even that fails the
+       picture is still on screen to be copied by hand. */
+    function _copyYearImage(canvas, name) {
+        if (!canvas) return Promise.resolve(false);
+        if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) {
+            return _downloadCanvas(canvas, name).catch(function () { return false; });
+        }
+        var item;
+        try {
+            item = new window.ClipboardItem({ 'image/png': _canvasBlob(canvas) });
+        } catch (err) {
+            return _downloadCanvas(canvas, name).catch(function () { return false; });
+        }
+        return navigator.clipboard.write([item])
+            .then(function () { return 'copied'; })
+            .catch(function () {
+                return _downloadCanvas(canvas, name).catch(function () { return false; });
+            });
+    }
+
+    function _reportImageResult(result) {
+        var say = function (msg) {
+            if (typeof window.showToast === 'function') window.showToast(msg, 4000);
+            else console.info('[center-ranking] ' + msg);
+        };
+        if (result === 'copied') say('Year chart copied - paste it into the draft');
+        else if (result === 'downloaded') say('Year chart saved to your downloads - attach it to the draft');
+        else say('Could not copy the chart automatically - right-click the picture below it and copy');
     }
 
     /* Opens the draft addressed and subject-filled, and puts the year picture on
@@ -1783,24 +1825,24 @@
             '&subject=' + encodeURIComponent(mail.subject) +
             '&body=' + encodeURIComponent(mail.body);
 
-        var open = function (imageResult) {
+        // The picture is grabbed first, while the click still counts as user
+        // activation, and the draft opens after — opening it first moves focus
+        // to the mail client and the clipboard refuses a write from a document
+        // that is not focused.
+        _copyYearImage(_lastTrajectoryCanvas, name).then(function (result) {
+            _reportImageResult(result);
             var link = document.createElement('a');
             link.href = href;
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            if (typeof window.showToast === 'function') {
-                window.showToast(imageResult === 'copied'
-                    ? 'Year chart copied - paste it into the draft'
-                    : imageResult === 'downloaded'
-                        ? 'Year chart saved to your downloads - attach it to the draft'
-                        : 'Draft opened');
-            }
-        };
-
-        _copyYearImage(name, open);
+        });
     }
+
+    // The canvas currently on screen, so the buttons copy the picture the viewer
+    // is looking at rather than quietly drawing a second one.
+    var _lastTrajectoryCanvas = null;
 
     function _openTrajectory(name) {
         var overlay = document.createElement('div');
@@ -1828,14 +1870,40 @@
                 '<button id="rankTrajectoryEmail" style="padding: 8px 16px; background: #2e7d32; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
                 'Email month over month summary</button>' +
+                '<button id="rankTrajectoryCopyImage" style="padding: 8px 16px; background: #5b3f8c; color: white; ' +
+                'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Copy picture</button>' +
+                '<button id="rankTrajectorySaveImage" style="padding: 8px 16px; background: var(--bg-surface-raised); ' +
+                'color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; ' +
+                'font-size: 0.9em;">Save picture</button>' +
                 '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
                 '<span style="color: var(--text-tertiary); font-size: 0.78em;">Goes to ' +
-                _escapeHtml(_apsEmailFor(name)) + '. The year chart is copied &mdash; paste it in.</span>' +
+                _escapeHtml(_apsEmailFor(name)) + '.</span>' +
             '</div>';
 
         overlay.appendChild(content);
         document.body.appendChild(overlay);
+
+        _lastTrajectoryCanvas = null;
+        var holder = document.getElementById('rankTrajectoryImage');
+        if (holder) {
+            try {
+                var model = buildYearImageModel(name);
+                var card = model && _drawYearCard(model);
+                if (card) {
+                    card.style.maxWidth = '100%';
+                    card.style.height = 'auto';
+                    card.style.display = 'block';
+                    holder.appendChild(card);
+                    _lastTrajectoryCanvas = card;
+                } else {
+                    holder.parentNode.style.display = 'none';
+                }
+            } catch (err) {
+                console.warn('[center-ranking] Year picture unavailable:', err && err.message);
+                if (holder.parentNode) holder.parentNode.style.display = 'none';
+            }
+        }
 
         var close = function () { overlay.remove(); };
         document.getElementById('rankTrajectoryClose').addEventListener('click', close);
@@ -1846,6 +1914,17 @@
         });
         var emailBtn = document.getElementById('rankTrajectoryEmail');
         if (emailBtn) emailBtn.addEventListener('click', function () { _emailMonthOverMonth(name); });
+
+        var copyImgBtn = document.getElementById('rankTrajectoryCopyImage');
+        if (copyImgBtn) copyImgBtn.addEventListener('click', function () {
+            _copyYearImage(_lastTrajectoryCanvas, name).then(_reportImageResult);
+        });
+        var saveImgBtn = document.getElementById('rankTrajectorySaveImage');
+        if (saveImgBtn) saveImgBtn.addEventListener('click', function () {
+            _downloadCanvas(_lastTrajectoryCanvas, name).then(_reportImageResult, function () {
+                _reportImageResult(false);
+            });
+        });
     }
 
     // The old behaviour of a name click, kept behind a button in the modal.

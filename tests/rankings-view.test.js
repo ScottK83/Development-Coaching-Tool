@@ -1138,3 +1138,29 @@ suite('rankings view: best rank is drawn at the top of the year picture', (t) =>
         t.check('the best month is drawn above the worst', best.y < worst.y);
     });
 });
+
+suite('rankings view: the year picture is on screen, not only on the clipboard', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('P0');
+
+    // It used to be drawn straight to the clipboard. When the clipboard refused
+    // — and it refuses whenever the write lands outside the click's user
+    // activation — there was nothing on screen to show for it, and no way to
+    // tell a refusal apart from a build that had not deployed.
+    t.check('there is somewhere for the picture to go', /id="rankTrajectoryImage"/.test(html));
+    t.check('and it says what it is',
+        /This is the picture that goes in the email/.test(html));
+    t.check('with the manual route spelled out',
+        /Right-click it to copy if the button will not/.test(html));
+
+    // Inside the scroller, or a tall picture squeezes the table out of the modal.
+    const scrollerAt = html.indexOf('min-height: 0; overflow: auto');
+    const imageAt = html.indexOf('id="rankTrajectoryImageBlock"');
+    const closeAt = html.indexOf('</div></div>', imageAt);
+    t.check('the picture sits inside the scroll box',
+        scrollerAt > -1 && imageAt > scrollerAt && closeAt > imageAt);
+
+    const balanced = (html.match(/<div/g) || []).length === (html.match(/<\/div>/g) || []).length;
+    t.check('and the markup still balances', balanced);
+});
