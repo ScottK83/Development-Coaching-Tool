@@ -785,7 +785,13 @@ suite('rankings view: the year scrolls sideways once it outgrows the modal', (t)
     // The table carried overflow-x from the start and it never fired: width:100%
     // makes a table shrink its columns to fit rather than overflow, so eight
     // months crushed into the space four had instead of scrolling.
-    t.check('there is a horizontal scroller', /overflow-x: auto/.test(html));
+    // One box scrolling both ways, not a sideways scroller nested in a vertical
+    // one: with the bar at the bottom of the content you had to scroll down to
+    // reach it, which is the opposite of what it is for.
+    t.check('the table box scrolls both ways', /min-height: 0; overflow: auto/.test(html));
+    t.check('and it is the flex child that takes the leftover height',
+        /flex: 1 1 auto; min-height: 0; overflow: auto/.test(html));
+    t.check('the intro above it does not scroll away', /<p style="flex: 0 0 auto;/.test(html));
     t.check('and the table has a real width to overflow with',
         /<table style="width: \d+px;[^"]*table-layout: fixed/.test(html));
     t.check('columns are pinned to that width', /<colgroup><col style="width: \d+px;"/.test(html));
@@ -797,7 +803,7 @@ suite('rankings view: the year scrolls sideways once it outgrows the modal', (t)
     const svgWidth = Number((html.match(/<svg viewBox="0 0 (\d+) /) || [])[1]);
     t.equal('the chart is exactly as wide as the table', svgWidth, tableWidth);
     t.check('both sit inside the same scroller',
-        new RegExp('overflow-x: auto;"><div style="width: ' + tableWidth + 'px;"').test(html));
+        new RegExp('overflow: auto;"><div style="width: ' + tableWidth + 'px;"').test(html));
 
     // The year runs January to now, so it outgrows the modal on its own.
     t.check('and the reader is told it scrolls', /Scroll sideways/.test(html));

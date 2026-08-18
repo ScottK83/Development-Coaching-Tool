@@ -1105,8 +1105,8 @@
             }
         }
 
-        var html = '';
-        html += '<p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.85em;">' +
+        var html = '<div style="display: flex; flex-direction: column; min-height: 0; height: 100%;">';
+        html += '<p style="flex: 0 0 auto; margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.85em;">' +
             'Rank in each month, over the people scored in that month. The arrow into a month is measured ' +
             'against the month before, over the people scored in both — which is why it is not always the ' +
             'difference of the two ranks either side of it. Best rank sits at the top.' +
@@ -1123,7 +1123,8 @@
         // scrolling to November leaves five unlabelled rows of numbers.
         var stick = 'position: sticky; left: 0; z-index: 1; background: var(--bg-surface);';
 
-        html += '<div style="overflow-x: auto;"><div style="width: ' + geom.width + 'px;">';
+        html += '<div style="flex: 1 1 auto; min-height: 0; overflow: auto;">' +
+            '<div style="width: ' + geom.width + 'px;">';
         html += '<div style="background: var(--bg-surface-raised); border: 1px solid var(--border); ' +
             'border-radius: 8px; padding: 8px 0 2px 0; margin-bottom: 14px;">' +
             _trajectorySvg(columns, reference, geom) + '</div>';
@@ -1216,10 +1217,10 @@
 
         html += '</tbody></table></div></div>';
         if (geom.width > 620) {
-            html += '<p style="margin: 8px 0 0 0; color: var(--text-tertiary); font-size: 0.78em;">' +
+            html += '<p style="flex: 0 0 auto; margin: 8px 0 0 0; color: var(--text-tertiary); font-size: 0.78em;">' +
                 'Scroll sideways for the rest of the year.</p>';
         }
-        return html;
+        return html + '</div>';
     }
 
     function _openTrajectory(name) {
@@ -1239,8 +1240,11 @@
                 '<button id="rankTrajectoryClose" style="background: none; border: none; font-size: 1.5em; ' +
                 'cursor: pointer; color: var(--text-secondary); padding: 0 4px;">&times;</button>' +
             '</div>' +
-            // min-height:0 or a flex child refuses to shrink and scrolls the page instead.
-            '<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto;">' + buildTrajectoryHtml(name) + '</div>' +
+            // min-height:0 or a flex child refuses to shrink and scrolls the page
+            // instead. Scrolling belongs to the box around the table, one level in,
+            // so its bars sit on its own edges rather than at the end of the content.
+            '<div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">' +
+            buildTrajectoryHtml(name) + '</div>' +
             '<div style="margin-top: 14px; display: flex; gap: 10px;">' +
                 '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
