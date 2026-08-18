@@ -1230,13 +1230,17 @@
         var content = document.createElement('div');
         content.className = 'modal-content';
         content.style.maxWidth = '1040px';
+        content.style.overflow = 'hidden';
+        content.style.display = 'flex';
+        content.style.flexDirection = 'column';
         content.innerHTML =
             '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">' +
                 '<h3 style="margin: 0; color: var(--text-primary);">' + _escapeHtml(name) + '</h3>' +
                 '<button id="rankTrajectoryClose" style="background: none; border: none; font-size: 1.5em; ' +
                 'cursor: pointer; color: var(--text-secondary); padding: 0 4px;">&times;</button>' +
             '</div>' +
-            '<div style="max-height: 74vh; overflow-y: auto;">' + buildTrajectoryHtml(name) + '</div>' +
+            // min-height:0 or a flex child refuses to shrink and scrolls the page instead.
+            '<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto;">' + buildTrajectoryHtml(name) + '</div>' +
             '<div style="margin-top: 14px; display: flex; gap: 10px;">' +
                 '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
