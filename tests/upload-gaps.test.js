@@ -102,9 +102,73 @@ suite('upload gaps: the banner says both things, separately', (t) => {
     t.check('the one real gap keeps its own heading', /1 week never uploaded/.test(el.innerHTML));
     t.check('and the blank start of the year gets its own', /Nothing uploaded before/.test(el.innerHTML));
     t.check('the empty months are named in plain English',
-        /January, February, March and April have no weekly data/.test(el.innerHTML));
-    t.check('and the reader is told they can be filled',
-        /in the dropdown if you have the reports/.test(el.innerHTML));
+        /January, February, March and April have no data at all/.test(el.innerHTML));
+    // Monthly first: one file per month against four or five weeklies, and the
+    // rankings cannot tell the two apart.
+    t.check('the cheap fix is offered first', /You do not need the weeks/.test(el.innerHTML));
+    t.check('and the weeks are still there for anyone who wants the detail',
+        /week-over-week detail inside those months/.test(el.innerHTML));
+});
+
+suite('upload gaps: a month can be uploaded instead of its weeks', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY);
+    const ids = gaps.monthOptions.map((o) => o.id);
+
+    // The wizard only ever offered "last completed month", so someone told four
+    // months were blank had no way to fill them but seventeen weekly uploads.
+    t.check('every uncovered month is offered', gaps.monthOptions.length === 4);
+    t.check('as real monthly periods',
+        gaps.monthOptions.every((o) => o.periodType === 'month' && o.isMissingPeriod));
+    t.check('January is one of them', ids.indexOf('month-2026-01-01') !== -1);
+    t.check('and April is the other end', ids.indexOf('month-2026-04-01') !== -1);
+    t.check('each spans its whole calendar month',
+        gaps.monthOptions.every((o) => /-01$/.test(o.startDate)) &&
+        gaps.monthOptions.some((o) => o.endDate === '2026-01-31'));
+    t.check('nearest first, like the weeks', gaps.monthOptions[0].startDate > gaps.monthOptions[3].startDate);
+
+    // The month in progress cannot be uploaded as a finished month.
+    t.check('August is not offered', ids.indexOf('month-2026-08-01') === -1);
+    // May onward is covered by weeklies, so it is not offered either.
+    t.check('covered months are left alone', ids.indexOf('month-2026-05-01') === -1);
+});
+
+suite('upload gaps: a monthly upload counts as covering its month', (t) => {
+    const wiz = loadWizard(t);
+    const withJan = Object.assign({
+        '2026-01-01|2026-01-31': {
+            employees: [{ name: 'A' }],
+            metadata: { startDate: '2026-01-01', endDate: '2026-01-31', periodType: 'month' }
+        }
+    }, STORE);
+    const gaps = wiz.computeMissingWeeks(withJan, TODAY);
+
+    // The rankings rebuild a month from weeklies only when no monthly upload
+    // exists for it, so a monthly file is coverage, not a partial substitute.
+    t.check('January drops off the empty list', gaps.emptyMonths.indexOf('January') === -1);
+    t.check('and off the offer list',
+        gaps.monthOptions.every((o) => o.id !== 'month-2026-01-01'));
+    t.check('the rest are untouched',
+        JSON.stringify(gaps.emptyMonths) === JSON.stringify(['February', 'March', 'April']));
+
+    const cov = wiz.monthCoverage(withJan, TODAY);
+    t.equal('January reads as uploaded', cov[0].status, 'uploaded');
+    t.equal('May reads as rebuilt from weeks', cov[4].status, 'rebuilt');
+    t.equal('February reads as nothing', cov[1].status, 'none');
+});
+
+suite('upload gaps: a fortnight is the floor for calling something a month', (t) => {
+    const wiz = loadWizard(t);
+    // The month rebuild throws out a "month" covering less than two weeks, so
+    // it must not read as coverage here either.
+    const stub = Object.assign({
+        '2026-03-01|2026-03-06': {
+            employees: [{ name: 'A' }],
+            metadata: { startDate: '2026-03-01', endDate: '2026-03-06', periodType: 'month' }
+        }
+    }, STORE);
+    const gaps = wiz.computeMissingWeeks(stub, TODAY);
+    t.check('a six-day "month" does not cover March', gaps.emptyMonths.indexOf('March') !== -1);
 });
 
 suite('upload gaps: a complete year says nothing', (t) => {

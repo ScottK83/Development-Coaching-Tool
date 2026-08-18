@@ -268,6 +268,89 @@
     const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'];
 
+    // What the month rebuild demands of an upload calling itself a month: at
+    // least a fortnight, or two weekly uploads ending inside it. Kept in step
+    // with period-compare's MIN_WEEKS_FOR_MONTH.
+    const MIN_DAYS_FOR_MONTH_UPLOAD = 14;
+    const MIN_WEEKS_FOR_MONTH = 2;
+
+    /* How each month of this year is covered, and by what.
+
+       A month upload is not a lesser substitute for its weeks: the rankings
+       rebuild a month from weeklies only when no monthly upload exists for it,
+       and rank the two identically. One file per month is a complete answer for
+       trends, month-over-month movement and the rankings trajectory. Weeks add
+       week-over-week detail inside a month and nothing else.
+
+       That mattered here because the only monthly option the wizard offered was
+       "last completed month", so a supervisor told four months were blank had no
+       way to fill them except seventeen weekly uploads. */
+    function monthCoverage(weeklyStore, today) {
+        const year = today.getFullYear();
+        const weekly = weeklyStore || {};
+        const weeksIn = {};
+        const monthUploads = new Set();
+
+        Object.keys(weekly).forEach(k => {
+            const meta = weekly[k]?.metadata || {};
+            const type = meta.periodType || 'week';
+            const end = parseLocalDate(meta.endDate || (k.includes('|') ? k.split('|')[1] : ''));
+            if (isNaN(end) || end.getFullYear() !== year) return;
+            if (type === 'week') {
+                weeksIn[end.getMonth()] = (weeksIn[end.getMonth()] || 0) + 1;
+            } else if (type === 'month') {
+                const start = parseLocalDate(meta.startDate || (k.includes('|') ? k.split('|')[0] : ''));
+                // A "month" covering less than a fortnight is thrown out by the
+                // rebuild, so it must not read as coverage here either.
+                if (isNaN(start)) return;
+                if (Math.round((end - start) / MS_PER_DAY) + 1 >= MIN_DAYS_FOR_MONTH_UPLOAD) {
+                    monthUploads.add(end.getMonth());
+                }
+            }
+        });
+
+        const out = [];
+        for (let m = 0; m <= today.getMonth(); m++) {
+            const weeks = weeksIn[m] || 0;
+            let status = 'none';
+            if (monthUploads.has(m)) status = 'uploaded';
+            else if (weeks >= MIN_WEEKS_FOR_MONTH) status = 'rebuilt';
+            else if (weeks > 0) status = 'thin';
+            out.push({
+                month: m,
+                name: MONTH_NAMES[m],
+                weeks,
+                status,
+                covered: status === 'uploaded' || status === 'rebuilt',
+                inProgress: m === today.getMonth()
+            });
+        }
+        return out;
+    }
+
+    // Completed months of this year that no upload covers, offered as monthly
+    // periods. One of these replaces four or five weekly uploads.
+    function missingMonthOptions(weeklyStore, today) {
+        const year = today.getFullYear();
+        return monthCoverage(weeklyStore, today)
+            .filter(mo => !mo.covered && !mo.inProgress)
+            .map(mo => {
+                const start = new Date(year, mo.month, 1);
+                const end = new Date(year, mo.month + 1, 0);
+                return {
+                    id: `month-${isoDate(start)}`,
+                    label: `${mo.name} ${year} (never uploaded)` +
+                        (mo.weeks ? ` — ${mo.weeks} week${mo.weeks === 1 ? '' : 's'} on file` : ''),
+                    periodType: 'month',
+                    startDate: isoDate(start),
+                    endDate: isoDate(end),
+                    isMissingPeriod: true,
+                    priority: 2.4
+                };
+            })
+            .reverse();   // nearest first, like the missing weeks
+    }
+
     /* Weeks of this year that sit BEFORE the first upload, and the months that
        have no weekly upload at all.
 
@@ -286,18 +369,13 @@
         const jan1 = new Date(year, 0, 1);
         const uploaded = scanUploadedWeeks(weeklyStore).mondays;
 
-        // Months with no weekly upload ending in them. Bucketed by end date,
-        // the same way the month rebuild buckets weeks, so this answers the
-        // question the trajectory raises rather than a near neighbour of it.
-        const covered = new Set();
-        uploaded.forEach(iso => {
-            const sun = addDays(parseLocalDate(iso), 6);
-            if (sun.getFullYear() === year) covered.add(sun.getMonth());
-        });
-        const emptyMonths = [];
-        for (let m = 0; m <= today.getMonth(); m++) {
-            if (!covered.has(m)) emptyMonths.push(MONTH_NAMES[m]);
-        }
+        // Months nothing covers — no monthly upload, and no weeks either. A
+        // monthly upload counts, because the rankings treat it as the month.
+        const coverage = monthCoverage(weeklyStore, today);
+        const emptyMonths = coverage
+            .filter(mo => mo.status === 'none' && !mo.inProgress)
+            .map(mo => mo.name);
+        const monthOptions = missingMonthOptions(weeklyStore, today);
 
         const weeks = [];
         if (earliestMon && earliestMon > jan1) {
@@ -324,7 +402,8 @@
             priorCount: weeks.length,
             priorShownCount: Math.min(weeks.length, maxOptions),
             firstCoveredDate: earliestMon ? isoDate(earliestMon) : null,
-            emptyMonths
+            emptyMonths,
+            monthOptions
         };
     }
 
@@ -434,8 +513,9 @@
         placeholder.textContent = '-- Select a period --';
         selectEl.appendChild(placeholder);
 
-        const pending = options.filter(o => !o.isUploaded && !o.isMissingWeek);
-        const missing = options.filter(o => !o.isUploaded && o.isMissingWeek);
+        const isMissing = (o) => o.isMissingWeek || o.isMissingPeriod;
+        const pending = options.filter(o => !o.isUploaded && !isMissing(o));
+        const missing = options.filter(o => !o.isUploaded && isMissing(o));
         const uploaded = options.filter(o => o.isUploaded);
 
         function appendOption(grp, opt, prefix) {
@@ -463,7 +543,7 @@
         }
         if (missing.length) {
             const grp = document.createElement('optgroup');
-            grp.label = 'Missing weeks (gaps in your trend line)';
+            grp.label = 'Never uploaded (gaps in your trend line)';
             missing.forEach(opt => appendOption(grp, opt, '⚠️ '));
             selectEl.appendChild(grp);
         }
@@ -646,10 +726,15 @@
         const monthText = months.length === 1
             ? `${months[0]} has`
             : `${months.slice(0, -1).join(', ')} and ${months[months.length - 1]} have`;
+        // Monthly first, because it is one file per month against four or five,
+        // and the rankings cannot tell the difference: a month rebuilt from weeks
+        // and a month uploaded whole are ranked by the same code.
+        const monthCount = (gaps.monthOptions || []).length;
         const startBlock = (gaps.priorCount || months.length) ? `
             <div style="${totalMissing ? 'margin-top:12px; padding-top:10px; border-top:1px solid var(--border);' : ''} font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">📅 Nothing uploaded before ${fmtLong(parseLocalDate(gaps.firstCoveredDate))}</div>
-            ${months.length ? `<div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">${monthText} no weekly data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>` : ''}
-            ${gaps.priorCount ? `<div style="font-size:0.85em; color:var(--text-primary, var(--text-primary));">${gaps.priorCount} earlier week${gaps.priorCount === 1 ? ' is' : 's are'} in the dropdown if you have the reports.</div>` : ''}` : '';
+            ${months.length ? `<div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">${monthText} no data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>` : ''}
+            ${monthCount ? `<div style="font-size:0.85em; margin-bottom:4px; color:var(--text-primary, var(--text-primary));"><strong>You do not need the weeks.</strong> Upload each one as a Monthly period — one file per month, ranked exactly like a month rebuilt from weeklies. ${monthCount === 1 ? 'It is' : 'All ' + monthCount + ' are'} in the dropdown.</div>` : ''}
+            ${gaps.priorCount ? `<div style="font-size:0.85em; color:var(--text-primary, var(--text-primary));">The ${gaps.priorCount} individual week${gaps.priorCount === 1 ? ' is' : 's are'} there too, if you want week-over-week detail inside those months.</div>` : ''}` : '';
 
         bannerEl.style.display = 'block';
         bannerEl.innerHTML = gapBlock + startBlock;
@@ -677,7 +762,10 @@
         const knownIds = new Set(options.map(o => o.id));
         // Weeks before the first upload are offered too — telling someone four
         // months are blank and giving them no way to fill them is half a feature.
-        const extraGaps = gaps.weeks.concat(gaps.priorWeeks || []).filter(w => !knownIds.has(w.id));
+        const extraGaps = gaps.weeks
+            .concat(gaps.monthOptions || [])
+            .concat(gaps.priorWeeks || [])
+            .filter(w => !knownIds.has(w.id));
         renderDropdown(selectEl, options.concat(extraGaps));
         renderGapBanner(document.getElementById('uploadWizardGapBanner'), gaps);
 
@@ -798,6 +886,8 @@
         annotateUploadState,
         computeMissingWeeks,
         missingWeeksInRange,
+        monthCoverage,
+        missingMonthOptions,
         // Exported for the tests: this banner is the thing a supervisor reads
         // to decide whether their year is complete, so its wording is pinned.
         renderGapBanner,
