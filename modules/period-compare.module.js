@@ -95,6 +95,11 @@
         return Math.round((ed - sd) / 86400000) + 1;
     }
 
+    function _nowMonth() {
+        var now = new Date();
+        return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    }
+
     function _monthLabel(monthKey) {
         var parts = String(monthKey).split('-');
         var mi = parseInt(parts[1], 10) - 1;
@@ -443,6 +448,10 @@
                 curScoreSum: r.scoreSum,
                 prevKpisMet: has ? was.kpisMet : null,
                 curKpisMet: r.kpisMet,
+                // How many of the five were measured, so a caller never prints
+                // "3/5 KPIs" for someone only three KPIs were scored on.
+                prevMeasuredCount: has ? was.measuredCount : null,
+                curMeasuredCount: r.measuredCount,
                 // True when the underlying scoring actually moved. False means the
                 // rank changed while performance did not.
                 scoreChanged: has ? (scoreSumDelta !== 0 || kpisMetDelta !== 0) : false,
@@ -592,12 +601,28 @@
         if (usable.length < 2) return null;
 
         var curIdx = usable.length - 1;
+        var steppedOverInProgress = null;
         if (options.anchorKey) {
             // From 1, not 0: the oldest period has nothing behind it to compare
             // against, so anchoring there falls back to the newest pair.
             for (var i = 1; i < usable.length; i++) {
                 if (String(usable[i].key) === String(options.anchorKey)) { curIdx = i; break; }
             }
+        } else if (usable[curIdx].inProgress && curIdx >= 2) {
+            /* A month still being lived in is not a month. Two weeks of August
+               against four weeks of July moves people tens of ranks on nothing but
+               a shorter sample, and the head-count guard never catches it because
+               the roster barely changes. Weeks already work this way — a
+               week-in-progress is excluded outright — and months were the one
+               granularity that never got the same treatment.
+
+               Stepped over only while a complete pair remains behind it, so the
+               column does not vanish in the first days of a month; when the
+               unfinished month is the only comparison available it is kept and
+               flagged instead. Reported either way, because a June-to-July
+               comparison shown in August looks stale unless it says why. */
+            steppedOverInProgress = usable[curIdx];
+            curIdx -= 1;
         }
         var cur = usable[curIdx];
         var prev = usable[curIdx - 1];
@@ -606,8 +631,7 @@
         if (!compared) return null;
 
         // A part-month must not read as a finished one.
-        var now = new Date();
-        var nowMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        var nowMonth = _nowMonth();
 
         return {
             scope: sc,
@@ -621,6 +645,15 @@
             }).map(function (p) {
                 return { key: p.key, label: p.label, count: p.count };
             }),
+            // The unfinished month that was passed over, so the caller can say why
+            // the comparison stops short of today.
+            skippedInProgress: steppedOverInProgress
+                ? { key: steppedOverInProgress.key, label: steppedOverInProgress.label,
+                    count: steppedOverInProgress.count, weekCount: steppedOverInProgress.weekCount }
+                : null,
+            // True when an unfinished period is one side of the comparison anyway —
+            // either the viewer asked for it, or it was the only thing available.
+            comparingInProgress: sc === 'month' && cur.key === nowMonth,
             total: compared.total,
             movements: compared.movements,
             onlyCurrent: compared.onlyCurrent,
@@ -720,7 +753,12 @@
                     key: mo, label: agg.label, employees: agg.employees, end: mo,
                     weekCount: agg.weekCount, fromUpload: agg.fromUpload,
                     count: buckets.counts[mo] || agg.employees.length,
-                    partial: !!buckets.partial[mo]
+                    partial: !!buckets.partial[mo],
+                    // The calendar month has not finished yet. Distinct from
+                    // `partial`, which is about head count: a two-week August has
+                    // very nearly the full roster, so the population guard waves it
+                    // straight through even though it is half a month of work.
+                    inProgress: mo === _nowMonth()
                 });
             });
             return out;
@@ -763,8 +801,12 @@
         var usable = _periodsForScope(scope, yr).filter(function (p) { return !p.partial; });
         if (usable.length < 2) return null;
 
-        var cur = usable[usable.length - 1];
-        var prev = usable[usable.length - 2];
+        // Same unfinished-month rule as the individual view, so the two surfaces
+        // can never end up describing different pairs of months.
+        var curIdx = usable.length - 1;
+        if (usable[curIdx].inProgress && curIdx >= 2) curIdx -= 1;
+        var cur = usable[curIdx];
+        var prev = usable[curIdx - 1];
 
         var compared = compareTeams(prev.employees, cur.employees, supervisors, yr);
         if (!compared) return null;
@@ -798,6 +840,10 @@
         aggregateEmployeesFrom: aggregateEmployeesFrom,
         buildMonthAggregate: buildMonthAggregate,
         compareRankings: compareRankings,
+        // Year-to-date hours missed, by name. center-ranking applies the same
+        // cumulative-not-slice rule to stored periods that buildMonthAggregate
+        // applies to rebuilt months, and both must read it from one place.
+        latestYtdReliability: _latestYtdReliability,
         compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
         buildMonthOverMonthTeams: buildMonthOverMonthTeams,

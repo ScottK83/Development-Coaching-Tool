@@ -118,6 +118,26 @@
         return end ? String(end).slice(0, 7) : null;
     }
 
+    /* The rank on a card is meaningless without the window it was measured over.
+       It sits directly above two more ranks that DO name their months, so a reader
+       puts all three in sequence and gets an impossible timeline — "#9 ... #21 in
+       July ... #29 in August" reads as a person who was 21st, then 29th, and is
+       somehow now 9th. Every rank on the card names its own period. */
+    function _selectedPeriodPhrase(data) {
+        var key = (data && data.periodKey) || _selectedRankingPeriodKey;
+        var match = key ? _getAvailableRankingPeriods().filter(function (p) {
+            return p.key === key;
+        })[0] : null;
+        // "July 2026 (rebuilt from 4 weeks)" is provenance, not a period name, and
+        // the provenance is already stated in the header.
+        var trim = function (label) { return String(label).replace(/\s*\([^)]*\)\s*$/, ''); };
+        if (match) {
+            if (match.type === 'ytd') return 'year to date';
+            return 'in ' + trim(match.label);
+        }
+        return (data && data.source) ? 'in ' + trim(data.source) : 'in this period';
+    }
+
     function _monthMovement() {
         if (_momCache !== undefined) return _momCache;
         var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
@@ -319,6 +339,33 @@
     ];
     var MIN_SURVEYS_FOR_RANK = 3;
 
+    /* A KPI with no data for the period is not a failed KPI.
+
+       kpisMet and scoreSum are raw counts out of five, and they are sort
+       priorities 1 and 2 — so someone measured on four KPIs is compared against
+       five-KPI totals and loses a whole tier for missing data. Meanwhile the band
+       printed beside the rank comes from kpiScore, which IS normalised, so the
+       card could read "Exceptional — 12/12 (KPI: 3.0)" next to a mid-pack rank
+       and be telling the truth twice in two incompatible units.
+
+       The sort is put on the same footing as the band: both counts are scaled to
+       a five-KPI basis. Scaling stops at MIN_MEASURED_FOR_SCALED because below
+       that there is too little measured to stand in for a full scorecard — two
+       KPIs at 3 is not an exceptional year, and pro-rating it would crown it.
+       Those records keep their raw counts, which sinks them, and the card says
+       how many KPIs went unmeasured rather than leaving it to be inferred. */
+    var FULL_KPI_COUNT = 5;
+    var MIN_MEASURED_FOR_SCALED = 4;
+
+    // Colour by the share of MEASURED KPIs met, so 4/4 reads like 5/5 rather than
+    // like 4/5. Identical to the old thresholds when all five were measured.
+    function _kpiMetColor(kpisMet, measuredCount, dark) {
+        var rate = measuredCount > 0 ? kpisMet / measuredCount : 0;
+        if (rate >= 0.8) return dark ? '#66bb6a' : '#2e7d32';
+        if (rate >= 0.6) return dark ? '#ffa726' : '#e65100';
+        return dark ? '#ef5350' : '#c62828';
+    }
+
     // Pull the extra metric values off the raw employee row. Survey-backed
     // metrics are withheld below the survey floor: 100% off one response
     // isn't an achievement, and letting it rank would crowd out real wins.
@@ -413,6 +460,44 @@
         };
     }
 
+    /* Reliability is hours of work missed against a budget for the WHOLE YEAR —
+       18 for a 3, 24 for a 2 — not a rate that stands on its own in any window.
+       buildMonthAggregate spells the reasoning out at length and substitutes the
+       running year-to-date total before scoring a rebuilt month. The stored-period
+       paths never got the same treatment, so selecting a week or an uploaded month
+       scored a week's 0 hours against an annual 18-hour budget and handed the whole
+       centre a free KPI — while the movement column beside it, built the other way,
+       disagreed about the same person in the same period.
+
+       One rule, applied on both paths. A year-to-date file already carries the
+       running total in that column and is left alone. */
+    function _withCumulativeReliability(employees, year, isYtdSource) {
+        var list = employees || [];
+        if (isYtdSource) return list;
+        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (!pc || !pc.latestYtdReliability) return list;
+        var cumulative;
+        try {
+            cumulative = pc.latestYtdReliability(year) || {};
+        } catch (err) {
+            return list;
+        }
+        // Copied rather than mutated — these rows are the stored upload, and every
+        // other surface reads the same objects.
+        return list.map(function (emp) {
+            if (!emp || !emp.name) return emp;
+            var copy = Object.assign({}, emp);
+            var raw = parseFloat(emp.reliability);
+            // Kept for coaching — "you missed 6 hours that week" is still the
+            // useful sentence — but never scored.
+            copy.reliabilityAccrued = isFinite(raw) ? raw : null;
+            // Left null with no year-to-date file to read. Unmeasured is correct:
+            // 0 is a perfect score, so guessing would crown people.
+            copy.reliability = isFinite(cumulative[emp.name]) ? cumulative[emp.name] : null;
+            return copy;
+        });
+    }
+
     /**
      * Build rankings from the best available data source for a year.
      * Uses getLatestYearPeriodForEmployee logic via YTD data, or falls
@@ -490,7 +575,8 @@
             if (emp && emp.name) baseEmployees[emp.name] = emp;
         });
 
-        var mergedEmployees = Object.values(baseEmployees);
+        var mergedEmployees = _withCumulativeReliability(
+            Object.values(baseEmployees), currentYear, bestPeriod === bestYtd);
 
         var rankings = _scoreAndRank(mergedEmployees, currentYear);
 
@@ -549,6 +635,11 @@
                 scores: score.scores,
                 values: score.values,
                 reliability: score.reliability,
+                // Hours missed in the period itself, where the caller substituted
+                // the cumulative year total for scoring. Coaching wants the slice
+                // — "you missed 6 hours in July" — and the rank must not have it.
+                reliabilityAccrued: Number.isFinite(parseFloat(emp.reliabilityAccrued))
+                    ? parseFloat(emp.reliabilityAccrued) : null,
                 surveyTotal: score.surveyTotal,
                 totalCalls: score.totalCalls
             });
@@ -645,12 +736,24 @@
                 : 0;
         });
 
+        // ── Rank basis ──
+        // Scaled to five KPIs so a missing slot neither pads nor drags the sort,
+        // matching what scoreEmployee already does for the displayed band. A fully
+        // measured record scales by 1 and is untouched.
+        rankings.forEach(function (r) {
+            var scale = (r.measuredCount >= MIN_MEASURED_FOR_SCALED && r.measuredCount > 0)
+                ? FULL_KPI_COUNT / r.measuredCount
+                : 1;
+            r.rankKpisMet = r.kpisMet * scale;
+            r.rankScoreSum = r.scoreSum * scale;
+        });
+
         // ── Step 7: Final Rank — 4-level priority sort ──
         rankings.sort(function (a, b) {
-            // Priority 1: KPIs Met (most first — descending)
-            if (a.kpisMet !== b.kpisMet) return b.kpisMet - a.kpisMet;
-            // Priority 2: Score Sum (highest first — descending)
-            if (a.scoreSum !== b.scoreSum) return b.scoreSum - a.scoreSum;
+            // Priority 1: KPIs Met (most first — descending), on a five-KPI basis
+            if (Math.abs(a.rankKpisMet - b.rankKpisMet) > 1e-9) return b.rankKpisMet - a.rankKpisMet;
+            // Priority 2: Score Sum (highest first — descending), same basis
+            if (Math.abs(a.rankScoreSum - b.rankScoreSum) > 1e-9) return b.rankScoreSum - a.rankScoreSum;
             // Priority 3: KPI Rank Total (lowest first — ascending)
             if (a.kpiRankTotal !== b.kpiRankTotal) return a.kpiRankTotal - b.kpiRankTotal;
             // Priority 4: Tiebreaker (highest first — descending)
@@ -713,7 +816,9 @@
         var endStr = meta.endDate || (periodKey.includes('|') ? periodKey.split('|')[1] : '');
         var endYear = parseInt(String(endStr).split('-')[0], 10) || new Date().getFullYear();
 
-        var rankings = _scoreAndRank(period.employees, endYear);
+        var _isYtdSource = (meta.periodType || (yData[periodKey] ? 'ytd' : 'week')) === 'ytd';
+        var rankings = _scoreAndRank(
+            _withCumulativeReliability(period.employees, endYear, _isYtdSource), endYear);
         if (!rankings.length) return null;
 
         // Identify team members for this period
@@ -819,14 +924,27 @@
             }
             html += '.';
             // Two rank scales sit on this page — the table's, over everyone in the
-            // selected period, and movement's, over the people in both. Left
-            // unsaid, the difference reads as the numbers disagreeing.
-            if (_mom.total !== data.totalEmployees) {
-                html += ' Rank in the table is out of ' + data.totalEmployees + ', so the two counts differ on purpose.';
-            }
+            // selected period, and movement's, over the people in both, across a
+            // different window. Left unsaid, the difference reads as the numbers
+            // disagreeing. Stated unconditionally: the windows differ even when the
+            // head counts happen to match, and that is the half readers get wrong.
+            html += ' Rank in the table is <strong>' + _escapeHtml(_selectedPeriodPhrase(data)) +
+                '</strong>, out of ' + data.totalEmployees +
+                ' &mdash; a different window from the movement column, not just a different count.';
             if (_mom.fellBack) {
                 html += ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[_mom.requestedScope] || _mom.requestedScope) +
                     ' is available, so there is nothing to compare it against &mdash; showing months instead.</span>';
+            }
+            // A comparison that stops short of today explains itself, rather than
+            // looking like uploads went missing.
+            if (_mom.skippedInProgress) {
+                html += ' <span style="color: #e65100;">' + _escapeHtml(_mom.skippedInProgress.label) +
+                    ' is still in progress' +
+                    (_mom.skippedInProgress.weekCount ? ' (' + _mom.skippedInProgress.weekCount + ' weeks so far)' : '') +
+                    ', so it is set aside &mdash; half a month against a full one moves people on sample size, not performance.</span>';
+            } else if (_mom.comparingInProgress) {
+                html += ' <span style="color: #e65100;">' + _escapeHtml(_mom.current.label) +
+                    ' is not finished yet, so it is being compared against a full month &mdash; expect movement that is partly sample size.</span>';
             }
             html += '</span>';
 
@@ -845,20 +963,30 @@
         // Team summary
         var teamRanks = data.rankings.filter(function (r) { return data.teamMembers.has(r.name); });
         var _teamMovement = _movementByName();
+        var _teamPeriodPhrase = _selectedPeriodPhrase(data);
         var _teamMovementLabels = _mom
             ? { previous: _mom.previous.label, current: _mom.current.label + (_mom.current.inProgress ? ' (so far)' : ''), total: _mom.total }
             : null;
         if (teamRanks.length > 0) {
             html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<h4 style="margin-top: 0; color: var(--text-primary);">Your Team</h4>';
-            // The headline rank and the movement ranks are counted over different
-            // populations, so a card can read "#9 of 126" above "#68 → #21" and look
-            // self-contradictory. Said once here rather than repeated on every card.
+            /* The headline rank and the movement ranks are measured over different
+               WINDOWS as well as different populations, and the window is the half
+               that gets missed. The old caption offered only "126 in this period"
+               against "123 scored in both", which actively hands the reader a wrong
+               story: told the whole difference is three missing people, a
+               supervisor correctly concludes that #9 and #29 cannot both be true.
+
+               Said once here rather than repeated on every card. */
             if (_teamMovementLabels) {
                 html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
-                    'Rank is out of the ' + data.totalEmployees + ' in this period. Movement below is ' +
-                    _escapeHtml(_teamMovementLabels.previous) + ' &rarr; ' + _escapeHtml(_teamMovementLabels.current) +
-                    ', ranked across the ' + _teamMovementLabels.total + ' scored in both.</p>';
+                    'The big number is where each person ranks <strong>' + _escapeHtml(_teamPeriodPhrase) +
+                    '</strong>, out of the ' + data.totalEmployees + ' scored in that period. The line under it is a ' +
+                    'separate <strong>' + _escapeHtml(_teamMovementLabels.previous) + '</strong> &rarr; <strong>' +
+                    _escapeHtml(_teamMovementLabels.current) + '</strong> comparison, with both of those periods ' +
+                    're-ranked from scratch over the ' + _teamMovementLabels.total + ' people scored in both. ' +
+                    'Different window, different field &mdash; the two sets of ranks are not on the same scale ' +
+                    'and are not meant to line up.</p>';
             }
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">';
 
@@ -869,13 +997,20 @@
                 var statusBg = r.trackStatusValue === 'on-track-exceptional' ? (_isDark() ? '#0d2a1a' : '#e8f5e9') :
                     r.trackStatusValue === 'on-track-successful' ? (_isDark() ? '#16240f' : '#f1f8e9') :
                     (_isDark() ? '#2a1210' : '#fbe9e7');
-                var percentile = Math.round((1 - (r.rank - 1) / data.totalEmployees) * 100);
+                // Share of the rest of the centre this person finished ahead of.
+                // The old line printed this same percentile under a "top N%" label,
+                // which inverted it: #9 of 126 read "top 94%" and last place read
+                // "top 1%", so the weakest performer on the panel looked elite.
+                var aheadOf = data.totalEmployees > 1
+                    ? Math.round(((data.totalEmployees - r.rank) / (data.totalEmployees - 1)) * 100)
+                    : 100;
 
                 html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
                 html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
                 html += '<div style="margin-top: 4px;">';
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
-                html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees + ' (top ' + percentile + '%)</span>';
+                html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees +
+                    ' ' + _escapeHtml(_teamPeriodPhrase) + ' &mdash; better than ' + aheadOf + '%</span>';
                 html += '</div>';
 
                 // Spelled out on the team cards rather than left as an arrow —
@@ -892,8 +1027,10 @@
                         // get read out as praise for a move nobody earned.
                         html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' +
                             'Moved ' + (_cardMv.delta > 0 ? 'up ' : 'down ') + Math.abs(_cardMv.delta) +
-                            ' (#' + _cardMv.prevRank + ' &rarr; #' + _cardMv.curRank + ') on the same score &mdash; ' +
-                            _cardMv.curKpisMet + '/5 KPIs, ' + _cardMv.curScoreSum + ' in both</div>';
+                            ' &mdash; #' + _cardMv.prevRank + ' in ' + _was + ', #' + _cardMv.curRank + ' in ' + _now +
+                            ', on the same score (' + _cardMv.curKpisMet + '/' +
+                            (_cardMv.curMeasuredCount || FULL_KPI_COUNT) + ' KPIs, ' +
+                            _cardMv.curScoreSum + ' in both)</div>';
                     } else {
                         var _up = _cardMv.delta > 0;
                         html += '<div style="margin-top: 4px; font-size: 0.85em; font-weight: 600; color: ' +
@@ -905,10 +1042,16 @@
                             _cardMv.prevScoreSum + '&rarr;' + _cardMv.curScoreSum + ')</span></div>';
                     }
                 }
-                var kpiColor = r.kpisMet >= 4 ? (_isDark() ? '#66bb6a' : '#2e7d32') :
-                    r.kpisMet >= 3 ? (_isDark() ? '#ffa726' : '#e65100') : (_isDark() ? '#ef5350' : '#c62828');
+                var kpiColor = _kpiMetColor(r.kpisMet, r.measuredCount, _isDark());
                 html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
-                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' + r.kpisMet + '/5 KPIs met</span></div>';
+                // Denominator is what was actually measured. Printing "4/5 KPIs met"
+                // beside "Score: 12/12" said the same record two incompatible ways.
+                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' +
+                    r.kpisMet + '/' + r.measuredCount + ' KPIs met</span>' +
+                    (r.measuredCount < FULL_KPI_COUNT
+                        ? '<span style="color: var(--text-tertiary); font-weight: 400;"> &mdash; ' +
+                          (FULL_KPI_COUNT - r.measuredCount) + ' not measured</span>'
+                        : '') + '</div>';
                 html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
                 html += '</div>';
             });
@@ -1076,8 +1219,8 @@
             html += _escapeHtml(r.name) + '</td>';
 
             // KPIs Met
-            var kpiMetColor = r.kpisMet >= 4 ? '#2e7d32' : r.kpisMet >= 3 ? '#e65100' : '#c62828';
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + kpiMetColor + ';">' + r.kpisMet + '/5</td>';
+            var kpiMetColor = _kpiMetColor(r.kpisMet, r.measuredCount, false);
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + kpiMetColor + ';">' + r.kpisMet + '/' + r.measuredCount + '</td>';
 
             // Score Sum
             html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + r.scoreSum + '</td>';

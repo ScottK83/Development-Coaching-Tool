@@ -236,20 +236,25 @@ suite('rankings view: one period of a kind falls back to months, and says so', (
 
 /* ── The two rank scales ── */
 
-suite('rankings view: the two rank counts are reconciled out loud', (t) => {
+suite('rankings view: the two rank scales are reconciled out loud', (t) => {
     const { dom, cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
     dom.els.rankingPeriodSelect.value = 'month:2026-07';
     dom.els.rankingPeriodSelect.fire('change');
 
     // The table ranks everyone in the period; movement ranks only the people in
-    // both periods. Same roster here, so the counts agree and no note is needed.
+    // both periods, over a different window. The head counts agree here, which is
+    // exactly when the window difference has to be said anyway — a reader told the
+    // only difference is a count concludes the ranks are broken.
     const shell = dom.shell();
     const shared = (shell.match(/ranked across the (\d+) scored in both/) || [])[1];
     const scored = (shell.match(/(\d+) employees scored/) || [])[1];
     t.check('the shared population is stated', !!shared);
-    t.check('when the two agree, no reconciliation is bolted on',
-        shared === scored ? !/differ on purpose/.test(shell) : /differ on purpose/.test(shell));
+    t.check('the counts agree in this fixture', shared === scored);
+    t.check('and the window is still named, because that is the half that gets missed',
+        /Rank in the table is <strong>in July 2026<\/strong>/.test(shell));
+    t.check('said as a window, not as a head count',
+        /a different window from the movement column/.test(shell));
 });
 
 /* ── Tie shuffles stay distinguishable ── */
@@ -397,4 +402,225 @@ suite('rankings view: a thin survey sample is hidden from ranking, not erased', 
           surveyTotal: 0, totalCalls: 80 }
     ], 2026)[0];
     t.equal('an unscored survey metric is null, not zero', missing.surveyValues.fcr, null);
+});
+
+/* ── The two scales, on the cards themselves ──
+   The complaint that produced all of this: a card reading "#9 of 126" directly
+   above "#21 in July 2026, #29 in August 2026". Three ranks in a column, two of
+   them stamped with a month and one bare, so they read as a sequence and the
+   sequence is impossible. */
+
+suite('rankings view: a team card says which window its rank is from', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
+    cr.renderCenterRanking();          // auto-picks the year-to-date file
+    const shell = dom.shell();
+    const team = shell.slice(shell.indexOf('Your Team'));
+
+    t.check('the headline rank carries its own window', /of \d+ year to date/.test(team));
+    t.check('the caption names that window too',
+        /ranks <strong>year to date<\/strong>/.test(team));
+    t.check('and names the movement window separately',
+        /separate <strong>June 2026<\/strong> &rarr; <strong>July 2026<\/strong> comparison/.test(team));
+    t.check('and says outright that the two do not line up',
+        /not on the same scale/.test(team));
+});
+
+suite('rankings view: the card percentile points the way it reads', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
+    cr.renderCenterRanking();
+    const team = dom.shell().slice(dom.shell().indexOf('Your Team'));
+
+    // The old line printed a percentile-RANK under a "top N%" label, so #9 of 126
+    // read "top 94%" and the worst performer on the panel read "top 9%".
+    t.check('nothing claims to be top anything', !/\(top \d+%\)/.test(team));
+
+    const cards = [...team.matchAll(/#(\d+)<\/span> <span[^>]*>of (\d+) year to date &mdash; better than (\d+)%/g)]
+        .map((m) => ({ rank: +m[1], total: +m[2], ahead: +m[3] }));
+    t.equal('every card carries the figure', cards.length, 3);
+    t.check('it is the share of the centre they finished ahead of',
+        cards.every((c) => c.ahead === Math.round(((c.total - c.rank) / (c.total - 1)) * 100)));
+    t.check('so a better rank number beats more people, not fewer',
+        cards.slice().sort((a, b) => a.rank - b.rank)[0].ahead === Math.max(...cards.map((c) => c.ahead)));
+});
+
+/* ── A month still being lived in ── */
+
+// Weeks ending in the last `count` calendar months, current month last. Returns
+// null when that span would cross into last year, which the month bucketing
+// filters out by year — there is nothing to assert in that case.
+function monthsEndingNow(count) {
+    const now = new Date();
+    const out = [];
+    for (let back = count - 1; back >= 0; back--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
+        if (d.getFullYear() !== now.getFullYear()) return null;
+        out.push(String(d.getFullYear()) + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+    }
+    return out;
+}
+
+function weeksIn(monthKeys, perMonth) {
+    let weeks = {};
+    monthKeys.forEach((mo, i) => {
+        for (let w = 0; w < (perMonth || 2); w++) {
+            const end = mo + '-' + String(7 * (w + 1)).padStart(2, '0');
+            weeks = Object.assign(weeks, period(mo + '-01', end, 'week', roster(40, i * 3 + w), 'Week ending ' + end));
+        }
+    });
+    return weeks;
+}
+
+suite('period compare: a month still being lived in is not compared as a finished one', (t) => {
+    const months = monthsEndingNow(3);
+    if (!months) {
+        // January and February have no two complete months behind them in-year.
+        t.check('skipped — the current month has no complete pair behind it this year', true);
+        return;
+    }
+    const { pc } = loadRankings(t, weeksIn(months), null);
+    const mv = pc.buildMovementForScope('month');
+
+    t.check('a comparison is still produced', !!mv);
+    // Two weeks of this month against four of last month moves people tens of
+    // ranks on sample size alone, and the head-count guard never catches it
+    // because the roster barely changes.
+    t.equal('the unfinished month is not the current side', mv.current.key, months[1]);
+    t.equal('the two complete months are what is compared', mv.previous.key, months[0]);
+    t.check('and the one that was set aside is named',
+        mv.skippedInProgress && mv.skippedInProgress.key === months[2]);
+    t.check('the comparison is not flagged as unfinished', !mv.comparingInProgress);
+});
+
+suite('period compare: an unfinished month is kept when it is the only comparison there is', (t) => {
+    const months = monthsEndingNow(2);
+    if (!months) {
+        t.check('skipped — January has no complete month behind it this year', true);
+        return;
+    }
+    const { pc } = loadRankings(t, weeksIn(months), null);
+    const mv = pc.buildMovementForScope('month');
+
+    // Stepping over it here would leave nothing at all, and a blank column is
+    // worse than a flagged one.
+    t.check('the comparison survives', !!mv);
+    t.equal('the unfinished month is used', mv.current.key, months[1]);
+    t.check('nothing was stepped over', !mv.skippedInProgress);
+    t.check('but the caller is told it is unfinished', mv.comparingInProgress === true);
+});
+
+suite('rankings view: setting a month aside says so on screen', (t) => {
+    const months = monthsEndingNow(3);
+    if (!months) {
+        t.check('skipped — the current month has no complete pair behind it this year', true);
+        return;
+    }
+    // A lone year-to-date file is the setup that reaches month scope: it has
+    // nothing to compare itself against, so the panel falls back to months.
+    const ytd = period(months[0].slice(0, 4) + '-01-01', months[2] + '-07', 'ytd',
+        roster(40, 4), 'YTD so far');
+    const { dom, cr } = loadRankings(t, weeksIn(months), ytd);
+    cr.renderCenterRanking();
+
+    // Without this a comparison that stops short of today just looks like uploads
+    // went missing.
+    t.check('the header explains why the comparison stops short of today',
+        /is still in progress[\s\S]{0,120}so it is set aside/.test(dom.shell()));
+});
+
+/* ── A KPI with no data is not a failed KPI ── */
+
+suite('rankings: a missing KPI neither pads nor drags the sort', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+
+    // Identical records but for the survey column, which one of them has no data
+    // for at all. Raw counts put the complete sweep (5 met, 15) above the thin
+    // sweep (4 met, 12) — a whole tier of separation for missing data, while the
+    // band printed beside it is already normalised and calls both Exceptional.
+    const rows = cr.scoreAndRankEmployees([
+        { name: 'Thin Sweep', aht: 380, scheduleAdherence: 99, overallSentiment: 97,
+          reliability: 0, surveyTotal: 0, totalCalls: 100 },
+        { name: 'Full Sweep', aht: 380, scheduleAdherence: 99, overallSentiment: 97,
+          reliability: 0, cxRepOverall: 99, surveyTotal: 20, totalCalls: 100 }
+    ], 2026);
+    const thin = rows.find((r) => r.name === 'Thin Sweep');
+    const full = rows.find((r) => r.name === 'Full Sweep');
+
+    t.equal('the thin record is measured on four KPIs', thin.measuredCount, 4);
+    t.equal('the full one on five', full.measuredCount, 5);
+    t.check('both swept everything they were measured on',
+        thin.kpisMet === thin.measuredCount && full.kpisMet === full.measuredCount);
+    t.check('raw counts alone would have separated them', thin.kpisMet < full.kpisMet);
+    t.check('scaled to a five-KPI basis they are level',
+        Math.abs(thin.rankKpisMet - full.rankKpisMet) < 1e-9 &&
+        Math.abs(thin.rankScoreSum - full.rankScoreSum) < 1e-9);
+    t.check('a fully measured record is left exactly as it was',
+        full.rankKpisMet === full.kpisMet && full.rankScoreSum === full.scoreSum);
+    // Level on the first two priorities, so the rank total decides — and a blank
+    // metric takes the worst rank there, which is what breaks the tie.
+    t.check('and the fully measured record still wins the tie', full.rank < thin.rank);
+});
+
+suite('rankings: too little measured to stand in for a scorecard is not scaled up', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+
+    // Two KPIs at 3 is not an exceptional year. Pro-rating it to 15 would crown
+    // somebody the centre has almost no data on.
+    const rows = cr.scoreAndRankEmployees([
+        { name: 'Two KPIs', aht: 380, scheduleAdherence: 99, surveyTotal: 0, totalCalls: 100 },
+        { name: 'Full Sweep', aht: 380, scheduleAdherence: 99, overallSentiment: 97,
+          reliability: 0, cxRepOverall: 99, surveyTotal: 20, totalCalls: 100 }
+    ], 2026);
+    const two = rows.find((r) => r.name === 'Two KPIs');
+    const full = rows.find((r) => r.name === 'Full Sweep');
+
+    t.equal('only two KPIs were measured', two.measuredCount, 2);
+    t.equal('so the raw count is what ranks it', two.rankKpisMet, two.kpisMet);
+    t.equal('and the raw score sum too', two.rankScoreSum, two.scoreSum);
+    t.check('which puts it behind a full scorecard', full.rank < two.rank);
+});
+
+suite('rankings view: the KPI count prints the denominator it actually has', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
+    cr.renderCenterRanking();
+    const team = dom.shell().slice(dom.shell().indexOf('Your Team'));
+
+    // "4/5 KPIs met" beside "Score: 12/12" states the same record two
+    // incompatible ways. The denominator follows measuredCount on both.
+    const pairs = [...team.matchAll(/Score: (\d+)\/(\d+) \(KPI: [\d.]+\)[\s\S]*?(\d+)\/(\d+) KPIs met/g)];
+    t.equal('every card was read', pairs.length, 3);
+    t.check('the score denominator and the KPI denominator agree',
+        pairs.every((m) => Number(m[2]) === Number(m[4]) * 3));
+});
+
+/* ── Reliability is a year, not a slice ── */
+
+suite('rankings view: a week is scored on the year\'s missed hours, not the week\'s', (t) => {
+    const REL_WEEKS = period('2026-07-20', '2026-07-26', 'week',
+        roster(40, 11).map((e) => Object.assign({}, e, { reliability: 0 })), 'Week ending Jul 26');
+    const REL_YTD = period('2026-01-01', '2026-07-31', 'ytd',
+        roster(40, 4).map((e, i) => Object.assign({}, e, { reliability: i === 0 ? 30 : 2 })),
+        'YTD through Jul 31');
+
+    const { cr } = loadRankings(t, REL_WEEKS, REL_YTD);
+
+    // A weekly upload carries hours missed IN THAT WEEK; the budget it is scored
+    // against is 18 for the whole year. Scoring 0 against 18 hands the entire
+    // centre a free KPI, and the movement column beside it — built the other way
+    // — then disagrees about the same person in the same period.
+    const week = cr.buildRankingsForPeriod('2026-07-20|2026-07-26');
+    const p0 = week.rankings.find((r) => r.name === 'P0');
+    t.equal('the running year-to-date total is what gets scored', p0.reliability, 30);
+    t.equal('so a blown budget still scores a 1', p0.scores.reliability, 1);
+    t.equal('the week figure is kept for coaching', p0.reliabilityAccrued, 0);
+
+    const p1 = week.rankings.find((r) => r.name === 'P1');
+    t.equal('and someone inside budget keeps their 3', p1.scores.reliability, 3);
+
+    // A year-to-date file already carries the running total in that column.
+    const ytd = cr.buildRankingsForPeriod('2026-01-01|2026-07-31');
+    t.equal('a year-to-date file is left exactly as uploaded',
+        ytd.rankings.find((r) => r.name === 'P0').reliability, 30);
 });
