@@ -884,15 +884,15 @@ suite('rankings view: the trajectory shows whether the YEAR is moving', (t) => {
     // A month rank answers "how was June". It cannot answer "is the year
     // moving" — someone can have a poor month and still be climbing, because
     // the year is the sum of everything before it too.
-    t.check('the year standing has its own row', />Year so far<\/td>/.test(html));
-    t.check('and its own movement row', />Year move<\/td>/.test(html));
+    t.check('the year standing has its own row', />Year to date<\/td>/.test(html));
+    t.check('and its own movement row', />Year to date move<\/td>/.test(html));
     t.check('the standing carries its denominator', /#\d+<\/strong><span[^>]*> of \d+<\/span>/.test(html));
 
     t.check('the chart draws it as a second line', /stroke="#8e6bbf"/.test(html));
     t.check('with hollow markers, so colour is not the only tell',
         /fill="var\(--bg-surface\)" stroke="#8e6bbf"/.test(html));
     t.check('and a legend naming both lines',
-        /Rank that month/.test(html) && /Standing for the year, as of that month/.test(html));
+        /Rank that month/.test(html) && /Year to date, as of that month/.test(html));
 
     // Two dashed lines on one chart means neither can be "the dashed line".
     t.check('the two references are named distinctly',
@@ -910,4 +910,50 @@ suite('period compare: the year standing accumulates rather than resetting', (t)
     // The first month has nothing before it, so the year and the month agree.
     t.equal('the first month is the year so far', series[0].overallRank, series[0].rank);
     t.check('and the year is ranked over the same field', series[0].overallTotal === series[0].total);
+});
+
+suite('rankings view: the year row agrees with the number on the card', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0'];
+    cr.renderCenterRanking();
+
+    // Reported as: the card said #95 year to date and the modal said #111 for
+    // the same person. The card ranks the uploaded year-to-date file; the modal
+    // was rebuilding from the months on file, which start in June here and in
+    // May in the real data. Both called themselves the year.
+    const card = dom.shell().slice(dom.shell().indexOf('Your Team'));
+    const cardRank = Number((card.match(/#(\d+)<\/span><span[^>]*>Year to date<\/span>/) || [])[1]);
+    t.check('the card carries a year-to-date rank', Number.isFinite(cardRank));
+
+    const html = cr.buildTrajectoryHtml('P0');
+    const yearCells = [...html.matchAll(/<strong style="color: #8e6bbf;">#(\d+)<\/strong>/g)].map((m) => Number(m[1]));
+    t.check('the modal carries them too', yearCells.length > 0);
+    // The uploaded file closes in July, so July and August both read it.
+    t.equal('and the last one is the same number the card shows',
+        yearCells[yearCells.length - 1], cardRank);
+});
+
+suite('period compare: the uploaded year-to-date file outranks a rebuild of it', (t) => {
+    const { pc } = loadRankings(t, WEEKS, YTD);
+    const series = pc.buildRankTimeline('month').byName.P0;
+
+    // Scott's standing rule: a real year-to-date upload takes precedence over
+    // anything reassembled from weeklies.
+    t.check('the months covered by the upload read it',
+        series.some((pt) => pt.overallSource === 'ytd-upload'));
+    t.check('and say so rather than implying a rebuild',
+        series.filter((pt) => pt.overallSource === 'ytd-upload')
+            .every((pt) => pt.overallCoversFrom === null));
+});
+
+suite('rankings view: a rebuilt year says which month it really starts in', (t) => {
+    // No year-to-date file at all, and weeks that only start in June. Calling
+    // that "year to date" without qualification is the lie being fixed.
+    const { cr } = loadRankings(t, WEEKS, null);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('P0');
+
+    t.check('the row is still year to date', />Year to date<\/td>/.test(html));
+    t.check('but the cells admit where the data begins', /from Jun only/.test(html));
+    t.check('and it is marked, not buried', /color: #e65100;">from Jun only/.test(html));
 });

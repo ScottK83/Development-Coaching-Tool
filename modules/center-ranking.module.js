@@ -876,6 +876,11 @@
 
     var TRAJECTORY_SCOPE = 'month';
 
+    function _pcMonthLabel(monthKey) {
+        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        return (pc && pc.monthLabel) ? pc.monthLabel(monthKey) : String(monthKey);
+    }
+
     function _timeline() {
         var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
         if (!pc || !pc.buildRankTimeline) return null;
@@ -1154,8 +1159,10 @@
             'difference of the two ranks either side of it. Best rank sits at the top. ' +
             'A month rebuilt from weekly uploads covers whole weeks, so its dates can start in the ' +
             'month before &mdash; the span under each heading is what it really covers. ' +
-            'The purple line is where they stand for the year as of each month, which is what says ' +
-            'whether the year is moving; a single month cannot.' +
+            'The purple line is where they stand year to date as of each month, which is what says ' +
+            'whether the year is moving; a single month cannot. It reads the uploaded year-to-date file ' +
+            'wherever one had closed by that month, so it agrees with the card; before that it is rebuilt ' +
+            'from the months on file and says which month those start in.' +
             (reference ? ' The flat blue line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
                 '</strong>, the figure on the card.' : '') + '</p>';
 
@@ -1174,7 +1181,7 @@
             '<span><span style="display:inline-block;width:16px;height:0;border-top:2px solid #1565c0;' +
             'vertical-align:middle;margin-right:5px;"></span>Rank that month</span>' +
             '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed #8e6bbf;' +
-            'vertical-align:middle;margin-right:5px;"></span>Standing for the year, as of that month</span>' +
+            'vertical-align:middle;margin-right:5px;"></span>Year to date, as of that month</span>' +
             (reference ? '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed #1565c0;' +
                 'vertical-align:middle;margin-right:5px;"></span>' + _escapeHtml(reference.label) + ' (the card figure)</span>' : '') +
             '</div>';
@@ -1239,18 +1246,31 @@
                 pt.total + '</span>';
         }, true);
 
-        html += bodyRow('Year so far', function (pt) {
+        /* Two things can stand behind this row, and they are not the same number.
+
+           Where a real year-to-date file had closed by that month, that file is
+           what gets ranked — it is the source of truth and it is where the figure
+           on the card comes from, so the two must agree. Everywhere else it is
+           rebuilt from the months on file, and if those start in May then this is
+           "since May" and saying "year" would be a lie. The cell says which. */
+        html += bodyRow('Year to date', function (pt) {
             if (!Number.isFinite(pt.overallRank)) {
                 return '<span style="color: var(--text-tertiary);">&middot;</span>';
             }
+            var partial = pt.overallSource === 'rebuilt' && pt.overallCoversFrom &&
+                String(pt.overallCoversFrom).slice(5) !== '01';
+            var note = partial
+                ? '<div style="font-size: 0.7em; color: #e65100;">from ' +
+                  _escapeHtml(_shortPeriodLabel(_pcMonthLabel(pt.overallCoversFrom))) + ' only</div>'
+                : '';
             return '<strong style="color: #8e6bbf;">#' + pt.overallRank + '</strong>' +
-                '<span style="color: var(--text-tertiary); font-size: 0.85em;"> of ' + pt.overallTotal + '</span>';
+                '<span style="color: var(--text-tertiary); font-size: 0.85em;"> of ' + pt.overallTotal + '</span>' + note;
         }, true);
 
         // Movement of the YEAR figure, month to month. This is the number that
         // answers "are they climbing", which a single month's rank never does.
         var prevOverall = null;
-        html += bodyRow('Year move', function (pt) {
+        html += bodyRow('Year to date move', function (pt) {
             var prev = prevOverall;
             prevOverall = Number.isFinite(pt.overallRank) ? pt.overallRank : prevOverall;
             if (!Number.isFinite(pt.overallRank) || !Number.isFinite(prev)) {
