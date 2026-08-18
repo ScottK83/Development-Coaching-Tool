@@ -1023,3 +1023,118 @@ suite('rankings view: one month is not a month-over-month story', (t) => {
     // caller has to be able to tell rather than sending an empty one.
     t.equal('an unknown person yields nothing', cr.buildMonthOverMonthEmail('Nobody At All'), null);
 });
+
+/* ── The year, as a picture ──
+   A mail body is plain text, so the two-month table is all the text can carry.
+   The year needs a picture. Pixels cannot be asserted; what goes into them can,
+   and so can coordinates landing off the canvas. */
+
+// A 2D context that records what it was asked to draw.
+function recordingCanvas() {
+    const ops = [];
+    const ctx = {
+        _align: 'left',
+        set font(v) {}, get font() { return '400 12px x'; },
+        set fillStyle(v) {}, set strokeStyle(v) {}, set lineWidth(v) {},
+        set lineJoin(v) {}, set lineCap(v) {}, set textBaseline(v) {},
+        set textAlign(v) { ctx._align = v; }, get textAlign() { return ctx._align; },
+        scale() {}, fillRect() {}, beginPath() {}, stroke() {}, fill() {}, setLineDash() {},
+        moveTo(x, y) { ops.push({ op: 'line', x, y }); },
+        lineTo(x, y) { ops.push({ op: 'line', x, y }); },
+        arc(x, y, r) { ops.push({ op: 'arc', x, y, r }); },
+        fillText(str, x, y) { ops.push({ op: 'text', s: String(str), x, y }); },
+        measureText(str) { return { width: String(str).length * 6 }; }
+    };
+    const canvas = { style: {}, width: 0, height: 0, getContext: () => ctx };
+    return { canvas, ops };
+}
+
+function withRecordingCanvas(t, fn) {
+    const rec = recordingCanvas();
+    const prev = global.document.createElement;
+    global.document.createElement = (tag) =>
+        (tag === 'canvas' ? rec.canvas : prev.call(global.document, tag));
+    try { return fn(rec); } finally { global.document.createElement = prev; }
+}
+
+suite('rankings view: the year picture covers January through the data', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+
+    t.check('there is a model', !!model);
+    t.equal('it starts in January, not at the first upload', model.columns[0].label, 'Jan');
+    t.check('and runs to the newest month with data',
+        model.columns[model.columns.length - 1].present ||
+        model.columns.some((c) => c.present));
+    t.check('the empty months are carried, not dropped',
+        model.columns.some((c) => !c.present));
+    t.check('the subtitle names the span', /Jan to \w{3}/.test(model.subtitle));
+
+    // Everything the picture needs travels in the model, so drawing reads no
+    // globals and can be checked without a browser.
+    const scored = model.columns.filter((c) => c.present);
+    t.check('each scored month carries its rank and field size',
+        scored.every((c) => Number.isFinite(c.rank) && c.total > 0));
+    t.check('and its five KPIs', scored.every((c) => c.metrics.length === 5));
+    t.check('with a 3/2/1 score where one was earned',
+        scored.some((c) => c.metrics.some((m) => m.score >= 1 && m.score <= 3)));
+});
+
+suite('rankings view: the year picture stays inside its own canvas', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+
+    withRecordingCanvas(t, (rec) => {
+        const canvas = cr.drawYearCard(model);
+        t.check('a canvas comes back', !!canvas);
+
+        // Drawn at 2x and scaled down, so a paste is not blurry on a normal
+        // display and stays sharp on a high-DPI one.
+        const W = canvas.width / 2, H = canvas.height / 2;
+        t.check('sized for the months it has', W > 400 && H > 300);
+
+        t.check('nothing is drawn at a NaN coordinate',
+            rec.ops.every((o) => Number.isFinite(o.x) && Number.isFinite(o.y)));
+        t.check('no text falls off the canvas',
+            rec.ops.filter((o) => o.op === 'text')
+                .every((o) => o.x >= 0 && o.x <= W && o.y >= 0 && o.y <= H));
+        t.check('no marker falls off it either',
+            rec.ops.filter((o) => o.op === 'arc')
+                .every((o) => o.y >= 0 && o.y <= H && o.x >= 0 && o.x <= W));
+
+        const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
+        t.check('the person is named', texts.indexOf('P0') !== -1);
+        t.check('both lines are keyed', texts.indexOf('Rank that month') !== -1 &&
+            texts.indexOf('Year to date') !== -1);
+        t.check('and the score dots are explained',
+            texts.some((s) => /3 exceeds\s+2 meets\s+1 below/.test(s)));
+        t.check('a month with no data says so', texts.indexOf('no data') !== -1);
+    });
+});
+
+suite('rankings view: best rank is drawn at the top of the year picture', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+    const scored = model.columns.filter((c) => c.present);
+    if (scored.length < 2 || scored[0].rank === scored[1].rank) {
+        t.check('skipped - this fixture has no rank spread', true);
+        return;
+    }
+
+    withRecordingCanvas(t, (rec) => {
+        cr.drawYearCard(model);
+        // The month markers are the filled 5.5px circles, in column order.
+        const markers = rec.ops.filter((o) => o.op === 'arc' && o.r === 5.5);
+        t.equal('one marker per scored month', markers.length, scored.length);
+
+        // Up is better, the way the word reads. A smaller rank number must sit
+        // higher on the canvas, which means a smaller y.
+        const pairs = scored.map((c, i) => ({ rank: c.rank, y: markers[i].y }));
+        const best = pairs.reduce((a, b) => (a.rank <= b.rank ? a : b));
+        const worst = pairs.reduce((a, b) => (a.rank >= b.rank ? a : b));
+        t.check('the best month is drawn above the worst', best.y < worst.y);
+    });
+});

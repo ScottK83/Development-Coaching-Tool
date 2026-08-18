@@ -1487,13 +1487,291 @@
         };
     }
 
-    /* Opens the draft addressed and subject-filled, and puts the body on the
-       clipboard as well.
 
-       Both, deliberately. A mailto body is truncated by some clients past a
-       couple of thousand characters and mangled by others, and this one is a
-       spaced table where a mangled line is worse than no line — so the clipboard
-       is the copy that is guaranteed to arrive intact. */
+    /* ── The year, as a picture ──
+
+       A mail body is plain text, so the two-month table is all the text can
+       carry. The year needs a picture, and a picture pastes into a draft.
+
+       Drawn on a canvas rather than screenshotting the modal: the modal is
+       themed from CSS variables that do not survive rasterising, it is sized for
+       a browser rather than a mail window, and half of what is on it — the
+       scroll box, the sticky column, the buttons — is furniture nobody wants in
+       an email. This draws light-on-white regardless of the app theme, because
+       a mail client is not the app.
+
+       The model is separated from the drawing so what goes IN the picture can be
+       asserted; a canvas can only be eyeballed. */
+
+    var IMG_SCORE_COLOR = { 3: '#2e7d32', 2: '#1565c0', 1: '#c62828' };
+    var IMG_FONT = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
+
+    function buildYearImageModel(name) {
+        var series = _timelineFor(name);
+        if (!series || !series.length) return null;
+        var columns = _trajectoryColumns(series);
+        if (!columns.length) return null;
+
+        // January through whatever has data, which is what _trajectoryColumns
+        // already covers — the empty months included, so a gap reads as a gap
+        // rather than as a year that started in May.
+        var first = columns[0], last = columns[columns.length - 1];
+        return {
+            name: name,
+            title: name,
+            subtitle: _shortPeriodLabel(first.label) + ' to ' + _shortPeriodLabel(last.label) + ' ' +
+                (String(last.key).slice(0, 4) || ''),
+            columns: columns.map(function (col) {
+                var pt = col.point;
+                return {
+                    key: col.key,
+                    label: _shortPeriodLabel(col.label),
+                    present: !!pt,
+                    inProgress: !!col.inProgress,
+                    rank: pt ? pt.rank : null,
+                    total: pt ? pt.total : null,
+                    overallRank: pt ? pt.overallRank : null,
+                    overallTotal: pt ? pt.overallTotal : null,
+                    kpisMet: pt ? pt.kpisMet : null,
+                    measuredCount: pt ? pt.measuredCount : null,
+                    kpiScore: pt ? pt.kpiScore : null,
+                    trackLabel: pt ? pt.trackLabel : null,
+                    metrics: TRAJECTORY_METRIC_ROWS.map(function (row) {
+                        var value = pt ? _trajectoryMetricValue(pt, row) : null;
+                        var score = pt ? (pt.scores || {})[row.scoreKey] : null;
+                        return {
+                            label: row.label,
+                            score: (score === undefined || score === null) ? null : score,
+                            display: (value === null || value === undefined || isNaN(value))
+                                ? '' : _formatMetricDisplay(row.registry, value)
+                        };
+                    })
+                };
+            })
+        };
+    }
+
+    function _drawYearCard(model) {
+        var canvas = document.createElement('canvas');
+        if (!canvas || typeof canvas.getContext !== 'function') return null;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        var n = model.columns.length;
+        var padX = 34, labelW = 116, colW = 96;
+        var headerH = 96, chartH = 224, gap = 26, rowH = 34, headRowH = 30;
+        var rows = TRAJECTORY_METRIC_ROWS.length + 2;   // rank line + KPIs met + metrics
+        var W = padX * 2 + labelW + colW * n;
+        var H = headerH + chartH + gap + headRowH + rowH * rows + 34;
+
+        // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
+        // display and still sharp on a high-DPI one.
+        var SCALE = 2;
+        canvas.width = W * SCALE;
+        canvas.height = H * SCALE;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.scale(SCALE, SCALE);
+
+        var text = function (str, x, y, size, color, weight, align) {
+            ctx.font = (weight || '400') + ' ' + size + 'px ' + IMG_FONT;
+            ctx.fillStyle = color;
+            ctx.textAlign = align || 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(str), x, y);
+        };
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+
+        // Header
+        ctx.fillStyle = '#0f2a4a';
+        ctx.fillRect(0, 0, W, headerH);
+        text(model.title, padX, 38, 26, '#ffffff', '700');
+        text(model.subtitle, padX, 68, 14, '#9fc0e4');
+        text('Your year so far', W - padX, 38, 14, '#9fc0e4', '400', 'right');
+
+        // ── Chart ──
+        var chartTop = headerH + 20;
+        var chartBottom = headerH + chartH - 26;
+        var worst = model.columns.reduce(function (m, c) {
+            return Math.max(m, c.total || 0, c.overallTotal || 0);
+        }, 1);
+        var span = Math.max(1, worst - 1);
+        var x = function (i) { return padX + labelW + colW * (i + 0.5); };
+        var y = function (rank) { return chartTop + ((rank - 1) / span) * (chartBottom - chartTop); };
+
+        [1, Math.round((1 + worst) / 2), worst].forEach(function (r) {
+            var yy = y(r);
+            ctx.strokeStyle = '#e6ecf3';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padX + labelW - 8, yy);
+            ctx.lineTo(W - padX, yy);
+            ctx.stroke();
+            text('#' + r, padX + labelW - 14, yy, 11, '#9aa7b4', '400', 'right');
+        });
+        text('Best', padX + labelW - 14, chartTop - 14, 11, '#9aa7b4', '600', 'right');
+
+        var runs = function (valueOf, color, width, dashed) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.setLineDash(dashed ? [6, 4] : []);
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            var drawing = false;
+            ctx.beginPath();
+            model.columns.forEach(function (c, i) {
+                var v = valueOf(c);
+                if (!Number.isFinite(v)) { drawing = false; return; }
+                if (!drawing) { ctx.moveTo(x(i), y(v)); drawing = true; }
+                else ctx.lineTo(x(i), y(v));
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+        };
+
+        runs(function (c) { return c.overallRank; }, '#8e6bbf', 2.5, true);
+        runs(function (c) { return c.rank; }, '#1565c0', 3, false);
+
+        model.columns.forEach(function (c, i) {
+            if (Number.isFinite(c.overallRank)) {
+                ctx.beginPath();
+                ctx.arc(x(i), y(c.overallRank), 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#8e6bbf';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+            }
+            if (!Number.isFinite(c.rank)) {
+                text('no data', x(i), (chartTop + chartBottom) / 2, 11, '#c3ccd6', '400', 'center');
+                return;
+            }
+            ctx.beginPath();
+            ctx.arc(x(i), y(c.rank), 5.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#1565c0';
+            ctx.fill();
+            text('#' + c.rank, x(i), y(c.rank) - 16, 12, '#0f2a4a', '700', 'center');
+        });
+
+        // Legend
+        var legendY = headerH + chartH - 8;
+        var legend = function (lx, color, dashed, label) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash(dashed ? [5, 3] : []);
+            ctx.beginPath();
+            ctx.moveTo(lx, legendY);
+            ctx.lineTo(lx + 20, legendY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            text(label, lx + 26, legendY, 11, '#5b6b7c');
+            ctx.font = '400 11px ' + IMG_FONT;
+            return lx + 26 + ctx.measureText(label).width + 22;
+        };
+        var lx = padX + labelW;
+        lx = legend(lx, '#1565c0', false, 'Rank that month');
+        legend(lx, '#8e6bbf', true, 'Year to date');
+
+        // ── Grid ──
+        var gridTop = headerH + chartH + gap;
+        model.columns.forEach(function (c, i) {
+            var cx = x(i);
+            if (i % 2 === 1) {
+                ctx.fillStyle = '#f7f9fc';
+                ctx.fillRect(cx - colW / 2, gridTop, colW, headRowH + rowH * rows);
+            }
+            text(c.label + (c.inProgress ? '*' : ''), cx, gridTop + headRowH / 2, 13,
+                c.inProgress ? '#b45309' : '#0f2a4a', '700', 'center');
+        });
+
+        var rowLabels = ['Rank', 'KPIs met'].concat(TRAJECTORY_METRIC_ROWS.map(function (r) { return r.label; }));
+        rowLabels.forEach(function (label, r) {
+            var ry = gridTop + headRowH + rowH * r + rowH / 2;
+            ctx.strokeStyle = '#eef2f7';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padX, ry - rowH / 2);
+            ctx.lineTo(W - padX, ry - rowH / 2);
+            ctx.stroke();
+            text(label, padX + 6, ry, 12, '#5b6b7c', r < 2 ? '700' : '400');
+
+            model.columns.forEach(function (c, i) {
+                var cx = x(i);
+                if (!c.present) { text('.', cx, ry, 12, '#c3ccd6', '400', 'center'); return; }
+                if (r === 0) {
+                    text('#' + c.rank, cx, ry, 13, '#0f2a4a', '700', 'center');
+                    return;
+                }
+                if (r === 1) {
+                    text(c.kpisMet + '/' + c.measuredCount, cx, ry, 13, '#0f2a4a', '600', 'center');
+                    return;
+                }
+                var m = c.metrics[r - 2];
+                if (!m || !m.display) { text('.', cx, ry, 12, '#c3ccd6', '400', 'center'); return; }
+                if (m.score) {
+                    ctx.beginPath();
+                    ctx.arc(cx - 30, ry, 7, 0, Math.PI * 2);
+                    ctx.fillStyle = IMG_SCORE_COLOR[m.score] || '#5b6b7c';
+                    ctx.fill();
+                    text(m.score, cx - 30, ry + 0.5, 9, '#ffffff', '700', 'center');
+                }
+                text(m.display, cx - 18, ry, 12, '#26364a', '400');
+            });
+        });
+
+        var lastRow = gridTop + headRowH + rowH * rows;
+        ctx.strokeStyle = '#eef2f7';
+        ctx.beginPath();
+        ctx.moveTo(padX, lastRow);
+        ctx.lineTo(W - padX, lastRow);
+        ctx.stroke();
+        text('3 exceeds  2 meets  1 below   *month still in progress', padX + 6, lastRow + 18, 11, '#9aa7b4');
+
+        return canvas;
+    }
+
+    /* Canvas to clipboard, so it can be pasted straight into the draft.
+
+       Falls back to downloading the file where the clipboard will not take an
+       image — Firefox and Safari still refuse — because a picture in the
+       downloads folder is recoverable and a silent failure is not. */
+    function _copyYearImage(name, done) {
+        var model = buildYearImageModel(name);
+        var canvas = model && _drawYearCard(model);
+        if (!canvas || typeof canvas.toBlob !== 'function') { done(false); return; }
+
+        canvas.toBlob(function (blob) {
+            if (!blob) { done(false); return; }
+            var save = function () {
+                try {
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = String(name).replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-year.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                    done('downloaded');
+                } catch (err) { done(false); }
+            };
+            if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+                navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })])
+                    .then(function () { done('copied'); }, save);
+            } else {
+                save();
+            }
+        }, 'image/png');
+    }
+
+    /* Opens the draft addressed and subject-filled, and puts the year picture on
+       the clipboard.
+
+       The text goes in the mail body, where it needs no pasting. The clipboard
+       is spent on the picture instead, since that is the thing a mailto cannot
+       carry at all. */
     function _emailMonthOverMonth(name) {
         var mail = buildMonthOverMonthEmail(name);
         if (!mail) {
@@ -1505,21 +1783,23 @@
             '&subject=' + encodeURIComponent(mail.subject) +
             '&body=' + encodeURIComponent(mail.body);
 
-        var open = function () {
+        var open = function (imageResult) {
             var link = document.createElement('a');
             link.href = href;
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            if (typeof window.showToast === 'function') {
+                window.showToast(imageResult === 'copied'
+                    ? 'Year chart copied - paste it into the draft'
+                    : imageResult === 'downloaded'
+                        ? 'Year chart saved to your downloads - attach it to the draft'
+                        : 'Draft opened');
+            }
         };
 
-        if (typeof window.copyToClipboard === 'function') {
-            window.copyToClipboard(mail.body, { message: 'Summary copied - opening your email' })
-                .then(open, open);
-        } else {
-            open();
-        }
+        _copyYearImage(name, open);
     }
 
     function _openTrajectory(name) {
@@ -1551,7 +1831,7 @@
                 '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
                 '<span style="color: var(--text-tertiary); font-size: 0.78em;">Goes to ' +
-                _escapeHtml(_apsEmailFor(name)) + ', copied to your clipboard too.</span>' +
+                _escapeHtml(_apsEmailFor(name)) + '. The year chart is copied &mdash; paste it in.</span>' +
             '</div>';
 
         overlay.appendChild(content);
@@ -2084,6 +2364,12 @@
         // The draft, built without touching the DOM or a mail client, so its
         // wording can be asserted rather than eyeballed.
         buildMonthOverMonthEmail: buildMonthOverMonthEmail,
+        // What goes into the year picture. The canvas itself can only be
+        // eyeballed; this is the part that can be asserted.
+        buildYearImageModel: buildYearImageModel,
+        // Exported so the geometry can be checked against a recording context.
+        // Pixels cannot be asserted; coordinates landing off the canvas can.
+        drawYearCard: _drawYearCard,
         resetPeriodSelection: resetPeriodSelection
     };
 
