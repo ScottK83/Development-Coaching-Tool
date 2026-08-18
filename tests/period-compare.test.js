@@ -602,3 +602,65 @@ suite('period compare: a rebuilt month reports the span it really covers', (t) =
     t.equal('the span starts in the month before', aug.spanStart, '2026-07-27');
     t.equal('and ends with the last completed week', aug.spanEnd, '2026-08-09');
 });
+
+
+/* ── Month to date beats the rebuild for its own month ── */
+
+const MTD_WEEKS = {
+    // The rebuild's August: starts 27 July, stops at the last finished week.
+    '2026-07-27|2026-08-02': {
+        employees: [{ name: 'A', totalCalls: 100, aht: 900, scheduleAdherence: 80, overallSentiment: 80 }],
+        metadata: { startDate: '2026-07-27', endDate: '2026-08-02', periodType: 'week' }
+    },
+    '2026-08-03|2026-08-09': {
+        employees: [{ name: 'A', totalCalls: 100, aht: 900, scheduleAdherence: 80, overallSentiment: 80 }],
+        metadata: { startDate: '2026-08-03', endDate: '2026-08-09', periodType: 'week' }
+    }
+};
+
+function mtdRow(endDate, aht) {
+    return {
+        [`2026-08-01|${endDate}`]: {
+            employees: [{ name: 'A', totalCalls: 100, aht: aht, scheduleAdherence: 95, overallSentiment: 95 }],
+            metadata: { startDate: '2026-08-01', endDate: endDate, periodType: 'month-to-date' }
+        }
+    };
+}
+
+suite('period compare: a month-to-date upload replaces the weekly rebuild', (t) => {
+    const pc = loadPure(t, Object.assign({}, MTD_WEEKS, mtdRow('2026-08-17', 400)));
+    const buckets = pc.getMonthBuckets(2026);
+
+    // The rebuild would have started on 27 July. The whole point of the upload
+    // is that it does not.
+    t.check('August comes from the upload', buckets.fromUpload['2026-08'] === true);
+    t.equal('and only from it', buckets.monthsMap['2026-08'].length, 1);
+    t.equal('the one row is the month-to-date one', buckets.monthsMap['2026-08'][0], '2026-08-01|2026-08-17');
+
+    const agg = pc.buildMonthAggregate('2026-08', 2026);
+    t.equal('so the numbers are the real month, not the stitched weeks', agg.employees[0].aht, 400);
+    t.equal('and the span starts on the first', agg.spanStart, '2026-08-01');
+    t.equal('not in the month before', agg.spanEnd, '2026-08-17');
+});
+
+suite('period compare: a completed month is left to its own rules', (t) => {
+    // Only the current month can be carried by a month-to-date row. A stale one
+    // for a finished month must not out-rank four real weeks.
+    const pc = loadPure(t, Object.assign({}, MTD_WEEKS, {
+        '2026-07-01|2026-07-14': {
+            employees: [{ name: 'A', totalCalls: 100, aht: 400, scheduleAdherence: 95 }],
+            metadata: { startDate: '2026-07-01', endDate: '2026-07-14', periodType: 'month-to-date' }
+        }
+    }));
+    const buckets = pc.getMonthBuckets(2026);
+    t.check('July is not taken over by a stale month-to-date row', !buckets.fromUpload['2026-07']);
+});
+
+suite('period compare: one day into the month still beats a rebuild made of last month', (t) => {
+    // No fortnight floor here, unlike a real monthly upload: on the second of
+    // the month the rebuild's "August" is almost entirely July.
+    const pc = loadPure(t, Object.assign({}, MTD_WEEKS, mtdRow('2026-08-01', 350)));
+    const buckets = pc.getMonthBuckets(2026);
+    t.check('the short month-to-date row still wins', buckets.fromUpload['2026-08'] === true);
+    t.equal('and it is what gets aggregated', pc.buildMonthAggregate('2026-08', 2026).employees[0].aht, 350);
+});

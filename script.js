@@ -2388,6 +2388,8 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
         label = `Week in progress: ${startDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
     } else if (periodType === 'month') {
         label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
+    } else if (periodType === 'month-to-date') {
+        label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} to date (through ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`;
     } else if (periodType === 'quarter') {
         const quarter = Math.floor(startDateObj.getMonth() / 3) + 1;
         label = `Q${quarter} ${startDateObj.getFullYear()}`;
@@ -2952,11 +2954,15 @@ function handleLoadPastedDataClick() {
                     }
                 }
             });
-        } else if (periodType === 'week-in-progress') {
+        } else if (periodType === 'week-in-progress' || periodType === 'month-to-date') {
+            // Both of these are one row that keeps being re-uploaded as the period
+            // runs on, so yesterday's copy of the same period is replaced rather
+            // than left beside the new one. Matched on start date, because the end
+            // moves every day and the key moves with it.
             Object.keys(weeklyData).forEach(k => {
                 if (k === weekKey) return;
                 const m = weeklyData[k]?.metadata || {};
-                if (m.periodType !== 'week-in-progress') return;
+                if (m.periodType !== periodType) return;
                 const startText = m.startDate || (k.includes('|') ? k.split('|')[0] : '');
                 if (startText === startDate) {
                     delete weeklyData[k];

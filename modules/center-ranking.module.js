@@ -97,6 +97,8 @@
         var type = match && match.type;
         if (type === 'ytd') return 'ytd';
         if (type === 'week' || type === 'week-in-progress') return 'week';
+        // A month-to-date row is a month, and months are what it compares against.
+        if (type === 'month-to-date') return 'month';
         // Quarters and days have no comparable series of their own; months are the
         // nearest thing that does, and the caption says which months.
         return 'month';
@@ -279,6 +281,7 @@
         var endDate = parts[1] || parts[0] || '';
         var prefix;
         if (type === 'ytd') prefix = 'YTD';
+        else if (type === 'month-to-date') prefix = 'Month to date';
         else if (type === 'month') prefix = 'Monthly';
         else if (type === 'quarter') prefix = 'Quarterly';
         else if (type === 'daily') prefix = 'Daily';
@@ -289,8 +292,8 @@
 
     function _renderRankingPeriodSelector(selectedValue) {
         var periods = _getAvailableRankingPeriods();
-        var typeOrder = ['ytd', 'quarter', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
-        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
+        var typeOrder = ['ytd', 'quarter', 'month-to-date', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
+        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', 'month-to-date': 'Month to Date', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
         var grouped = {};
         periods.forEach(function(p) {
             var t = p.type || 'week';

@@ -197,3 +197,50 @@ suite('upload gaps: a brand new install is not scolded for the year so far', (t)
     t.equal('no gaps are invented', gaps.totalMissing, 0);
     t.equal('and no backfill is demanded', gaps.priorCount, 0);
 });
+
+
+/* ── Month to date ──
+   A rebuilt month runs on whole weeks, so "August" starts in July and stops at
+   the last finished week. A month-to-date upload is the real month so far,
+   straight from the source, and replaces itself every time it is uploaded. */
+
+suite('upload options: month to date is offered for the current month', (t) => {
+    const wiz = loadWizard(t);
+    const opts = wiz.computeUploadOptions(TODAY);          // 18 Aug 2026
+    const mtd = opts.find((o) => o.id === 'month-to-date');
+
+    t.check('the option exists', !!mtd);
+    t.equal('it is its own kind of period', mtd.periodType, 'month-to-date');
+    t.equal('it starts on the first of the month', mtd.startDate, '2026-08-01');
+    // PowerBI publishes the prior day, the same reason the week-in-progress
+    // option stops at yesterday.
+    t.equal('and ends yesterday, not today', mtd.endDate, '2026-08-17');
+    t.check('it names the month', /August 2026 to date/.test(mtd.label));
+    t.check('it sits between last week and last completed month',
+        mtd.priority > opts.find((o) => o.id.startsWith('week-')).priority &&
+        mtd.priority < opts.find((o) => o.id.startsWith('month-2')).priority);
+});
+
+suite('upload options: on the first of the month there is nothing to date yet', (t) => {
+    const wiz = loadWizard(t);
+    const opts = wiz.computeUploadOptions(new Date(2026, 7, 1));
+    t.check('no month-to-date option', !opts.some((o) => o.id === 'month-to-date'));
+});
+
+suite('upload gaps: a month-to-date upload covers its month', (t) => {
+    const wiz = loadWizard(t);
+    const withMtd = Object.assign({
+        '2026-08-01|2026-08-17': {
+            employees: [{ name: 'A' }],
+            metadata: { startDate: '2026-08-01', endDate: '2026-08-17', periodType: 'month-to-date' }
+        }
+    }, STORE);
+    const cov = wiz.monthCoverage(withMtd, TODAY);
+    t.equal('August reads as uploaded', cov[7].status, 'uploaded');
+
+    // It is the current month, so it was never on the backfill list anyway —
+    // but it must not start appearing there either.
+    const gaps = wiz.computeMissingWeeks(withMtd, TODAY);
+    t.check('and is not offered for backfill',
+        gaps.monthOptions.every((o) => o.id !== 'month-2026-08-01'));
+});

@@ -162,6 +162,26 @@
             return Object.keys(names).length;
         }
 
+        /* A month-to-date upload is the real month so far, straight from the
+           source. It beats the weekly rebuild for its month outright — the
+           rebuild runs on whole weeks, so it starts in the previous month and
+           stops at the last finished week, which is exactly the mismatch a
+           month-to-date row exists to remove.
+
+           No fortnight floor and no head-count test: it only ever describes the
+           current month, it is never offered for backfill, and on the second of
+           the month one day of real data still beats nothing or a rebuild made
+           mostly of last month. It stays flagged in progress either way. */
+        var _nowMo = _nowMonth();
+        Object.keys(wData).forEach(function (k) {
+            if (_periodType(k) !== 'month-to-date') return;
+            if (_yearOf(k) !== yr) return;
+            var mtdMo = String(_endDate(k)).slice(0, 7);
+            if (mtdMo !== _nowMo) return;
+            monthsMap[mtdMo] = [k];
+            fromUpload[mtdMo] = true;
+        });
+
         Object.keys(wData).forEach(function (k) {
             if (_periodType(k) !== 'month') return;
             if (_yearOf(k) !== yr) return;

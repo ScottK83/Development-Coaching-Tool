@@ -86,6 +86,8 @@
         // Week boundaries (Monday start)
         const daysBackToMon = dow === 0 ? 6 : dow - 1;
         const thisWeekMon = addDays(now, -daysBackToMon);
+        const thisMonthFirstForMtd = new Date(now.getFullYear(), now.getMonth(), 1);
+        const mtdMonthName = thisMonthFirstForMtd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const lastWeekMon = addDays(thisWeekMon, -7);
         const lastWeekSun = addDays(thisWeekMon, -1);
         const yesterday = addDays(now, -1);
@@ -129,6 +131,21 @@
             endDate: isoDate(lastWeekSun),
             priority: 2
         });
+
+        // 2b. Month to date. The current month up to yesterday, replacing itself
+        //     on every upload — the point is one row that is always the real
+        //     month so far, rather than a rebuild stitched from whole weeks that
+        //     starts in the previous month.
+        if (yesterday >= thisMonthFirstForMtd) {
+            options.push({
+                id: 'month-to-date',
+                label: `${mtdMonthName} to date (${fmtShort(thisMonthFirstForMtd)} – ${fmtShort(yesterday)})`,
+                periodType: 'month-to-date',
+                startDate: isoDate(thisMonthFirstForMtd),
+                endDate: isoDate(yesterday),
+                priority: 2.5
+            });
+        }
 
         // 3. Last completed month
         const thisMonthFirst = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -306,6 +323,10 @@
                 if (Math.round((end - start) / MS_PER_DAY) + 1 >= MIN_DAYS_FOR_MONTH_UPLOAD) {
                     monthUploads.add(end.getMonth());
                 }
+            } else if (type === 'month-to-date') {
+                // Covers its month for as far as the month has gone. It is only
+                // ever the current one, which is never offered for backfill.
+                monthUploads.add(end.getMonth());
             }
         });
 
