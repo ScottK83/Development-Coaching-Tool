@@ -957,3 +957,64 @@ suite('rankings view: a rebuilt year says which month it really starts in', (t) 
     t.check('but the cells admit where the data begins', /from Jun only/.test(html));
     t.check('and it is marked, not buried', /color: #e65100;">from Jun only/.test(html));
 });
+
+/* ── Month over month, as an email ── */
+
+suite('rankings view: the month-over-month email is addressed and readable', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const mail = cr.buildMonthOverMonthEmail('P0');
+
+    t.check('there is a draft', !!mail);
+    t.equal('addressed first.last at aps', mail.to, 'p0@aps.com');
+    t.equal('copied to the coaching mailbox', mail.cc, 'Brandywine.Lockhart@aps.com');
+    t.check('the subject names both months', /June 2026 to July 2026/.test(mail.subject));
+
+    // Written to the associate, not about them.
+    t.check('it opens to the person by first name', /^Hi P0,/.test(mail.body));
+    t.check('and closes as an invitation', /Happy to walk through any of it\.$/.test(mail.body));
+    t.check('nothing in it is about other people', !/better than \d+/.test(mail.body));
+
+    // A spaced table is the only kind that survives a plain-text mail body, so
+    // the arrows have to line up in one column.
+    const arrows = mail.body.split(String.fromCharCode(10)).filter((l) => l.includes(' -> '));
+    t.check('every row is an arrow row', arrows.length >= 5);
+    t.check('and they all line up',
+        new Set(arrows.map((l) => l.indexOf(' -> '))).size === 1);
+
+    t.check('the average is spelled out rather than left to be inferred',
+        /Average\s+[\d.]+ ->\s+[\d.]+\s+out of 3\.0/.test(mail.body));
+    t.check('and the placing is a placing, not a beaten-count',
+        /In the call center you (moved (up|down) \d+ places|placed \d+ out of \d+)/.test(mail.body));
+
+    // Short enough that a mail client will not truncate the body.
+    t.check('it fits in a mailto', mail.body.length < 1800);
+});
+
+suite('rankings view: the email reports the outcome, not the arithmetic', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+
+    // AHT rising is a step backwards; adherence rising is a step forwards. A
+    // bare "up 11" would read as praise on one line and a warning on the next.
+    const bodies = ['P0', 'P1', 'P2', 'P3', 'P4', 'P5'].map((n) => cr.buildMonthOverMonthEmail(n))
+        .filter(Boolean).map((m) => m.body);
+    t.check('some drafts were built', bodies.length > 0);
+
+    const ahtLines = bodies.map((b) => (b.match(/ {2}AHT.*/) || [''])[0]).filter(Boolean);
+    t.check('AHT is judged, not just measured',
+        ahtLines.every((l) => /no change|better by|worse by/.test(l)));
+    t.check('and a slower AHT is called worse',
+        ahtLines.filter((l) => /worse by/.test(l)).every((l) => {
+            const m = l.match(/([\d.]+) sec ->\s+([\d.]+) sec/);
+            return !m || Number(m[2]) > Number(m[1]);
+        }));
+});
+
+suite('rankings view: one month is not a month-over-month story', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    // Someone with no history cannot have a draft built for them, and the
+    // caller has to be able to tell rather than sending an empty one.
+    t.equal('an unknown person yields nothing', cr.buildMonthOverMonthEmail('Nobody At All'), null);
+});

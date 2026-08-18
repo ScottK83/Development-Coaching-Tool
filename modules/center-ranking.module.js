@@ -1338,6 +1338,185 @@
         return html + '</div>';
     }
 
+
+    /* ── Month over month, as an email ──
+
+       Written to the associate, not about them. Plain text, because a mailto
+       body is plain text in every client — a table drawn in spaces survives the
+       trip, and anything cleverer arrives as markup.
+
+       Only the two most recent months that both have data, because "here is
+       July against August" is a conversation and eight columns is a report
+       nobody reads. */
+
+    var COACHING_CC = 'Brandywine.Lockhart@aps.com';
+
+    // first.last@aps.com. Matches the rule the red-flag and trend emails use, so
+    // one person cannot end up addressed two different ways.
+    function _apsEmailFor(name) {
+        var parts = String(name || '').trim().split(/\s+/)
+            .map(function (part) { return part.replace(/[^a-zA-Z0-9'-]/g, ''); })
+            .filter(Boolean);
+        if (!parts.length) return '';
+        return parts.join('.').toLowerCase() + '@aps.com';
+    }
+
+    // Metrics where a bigger number is worse, so the arrow can point at the
+    // outcome rather than at the arithmetic.
+    var EMAIL_METRIC_ROWS = [
+        { label: 'AHT', key: 'aht', registry: 'aht', lowerIsBetter: true, unit: 'sec' },
+        { label: 'Adherence', key: 'adherence', registry: 'scheduleAdherence', lowerIsBetter: false, unit: 'pts' },
+        { label: 'Sentiment', key: 'sentiment', registry: 'overallSentiment', lowerIsBetter: false, unit: 'pts' },
+        { label: 'Rep Sat', key: 'associateOverall', registry: 'cxRepOverall', lowerIsBetter: false, unit: 'pts' },
+        { label: 'Reliability', key: 'reliability', registry: 'reliability', lowerIsBetter: true, unit: 'h' }
+    ];
+
+    function _emailMetricValue(pt, row) {
+        if (!pt) return null;
+        if (row.key === 'reliability') return pt.reliability;
+        var v = (pt.values || {})[row.key];
+        return v === undefined ? null : v;
+    }
+
+    function _padEnd(text, width) {
+        var out = String(text);
+        while (out.length < width) out += ' ';
+        return out;
+    }
+    function _padStart(text, width) {
+        var out = String(text);
+        while (out.length < width) out = ' ' + out;
+        return out;
+    }
+
+    /**
+     * The two most recent points that both carry data, oldest first, or null.
+     * A trajectory with one month has no month-over-month story to tell.
+     */
+    function _lastTwoScored(series) {
+        var scored = (series || []).filter(function (pt) { return pt && Number.isFinite(pt.rank); });
+        if (scored.length < 2) return null;
+        return [scored[scored.length - 2], scored[scored.length - 1]];
+    }
+
+    function buildMonthOverMonthEmail(name) {
+        var series = _timelineFor(name);
+        var pair = _lastTwoScored(series);
+        if (!pair) return null;
+
+        var prev = pair[0], cur = pair[1];
+        var firstName = String(name || '').trim().split(/\s+/)[0] || name;
+        var prevLabel = _shortPeriodLabel(prev.label);
+        var curLabel = _shortPeriodLabel(cur.label) + (cur.inProgress ? ' so far' : '');
+
+        // One column width for everything, so the arrows form a straight line
+        // down the message. A spaced table is the only kind that survives a
+        // plain-text mail body intact.
+        var W = 11;
+        var col = function (label, a, b, trailing) {
+            return '  ' + _padEnd(label, 13) + _padStart(a, W) + ' -> ' + _padStart(b, W) +
+                (trailing ? '    ' + trailing : '');
+        };
+
+        var lines = [];
+        lines.push('Hi ' + firstName + ',');
+        lines.push('');
+        lines.push('Here is how your numbers moved from ' + prev.label + ' to ' + cur.label +
+            (cur.inProgress ? ' so far.' : '.'));
+        lines.push('');
+        lines.push('  ' + _padEnd('', 13) + _padStart(prevLabel, W) + '    ' + _padStart(curLabel, W) + '    Change');
+        lines.push('  ' + new Array(13 + W + 4 + W + 12).join('-'));
+
+        EMAIL_METRIC_ROWS.forEach(function (row) {
+            var a = _emailMetricValue(prev, row);
+            var b = _emailMetricValue(cur, row);
+            var missing = function (v) { return v === null || v === undefined || isNaN(v); };
+            // A metric nobody measured is not a row. Printing "-- -> --" only
+            // invites being asked what happened to it.
+            if (missing(a) && missing(b)) return;
+
+            var shown = function (v) { return missing(v) ? '--' : _formatMetricDisplay(row.registry, v); };
+            var change = '';
+            if (!missing(a) && !missing(b)) {
+                var diff = b - a;
+                if (Math.abs(diff) < 0.05) {
+                    change = 'no change';
+                } else {
+                    // The arrow reports the outcome, not the direction of the
+                    // number: AHT going up is a step backwards.
+                    var better = row.lowerIsBetter ? diff < 0 : diff > 0;
+                    change = (better ? 'better by ' : 'worse by ') +
+                        (Math.round(Math.abs(diff) * 10) / 10) + ' ' + row.unit;
+                }
+            }
+            lines.push(col(row.label, shown(a), shown(b), change));
+        });
+
+        lines.push('');
+        lines.push(col('KPIs met', prev.kpisMet + '/' + prev.measuredCount,
+            cur.kpisMet + '/' + cur.measuredCount, ''));
+        lines.push(col('Average', prev.kpiScore.toFixed(1), cur.kpiScore.toFixed(1), 'out of 3.0'));
+        lines.push(col('Overall', prev.trackLabel, cur.trackLabel, ''));
+
+        // Placing, not a beaten-count. This one is written to the person.
+        if (Number.isFinite(cur.rank)) {
+            lines.push('');
+            if (Number.isFinite(prev.rank) && Number.isFinite(cur.delta) && cur.delta !== 0) {
+                lines.push('In the call center you moved ' + (cur.delta > 0 ? 'up' : 'down') + ' ' +
+                    Math.abs(cur.delta) + ' places, ' + prev.rank + ' to ' + cur.rank + '.');
+            } else {
+                lines.push('In the call center you placed ' + cur.rank + ' out of ' + cur.total + '.');
+            }
+        }
+
+        lines.push('');
+        lines.push('Happy to walk through any of it.');
+
+        return {
+            to: _apsEmailFor(name),
+            cc: COACHING_CC,
+            subject: prev.label + ' to ' + cur.label + ' - your numbers',
+            body: lines.join('\n'),
+            prevLabel: prev.label,
+            curLabel: cur.label
+        };
+    }
+
+    /* Opens the draft addressed and subject-filled, and puts the body on the
+       clipboard as well.
+
+       Both, deliberately. A mailto body is truncated by some clients past a
+       couple of thousand characters and mangled by others, and this one is a
+       spaced table where a mangled line is worse than no line — so the clipboard
+       is the copy that is guaranteed to arrive intact. */
+    function _emailMonthOverMonth(name) {
+        var mail = buildMonthOverMonthEmail(name);
+        if (!mail) {
+            alert('Two months of data are needed before there is a month-over-month story to send.');
+            return;
+        }
+        var href = 'mailto:' + encodeURIComponent(mail.to) +
+            '?cc=' + encodeURIComponent(mail.cc) +
+            '&subject=' + encodeURIComponent(mail.subject) +
+            '&body=' + encodeURIComponent(mail.body);
+
+        var open = function () {
+            var link = document.createElement('a');
+            link.href = href;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        if (typeof window.copyToClipboard === 'function') {
+            window.copyToClipboard(mail.body, { message: 'Summary copied - opening your email' })
+                .then(open, open);
+        } else {
+            open();
+        }
+    }
+
     function _openTrajectory(name) {
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
@@ -1360,9 +1539,14 @@
             // so its bars sit on its own edges rather than at the end of the content.
             '<div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">' +
             buildTrajectoryHtml(name) + '</div>' +
-            '<div style="margin-top: 14px; display: flex; gap: 10px;">' +
+            '<div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">' +
+                '<button id="rankTrajectoryEmail" style="padding: 8px 16px; background: #2e7d32; color: white; ' +
+                'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
+                'Email month over month summary</button>' +
                 '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
+                '<span style="color: var(--text-tertiary); font-size: 0.78em;">Goes to ' +
+                _escapeHtml(_apsEmailFor(name)) + ', copied to your clipboard too.</span>' +
             '</div>';
 
         overlay.appendChild(content);
@@ -1375,6 +1559,8 @@
             close();
             _scrollToRow(name);
         });
+        var emailBtn = document.getElementById('rankTrajectoryEmail');
+        if (emailBtn) emailBtn.addEventListener('click', function () { _emailMonthOverMonth(name); });
     }
 
     // The old behaviour of a name click, kept behind a button in the modal.
@@ -1890,6 +2076,9 @@
         // The modal body, built without touching the DOM, so what a name click
         // shows can be asserted rather than eyeballed.
         buildTrajectoryHtml: buildTrajectoryHtml,
+        // The draft, built without touching the DOM or a mail client, so its
+        // wording can be asserted rather than eyeballed.
+        buildMonthOverMonthEmail: buildMonthOverMonthEmail,
         resetPeriodSelection: resetPeriodSelection
     };
 
