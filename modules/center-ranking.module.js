@@ -846,6 +846,314 @@
         };
     }
 
+
+    /* ── Trajectory ──
+       "Down 39" is a fact about one step. The question it always raises next is
+       what the rest of the year looked like, and until now the only way to answer
+       it was to change the period selector eight times and write the numbers down.
+
+       Two surfaces: a strip of per-period deltas on the card, and the whole year
+       on click. Both read the same series, so they can never disagree.
+
+       Rank shown per month is over the people scored in that month. The arrow into
+       a month is measured over the people scored in both it and the month before.
+       Those are two scales — the same two the table and its movement column use —
+       so the arrow is not always the difference of the two ranks either side of
+       it, and the modal prints the shared pair it IS the difference of. */
+
+    var TRAJECTORY_SCOPE = 'month';
+
+    function _timeline() {
+        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (!pc || !pc.buildRankTimeline) return null;
+        try {
+            return pc.buildRankTimeline(TRAJECTORY_SCOPE);
+        } catch (err) {
+            console.warn('[center-ranking] Trajectory unavailable:', err && err.message);
+            return null;
+        }
+    }
+
+    function _timelineFor(name) {
+        var tl = _timeline();
+        return (tl && tl.byName[name]) || null;
+    }
+
+    // "July 2026" -> "Jul", so a dozen chips fit across a 240px card. Anything
+    // whose shape this does not recognise is trimmed rather than dropped.
+    var MONTH_ABBREV = {
+        January: 'Jan', February: 'Feb', March: 'Mar', April: 'Apr',
+        May: 'May', June: 'Jun', July: 'Jul', August: 'Aug',
+        September: 'Sep', October: 'Oct', November: 'Nov', December: 'Dec'
+    };
+    function _shortPeriodLabel(label) {
+        var word = String(label || '').split(' ')[0];
+        return MONTH_ABBREV[word] || (word.length > 5 ? word.slice(0, 5) : word);
+    }
+
+    function _deltaColor(pt) {
+        // A move with no score change behind it is greyed, everywhere. The centre
+        // compresses into few scoring buckets, so people reshuffle on tiebreakers
+        // alone and colouring that green invites congratulating nobody's work.
+        if (!pt.scoreChanged) return 'var(--text-tertiary)';
+        return pt.delta > 0 ? (_isDark() ? '#66bb6a' : '#2e7d32') : (_isDark() ? '#ef5350' : '#c62828');
+    }
+
+    function _deltaMarkup(pt) {
+        if (!Number.isFinite(pt.delta)) return '';
+        if (pt.delta === 0) return ' <span style="color: var(--text-tertiary);">&#8213;</span>';
+        return ' <span style="color: ' + _deltaColor(pt) + ';">' +
+            (pt.delta > 0 ? '&#9650;' : '&#9660;') + Math.abs(pt.delta) +
+            (pt.scoreChanged ? '' : '<span style="opacity:0.7;">*</span>') + '</span>';
+    }
+
+    function _pointTitle(pt) {
+        var parts = [pt.label + (pt.inProgress ? ' (so far)' : '') +
+            ' — #' + pt.rank + ' of ' + pt.total];
+        if (Number.isFinite(pt.delta) && pt.delta !== 0) {
+            parts.push((pt.delta > 0 ? 'up ' : 'down ') + Math.abs(pt.delta) +
+                ' (#' + pt.sharedPrevRank + ' to #' + pt.sharedRank + ' over the ' +
+                pt.sharedTotal + ' in both months)');
+        }
+        parts.push(pt.kpisMet + '/' + pt.measuredCount + ' KPIs, score ' + pt.scoreSum);
+        return parts.join('. ') + '.';
+    }
+
+    // The strip on the card: one chip per period, rank and the move into it.
+    function _renderTimelineStrip(series) {
+        if (!series || series.length < 2) return '';
+        var chips = series.map(function (pt) {
+            return '<span title="' + _escapeHtml(_pointTitle(pt)) + '" style="font-size: 0.72em; ' +
+                'padding: 1px 4px; border-radius: 3px; background: rgba(127,127,127,0.13); white-space: nowrap;">' +
+                (pt.inProgress
+                    ? '<span style="color: #e65100;">' + _escapeHtml(_shortPeriodLabel(pt.label)) + '</span>'
+                    : _escapeHtml(_shortPeriodLabel(pt.label))) +
+                ' <strong>' + pt.rank + '</strong>' + _deltaMarkup(pt) + '</span>';
+        });
+        return '<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 3px;">' + chips.join('') + '</div>';
+    }
+
+    /* ── The year, drawn ──
+       Rank 1 at the top, so up is better and the line reads the way the word
+       does. Inline SVG rather than a chart library: this is one polyline in a
+       modal, and it has to theme itself from the same CSS variables as
+       everything around it. */
+    function _trajectorySvg(series, reference) {
+        var W = 620, H = 200, padL = 42, padR = 18, padT = 18, padB = 30;
+        var worst = series.reduce(function (m, pt) { return Math.max(m, pt.total); }, 1);
+        if (reference && Number.isFinite(reference.rank)) worst = Math.max(worst, reference.total || 1);
+        var span = Math.max(1, worst - 1);
+        var n = series.length;
+        var x = function (i) { return n < 2 ? (padL + (W - padL - padR) / 2) : padL + (i * (W - padL - padR)) / (n - 1); };
+        var y = function (rank) { return padT + ((rank - 1) / span) * (H - padT - padB); };
+
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" role="img" ' +
+            'aria-label="Rank by month, best at the top" style="display:block;">';
+
+        // Gridlines at best, middle and worst.
+        [1, Math.round((1 + worst) / 2), worst].forEach(function (rank) {
+            var yy = y(rank);
+            svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy +
+                '" stroke="var(--border)" stroke-width="1" />';
+            svg += '<text x="' + (padL - 6) + '" y="' + (yy + 4) + '" text-anchor="end" ' +
+                'font-size="10" fill="var(--text-tertiary)">#' + rank + '</text>';
+        });
+
+        // Where they stand over the whole selected period, so the big number on
+        // the card is reconciled against the months in one glance.
+        if (reference && Number.isFinite(reference.rank)) {
+            var ry = y(reference.rank);
+            svg += '<line x1="' + padL + '" y1="' + ry + '" x2="' + (W - padR) + '" y2="' + ry +
+                '" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="5 4" />';
+            svg += '<text x="' + (W - padR) + '" y="' + (ry - 5) + '" text-anchor="end" ' +
+                'font-size="10" fill="#1565c0">#' + reference.rank + ' ' + _escapeHtml(reference.label) + '</text>';
+        }
+
+        var points = series.map(function (pt, i) { return x(i) + ',' + y(pt.rank); });
+        svg += '<polyline points="' + points.join(' ') + '" fill="none" stroke="#1565c0" stroke-width="2" ' +
+            'stroke-linejoin="round" stroke-linecap="round" />';
+
+        series.forEach(function (pt, i) {
+            var fill = pt.trackStatusValue === 'on-track-exceptional' ? '#2e7d32'
+                : pt.trackStatusValue === 'on-track-successful' ? '#1565c0' : '#c62828';
+            svg += '<circle cx="' + x(i) + '" cy="' + y(pt.rank) + '" r="4.5" fill="' + fill + '" />';
+            svg += '<text x="' + x(i) + '" y="' + (y(pt.rank) - 9) + '" text-anchor="middle" ' +
+                'font-size="10" font-weight="bold" fill="var(--text-primary)">' + pt.rank + '</text>';
+            svg += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle" ' +
+                'font-size="10" fill="' + (pt.inProgress ? '#e65100' : 'var(--text-secondary)') + '">' +
+                _escapeHtml(_shortPeriodLabel(pt.label)) + '</text>';
+        });
+
+        return svg + '</svg>';
+    }
+
+    // The five KPIs, one row each, a column per period. This is the answer to
+    // "which metric moved", which is the only useful next question after a rank
+    // drop and was previously a period-selector safari to find.
+    var TRAJECTORY_METRIC_ROWS = [
+        { label: 'AHT', scoreKey: 'aht', rankKey: 'aht', registry: 'aht' },
+        { label: 'Adherence', scoreKey: 'adherence', rankKey: 'adherence', registry: 'scheduleAdherence' },
+        { label: 'Sentiment', scoreKey: 'sentiment', rankKey: 'sentiment', registry: 'overallSentiment' },
+        { label: 'CX Adv', scoreKey: 'associateOverall', rankKey: 'associateOverall', registry: 'cxRepOverall' },
+        { label: 'Reliability', scoreKey: 'reliability', rankKey: 'reliability', registry: 'reliability' }
+    ];
+
+    function _trajectoryMetricValue(pt, row) {
+        if (row.scoreKey === 'reliability') return pt.reliability;
+        var v = (pt.values || {})[row.scoreKey];
+        return v === undefined ? null : v;
+    }
+
+    function _scoreDot(score) {
+        if (score === null || score === undefined) return '';
+        var bg = score === 3 ? '#2e7d32' : score === 2 ? '#1565c0' : '#c62828';
+        return '<span style="display: inline-block; width: 15px; height: 15px; line-height: 15px; ' +
+            'border-radius: 50%; font-size: 0.62em; font-weight: bold; color: #fff; background: ' + bg +
+            '; text-align: center; margin-right: 3px;">' + score + '</span>';
+    }
+
+    function buildTrajectoryHtml(name) {
+        var series = _timelineFor(name);
+        if (!series || !series.length) {
+            return '<p style="color: var(--text-secondary);">No month-by-month history for ' +
+                _escapeHtml(name) + ' yet. Two full months of uploads are needed before a trajectory exists.</p>';
+        }
+
+        var reference = null;
+        if (_lastRankingData) {
+            var row = _lastRankingData.rankings.filter(function (r) { return r.name === name; })[0];
+            if (row) {
+                reference = { rank: row.rank, total: _lastRankingData.totalEmployees,
+                    label: _selectedPeriodPhrase(_lastRankingData) };
+            }
+        }
+
+        var html = '';
+        html += '<p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.85em;">' +
+            'Rank in each month, over the people scored in that month. The arrow into a month is measured ' +
+            'against the month before, over the people scored in both — which is why it is not always the ' +
+            'difference of the two ranks either side of it. Best rank sits at the top.' +
+            (reference ? ' The dashed line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
+                '</strong>, the figure on the card.' : '') + '</p>';
+
+        html += '<div style="background: var(--bg-surface-raised); border: 1px solid var(--border); ' +
+            'border-radius: 8px; padding: 8px 4px 2px 4px; margin-bottom: 14px;">' +
+            _trajectorySvg(series, reference) + '</div>';
+
+        var th = 'padding: 5px 6px; border-bottom: 2px solid var(--border); font-size: 0.78em; ' +
+            'color: var(--text-secondary); text-align: center; white-space: nowrap;';
+        var td = 'padding: 5px 6px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap;';
+
+        html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">';
+        html += '<thead><tr><th style="' + th + ' text-align: left;">Month</th>';
+        series.forEach(function (pt) {
+            html += '<th style="' + th + '">' + _escapeHtml(_shortPeriodLabel(pt.label)) +
+                (pt.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        function bodyRow(label, cells, strong) {
+            var out = '<tr><td style="' + td + ' text-align: left; color: var(--text-secondary);' +
+                (strong ? ' font-weight: 700; color: var(--text-primary);' : '') + '">' + label + '</td>';
+            cells.forEach(function (c) { out += '<td style="' + td + '">' + c + '</td>'; });
+            return out + '</tr>';
+        }
+
+        html += bodyRow('Rank', series.map(function (pt) {
+            return '<strong>#' + pt.rank + '</strong> <span style="color: var(--text-tertiary); font-size: 0.85em;">of ' +
+                pt.total + '</span>';
+        }), true);
+
+        html += bodyRow('Move', series.map(function (pt) {
+            if (!Number.isFinite(pt.delta)) return '<span style="color: var(--text-tertiary);" title="Nothing before this to measure against">&middot;</span>';
+            if (pt.delta === 0) return '<span style="color: var(--text-tertiary);">&#8213;</span>';
+            return '<span style="color: ' + _deltaColor(pt) + '; font-weight: 600;">' +
+                (pt.delta > 0 ? '&#9650;' : '&#9660;') + Math.abs(pt.delta) + '</span>' +
+                '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + pt.sharedPrevRank +
+                '&rarr;' + pt.sharedRank + '</div>';
+        }));
+
+        html += bodyRow('KPIs met', series.map(function (pt) {
+            return '<span style="font-weight: 600; color: ' + _kpiMetColor(pt.kpisMet, pt.measuredCount, _isDark()) + ';">' +
+                pt.kpisMet + '/' + pt.measuredCount + '</span>';
+        }));
+
+        html += bodyRow('Score', series.map(function (pt) {
+            return pt.scoreSum + '/' + (pt.measuredCount * 3) +
+                '<div style="font-size: 0.72em; color: var(--text-tertiary);">' + pt.kpiScore.toFixed(1) + '</div>';
+        }));
+
+        html += bodyRow('Band', series.map(function (pt) {
+            var c = pt.trackStatusValue === 'on-track-exceptional' ? '#2e7d32'
+                : pt.trackStatusValue === 'on-track-successful' ? '#1565c0' : '#c62828';
+            return '<span style="display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 0.72em; ' +
+                'font-weight: bold; color: #fff; background: ' + c + ';">' + _escapeHtml(pt.trackLabel) + '</span>';
+        }));
+
+        html += '<tr><td colspan="' + (series.length + 1) + '" style="padding: 10px 6px 4px 6px; ' +
+            'font-size: 0.78em; color: var(--text-secondary); border-bottom: 2px solid var(--border);">' +
+            'The five KPIs behind it &mdash; value, its 3/2/1 score, and where that ranked in the month.</td></tr>';
+
+        TRAJECTORY_METRIC_ROWS.forEach(function (row) {
+            html += bodyRow(row.label, series.map(function (pt) {
+                var value = _trajectoryMetricValue(pt, row);
+                var score = (pt.scores || {})[row.scoreKey];
+                if (value === null || value === undefined || isNaN(value)) {
+                    return '<span style="color: var(--text-tertiary);" title="Not measured in ' +
+                        _escapeHtml(pt.label) + '">&mdash;</span>';
+                }
+                var mRank = (pt.metricRanks || {})[row.rankKey];
+                return _scoreDot(score === undefined ? null : score) + _escapeHtml(_formatMetricDisplay(row.registry, value)) +
+                    (Number.isFinite(mRank) ? '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + mRank + '</div>' : '');
+            }));
+        });
+
+        html += '</tbody></table></div>';
+        return html;
+    }
+
+    function _openTrajectory(name) {
+        var overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.style.display = 'flex';
+
+        var content = document.createElement('div');
+        content.className = 'modal-content';
+        content.style.maxWidth = '860px';
+        content.innerHTML =
+            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">' +
+                '<h3 style="margin: 0; color: var(--text-primary);">' + _escapeHtml(name) + '</h3>' +
+                '<button id="rankTrajectoryClose" style="background: none; border: none; font-size: 1.5em; ' +
+                'cursor: pointer; color: var(--text-secondary); padding: 0 4px;">&times;</button>' +
+            '</div>' +
+            '<div style="max-height: 74vh; overflow-y: auto;">' + buildTrajectoryHtml(name) + '</div>' +
+            '<div style="margin-top: 14px; display: flex; gap: 10px;">' +
+                '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
+                'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
+            '</div>';
+
+        overlay.appendChild(content);
+        document.body.appendChild(overlay);
+
+        var close = function () { overlay.remove(); };
+        document.getElementById('rankTrajectoryClose').addEventListener('click', close);
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+        document.getElementById('rankTrajectoryFind').addEventListener('click', function () {
+            close();
+            _scrollToRow(name);
+        });
+    }
+
+    // The old behaviour of a name click, kept behind a button in the modal.
+    function _scrollToRow(name) {
+        var row = document.querySelector('#centerRankingTableWrapper tr[data-employee="' + CSS.escape(name) + '"]');
+        if (!row) return;
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.transition = 'background 0.3s';
+        row.style.background = _isDark() ? '#1e3a5f' : '#bbdefb';
+        setTimeout(function () { row.style.background = ''; }, 2000);
+    }
+
     /**
      * Render the center ranking view
      */
@@ -856,6 +1164,8 @@
         // Recomputed per render, not per sort — an upload between renders must
         // not leave stale movement on screen.
         _momCache = undefined;
+        var _pcMod2 = window.DevCoachModules && window.DevCoachModules.periodCompare;
+        if (_pcMod2 && _pcMod2.resetTimelineCache) _pcMod2.resetTimelineCache();
 
         // Drop the remembered key if it no longer resolves (period was deleted,
         // replaced by cleanup, or hydrated from a different source mid-session).
@@ -1054,6 +1364,10 @@
                             _cardMv.prevScoreSum + '&rarr;' + _cardMv.curScoreSum + ')</span></div>';
                     }
                 }
+                // The whole year under the one-step move, so "down 39" is read
+                // against where they have actually been rather than in isolation.
+                html += _renderTimelineStrip(_timelineFor(r.name));
+
                 var kpiColor = _kpiMetColor(r.kpisMet, r.measuredCount, _isDark());
                 html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' + _escapeHtml(r.trackLabel) + ' &mdash; Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
                 // Denominator is what was actually measured. Printing "4/5 KPIs met"
@@ -1095,18 +1409,11 @@
         var sel = document.getElementById('rankingPeriodSelect');
         if (sel) sel.addEventListener('change', _onRankingPeriodChange);
 
-        // Bind team card name clicks to scroll to that employee's row
+        // A name opens that person's year. Scrolling to their row — what this
+        // used to do — is a button inside it, because the row says no more than
+        // the card already did.
         container.querySelectorAll('.ranking-card-name').forEach(function (el) {
-            el.addEventListener('click', function () {
-                var name = el.dataset.employee;
-                var row = document.querySelector('#centerRankingTableWrapper tr[data-employee="' + CSS.escape(name) + '"]');
-                if (row) {
-                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    row.style.transition = 'background 0.3s';
-                    row.style.background = _isDark() ? '#1e3a5f' : '#bbdefb';
-                    setTimeout(function () { row.style.background = ''; }, 2000);
-                }
-            });
+            el.addEventListener('click', function () { _openTrajectory(el.dataset.employee); });
         });
     }
 
@@ -1327,6 +1634,9 @@
         // Ranks an arbitrary employee array. period-compare uses it to re-rank a
         // past month, since rank is computed on demand and never stored.
         scoreAndRankEmployees: _scoreAndRank,
+        // The modal body, built without touching the DOM, so what a name click
+        // shows can be asserted rather than eyeballed.
+        buildTrajectoryHtml: buildTrajectoryHtml,
         resetPeriodSelection: resetPeriodSelection
     };
 

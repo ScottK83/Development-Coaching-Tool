@@ -661,3 +661,112 @@ suite('rankings view: the movement column names the ranks it moved between', (t)
     t.check('the table intro says the two do not subtract',
         /so the two do not subtract/.test(dom.shell()));
 });
+
+/* ── Trajectory ──
+   The one-step arrow answered "which way", never "from where in the year".
+   Reading it in isolation is what produced "down 39 to 21, so was she at minus
+   eighteen" — the strip and the modal put the step back among its neighbours. */
+
+suite('period compare: the timeline ranks each month, and measures moves pairwise', (t) => {
+    const { pc } = loadRankings(t, WEEKS, YTD);
+    const tl = pc.buildRankTimeline('month');
+
+    t.check('a timeline is built', !!tl);
+    t.equal('both rebuildable months are on it', tl.periods.length, 2);
+    t.equal('oldest first', tl.periods[0].label, 'June 2026');
+    t.equal('newest last', tl.periods[1].label, 'July 2026');
+
+    const series = tl.byName.P0;
+    t.equal('a person has a point per month', series.length, 2);
+    t.equal('the first month has nothing behind it to measure against', series[0].delta, null);
+    t.check('the rank is over the people scored in that month',
+        series.every((pt) => pt.rank >= 1 && pt.rank <= pt.total && pt.total === 40));
+
+    // Two scales on purpose: the rank is over the month's own population, the
+    // delta over the people in both months. The delta must reconcile against the
+    // shared pair it travels with, not against the ranks either side of it.
+    const step = series[1];
+    t.check('the move carries the shared pair it is the difference of',
+        Number.isFinite(step.sharedPrevRank) && Number.isFinite(step.sharedRank));
+    t.equal('and the delta is exactly that difference',
+        step.delta, step.sharedPrevRank - step.sharedRank);
+
+    // "Down 39" always raises "which metric", and answering it must not mean
+    // re-ranking the year a second time.
+    t.check('the five KPIs travel with each point',
+        series.every((pt) => pt.scores && pt.values && pt.metricRanks));
+    t.check('including reliability, which is not in values',
+        series.every((pt) => 'reliability' in pt));
+
+    t.check('one person per scored name', Object.keys(tl.byName).length === 40);
+});
+
+suite('rankings view: the card carries the year, not just the last step', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
+    cr.renderCenterRanking();
+    const team = dom.shell().slice(dom.shell().indexOf('Your Team'));
+
+    t.check('every card gets a strip', (team.match(/Jun <strong>/g) || []).length === 3);
+    t.check('and it runs to the newest month', (team.match(/Jul <strong>/g) || []).length === 3);
+    t.check('the first chip has no arrow, having nothing behind it',
+        /Jun <strong>\d+<\/strong><\/span>/.test(team));
+    t.check('the chips explain themselves on hover',
+        /title="June 2026 &mdash; #\d+ of 40/.test(team) || /title="June 2026 — #\d+ of 40/.test(team));
+});
+
+suite('rankings view: a name opens the year behind the number', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('P0');
+
+    t.check('the chart is drawn', /<svg /.test(html));
+    t.check('best rank sits at the top', /Best rank sits at the top/.test(html));
+    t.check('every month is a column', /<th[^>]*>Jun<\/th>/.test(html) && /<th[^>]*>Jul<\/th>/.test(html));
+    t.check('the rank row states its denominator', /of 40/.test(html));
+
+    // The reconciliation the cards needed, in the one place someone goes when
+    // the card looks wrong: the selected-period rank drawn across the months.
+    t.check('the card figure is drawn across it', /the figure on the card/.test(html));
+    t.check('and named as year to date', /year to date<\/strong>, the figure on the card/.test(html));
+
+    // Scott asked for the five KPIs here too — a rank move is only actionable
+    // once you know which metric moved.
+    ['AHT', 'Adherence', 'Sentiment', 'CX Adv', 'Reliability'].forEach((label) => {
+        t.check('the ' + label + ' row is there', new RegExp('>' + label + '</td>').test(html));
+    });
+    t.check('with the 3/2/1 score on each cell', /border-radius: 50%/.test(html));
+
+    t.check('and the two scales are still explained',
+        /over the people scored in both/.test(html));
+});
+
+suite('rankings view: a trajectory nobody has yet says so', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('Nobody At All');
+    t.check('an unknown name does not throw or render an empty chart',
+        /No month-by-month history/.test(html) && !/<svg /.test(html));
+});
+
+suite('rankings view: the strip marks a month that has not finished', (t) => {
+    const months = monthsEndingNow(3);
+    if (!months) {
+        t.check('skipped — the current month has no complete pair behind it this year', true);
+        return;
+    }
+    const ytd = period(months[0].slice(0, 4) + '-01-01', months[2] + '-07', 'ytd',
+        roster(40, 4), 'YTD so far');
+    const { dom, cr } = loadRankings(t, weeksIn(months), ytd);
+    global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
+    cr.renderCenterRanking();
+    const team = dom.shell().slice(dom.shell().indexOf('Your Team'));
+
+    // The headline move deliberately stops at the last complete month, so the
+    // strip running one further has to say which one is still filling up.
+    // Marked by colour, not by a star: a star already means "moved with no
+    // score change" everywhere else on this view.
+    t.check('the unfinished month is on the strip', (team.match(/<strong>/g) || []).length >= 9);
+    t.check('and it is marked as unfinished', /<span style="color: #e65100;">[A-Z][a-z]{2}<\/span> <strong>/.test(team));
+    t.check('while the complete months are not', /(^|>)[A-Z][a-z]{2} <strong>/.test(team));
+});

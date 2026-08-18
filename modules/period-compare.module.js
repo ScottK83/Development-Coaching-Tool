@@ -661,6 +661,117 @@
         };
     }
 
+    /* ── Rank timeline ──
+       Every period of one granularity in order, with each person's rank in each.
+
+       Two rank scales travel together here, deliberately, because that is what
+       the rankings table and its movement column already do and a third answer
+       would just be a fourth number to reconcile:
+
+         - `rank` for a period is over the people scored IN THAT PERIOD. It is the
+           number the table shows when that period is selected, so the timeline
+           and the table can never disagree about a month.
+
+         - `delta` into a period is measured over the people scored in BOTH it and
+           the period before, because a rank out of 118 against a rank out of 126
+           is not a like-for-like move. So the arrow is not always exactly the
+           difference of the two ranks printed either side of it — and the shared
+           ranks it IS the difference of travel alongside, for anyone who checks.
+
+       Rank is never stored, so this is every month re-ranked on demand. That is
+       ~2 rankings per month of data; cheap enough per render, cached anyway
+       because the modal asks for it once per person. */
+    var _timelineCache = {};
+
+    function resetTimelineCache() {
+        _timelineCache = {};
+    }
+
+    function buildRankTimeline(scope, year) {
+        var yr = year || _year();
+        var sc = scope || 'month';
+        var cacheKey = sc + '|' + yr;
+        if (Object.prototype.hasOwnProperty.call(_timelineCache, cacheKey)) return _timelineCache[cacheKey];
+
+        // Partial periods are stepped over the same way the pairwise comparison
+        // steps over them: a one-team upload filed as a month is not a point on
+        // anybody's year. An unfinished month IS kept — the trajectory is the one
+        // place where "so far" is worth seeing — and carries its flag.
+        var usable = _periodsForScope(sc, yr).filter(function (p) { return !p.partial; });
+        if (!usable.length) { _timelineCache[cacheKey] = null; return null; }
+
+        var ranked = usable.map(function (p) { return _rank(p.employees, yr) || []; });
+
+        var moves = usable.map(function () { return {}; });
+        var moveTotals = usable.map(function () { return null; });
+        for (var i = 1; i < usable.length; i++) {
+            var cmp = compareRankings(usable[i - 1].employees, usable[i].employees, yr);
+            if (!cmp) continue;
+            var m = {};
+            cmp.movements.forEach(function (mv) { m[mv.name] = mv; });
+            moves[i] = m;
+            moveTotals[i] = cmp.total;
+        }
+
+        var byName = {};
+        ranked.forEach(function (rows, i) {
+            var per = usable[i];
+            rows.forEach(function (r) {
+                var mv = moves[i][r.name] || null;
+                if (!byName[r.name]) byName[r.name] = [];
+                byName[r.name].push({
+                    key: per.key,
+                    label: per.label,
+                    inProgress: !!per.inProgress,
+                    fromUpload: !!per.fromUpload,
+                    weekCount: per.weekCount || null,
+                    // Over everyone scored in this period.
+                    rank: r.rank,
+                    total: rows.length,
+                    kpisMet: r.kpisMet,
+                    measuredCount: r.measuredCount,
+                    scoreSum: r.scoreSum,
+                    kpiScore: r.kpiScore,
+                    trackLabel: r.trackLabel,
+                    trackStatusValue: r.trackStatusValue,
+                    /* The five KPIs themselves, not just what they totalled to.
+                       "Down 39" is a fact about a rank; the question it always
+                       raises is which metric moved, and that answer has to be in
+                       the same payload or the caller ends up re-ranking the year
+                       a second time to find it. Values, their 3/2/1 scores, and
+                       the per-metric rank inside this period. */
+                    values: r.values || {},
+                    reliability: r.reliability,
+                    scores: r.scores || {},
+                    metricRanks: r.metricRanks || {},
+                    // Over the people in this period and the one before it.
+                    delta: mv && Number.isFinite(mv.delta) ? mv.delta : null,
+                    sharedPrevRank: mv ? mv.prevRank : null,
+                    sharedRank: mv ? mv.curRank : null,
+                    sharedTotal: moveTotals[i],
+                    scoreChanged: mv ? !!mv.scoreChanged : false
+                });
+            });
+        });
+
+        var out = {
+            scope: sc,
+            year: yr,
+            periods: usable.map(function (per, i) {
+                return { key: per.key, label: per.label, total: ranked[i].length, inProgress: !!per.inProgress };
+            }),
+            byName: byName
+        };
+        _timelineCache[cacheKey] = out;
+        return out;
+    }
+
+    /** One person's trajectory, oldest first, or null if they were never scored. */
+    function getTimelineFor(name, scope, year) {
+        var tl = buildRankTimeline(scope, year);
+        return (tl && tl.byName[name]) || null;
+    }
+
     /**
      * Selector-ready entries for months that can be rebuilt from weekly uploads.
      * Shared by the rankings and matchup period pickers so "which months exist"
@@ -848,6 +959,9 @@
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
         buildMonthOverMonthTeams: buildMonthOverMonthTeams,
         buildMovementForScope: buildMovementForScope,
+        buildRankTimeline: buildRankTimeline,
+        getTimelineFor: getTimelineFor,
+        resetTimelineCache: resetTimelineCache,
         buildTeamMovementForScope: buildTeamMovementForScope,
         getMovementFor: getMovementFor,
         monthLabel: _monthLabel
