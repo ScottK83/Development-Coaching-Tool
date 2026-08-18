@@ -799,6 +799,46 @@ suite('rankings view: the year scrolls sideways once it outgrows the modal', (t)
     t.check('both sit inside the same scroller',
         new RegExp('overflow-x: auto;"><div style="width: ' + tableWidth + 'px;"').test(html));
 
-    // Two months fits; nothing to announce.
-    t.check('a short year says nothing about scrolling', !/Scroll sideways/.test(html));
+    // The year runs January to now, so it outgrows the modal on its own.
+    t.check('and the reader is told it scrolls', /Scroll sideways/.test(html));
+});
+
+suite('rankings view: the trajectory shows the whole year, gaps included', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('P0');
+
+    // WEEKS only carries June and July. A chart that starts in June reads as a
+    // year that started in June, so every month to date gets a column and the
+    // empty ones say what is missing rather than not existing.
+    // slice(1) drops the "Month" corner cell, which matches the same shape.
+    const heads = [...html.matchAll(/<th style="[^"]*">([A-Z][a-z]{2})/g)].map((m) => m[1]).slice(1);
+    t.check('January is on it', heads.indexOf('Jan') === 0);
+    t.check('and the ranked months are in their calendar slots',
+        heads.indexOf('Jun') === 5 && heads.indexOf('Jul') === 6);
+    t.check('every month to date has a column', heads.length >= 8);
+
+    t.check('the empty months say why they are empty', /No ranking for Jan \(nothing uploaded/.test(html));
+    t.check('and the chart marks them rather than joining across',
+        (html.match(/>no data<\/text>/g) || []).length >= 4);
+
+    // Joining across a gap would draw a trend through months nobody measured.
+    const runs = (html.match(/<polyline /g) || []).length;
+    t.check('the line is drawn in runs, not one stroke over the gaps', runs >= 1);
+
+    t.check('the rows still walk every column',
+        (html.match(/<td style="[^"]*">·<\/td>|&middot;<\/span><\/td>/g) || []).length > 0);
+});
+
+suite('rankings view: the whole card opens the trajectory, not just the name', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
+    cr.renderCenterRanking();
+    const team = dom.shell().slice(dom.shell().indexOf('Your Team'));
+
+    const cards = [...team.matchAll(/<div class="ranking-card" data-employee="([^"]+)"[^>]*>/g)];
+    t.equal('every card is a target', cards.length, 3);
+    t.check('and says so', cards.every((m) => /cursor: pointer/.test(m[0])));
+    t.check('the name no longer carries the binding on its own',
+        !/ranking-card-name" data-employee/.test(team));
 });

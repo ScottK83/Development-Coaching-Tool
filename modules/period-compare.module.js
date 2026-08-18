@@ -661,6 +661,61 @@
         };
     }
 
+    /* Every month of the year so far, ranked or not, and why not.
+
+       A trajectory that silently starts in May looks like the year started in
+       May. It did not — those months exist, they just could not be ranked, and
+       the difference between "no data" and "one week of data" and "one team's
+       upload" is the difference between shrugging and knowing which file to go
+       and find. So all twelve slots are returned and the empty ones carry their
+       reason. */
+    function buildMonthCoverage(year) {
+        var yr = year || _year();
+        var buckets = getMonthBuckets(yr);
+        var nowMonth = _nowMonth();
+        var out = [];
+
+        for (var m = 1; m <= 12; m++) {
+            var mo = yr + '-' + String(m).padStart(2, '0');
+            if (mo > nowMonth) break;
+
+            var keys = buckets.monthsMap[mo] || [];
+            var names = {};
+            keys.forEach(function (k) {
+                var e = _entry(k);
+                ((e && e.employees) || []).forEach(function (emp) {
+                    if (emp && emp.name) names[emp.name] = 1;
+                });
+            });
+            var count = Object.keys(names).length;
+            var isUsable = buckets.usable.indexOf(mo) !== -1;
+
+            var entry = {
+                key: mo,
+                label: _monthLabel(mo),
+                weekCount: keys.length,
+                count: count,
+                fromUpload: !!buckets.fromUpload[mo],
+                inProgress: mo === nowMonth,
+                status: 'none',
+                reason: 'nothing uploaded for this month'
+            };
+            if (isUsable && !buckets.partial[mo]) {
+                entry.status = 'ranked';
+                entry.reason = '';
+            } else if (isUsable) {
+                entry.status = 'partial';
+                entry.reason = 'only ' + count + ' associates in the upload';
+            } else if (keys.length > 0) {
+                entry.status = 'thin';
+                entry.reason = keys.length + ' week' + (keys.length === 1 ? '' : 's') +
+                    ' uploaded, ' + MIN_WEEKS_FOR_MONTH + ' needed to rebuild a month';
+            }
+            out.push(entry);
+        }
+        return out;
+    }
+
     /* ── Rank timeline ──
        Every period of one granularity in order, with each person's rank in each.
 
@@ -760,6 +815,9 @@
             periods: usable.map(function (per, i) {
                 return { key: per.key, label: per.label, total: ranked[i].length, inProgress: !!per.inProgress };
             }),
+            // Every month of the year, including the ones that produced no rank,
+            // so a caller can show the whole year rather than the ranked part of it.
+            coverage: sc === 'month' ? buildMonthCoverage(yr) : null,
             byName: byName
         };
         _timelineCache[cacheKey] = out;
@@ -959,6 +1017,7 @@
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
         buildMonthOverMonthTeams: buildMonthOverMonthTeams,
         buildMovementForScope: buildMovementForScope,
+        buildMonthCoverage: buildMonthCoverage,
         buildRankTimeline: buildRankTimeline,
         getTimelineFor: getTimelineFor,
         resetTimelineCache: resetTimelineCache,

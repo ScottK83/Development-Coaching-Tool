@@ -946,15 +946,54 @@
     var TRAJECTORY_LABEL_COL = 104;   // the sticky row-label column
     var TRAJECTORY_COL_WIDTH = 116;   // one period
 
-    function _trajectoryGeometry(series) {
+    function _trajectoryGeometry(columns) {
         return {
             labelCol: TRAJECTORY_LABEL_COL,
             colWidth: TRAJECTORY_COL_WIDTH,
-            width: TRAJECTORY_LABEL_COL + TRAJECTORY_COL_WIDTH * series.length
+            width: TRAJECTORY_LABEL_COL + TRAJECTORY_COL_WIDTH * columns.length
         };
     }
 
-    function _trajectorySvg(series, reference, geom) {
+    /* One column per month of the year so far, whether it produced a rank or not.
+
+       A trajectory that starts in May reads as a year that started in May. The
+       empty months are part of the progress picture — they say the data is
+       missing, not that the person is — and each one carries the reason, because
+       "one week uploaded" and "nothing uploaded" send you to different places. */
+    function _trajectoryColumns(series) {
+        var tl = _timeline();
+        var coverage = tl && tl.coverage;
+        var byKey = {};
+        series.forEach(function (pt) { byKey[pt.key] = pt; });
+
+        if (!coverage || !coverage.length) {
+            return series.map(function (pt) { return { key: pt.key, label: pt.label, point: pt, status: 'ranked' }; });
+        }
+
+        var columns = coverage.map(function (mo) {
+            return {
+                key: mo.key,
+                label: mo.label,
+                inProgress: !!mo.inProgress,
+                status: byKey[mo.key] ? 'ranked' : mo.status,
+                reason: byKey[mo.key] ? '' : mo.reason,
+                point: byKey[mo.key] || null
+            };
+        });
+
+        // A month the coverage list does not know about — a scope that is not
+        // months, or a period from another year — must still be shown.
+        series.forEach(function (pt) {
+            if (!columns.some(function (c) { return c.key === pt.key; })) {
+                columns.push({ key: pt.key, label: pt.label, status: 'ranked', point: pt, reason: '' });
+            }
+        });
+        return columns;
+    }
+
+    function _trajectorySvg(columns, reference, geom) {
+        var series = columns.filter(function (c) { return c.point; }).map(function (c) { return c.point; });
+        if (!series.length) return '';
         var W = geom.width, H = 200, padL = geom.labelCol, padR = 8, padT = 18, padB = 30;
         var worst = series.reduce(function (m, pt) { return Math.max(m, pt.total); }, 1);
         if (reference && Number.isFinite(reference.rank)) worst = Math.max(worst, reference.total || 1);
@@ -984,19 +1023,42 @@
                 'font-size="10" fill="#1565c0">#' + reference.rank + ' ' + _escapeHtml(reference.label) + '</text>';
         }
 
-        var points = series.map(function (pt, i) { return x(i) + ',' + y(pt.rank); });
-        svg += '<polyline points="' + points.join(' ') + '" fill="none" stroke="#1565c0" stroke-width="2" ' +
-            'stroke-linejoin="round" stroke-linecap="round" />';
+        /* Drawn as one run per unbroken stretch of months, so a gap in the
+           uploads shows as a gap in the line. Joining across it would draw a
+           trend through months nobody measured. */
+        var run = [];
+        var flush = function () {
+            if (run.length > 1) {
+                svg += '<polyline points="' + run.join(' ') + '" fill="none" stroke="#1565c0" ' +
+                    'stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />';
+            }
+            run = [];
+        };
+        columns.forEach(function (col, i) {
+            if (!col.point) { flush(); return; }
+            run.push(x(i) + ',' + y(col.point.rank));
+        });
+        flush();
 
-        series.forEach(function (pt, i) {
+        columns.forEach(function (col, i) {
+            if (!col.point) {
+                // An empty slot is still a month of the year, so it keeps its
+                // label and says so rather than vanishing.
+                svg += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle" ' +
+                    'font-size="10" fill="var(--text-tertiary)">' + _escapeHtml(_shortPeriodLabel(col.label)) + '</text>';
+                svg += '<text x="' + x(i) + '" y="' + (padT + (H - padT - padB) / 2) + '" text-anchor="middle" ' +
+                    'font-size="9" fill="var(--text-tertiary)">no data</text>';
+                return;
+            }
+            var pt = col.point;
             var fill = pt.trackStatusValue === 'on-track-exceptional' ? '#2e7d32'
                 : pt.trackStatusValue === 'on-track-successful' ? '#1565c0' : '#c62828';
             svg += '<circle cx="' + x(i) + '" cy="' + y(pt.rank) + '" r="4.5" fill="' + fill + '" />';
             svg += '<text x="' + x(i) + '" y="' + (y(pt.rank) - 9) + '" text-anchor="middle" ' +
                 'font-size="10" font-weight="bold" fill="var(--text-primary)">' + pt.rank + '</text>';
             svg += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle" ' +
-                'font-size="10" fill="' + (pt.inProgress ? '#e65100' : 'var(--text-secondary)') + '">' +
-                _escapeHtml(_shortPeriodLabel(pt.label)) + '</text>';
+                'font-size="10" fill="' + (col.inProgress ? '#e65100' : 'var(--text-secondary)') + '">' +
+                _escapeHtml(_shortPeriodLabel(col.label)) + '</text>';
         });
 
         return svg + '</svg>';
@@ -1051,7 +1113,8 @@
             (reference ? ' The dashed line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
                 '</strong>, the figure on the card.' : '') + '</p>';
 
-        var geom = _trajectoryGeometry(series);
+        var columns = _trajectoryColumns(series);
+        var geom = _trajectoryGeometry(columns);
 
         var th = 'padding: 5px 6px; border-bottom: 2px solid var(--border); font-size: 0.78em; ' +
             'color: var(--text-secondary); text-align: center; white-space: nowrap;';
@@ -1063,64 +1126,82 @@
         html += '<div style="overflow-x: auto;"><div style="width: ' + geom.width + 'px;">';
         html += '<div style="background: var(--bg-surface-raised); border: 1px solid var(--border); ' +
             'border-radius: 8px; padding: 8px 0 2px 0; margin-bottom: 14px;">' +
-            _trajectorySvg(series, reference, geom) + '</div>';
+            _trajectorySvg(columns, reference, geom) + '</div>';
 
         html += '<table style="width: ' + geom.width + 'px; border-collapse: collapse; ' +
             'table-layout: fixed; font-size: 0.85em;">';
         html += '<colgroup><col style="width: ' + geom.labelCol + 'px;" />' +
-            series.map(function () { return '<col style="width: ' + geom.colWidth + 'px;" />'; }).join('') +
+            columns.map(function () { return '<col style="width: ' + geom.colWidth + 'px;" />'; }).join('') +
             '</colgroup>';
         html += '<thead><tr><th style="' + th + stick + ' text-align: left;">Month</th>';
-        series.forEach(function (pt) {
-            html += '<th style="' + th + '">' + _escapeHtml(_shortPeriodLabel(pt.label)) +
-                (pt.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') + '</th>';
+        columns.forEach(function (col) {
+            html += '<th style="' + th + (col.point ? '' : ' color: var(--text-tertiary);') + '">' +
+                _escapeHtml(_shortPeriodLabel(col.label)) +
+                (col.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') + '</th>';
         });
         html += '</tr></thead><tbody>';
 
-        function bodyRow(label, cells, strong) {
+        /* `cells` is built from the ranked months only; the empty ones are filled
+           in here so every row walks the same twelve columns without each caller
+           having to remember which months are missing. */
+        function bodyRow(label, cellFor, strong) {
             var out = '<tr><td style="' + td + stick + ' text-align: left; color: var(--text-secondary);' +
                 (strong ? ' font-weight: 700; color: var(--text-primary);' : '') + '">' + label + '</td>';
-            cells.forEach(function (c) { out += '<td style="' + td + '">' + c + '</td>'; });
+            columns.forEach(function (col) {
+                out += '<td style="' + td + '">' +
+                    (col.point ? cellFor(col.point) : '<span style="color: var(--text-tertiary);">&middot;</span>') +
+                    '</td>';
+            });
             return out + '</tr>';
         }
 
-        html += bodyRow('Rank', series.map(function (pt) {
+        // Said once, at the top, so the empty columns below are already explained.
+        var missing = columns.filter(function (col) { return !col.point && col.reason; });
+        if (missing.length) {
+            html += '<tr><td colspan="' + (columns.length + 1) + '" style="' + stick +
+                ' padding: 6px; font-size: 0.76em; color: #e65100; border-bottom: 1px solid var(--border);">' +
+                'No ranking for ' + missing.map(function (col) {
+                    return _escapeHtml(_shortPeriodLabel(col.label)) + ' (' + _escapeHtml(col.reason) + ')';
+                }).join(', ') + '.</td></tr>';
+        }
+
+        html += bodyRow('Rank', function (pt) {
             return '<strong>#' + pt.rank + '</strong> <span style="color: var(--text-tertiary); font-size: 0.85em;">of ' +
                 pt.total + '</span>';
-        }), true);
+        }, true);
 
-        html += bodyRow('Move', series.map(function (pt) {
+        html += bodyRow('Move', function (pt) {
             if (!Number.isFinite(pt.delta)) return '<span style="color: var(--text-tertiary);" title="Nothing before this to measure against">&middot;</span>';
             if (pt.delta === 0) return '<span style="color: var(--text-tertiary);">&#8213;</span>';
             return '<span style="color: ' + _deltaColor(pt) + '; font-weight: 600;">' +
                 (pt.delta > 0 ? '&#9650;' : '&#9660;') + Math.abs(pt.delta) + '</span>' +
                 '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + pt.sharedPrevRank +
                 '&rarr;' + pt.sharedRank + '</div>';
-        }));
+        });
 
-        html += bodyRow('KPIs met', series.map(function (pt) {
+        html += bodyRow('KPIs met', function (pt) {
             return '<span style="font-weight: 600; color: ' + _kpiMetColor(pt.kpisMet, pt.measuredCount, _isDark()) + ';">' +
                 pt.kpisMet + '/' + pt.measuredCount + '</span>';
-        }));
+        });
 
-        html += bodyRow('Score', series.map(function (pt) {
+        html += bodyRow('Score', function (pt) {
             return pt.scoreSum + '/' + (pt.measuredCount * 3) +
                 '<div style="font-size: 0.72em; color: var(--text-tertiary);">' + pt.kpiScore.toFixed(1) + '</div>';
-        }));
+        });
 
-        html += bodyRow('Band', series.map(function (pt) {
+        html += bodyRow('Band', function (pt) {
             var c = pt.trackStatusValue === 'on-track-exceptional' ? '#2e7d32'
                 : pt.trackStatusValue === 'on-track-successful' ? '#1565c0' : '#c62828';
             return '<span style="display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 0.72em; ' +
                 'font-weight: bold; color: #fff; background: ' + c + ';">' + _escapeHtml(pt.trackLabel) + '</span>';
-        }));
+        });
 
-        html += '<tr><td colspan="' + (series.length + 1) + '" style="' + stick + ' padding: 10px 6px 4px 6px; ' +
+        html += '<tr><td colspan="' + (columns.length + 1) + '" style="' + stick + ' padding: 10px 6px 4px 6px; ' +
             'font-size: 0.78em; color: var(--text-secondary); border-bottom: 2px solid var(--border);">' +
             'The five KPIs behind it &mdash; value, its 3/2/1 score, and where that ranked in the month.</td></tr>';
 
         TRAJECTORY_METRIC_ROWS.forEach(function (row) {
-            html += bodyRow(row.label, series.map(function (pt) {
+            html += bodyRow(row.label, function (pt) {
                 var value = _trajectoryMetricValue(pt, row);
                 var score = (pt.scores || {})[row.scoreKey];
                 if (value === null || value === undefined || isNaN(value)) {
@@ -1130,7 +1211,7 @@
                 var mRank = (pt.metricRanks || {})[row.rankKey];
                 return _scoreDot(score === undefined ? null : score) + _escapeHtml(_formatMetricDisplay(row.registry, value)) +
                     (Number.isFinite(mRank) ? '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + mRank + '</div>' : '');
-            }));
+            });
         });
 
         html += '</tbody></table></div></div>';
@@ -1357,8 +1438,8 @@
                     ? Math.round(((data.totalEmployees - r.rank) / (data.totalEmployees - 1)) * 100)
                     : 100;
 
-                html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
-                html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
+                html += '<div class="ranking-card" data-employee="' + _escapeHtml(r.name) + '" style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + '; cursor: pointer;">';
+                html += '<div class="ranking-card-name" style="font-weight: bold; font-size: 1.05em; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
                 html += '<div style="margin-top: 4px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">';
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
                 // The window, hard against the number it belongs to, before
@@ -1448,7 +1529,7 @@
         // A name opens that person's year. Scrolling to their row — what this
         // used to do — is a button inside it, because the row says no more than
         // the card already did.
-        container.querySelectorAll('.ranking-card-name').forEach(function (el) {
+        container.querySelectorAll('.ranking-card').forEach(function (el) {
             el.addEventListener('click', function () { _openTrajectory(el.dataset.employee); });
         });
     }
