@@ -624,3 +624,40 @@ suite('rankings view: a week is scored on the year\'s missed hours, not the week
     t.equal('a year-to-date file is left exactly as uploaded',
         ytd.rankings.find((r) => r.name === 'P0').reliability, 30);
 });
+
+/* ── The movement column, beside a rank column counting something else ── */
+
+suite('rankings view: the movement column names the ranks it moved between', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();          // year-to-date table, month-over-month movement
+
+    const cells = [...dom.table().matchAll(/<tr class="ranking-row"[\s\S]*?<\/tr>/g)]
+        .map((r) => [...r[0].matchAll(/<td[\s\S]*?<\/td>/g)].map((m) => m[0]));
+    t.check('the table rendered', cells.length > 0);
+
+    // The Rank column and this one count over different periods. A bare "39"
+    // has nothing to be measured from except the rank sitting next to it, and
+    // "21, down 39" subtracts to minus eighteen.
+    const moved = cells.filter((c) => /&#96[56]0;\d/.test(c[1]));
+    t.check('some rows moved', moved.length > 0);
+    t.check('every one of them shows the pair it moved between',
+        moved.every((c) => /#\d+&rarr;\d+/.test(c[1])));
+
+    const pairs = moved.map((c) => ({
+        rank: Number((c[0].match(/>(\d+)<\/td>/) || [])[1]),
+        from: Number((c[1].match(/#(\d+)&rarr;/) || [])[1]),
+        to: Number((c[1].match(/&rarr;(\d+)/) || [])[1]),
+        delta: Number((c[1].match(/&#96[56]0;(\d+)/) || [])[1]),
+        down: /&#9660;/.test(c[1])
+    }));
+    t.check('the arrow is the distance between the two ranks shown',
+        pairs.every((p) => Math.abs(p.from - p.to) === p.delta));
+    t.check('and it points the way they moved',
+        pairs.every((p) => p.down === (p.to > p.from)));
+    // The whole point: the pair is on the movement scale, not the table's.
+    t.check('the pair is not the rank in the column beside it',
+        pairs.some((p) => p.rank !== p.to));
+
+    t.check('the table intro says the two do not subtract',
+        /so the two do not subtract/.test(dom.shell()));
+});

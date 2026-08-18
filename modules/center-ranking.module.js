@@ -179,13 +179,24 @@
         // Labels come off upload metadata, and these land inside a title attribute.
         var was = _escapeHtml((labels && labels.previous) || 'the period before');
         var now = _escapeHtml((labels && labels.current) || 'this period');
+        /* The ranks the move was between, printed under the arrow.
+
+           This column sits directly beside the Rank column, and the two count
+           over different periods and different populations. A bare "▼39" has
+           nothing to be measured from except the rank next to it, so "21, down
+           39" gets read as a fall from minus eighteen. Naming both ends costs
+           one small line and removes the only arithmetic a reader can do. */
+        var pair = function (text) {
+            return '<div style="font-size: 0.78em; color: var(--text-tertiary); white-space: nowrap;">' + text + '</div>';
+        };
         if (!mv || !Number.isFinite(mv.delta)) {
             return showDash
                 ? '<span style="color: var(--text-tertiary);" title="Not scored in ' + was + ', so there is nothing to measure against">&middot;</span>'
                 : '';
         }
         if (mv.delta === 0) {
-            return '<span style="color: var(--text-tertiary);" title="Same rank in ' + was + ' and ' + now + '">&#8213;</span>';
+            return '<span style="color: var(--text-tertiary);" title="Same rank in ' + was + ' and ' + now + '">&#8213;</span>' +
+                pair('#' + mv.curRank + ' both');
         }
         var up = mv.delta > 0;
         var color = mv.scoreChanged ? (up ? '#2e7d32' : '#c62828') : 'var(--text-tertiary)';
@@ -195,7 +206,8 @@
                 : 'Same score (' + mv.curKpisMet + ' KPIs, ' + mv.curScoreSum + ') — position shifted among tied people, not performance');
         return '<span style="color: ' + color + '; font-weight: ' + (mv.scoreChanged ? 'bold' : 'normal') + '; white-space: nowrap;"' +
             ' title="' + title + '">' + (up ? '&#9650;' : '&#9660;') + Math.abs(mv.delta) +
-            (mv.scoreChanged ? '' : '<span style="opacity:0.7;">*</span>') + '</span>';
+            (mv.scoreChanged ? '' : '<span style="opacity:0.7;">*</span>') + '</span>' +
+            pair('#' + mv.prevRank + '&rarr;' + mv.curRank);
     }
 
     function _getAvailableRankingPeriods() {
@@ -1066,10 +1078,13 @@
         // Full ranking table
         html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Center Rankings</h4>';
-        html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. Each metric shows value and rank (#).' +
-            (_mom ? ' <strong>' + (MOVEMENT_COLUMN_LABEL[_mom.scope] || 'Move') + '</strong> is rank movement since ' +
-                _escapeHtml(_mom.previous.label) +
-                '. A greyed value marked * moved with no change in KPIs met or score &mdash; position shifted among tied people, not performance.' : '') +
+        html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. ' +
+            'The <strong>Rank</strong> column is ' + _escapeHtml(_selectedPeriodPhrase(data)) + '. Each metric shows value and rank (#).' +
+            (_mom ? ' <strong>' + (MOVEMENT_COLUMN_LABEL[_mom.scope] || 'Move') + '</strong> is a separate ' +
+                _escapeHtml(_mom.previous.label) + ' &rarr; ' + _escapeHtml(_mom.current.label) +
+                ' comparison, re-ranked over the ' + _mom.total + ' people scored in both &mdash; the two ranks under the arrow are on that scale, ' +
+                'not on the Rank column\'s, so the two do not subtract.' +
+                ' A greyed value marked * moved with no change in KPIs met or score &mdash; position shifted among tied people, not performance.' : '') +
             '</p>';
         html += '</div>';
 
@@ -1153,8 +1168,10 @@
         var html = '<div style="overflow-x: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.82em; table-layout: auto;">';
         html += '<thead><tr style="background: var(--bg-surface-raised);">';
-        html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;">Rank' + arrow('rank') + '</th>';
-        html += '<th class="rank-sort-header" data-sort="mom" style="' + thStyle + ' width: 34px;" title="' + _escapeHtml(_momTitle) + '">' + _momHeading + arrow('mom') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="rank" style="' + thStyle + ' width: 30px;"' +
+            ' title="Rank ' + _escapeHtml(_selectedPeriodPhrase(data)) + ', out of the ' + data.totalEmployees +
+            ' scored in that period. The ' + _momHeading + ' column beside it counts over different periods.">Rank' + arrow('rank') + '</th>';
+        html += '<th class="rank-sort-header" data-sort="mom" style="' + thStyle + ' width: 58px;" title="' + _escapeHtml(_momTitle) + '">' + _momHeading + arrow('mom') + '</th>';
         html += '<th style="' + thStyle + ' text-align: left;">Name</th>';
         html += '<th class="rank-sort-header" data-sort="kpisMet" style="' + thStyle + '">KPIs Met' + arrow('kpisMet') + '</th>';
         html += '<th class="rank-sort-header" data-sort="scoreSum" style="' + thStyle + '">Score Sum' + arrow('scoreSum') + '</th>';
