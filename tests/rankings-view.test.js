@@ -728,7 +728,10 @@ suite('rankings view: a name opens the year behind the number', (t) => {
 
     t.check('the chart is drawn', /<svg /.test(html));
     t.check('best rank sits at the top', /Best rank sits at the top/.test(html));
-    t.check('every month is a column', /<th[^>]*>Jun<\/th>/.test(html) && /<th[^>]*>Jul<\/th>/.test(html));
+    t.check('every month is a column', /<th[^>]*>Jun</.test(html) && /<th[^>]*>Jul</.test(html));
+    // A rebuilt month starts at the first week ENDING in it, so "June" can begin
+    // in May — the header carries the dates it really covers.
+    t.check('and each says what it really covers', /title="June 2026 covers \d\d-\d\d to \d\d-\d\d"/.test(html));
     t.check('the rank row states its denominator', /of 40/.test(html));
 
     // The reconciliation the cards needed, in the one place someone goes when
@@ -817,8 +820,10 @@ suite('rankings view: the trajectory shows the whole year, gaps included', (t) =
     // WEEKS only carries June and July. A chart that starts in June reads as a
     // year that started in June, so every month to date gets a column and the
     // empty ones say what is missing rather than not existing.
-    // slice(1) drops the "Month" corner cell, which matches the same shape.
-    const heads = [...html.matchAll(/<th style="[^"]*">([A-Z][a-z]{2})/g)].map((m) => m[1]).slice(1);
+    // slice(1) drops the "Month" corner cell, which matches the same shape. The
+    // optional title carries the real span a rebuilt month covers.
+    const heads = [...html.matchAll(/<th style="[^"]*"(?: title="[^"]*")?>([A-Z][a-z]{2})/g)]
+        .map((m) => m[1]).slice(1);
     t.check('January is on it', heads.indexOf('Jan') === 0);
     t.check('and the ranked months are in their calendar slots',
         heads.indexOf('Jun') === 5 && heads.indexOf('Jul') === 6);

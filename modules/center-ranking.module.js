@@ -470,6 +470,12 @@
             scores: scores,
             values: result.values || {},
             reliability: reliabilityVal,
+            // Which survey actually stands behind the "CX Adv" number. The scorer
+            // falls back from rep sat to Overall Experience when rep sat is blank
+            // or zero, and every surface downstream printed the result under the
+            // rep-sat label, so a cell could read "CX Adv 66.7%" while rep sat was
+            // 100% and untouched.
+            associateOverallSource: result.associateOverallSource || null,
             surveyTotal: parseInt(emp.surveyTotal, 10) || 0,
             totalCalls: parseInt(emp.totalCalls, 10) || 0
         };
@@ -650,6 +656,7 @@
                 scores: score.scores,
                 values: score.values,
                 reliability: score.reliability,
+                associateOverallSource: score.associateOverallSource,
                 // Hours missed in the period itself, where the caller substituted
                 // the cumulative year total for scoring. Coaching wants the slice
                 // — "you missed 6 hours in July" — and the rank must not have it.
@@ -1075,6 +1082,16 @@
         { label: 'Reliability', scoreKey: 'reliability', rankKey: 'reliability', registry: 'reliability' }
     ];
 
+    // A month where the CX Adv figure is not rep sat at all. Marked rather than
+    // footnoted: the reader is comparing it against a rep-sat number they have
+    // open in another window, and silence there costs them the comparison.
+    function _substitutedSurveyNote(pt, row) {
+        if (row.scoreKey !== 'associateOverall') return '';
+        if (pt.associateOverallSource !== 'overallExperience') return '';
+        return '<span title="Rep sat was blank or zero this month, so this is Overall Experience"' +
+            ' style="color: #e65100; font-weight: 700;"> OE</span>';
+    }
+
     function _trajectoryMetricValue(pt, row) {
         if (row.scoreKey === 'reliability') return pt.reliability;
         var v = (pt.values || {})[row.scoreKey];
@@ -1109,7 +1126,9 @@
         html += '<p style="flex: 0 0 auto; margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.85em;">' +
             'Rank in each month, over the people scored in that month. The arrow into a month is measured ' +
             'against the month before, over the people scored in both — which is why it is not always the ' +
-            'difference of the two ranks either side of it. Best rank sits at the top.' +
+            'difference of the two ranks either side of it. Best rank sits at the top. ' +
+            'A month rebuilt from weekly uploads covers whole weeks, so its dates can start in the ' +
+            'month before &mdash; the span under each heading is what it really covers.' +
             (reference ? ' The dashed line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
                 '</strong>, the figure on the card.' : '') + '</p>';
 
@@ -1136,9 +1155,21 @@
             '</colgroup>';
         html += '<thead><tr><th style="' + th + stick + ' text-align: left;">Month</th>';
         columns.forEach(function (col) {
-            html += '<th style="' + th + (col.point ? '' : ' color: var(--text-tertiary);') + '">' +
+            var pt = col.point;
+            // A rebuilt month runs from the start of the first week ENDING in it,
+            // so "August" can begin in July. Someone holding this column up
+            // against a calendar-month report needs to see that.
+            var span = pt && pt.spanStart && pt.spanEnd
+                ? _escapeHtml(pt.spanStart.slice(5) + ' to ' + pt.spanEnd.slice(5))
+                : '';
+            var offCalendar = pt && pt.spanStart && pt.spanStart.slice(0, 7) !== String(pt.key).slice(0, 7);
+            html += '<th style="' + th + (pt ? '' : ' color: var(--text-tertiary);') + '"' +
+                (span ? ' title="' + _escapeHtml(col.label) + ' covers ' + span + '"' : '') + '>' +
                 _escapeHtml(_shortPeriodLabel(col.label)) +
-                (col.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') + '</th>';
+                (col.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') +
+                (span ? '<div style="font-weight: 400; font-size: 0.86em; color: ' +
+                    (offCalendar ? '#e65100' : 'var(--text-tertiary)') + ';">' + span + '</div>' : '') +
+                '</th>';
         });
         html += '</tr></thead><tbody>';
 
@@ -1211,6 +1242,7 @@
                 }
                 var mRank = (pt.metricRanks || {})[row.rankKey];
                 return _scoreDot(score === undefined ? null : score) + _escapeHtml(_formatMetricDisplay(row.registry, value)) +
+                    _substitutedSurveyNote(pt, row) +
                     (Number.isFinite(mRank) ? '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + mRank + '</div>' : '');
             });
         });

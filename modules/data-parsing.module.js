@@ -98,7 +98,9 @@
         positiveWord: 11,
         sentiment: 12,
         fcr: 13,
+        fcrSurveyTotal: 14,
         cxRepOverall: 15,
+        repSurveyTotal: 16,
         overallExperience: 17,
         overallExperienceTop3: -1,
         surveyTotal: 18,
@@ -446,6 +448,11 @@
                 'top3 box'
             ]),
             surveyTotal: findColumnIndex(['oe survey', 'survey total', 'survey responses', 'total surveys', 'oesurvey total', 'oe survey total']),
+            // Each survey rate's own denominator. Matched before the generic
+            // 'survey total' patterns above would swallow them, because
+            // findColumnIndex takes the first header that matches.
+            repSurveyTotal: findColumnIndex(['overallreptotal', 'overall rep total', 'rep survey total', 'repsat total', 'rep sat total']),
+            fcrSurveyTotal: findColumnIndex(['overallfcrtotal', 'overall fcr total', 'fcr survey total', 'fcr total']),
             reliability: findColumnIndex(['reliability', 'reliability hours', 'reliability hrs', 'hours against'])
         };
 
@@ -522,6 +529,25 @@
         const parsedTotalCalls = parseInt(totalCallsRaw, 10);
         const surveyTotalRaw = getCell(cells, colMap.surveyTotal);
         const surveyTotal = Number.isInteger(parseInt(surveyTotalRaw, 10)) ? parseInt(surveyTotalRaw, 10) : 0;
+
+        /* Each survey rate's own response count.
+
+           These decide what a 0% means. Rep sat reported as 0 against 0 responses
+           is "nobody answered"; the same 0 against 4 responses is four unhappy
+           customers. Without the count both look identical, and the weighted
+           month average scored the first one as a genuine zero — which is how a
+           rep whose real rep sat was 100% came out at 66.7%.
+
+           Left null rather than 0 when the column is absent, so a caller can fall
+           back to the Overall Experience count instead of reading "no responses"
+           into a file that simply never carried the column. */
+        const countOrNull = (idx) => {
+            if (!(idx >= 0)) return null;
+            const raw = parseInt(getCell(cells, idx), 10);
+            return Number.isInteger(raw) ? raw : null;
+        };
+        const repSurveyTotal = countOrNull(colMap.repSurveyTotal);
+        const fcrSurveyTotal = countOrNull(colMap.fcrSurveyTotal);
         const totalCalls = Number.isInteger(parsedTotalCalls)
             ? parsedTotalCalls
             : (surveyTotal > 0 ? surveyTotal : 0);
@@ -569,6 +595,11 @@
             negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',
             managingEmotions: parsePercentage(getCell(cells, colMap.emotions)) || '',
             surveyTotal: surveyTotal,
+            // Null when the export did not carry the column; callers weight by
+            // surveyTotal in that case, which is what they did for every metric
+            // before these were parsed at all.
+            repSurveyTotal: repSurveyTotal,
+            fcrSurveyTotal: fcrSurveyTotal,
             totalCalls: totalCalls
         };
     }

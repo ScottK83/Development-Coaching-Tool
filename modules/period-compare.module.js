@@ -16,10 +16,12 @@
       the quiet weeks and is wrong every time.
 
    2. Reliability. It is CUMULATIVE year-to-date hours, not a per-period figure,
-      and it feeds the rank composite. Carrying the raw cumulative number into a
-      monthly rank would mark everyone down in December purely for the year
-      having gone on longer. Monthly aggregates therefore carry hours ACCRUED IN
-      THAT MONTH — cumulative at month end minus cumulative at prior month end.
+      and it feeds the rank composite. It is SCORED on the running total, because
+      the budget it is measured against is annual and a slice of it means nothing
+      — see the long note above the substitution in buildMonthAggregate. What a
+      month carries is therefore the total as of THAT month, taken from the
+      newest year-to-date file that had closed by then; the hours accrued in the
+      month itself ride along as reliabilityAccrued, for coaching, never scored.
 
    3. Population. A rank delta only means something when both sides ranked the
       same people. If ten reps had no data last month, everyone's rank shifts for
@@ -52,7 +54,23 @@
         'aht', 'talkTime', 'acw', 'holdTime', 'overallSentiment', 'managingEmotions',
         'negativeWord', 'positiveWord'
     ];
-    var SURVEY_WEIGHTED = { cxRepOverall: true, fcr: true, overallExperience: true };
+    /* Which response count each survey rate is weighted by.
+
+       All three used to share the Overall Experience count, because that was the
+       only one parsed. That is wrong twice: a rep-sat figure is weighted by a
+       denominator it does not belong to, and — worse — a week where nobody
+       answered the rep-sat question cannot be told from a week that scored 0%,
+       because both arrive as 0 with a positive OE weight. A rep whose real rep
+       sat was 100% across the month came out at 66.7%, which flipped the KPI
+       from a 3 to a 1.
+
+       Falls back to surveyTotal when the export did not carry the column, which
+       is exactly the old behaviour. */
+    var SURVEY_WEIGHT_FIELD = {
+        cxRepOverall: 'repSurveyTotal',
+        fcr: 'fcrSurveyTotal',
+        overallExperience: 'surveyTotal'
+    };
 
     var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'];
@@ -214,9 +232,11 @@
     }
 
     /* ── Weighted aggregation ──
-       Mirrors buildYtdAggregateForYear's math. Reliability is carried through as
-       the running cumulative maximum here; callers wanting a per-month figure use
-       buildMonthAggregate, which converts it to an accrued delta. */
+       Mirrors buildYtdAggregateForYear's math. Reliability is SUMMED here, which
+       is right for weekly rows: a weekly upload carries the hours missed in that
+       week, so the total across a month's weeks is the hours missed in the month.
+       buildMonthAggregate keeps that as reliabilityAccrued and then replaces the
+       scored value with the running year-to-date total as of that month. */
 
     function aggregateEmployeesFrom(entries) {
         var agg = {};
@@ -231,6 +251,8 @@
                         firstName: emp.firstName,
                         transfersCount: 0,
                         surveyTotal: 0,
+                        repSurveyTotal: 0,
+                        fcrSurveyTotal: 0,
                         reliability: 0,
                         totalCalls: 0,
                         _periodsSeen: 0,
@@ -243,9 +265,25 @@
                 var surveyTotal = parseInt(emp.surveyTotal, 10);
                 var totalCalls = parseInt(emp.totalCalls, 10);
 
+                // A rate's own denominator, or the Overall Experience count when
+                // the export never carried one. Null and undefined both mean
+                // "column absent", not "nobody answered".
+                var surveyWeightFor = function (metricKey) {
+                    var field = SURVEY_WEIGHT_FIELD[metricKey];
+                    if (!field) return 0;
+                    var own = emp[field];
+                    if (own === null || own === undefined || own === '') {
+                        return Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+                    }
+                    var n = parseInt(own, 10);
+                    return Number.isInteger(n) && n > 0 ? n : 0;
+                };
+
                 a._periodsSeen += 1;
                 a.transfersCount += Number.isFinite(parseFloat(emp.transfersCount)) ? parseFloat(emp.transfersCount) : 0;
                 a.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
+                a.repSurveyTotal += surveyWeightFor('cxRepOverall');
+                a.fcrSurveyTotal += surveyWeightFor('fcr');
                 a.totalCalls += Number.isInteger(totalCalls) ? totalCalls : 0;
 
                 // ADDITIVE across weekly periods. A weekly upload carries the hours
@@ -260,8 +298,8 @@
                     var val = parseFloat(emp[mk]);
                     if (!Number.isFinite(val)) return;
                     var weight;
-                    if (SURVEY_WEIGHTED[mk]) {
-                        weight = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+                    if (SURVEY_WEIGHT_FIELD[mk]) {
+                        weight = surveyWeightFor(mk);
                     } else {
                         weight = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
                     }
@@ -284,7 +322,7 @@
         });
     }
 
-    /* ── Reliability: cumulative -> accrued ── */
+    /* ── Reliability: the running year-to-date total, as of a given month ── */
 
     function _ytdData() {
         return typeof ytdData !== 'undefined' ? ytdData : {};
@@ -294,13 +332,25 @@
     // That upload is the only complete running total available: weekly uploads only
     // go back as far as someone started uploading them, and the months before that
     // cannot be reconstructed from anything on hand.
-    function _latestYtdReliability(year) {
+    /* opts.asOfMonth ('YYYY-MM') picks the newest year-to-date file that had
+       already closed by the end of that month, rather than the newest one there
+       is. Without it, January was scored with the hours someone had missed by
+       August — absence that had not happened yet — and since kpisMet is the first
+       sort key that cost a whole tier in every historical month, not a nudge.
+
+       With no file old enough there is nothing honest to say, so the answer is
+       empty and scoreEmployee treats reliability as unmeasured. Guessing is worse:
+       0 is a perfect score. */
+    function _latestYtdReliability(year, opts) {
         var yData = _ytdData();
+        var asOf = opts && opts.asOfMonth ? String(opts.asOfMonth) : null;
         var best = null, bestEnd = '';
         Object.keys(yData).forEach(function (k) {
             var meta = (yData[k] && yData[k].metadata) || {};
             var end = meta.endDate || (k.indexOf('|') !== -1 ? k.split('|')[1] : k);
             if (parseInt(String(end).split('-')[0], 10) !== year) return;
+            // A file ending inside the month still describes that month's total.
+            if (asOf && String(end).slice(0, 7) > asOf) return;
             if (!best || String(end).localeCompare(bestEnd) > 0) { best = yData[k]; bestEnd = String(end); }
         });
         if (!best) return {};
@@ -326,10 +376,10 @@
         var employees = aggregateEmployeesFrom(keys.map(_entry));
         if (!employees.length) return null;
 
-        // Cumulative -> accrued in this month. Clamped at 0: a cumulative figure
-        // that appears to drop (a correction upstream, or a rep whose history was
-        // restated) would otherwise read as negative hours, which is meaningless.
-        var ytdRel = _latestYtdReliability(yr);
+        // Two figures per person: what they missed IN this month (summed from the
+        // weeks above) and the running year-to-date total as of this month. The
+        // first is for coaching, the second is what gets scored.
+        var ytdRel = _latestYtdReliability(yr, { asOfMonth: monthKey });
         employees.forEach(function (e) {
             // Aggregation summed the month's weeks, so this IS hours missed in the
             // month. Kept for coaching — "you missed 6 hours in July" is the useful
@@ -356,7 +406,9 @@
             // running total, so that is what gets scored, whatever period is being
             // viewed. A consequence worth stating: reliability can only hold or
             // worsen month over month, never improve. That is the metric being
-            // honest, not a bug — you cannot go back and not miss the shift.
+            // honest, not a bug — you cannot go back and not miss the shift. It holds
+            // only while both months read the same year-to-date file; asOfMonth is
+            // what lets an earlier month carry a smaller total than a later one.
             //
             // Sourced from the YTD upload rather than rebuilt from weeks, because
             // weekly coverage starts partway through the year and everything before
@@ -367,13 +419,28 @@
             e.reliability = e.reliabilityCumulative;
         });
 
+        var spanStart = keys.reduce(function (min, k) {
+            var d = _startDate(k);
+            return (!min || String(d) < min) ? String(d) : min;
+        }, '');
+        var spanEnd = keys.reduce(function (max, k) {
+            var d = _endDate(k);
+            return (!max || String(d) > max) ? String(d) : max;
+        }, '');
+
         return {
             key: monthKey,
             label: _monthLabel(monthKey),
             employees: employees,
             weekKeys: keys.slice(),
             fromUpload: !!buckets.fromUpload[monthKey],
-            weekCount: keys.length
+            weekCount: keys.length,
+            // The dates this month actually covers. A rebuild runs from the start
+            // of the first week ENDING in the month, so "August" can begin in July
+            // — which is exactly the gap between this column and a calendar-month
+            // report someone is holding it up against.
+            spanStart: spanStart || null,
+            spanEnd: spanEnd || null
         };
     }
 
@@ -780,6 +847,8 @@
                     inProgress: !!per.inProgress,
                     fromUpload: !!per.fromUpload,
                     weekCount: per.weekCount || null,
+                    spanStart: per.spanStart || null,
+                    spanEnd: per.spanEnd || null,
                     // Over everyone scored in this period.
                     rank: r.rank,
                     total: rows.length,
@@ -797,6 +866,8 @@
                        the per-metric rank inside this period. */
                     values: r.values || {},
                     reliability: r.reliability,
+                    reliabilityAccrued: r.reliabilityAccrued,
+                    associateOverallSource: r.associateOverallSource || null,
                     scores: r.scores || {},
                     metricRanks: r.metricRanks || {},
                     // Over the people in this period and the one before it.
@@ -920,6 +991,7 @@
                 if (!agg) return;
                 out.push({
                     key: mo, label: agg.label, employees: agg.employees, end: mo,
+                    spanStart: agg.spanStart, spanEnd: agg.spanEnd,
                     weekCount: agg.weekCount, fromUpload: agg.fromUpload,
                     count: buckets.counts[mo] || agg.employees.length,
                     partial: !!buckets.partial[mo],

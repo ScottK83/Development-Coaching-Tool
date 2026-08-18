@@ -505,3 +505,100 @@ suite('period compare: too little overlap produces nothing rather than noise', (
     t.check('a single shared person is not a comparison', pc.compareRankings(a, b, 2026) === null);
     t.check('and two months are required for the headline view', pc.buildMonthOverMonthRanks(2026) === null);
 });
+
+
+/* ── Each survey rate carries its own denominator ──
+   Reported as: a rep whose rep sat was 100% all month showed 66.7% in the
+   trajectory, which flipped that KPI from a 3 to a 1. All three survey rates
+   were weighted by the Overall Experience response count, because that was the
+   only count the parser ever mapped — so a week where nobody answered the
+   rep-sat question was indistinguishable from a week that scored 0%. */
+
+suite('period compare: a week nobody answered is not a zero', (t) => {
+    const pc = loadPure(t, {});
+
+    const wk = (rep, repN, oe, oeN) => ({
+        employees: [{
+            name: 'A', totalCalls: 100,
+            cxRepOverall: rep, repSurveyTotal: repN,
+            overallExperience: oe, surveyTotal: oeN
+        }]
+    });
+
+    // Two weeks at 100% rep sat, one week with no rep-sat responses at all. The
+    // OE survey ran in all three, which is what used to hand that third week a
+    // vote it had not earned.
+    const agg = pc.aggregateEmployeesFrom([wk(100, 1, 90, 1), wk(100, 1, 90, 1), wk(0, 0, 90, 1)])[0];
+    t.equal('rep sat averages only the weeks that had responses', Math.round(agg.cxRepOverall), 100);
+    t.equal('the rep-sat responses are counted on their own', agg.repSurveyTotal, 2);
+    t.equal('and the OE count is untouched', agg.surveyTotal, 3);
+
+    // A real zero still counts, because it arrives with a response behind it.
+    const real = pc.aggregateEmployeesFrom([wk(100, 1, 90, 1), wk(100, 1, 90, 1), wk(0, 1, 90, 1)])[0];
+    t.equal('a zero backed by a response still drags the average',
+        Math.round(real.cxRepOverall * 10) / 10, 66.7);
+});
+
+suite('period compare: an export without the extra counts behaves as it always did', (t) => {
+    const pc = loadPure(t, {});
+    // Older uploads carry only the OE survey total. Falling back to it is exactly
+    // the previous behaviour, so re-reading old data cannot silently change.
+    const agg = pc.aggregateEmployeesFrom([
+        { employees: [{ name: 'A', totalCalls: 100, cxRepOverall: 100, overallExperience: 90, surveyTotal: 2 }] },
+        { employees: [{ name: 'A', totalCalls: 100, cxRepOverall: 40, overallExperience: 80, surveyTotal: 2 }] }
+    ])[0];
+    t.equal('weighted by the only count there is', agg.cxRepOverall, 70);
+});
+
+/* ── Reliability is the total as of that month, not as of today ── */
+
+const REL_WEEKS = {
+    '2026-02-23|2026-03-01': {
+        employees: [{ name: 'A', totalCalls: 100, aht: 400, scheduleAdherence: 95, reliability: 1 }],
+        metadata: { startDate: '2026-02-23', endDate: '2026-03-01', periodType: 'week' }
+    },
+    '2026-03-02|2026-03-08': {
+        employees: [{ name: 'A', totalCalls: 100, aht: 400, scheduleAdherence: 95, reliability: 1 }],
+        metadata: { startDate: '2026-03-02', endDate: '2026-03-08', periodType: 'week' }
+    }
+};
+
+suite('period compare: a historical month is not scored with hours missed later', (t) => {
+    // Two year-to-date files. March's rebuild must read the March one.
+    const pc = loadPure(t, REL_WEEKS, {
+        '2026-01-01|2026-03-31': { employees: [{ name: 'A', reliability: 2 }],
+            metadata: { startDate: '2026-01-01', endDate: '2026-03-31', periodType: 'ytd' } },
+        '2026-01-01|2026-08-09': { employees: [{ name: 'A', reliability: 60.1 }],
+            metadata: { startDate: '2026-01-01', endDate: '2026-08-09', periodType: 'ytd' } }
+    });
+
+    const march = pc.buildMonthAggregate('2026-03', 2026);
+    t.equal('March is scored on the total as of March', march.employees[0].reliability, 2);
+    t.equal('and still knows what was missed in the month itself', march.employees[0].reliabilityAccrued, 2);
+});
+
+suite('period compare: with no year-to-date file old enough, reliability is unmeasured', (t) => {
+    // Guessing would be worse than saying nothing: 0 is a perfect score.
+    const pc = loadPure(t, REL_WEEKS, {
+        '2026-01-01|2026-08-09': { employees: [{ name: 'A', reliability: 60.1 }],
+            metadata: { startDate: '2026-01-01', endDate: '2026-08-09', periodType: 'ytd' } }
+    });
+    const march = pc.buildMonthAggregate('2026-03', 2026);
+    t.equal('August hours are not back-applied to March', march.employees[0].reliability, null);
+});
+
+/* ── A rebuilt month says which dates it covers ── */
+
+suite('period compare: a rebuilt month reports the span it really covers', (t) => {
+    // Ends in August, starts in July. This is the whole reason an "August"
+    // column can disagree with a calendar-month report held up beside it.
+    const pc = loadPure(t, {
+        '2026-07-27|2026-08-02': { employees: [{ name: 'A', totalCalls: 100, aht: 400, scheduleAdherence: 95 }],
+            metadata: { startDate: '2026-07-27', endDate: '2026-08-02', periodType: 'week' } },
+        '2026-08-03|2026-08-09': { employees: [{ name: 'A', totalCalls: 100, aht: 400, scheduleAdherence: 95 }],
+            metadata: { startDate: '2026-08-03', endDate: '2026-08-09', periodType: 'week' } }
+    });
+    const aug = pc.buildMonthAggregate('2026-08', 2026);
+    t.equal('the span starts in the month before', aug.spanStart, '2026-07-27');
+    t.equal('and ends with the last completed week', aug.spanEnd, '2026-08-09');
+});
