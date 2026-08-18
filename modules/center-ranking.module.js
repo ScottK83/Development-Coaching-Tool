@@ -1005,7 +1005,9 @@
         var series = columns.filter(function (c) { return c.point; }).map(function (c) { return c.point; });
         if (!series.length) return '';
         var W = geom.width, H = 200, padL = geom.labelCol, padR = 8, padT = 18, padB = 30;
-        var worst = series.reduce(function (m, pt) { return Math.max(m, pt.total); }, 1);
+        var worst = series.reduce(function (m, pt) {
+            return Math.max(m, pt.total, pt.overallTotal || 0);
+        }, 1);
         if (reference && Number.isFinite(reference.rank)) worst = Math.max(worst, reference.total || 1);
         var span = Math.max(1, worst - 1);
         var x = function (i) { return padL + geom.colWidth * (i + 0.5); };
@@ -1033,22 +1035,42 @@
                 'font-size="10" fill="#1565c0">#' + reference.rank + ' ' + _escapeHtml(reference.label) + '</text>';
         }
 
-        /* Drawn as one run per unbroken stretch of months, so a gap in the
-           uploads shows as a gap in the line. Joining across it would draw a
-           trend through months nobody measured. */
-        var run = [];
-        var flush = function () {
-            if (run.length > 1) {
-                svg += '<polyline points="' + run.join(' ') + '" fill="none" stroke="#1565c0" ' +
-                    'stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />';
-            }
-            run = [];
+        /* Two lines, drawn as one run per unbroken stretch of months so a gap in
+           the uploads shows as a gap rather than a trend through months nobody
+           measured.
+
+           The heavy blue line is the month itself. The lighter one underneath is
+           where they stand for the YEAR as of that month — the question a month
+           rank cannot answer, because someone can have a poor August and still be
+           climbing on the year. */
+        var drawRuns = function (valueOf, stroke, width, dash) {
+            var run = [];
+            var flush = function () {
+                if (run.length > 1) {
+                    svg += '<polyline points="' + run.join(' ') + '" fill="none" stroke="' + stroke +
+                        '" stroke-width="' + width + '"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') +
+                        ' stroke-linejoin="round" stroke-linecap="round" />';
+                }
+                run = [];
+            };
+            columns.forEach(function (col, i) {
+                var v = col.point ? valueOf(col.point) : null;
+                if (!Number.isFinite(v)) { flush(); return; }
+                run.push(x(i) + ',' + y(v));
+            });
+            flush();
         };
+
+        drawRuns(function (pt) { return pt.overallRank; }, '#8e6bbf', 2, '4 3');
+        drawRuns(function (pt) { return pt.rank; }, '#1565c0', 2, null);
+
+        // Hollow markers for the year line, so the two are told apart without
+        // relying on colour alone.
         columns.forEach(function (col, i) {
-            if (!col.point) { flush(); return; }
-            run.push(x(i) + ',' + y(col.point.rank));
+            if (!col.point || !Number.isFinite(col.point.overallRank)) return;
+            svg += '<circle cx="' + x(i) + '" cy="' + y(col.point.overallRank) + '" r="3.5" ' +
+                'fill="var(--bg-surface)" stroke="#8e6bbf" stroke-width="2" />';
         });
-        flush();
 
         columns.forEach(function (col, i) {
             if (!col.point) {
@@ -1131,8 +1153,10 @@
             'against the month before, over the people scored in both — which is why it is not always the ' +
             'difference of the two ranks either side of it. Best rank sits at the top. ' +
             'A month rebuilt from weekly uploads covers whole weeks, so its dates can start in the ' +
-            'month before &mdash; the span under each heading is what it really covers.' +
-            (reference ? ' The dashed line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
+            'month before &mdash; the span under each heading is what it really covers. ' +
+            'The purple line is where they stand for the year as of each month, which is what says ' +
+            'whether the year is moving; a single month cannot.' +
+            (reference ? ' The flat blue line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
                 '</strong>, the figure on the card.' : '') + '</p>';
 
         var columns = _trajectoryColumns(series);
@@ -1144,6 +1168,16 @@
         // The row labels stay put while the months slide past; without this,
         // scrolling to November leaves five unlabelled rows of numbers.
         var stick = 'position: sticky; left: 0; z-index: 1; background: var(--bg-surface);';
+
+        html += '<div style="flex: 0 0 auto; margin: 0 0 8px 0; font-size: 0.8em; color: var(--text-secondary); ' +
+            'display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">' +
+            '<span><span style="display:inline-block;width:16px;height:0;border-top:2px solid #1565c0;' +
+            'vertical-align:middle;margin-right:5px;"></span>Rank that month</span>' +
+            '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed #8e6bbf;' +
+            'vertical-align:middle;margin-right:5px;"></span>Standing for the year, as of that month</span>' +
+            (reference ? '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed #1565c0;' +
+                'vertical-align:middle;margin-right:5px;"></span>' + _escapeHtml(reference.label) + ' (the card figure)</span>' : '') +
+            '</div>';
 
         html += '<div style="flex: 1 1 auto; min-height: 0; overflow: auto;">' +
             '<div style="width: ' + geom.width + 'px;">';
@@ -1204,6 +1238,32 @@
             return '<strong>#' + pt.rank + '</strong> <span style="color: var(--text-tertiary); font-size: 0.85em;">of ' +
                 pt.total + '</span>';
         }, true);
+
+        html += bodyRow('Year so far', function (pt) {
+            if (!Number.isFinite(pt.overallRank)) {
+                return '<span style="color: var(--text-tertiary);">&middot;</span>';
+            }
+            return '<strong style="color: #8e6bbf;">#' + pt.overallRank + '</strong>' +
+                '<span style="color: var(--text-tertiary); font-size: 0.85em;"> of ' + pt.overallTotal + '</span>';
+        }, true);
+
+        // Movement of the YEAR figure, month to month. This is the number that
+        // answers "are they climbing", which a single month's rank never does.
+        var prevOverall = null;
+        html += bodyRow('Year move', function (pt) {
+            var prev = prevOverall;
+            prevOverall = Number.isFinite(pt.overallRank) ? pt.overallRank : prevOverall;
+            if (!Number.isFinite(pt.overallRank) || !Number.isFinite(prev)) {
+                return '<span style="color: var(--text-tertiary);" title="Nothing before this to measure against">&middot;</span>';
+            }
+            var d = prev - pt.overallRank;
+            if (d === 0) return '<span style="color: var(--text-tertiary);">&#8213;</span>';
+            var up = d > 0;
+            return '<span style="font-weight: 600; color: ' +
+                (up ? (_isDark() ? '#66bb6a' : '#2e7d32') : (_isDark() ? '#ef5350' : '#c62828')) + ';">' +
+                (up ? '&#9650;' : '&#9660;') + Math.abs(d) + '</span>' +
+                '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + prev + '&rarr;' + pt.overallRank + '</div>';
+        });
 
         html += bodyRow('Move', function (pt) {
             if (!Number.isFinite(pt.delta)) return '<span style="color: var(--text-tertiary);" title="Nothing before this to measure against">&middot;</span>';
@@ -1553,7 +1613,8 @@
         html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Center Rankings</h4>';
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. ' +
-            'The <strong>Rank</strong> column is ' + _escapeHtml(_selectedPeriodPhrase(data)) + '. Each metric shows value and rank (#).' +
+            'The <strong>Rank</strong> column is ' + _escapeHtml(_selectedPeriodPhrase(data)) +
+            '. Click any name for that person’s month-by-month history. Each metric shows value and rank (#).' +
             (_mom ? ' <strong>' + (MOVEMENT_COLUMN_LABEL[_mom.scope] || 'Move') + '</strong> is a separate ' +
                 _escapeHtml(_mom.previous.label) + ' &rarr; ' + _escapeHtml(_mom.current.label) +
                 ' comparison, re-ranked over the ' + _mom.total + ' people scored in both &mdash; the two ranks under the arrow are on that scale, ' +
@@ -1693,14 +1754,17 @@
                 _movementBadge(_tableMovement && _tableMovement[r.name], true, _mvLabels) + '</td>';
 
             // Name
-            html += '<td class="ranking-name-cell" style="padding: 4px 3px; white-space: nowrap;">';
+            html += '<td class="ranking-name-cell" data-employee="' + _escapeHtml(r.name) +
+                '" title="Open ' + _escapeHtml(r.name) + '’s year" ' +
+                'style="padding: 4px 3px; white-space: nowrap; cursor: pointer;">';
             if (isTeam) {
                 html += '<span style="color: #1565c0;">&#9733; </span>';
             } else if (supColor) {
                 var _dotColor = _getSupervisorDotColor(r.name);
                 html += '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + _dotColor + ';box-shadow:0 0 0 1px rgba(0,0,0,0.25);margin-right:5px;vertical-align:middle;"></span>';
             }
-            html += _escapeHtml(r.name) + '</td>';
+            html += '<span style="text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px;">' +
+                _escapeHtml(r.name) + '</span></td>';
 
             // KPIs Met
             var kpiMetColor = _kpiMetColor(r.kpisMet, r.measuredCount, false);
@@ -1756,7 +1820,16 @@
         tableDiv.innerHTML = html;
         wrapper.appendChild(tableDiv.firstChild);
 
-        // Bind sort headers
+        // Any name in the centre opens that person's year.
+        wrapper.querySelectorAll('.ranking-name-cell').forEach(function (cell) {
+            cell.addEventListener('click', function () {
+                var name = cell.dataset ? cell.dataset.employee : null;
+                if (name) _openTrajectory(name);
+            });
+        });
+
+        // Bind sort headers. Re-bound on every render, since sorting rebuilds
+        // the table and throws the old nodes away.
         wrapper.querySelectorAll('.rank-sort-header').forEach(function(th) {
             th.addEventListener('click', function() {
                 var newKey = th.dataset.sort;

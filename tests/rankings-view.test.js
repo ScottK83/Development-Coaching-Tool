@@ -853,3 +853,61 @@ suite('rankings view: the whole card opens the trajectory, not just the name', (
     t.check('the name no longer carries the binding on its own',
         !/ranking-card-name" data-employee/.test(team));
 });
+
+suite('rankings view: any name in the centre opens a year', (t) => {
+    const { dom, cr } = loadRankings(t, WEEKS, YTD);
+    global.window.getTeamMembersForWeek = () => ['P0'];
+    cr.renderCenterRanking();
+    const table = dom.table();
+
+    // The card was the only way in, so checking someone else's year meant
+    // scrolling the table to find the name and then having nowhere to click.
+    const cells = [...table.matchAll(/<td class="ranking-name-cell" data-employee="([^"]+)"[^>]*>/g)];
+    t.check('every row carries a target', cells.length === 40);
+    t.check('and every target names its person', cells.every((m) => /^P\d+$/.test(m[1])));
+    t.check('the cell says it can be clicked', /cursor: pointer/.test(cells[0][0]));
+    t.check('and says what it opens', /title="Open P\d+&#39;s year"|title="Open P\d+’s year"/.test(cells[0][0]));
+
+    // A dotted underline on one cell in twelve columns is easy to miss.
+    t.check('the intro says the names are live',
+        /Click any name for that person(&#39;|’)s month-by-month history/.test(dom.shell()));
+
+    // Team members already had a star; that must not be swallowed by the link.
+    t.check('the team marker survives', /&#9733; <\/span>/.test(table));
+});
+
+suite('rankings view: the trajectory shows whether the YEAR is moving', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('P0');
+
+    // A month rank answers "how was June". It cannot answer "is the year
+    // moving" — someone can have a poor month and still be climbing, because
+    // the year is the sum of everything before it too.
+    t.check('the year standing has its own row', />Year so far<\/td>/.test(html));
+    t.check('and its own movement row', />Year move<\/td>/.test(html));
+    t.check('the standing carries its denominator', /#\d+<\/strong><span[^>]*> of \d+<\/span>/.test(html));
+
+    t.check('the chart draws it as a second line', /stroke="#8e6bbf"/.test(html));
+    t.check('with hollow markers, so colour is not the only tell',
+        /fill="var\(--bg-surface\)" stroke="#8e6bbf"/.test(html));
+    t.check('and a legend naming both lines',
+        /Rank that month/.test(html) && /Standing for the year, as of that month/.test(html));
+
+    // Two dashed lines on one chart means neither can be "the dashed line".
+    t.check('the two references are named distinctly',
+        /The purple line is where they stand/.test(html) && /The flat blue line is/.test(html));
+    t.check('and nothing is called just "the dashed line"', !/The dashed line is/.test(html));
+});
+
+suite('period compare: the year standing accumulates rather than resetting', (t) => {
+    const { pc } = loadRankings(t, WEEKS, YTD);
+    const tl = pc.buildRankTimeline('month');
+    const series = tl.byName.P0;
+
+    t.check('every scored month carries a year standing',
+        series.every((pt) => Number.isFinite(pt.overallRank) && pt.overallTotal > 0));
+    // The first month has nothing before it, so the year and the month agree.
+    t.equal('the first month is the year so far', series[0].overallRank, series[0].rank);
+    t.check('and the year is ranked over the same field', series[0].overallTotal === series[0].total);
+});

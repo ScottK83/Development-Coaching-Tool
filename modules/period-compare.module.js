@@ -844,6 +844,34 @@
 
         var ranked = usable.map(function (p) { return _rank(p.employees, yr) || []; });
 
+        /* Where they stand for the YEAR as of the end of each month.
+
+           A month rank answers "how was August". It does not answer "is the year
+           moving", which is the question a supervisor actually has — someone can
+           have a poor August and still be climbing, because the year is the sum
+           of everything before it too.
+
+           Built by re-aggregating the month aggregates rather than the raw weeks.
+           That is exact, not an approximation: every rate here is a weighted mean
+           and each month carries the weights it was built from, so a weighted mean
+           of weighted means over the same weights is the same number. Reliability
+           is the exception — the months carry a running total, not something
+           summable — so it is re-read from the year-to-date file as of that month,
+           the same rule buildMonthAggregate uses. */
+        var cumulative = [];
+        var soFar = [];
+        usable.forEach(function (per, i) {
+            soFar.push({ employees: per.employees });
+            var rows = aggregateEmployeesFrom(soFar);
+            var asOf = _latestYtdReliability(yr, { asOfMonth: per.key });
+            rows.forEach(function (e) {
+                e.reliability = Number.isFinite(asOf[e.name]) ? asOf[e.name] : null;
+            });
+            var byName = {};
+            (_rank(rows, yr) || []).forEach(function (r) { byName[r.name] = r; });
+            cumulative[i] = { byName: byName, total: Object.keys(byName).length };
+        });
+
         var moves = usable.map(function () { return {}; });
         var moveTotals = usable.map(function () { return null; });
         for (var i = 1; i < usable.length; i++) {
@@ -869,6 +897,12 @@
                     weekCount: per.weekCount || null,
                     spanStart: per.spanStart || null,
                     spanEnd: per.spanEnd || null,
+                    // Standing for the year as a whole, as of the end of this
+                    // month. Null for anyone not scored in the year to that point.
+                    overallRank: (cumulative[i].byName[r.name] || {}).rank || null,
+                    overallTotal: cumulative[i].total,
+                    overallKpisMet: (cumulative[i].byName[r.name] || {}).kpisMet,
+                    overallScoreSum: (cumulative[i].byName[r.name] || {}).scoreSum,
                     // Over everyone scored in this period.
                     rank: r.rank,
                     total: rows.length,
