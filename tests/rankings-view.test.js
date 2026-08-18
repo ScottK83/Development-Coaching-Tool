@@ -417,7 +417,13 @@ suite('rankings view: a team card says which window its rank is from', (t) => {
     const shell = dom.shell();
     const team = shell.slice(shell.indexOf('Your Team'));
 
-    t.check('the headline rank carries its own window', /of \d+ year to date/.test(team));
+    // Three rounds of the same misread said a trailing "year to date" after
+    // "of 126" was not enough: the eye stops at the big number and moves on to
+    // the movement line, which names its months. The window is now a badge hard
+    // against the number, before anything else can be read instead.
+    t.check('the window is a badge on the number itself',
+        /#\d+<\/span><span[^>]*text-transform: uppercase[^>]*>Year to date<\/span>/.test(team));
+    t.check('every card carries it', (team.match(/>Year to date<\/span>/g) || []).length === 3);
     t.check('the caption names that window too',
         /ranks <strong>year to date<\/strong>/.test(team));
     t.check('and names the movement window separately',
@@ -436,7 +442,7 @@ suite('rankings view: the card percentile points the way it reads', (t) => {
     // read "top 94%" and the worst performer on the panel read "top 9%".
     t.check('nothing claims to be top anything', !/\(top \d+%\)/.test(team));
 
-    const cards = [...team.matchAll(/#(\d+)<\/span> <span[^>]*>of (\d+) year to date &mdash; better than (\d+)%/g)]
+    const cards = [...team.matchAll(/#(\d+)<\/span><span[^>]*>[^<]*<\/span><span[^>]*>of (\d+) &mdash; better than (\d+)%/g)]
         .map((m) => ({ rank: +m[1], total: +m[2], ahead: +m[3] }));
     t.equal('every card carries the figure', cards.length, 3);
     t.check('it is the share of the centre they finished ahead of',
@@ -769,4 +775,30 @@ suite('rankings view: the strip marks a month that has not finished', (t) => {
     t.check('the unfinished month is on the strip', (team.match(/<strong>/g) || []).length >= 9);
     t.check('and it is marked as unfinished', /<span style="color: #e65100;">[A-Z][a-z]{2}<\/span> <strong>/.test(team));
     t.check('while the complete months are not', /(^|>)[A-Z][a-z]{2} <strong>/.test(team));
+});
+
+suite('rankings view: the year scrolls sideways once it outgrows the modal', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const html = cr.buildTrajectoryHtml('P0');
+
+    // The table carried overflow-x from the start and it never fired: width:100%
+    // makes a table shrink its columns to fit rather than overflow, so eight
+    // months crushed into the space four had instead of scrolling.
+    t.check('there is a horizontal scroller', /overflow-x: auto/.test(html));
+    t.check('and the table has a real width to overflow with',
+        /<table style="width: \d+px;[^"]*table-layout: fixed/.test(html));
+    t.check('columns are pinned to that width', /<colgroup><col style="width: \d+px;"/.test(html));
+    t.check('the row labels stay put while the months slide past',
+        (html.match(/position: sticky; left: 0/g) || []).length >= 6);
+
+    // Chart and table share one geometry so a plotted point sits over its column.
+    const tableWidth = Number((html.match(/<table style="width: (\d+)px;/) || [])[1]);
+    const svgWidth = Number((html.match(/<svg viewBox="0 0 (\d+) /) || [])[1]);
+    t.equal('the chart is exactly as wide as the table', svgWidth, tableWidth);
+    t.check('both sit inside the same scroller',
+        new RegExp('overflow-x: auto;"><div style="width: ' + tableWidth + 'px;"').test(html));
+
+    // Two months fits; nothing to announce.
+    t.check('a short year says nothing about scrolling', !/Scroll sideways/.test(html));
 });

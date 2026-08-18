@@ -123,7 +123,7 @@
        puts all three in sequence and gets an impossible timeline — "#9 ... #21 in
        July ... #29 in August" reads as a person who was 21st, then 29th, and is
        somehow now 9th. Every rank on the card names its own period. */
-    function _selectedPeriodPhrase(data) {
+    function _selectedPeriodName(data) {
         var key = (data && data.periodKey) || _selectedRankingPeriodKey;
         var match = key ? _getAvailableRankingPeriods().filter(function (p) {
             return p.key === key;
@@ -131,11 +131,14 @@
         // "July 2026 (rebuilt from 4 weeks)" is provenance, not a period name, and
         // the provenance is already stated in the header.
         var trim = function (label) { return String(label).replace(/\s*\([^)]*\)\s*$/, ''); };
-        if (match) {
-            if (match.type === 'ytd') return 'year to date';
-            return 'in ' + trim(match.label);
-        }
-        return (data && data.source) ? 'in ' + trim(data.source) : 'in this period';
+        if (match) return match.type === 'ytd' ? 'Year to date' : trim(match.label);
+        return (data && data.source) ? trim(data.source) : '';
+    }
+
+    function _selectedPeriodPhrase(data) {
+        var name = _selectedPeriodName(data);
+        if (!name) return 'in this period';
+        return name === 'Year to date' ? 'year to date' : 'in ' + name;
     }
 
     function _monthMovement() {
@@ -938,16 +941,28 @@
        does. Inline SVG rather than a chart library: this is one polyline in a
        modal, and it has to theme itself from the same CSS variables as
        everything around it. */
-    function _trajectorySvg(series, reference) {
-        var W = 620, H = 200, padL = 42, padR = 18, padT = 18, padB = 30;
+    // One geometry for the chart and the table beneath it, so a plotted point
+    // sits directly over the column it belongs to at every scroll position.
+    var TRAJECTORY_LABEL_COL = 104;   // the sticky row-label column
+    var TRAJECTORY_COL_WIDTH = 116;   // one period
+
+    function _trajectoryGeometry(series) {
+        return {
+            labelCol: TRAJECTORY_LABEL_COL,
+            colWidth: TRAJECTORY_COL_WIDTH,
+            width: TRAJECTORY_LABEL_COL + TRAJECTORY_COL_WIDTH * series.length
+        };
+    }
+
+    function _trajectorySvg(series, reference, geom) {
+        var W = geom.width, H = 200, padL = geom.labelCol, padR = 8, padT = 18, padB = 30;
         var worst = series.reduce(function (m, pt) { return Math.max(m, pt.total); }, 1);
         if (reference && Number.isFinite(reference.rank)) worst = Math.max(worst, reference.total || 1);
         var span = Math.max(1, worst - 1);
-        var n = series.length;
-        var x = function (i) { return n < 2 ? (padL + (W - padL - padR) / 2) : padL + (i * (W - padL - padR)) / (n - 1); };
+        var x = function (i) { return padL + geom.colWidth * (i + 0.5); };
         var y = function (rank) { return padT + ((rank - 1) / span) * (H - padT - padB); };
 
-        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" role="img" ' +
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" ' +
             'aria-label="Rank by month, best at the top" style="display:block;">';
 
         // Gridlines at best, middle and worst.
@@ -1036,16 +1051,26 @@
             (reference ? ' The dashed line is <strong>#' + reference.rank + ' ' + _escapeHtml(reference.label) +
                 '</strong>, the figure on the card.' : '') + '</p>';
 
-        html += '<div style="background: var(--bg-surface-raised); border: 1px solid var(--border); ' +
-            'border-radius: 8px; padding: 8px 4px 2px 4px; margin-bottom: 14px;">' +
-            _trajectorySvg(series, reference) + '</div>';
+        var geom = _trajectoryGeometry(series);
 
         var th = 'padding: 5px 6px; border-bottom: 2px solid var(--border); font-size: 0.78em; ' +
             'color: var(--text-secondary); text-align: center; white-space: nowrap;';
         var td = 'padding: 5px 6px; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap;';
+        // The row labels stay put while the months slide past; without this,
+        // scrolling to November leaves five unlabelled rows of numbers.
+        var stick = 'position: sticky; left: 0; z-index: 1; background: var(--bg-surface);';
 
-        html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">';
-        html += '<thead><tr><th style="' + th + ' text-align: left;">Month</th>';
+        html += '<div style="overflow-x: auto;"><div style="width: ' + geom.width + 'px;">';
+        html += '<div style="background: var(--bg-surface-raised); border: 1px solid var(--border); ' +
+            'border-radius: 8px; padding: 8px 0 2px 0; margin-bottom: 14px;">' +
+            _trajectorySvg(series, reference, geom) + '</div>';
+
+        html += '<table style="width: ' + geom.width + 'px; border-collapse: collapse; ' +
+            'table-layout: fixed; font-size: 0.85em;">';
+        html += '<colgroup><col style="width: ' + geom.labelCol + 'px;" />' +
+            series.map(function () { return '<col style="width: ' + geom.colWidth + 'px;" />'; }).join('') +
+            '</colgroup>';
+        html += '<thead><tr><th style="' + th + stick + ' text-align: left;">Month</th>';
         series.forEach(function (pt) {
             html += '<th style="' + th + '">' + _escapeHtml(_shortPeriodLabel(pt.label)) +
                 (pt.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') + '</th>';
@@ -1053,7 +1078,7 @@
         html += '</tr></thead><tbody>';
 
         function bodyRow(label, cells, strong) {
-            var out = '<tr><td style="' + td + ' text-align: left; color: var(--text-secondary);' +
+            var out = '<tr><td style="' + td + stick + ' text-align: left; color: var(--text-secondary);' +
                 (strong ? ' font-weight: 700; color: var(--text-primary);' : '') + '">' + label + '</td>';
             cells.forEach(function (c) { out += '<td style="' + td + '">' + c + '</td>'; });
             return out + '</tr>';
@@ -1090,7 +1115,7 @@
                 'font-weight: bold; color: #fff; background: ' + c + ';">' + _escapeHtml(pt.trackLabel) + '</span>';
         }));
 
-        html += '<tr><td colspan="' + (series.length + 1) + '" style="padding: 10px 6px 4px 6px; ' +
+        html += '<tr><td colspan="' + (series.length + 1) + '" style="' + stick + ' padding: 10px 6px 4px 6px; ' +
             'font-size: 0.78em; color: var(--text-secondary); border-bottom: 2px solid var(--border);">' +
             'The five KPIs behind it &mdash; value, its 3/2/1 score, and where that ranked in the month.</td></tr>';
 
@@ -1108,7 +1133,11 @@
             }));
         });
 
-        html += '</tbody></table></div>';
+        html += '</tbody></table></div></div>';
+        if (geom.width > 620) {
+            html += '<p style="margin: 8px 0 0 0; color: var(--text-tertiary); font-size: 0.78em;">' +
+                'Scroll sideways for the rest of the year.</p>';
+        }
         return html;
     }
 
@@ -1119,7 +1148,7 @@
 
         var content = document.createElement('div');
         content.className = 'modal-content';
-        content.style.maxWidth = '860px';
+        content.style.maxWidth = '1040px';
         content.innerHTML =
             '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">' +
                 '<h3 style="margin: 0; color: var(--text-primary);">' + _escapeHtml(name) + '</h3>' +
@@ -1286,6 +1315,7 @@
         var teamRanks = data.rankings.filter(function (r) { return data.teamMembers.has(r.name); });
         var _teamMovement = _movementByName();
         var _teamPeriodPhrase = _selectedPeriodPhrase(data);
+        var _teamPeriodName = _selectedPeriodName(data) || 'this period';
         var _teamMovementLabels = _mom
             ? { previous: _mom.previous.label, current: _mom.current.label + (_mom.current.inProgress ? ' (so far)' : ''), total: _mom.total }
             : null;
@@ -1329,10 +1359,16 @@
 
                 html += '<div style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
                 html += '<div class="ranking-card-name" data-employee="' + _escapeHtml(r.name) + '" style="font-weight: bold; font-size: 1.05em; cursor: pointer; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
-                html += '<div style="margin-top: 4px;">';
+                html += '<div style="margin-top: 4px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">';
                 html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
-                html += ' <span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees +
-                    ' ' + _escapeHtml(_teamPeriodPhrase) + ' &mdash; better than ' + aheadOf + '%</span>';
+                // The window, hard against the number it belongs to, before
+                // anything else gets a chance to be read instead.
+                html += '<span style="display: inline-block; padding: 1px 6px; border-radius: 4px; ' +
+                    'background: #1565c0; color: #fff; font-size: 0.62em; font-weight: 700; ' +
+                    'letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;">' +
+                    _escapeHtml(_teamPeriodName) + '</span>';
+                html += '<span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees +
+                    ' &mdash; better than ' + aheadOf + '%</span>';
                 html += '</div>';
 
                 // Spelled out on the team cards rather than left as an arrow —
