@@ -265,12 +265,78 @@
         return earliest;
     }
 
+    const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+
+    /* Weeks of this year that sit BEFORE the first upload, and the months that
+       have no weekly upload at all.
+
+       These are deliberately not counted as gaps: a gap is a hole between
+       things you have, and the scan starts at the first upload because weeks
+       before it were "just before you started". That reads right in week two of
+       a new install and wrong in August — the trajectory, the month rebuilds
+       and every year-to-date comparison run January to now, so four blank
+       months at the front of the year are missing data by every definition the
+       rest of the app uses, and the banner said "1 week never uploaded".
+
+       Kept as a separate bucket so eighteen weeks of never-had-it cannot drown
+       the one week that is genuinely an oversight. */
+    function priorYearCoverage(weeklyStore, today, earliestMon, maxOptions) {
+        const year = today.getFullYear();
+        const jan1 = new Date(year, 0, 1);
+        const uploaded = scanUploadedWeeks(weeklyStore).mondays;
+
+        // Months with no weekly upload ending in them. Bucketed by end date,
+        // the same way the month rebuild buckets weeks, so this answers the
+        // question the trajectory raises rather than a near neighbour of it.
+        const covered = new Set();
+        uploaded.forEach(iso => {
+            const sun = addDays(parseLocalDate(iso), 6);
+            if (sun.getFullYear() === year) covered.add(sun.getMonth());
+        });
+        const emptyMonths = [];
+        for (let m = 0; m <= today.getMonth(); m++) {
+            if (!covered.has(m)) emptyMonths.push(MONTH_NAMES[m]);
+        }
+
+        const weeks = [];
+        if (earliestMon && earliestMon > jan1) {
+            for (let mon = mondayOf(jan1); mon < earliestMon; mon = addDays(mon, 7)) {
+                const sun = addDays(mon, 6);
+                if (sun < jan1) continue;   // that week belongs to last year
+                const iso = isoDate(mon);
+                if (uploaded.has(iso)) continue;
+                weeks.push({
+                    id: `week-${iso}`,
+                    label: `${fmtShort(mon)} – ${fmtLong(sun)} (before your first upload)`,
+                    periodType: 'week',
+                    startDate: iso,
+                    endDate: isoDate(sun),
+                    isMissingWeek: true,
+                    priority: 2.6
+                });
+            }
+        }
+        weeks.reverse();   // nearest to the data you have comes first
+
+        return {
+            priorWeeks: weeks.slice(0, maxOptions),
+            priorCount: weeks.length,
+            priorShownCount: Math.min(weeks.length, maxOptions),
+            firstCoveredDate: earliestMon ? isoDate(earliestMon) : null,
+            emptyMonths
+        };
+    }
+
     function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12) {
         const lastWeekMon = addDays(mondayOf(today), -7);
         const { mondays: uploadedMondays } = scanUploadedWeeks(weeklyStore);
         const earliestMon = earliestCoveredMonday(weeklyStore);
 
-        if (!earliestMon) return { weeks: [], totalMissing: 0, shownCount: 0 };
+        const prior = priorYearCoverage(weeklyStore, today, earliestMon, maxOptions);
+        if (!earliestMon) {
+            return Object.assign({ weeks: [], totalMissing: 0, shownCount: 0 }, prior);
+        }
 
         const oldestScanned = addDays(lastWeekMon, -7 * 51);
         const scanFrom = earliestMon > oldestScanned ? earliestMon : oldestScanned;
@@ -293,11 +359,11 @@
         }
 
         missing.reverse(); // most recent gap first — likeliest to be filled
-        return {
+        return Object.assign({
             weeks: missing.slice(0, maxOptions),
             totalMissing: missing.length,
             shownCount: Math.min(missing.length, maxOptions)
-        };
+        }, prior);
     }
 
     // Annotate each option with upload state by looking it up in
@@ -549,7 +615,7 @@
     // here are locally formatted dates, so plain innerHTML is safe.
     function renderGapBanner(bannerEl, gaps) {
         if (!bannerEl) return;
-        if (!gaps || !gaps.totalMissing) {
+        if (!gaps || (!gaps.totalMissing && !gaps.priorCount && !(gaps.emptyMonths || []).length)) {
             bannerEl.style.display = 'none';
             bannerEl.innerHTML = '';
             return;
@@ -566,12 +632,27 @@
         const more = totalMissing > shownCount
             ? `<div style="margin-top:6px; font-size:0.8em; color:var(--yellow-text, #6c4400);">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
             : '';
-        bannerEl.style.display = 'block';
-        bannerEl.innerHTML = `
+        // Two different problems, said separately. A hole between uploads is
+        // probably an oversight; a blank start to the year is a decision about
+        // how far back to go, and lumping them into one count made the January
+        // to April hole read as "1 week never uploaded".
+        const gapBlock = totalMissing ? `
             <div style="font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>
             <div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
             <div>${chips}</div>
-            ${more}`;
+            ${more}` : '';
+
+        const months = gaps.emptyMonths || [];
+        const monthText = months.length === 1
+            ? `${months[0]} has`
+            : `${months.slice(0, -1).join(', ')} and ${months[months.length - 1]} have`;
+        const startBlock = (gaps.priorCount || months.length) ? `
+            <div style="${totalMissing ? 'margin-top:12px; padding-top:10px; border-top:1px solid var(--border);' : ''} font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">📅 Nothing uploaded before ${fmtLong(parseLocalDate(gaps.firstCoveredDate))}</div>
+            ${months.length ? `<div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">${monthText} no weekly data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>` : ''}
+            ${gaps.priorCount ? `<div style="font-size:0.85em; color:var(--text-primary, var(--text-primary));">${gaps.priorCount} earlier week${gaps.priorCount === 1 ? ' is' : 's are'} in the dropdown if you have the reports.</div>` : ''}` : '';
+
+        bannerEl.style.display = 'block';
+        bannerEl.innerHTML = gapBlock + startBlock;
     }
 
     // Refresh the dropdown using current weeklyData / ytdData. Called
@@ -594,7 +675,9 @@
         // already covers (e.g. "Last week" when last week is a gap).
         const gaps = computeMissingWeeks(weekly, today);
         const knownIds = new Set(options.map(o => o.id));
-        const extraGaps = gaps.weeks.filter(w => !knownIds.has(w.id));
+        // Weeks before the first upload are offered too — telling someone four
+        // months are blank and giving them no way to fill them is half a feature.
+        const extraGaps = gaps.weeks.concat(gaps.priorWeeks || []).filter(w => !knownIds.has(w.id));
         renderDropdown(selectEl, options.concat(extraGaps));
         renderGapBanner(document.getElementById('uploadWizardGapBanner'), gaps);
 
@@ -715,6 +798,9 @@
         annotateUploadState,
         computeMissingWeeks,
         missingWeeksInRange,
+        // Exported for the tests: this banner is the thing a supervisor reads
+        // to decide whether their year is complete, so its wording is pinned.
+        renderGapBanner,
         refresh,
         bind
     };
