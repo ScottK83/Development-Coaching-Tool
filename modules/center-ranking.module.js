@@ -1373,23 +1373,6 @@
         return parts.join('.').toLowerCase() + '@aps.com';
     }
 
-    // Metrics where a bigger number is worse, so the arrow can point at the
-    // outcome rather than at the arithmetic.
-    var EMAIL_METRIC_ROWS = [
-        { label: 'AHT', key: 'aht', registry: 'aht', lowerIsBetter: true, unit: 'sec' },
-        { label: 'Adherence', key: 'adherence', registry: 'scheduleAdherence', lowerIsBetter: false, unit: 'pts' },
-        { label: 'Sentiment', key: 'sentiment', registry: 'overallSentiment', lowerIsBetter: false, unit: 'pts' },
-        { label: 'Rep Sat', key: 'associateOverall', registry: 'cxRepOverall', lowerIsBetter: false, unit: 'pts' },
-        { label: 'Reliability', key: 'reliability', registry: 'reliability', lowerIsBetter: true, unit: 'h' }
-    ];
-
-    function _emailMetricValue(pt, row) {
-        if (!pt) return null;
-        if (row.key === 'reliability') return pt.reliability;
-        var v = (pt.values || {})[row.key];
-        return v === undefined ? null : v;
-    }
-
     function _padEnd(text, width) {
         var out = String(text);
         while (out.length < width) out += ' ';
@@ -1412,78 +1395,62 @@
     }
 
     function buildMonthOverMonthEmail(name) {
+        var model = buildYearImageModel(name);
+        if (!model) return null;
         var series = _timelineFor(name);
         var pair = _lastTwoScored(series);
-        if (!pair) return null;
+        var scored = model.columns.filter(function (c) { return c.present; });
+        if (!scored.length) return null;
 
-        var prev = pair[0], cur = pair[1];
         var firstName = String(name || '').trim().split(/\s+/)[0] || name;
-        var prevLabel = _shortPeriodLabel(prev.label);
-        var curLabel = _shortPeriodLabel(cur.label) + (cur.inProgress ? ' so far' : '');
-
-        // One column width for everything, so the arrows form a straight line
-        // down the message. A spaced table is the only kind that survives a
-        // plain-text mail body intact.
-        var W = 11;
-        var col = function (label, a, b, trailing) {
-            return '  ' + _padEnd(label, 13) + _padStart(a, W) + ' -> ' + _padStart(b, W) +
-                (trailing ? '    ' + trailing : '');
-        };
+        var CW = 7;   // "  below" / "  meets" fits, with a space between columns
 
         var lines = [];
         lines.push('Hi ' + firstName + ',');
         lines.push('');
-        lines.push('Here is how your numbers moved from ' + prev.label + ' to ' + cur.label +
-            (cur.inProgress ? ' so far.' : '.'));
+        lines.push('Here is where your numbers have landed each month this year, against target.');
         lines.push('');
-        lines.push('  ' + _padEnd('', 13) + _padStart(prevLabel, W) + '    ' + _padStart(curLabel, W) + '    Change');
-        lines.push('  ' + new Array(13 + W + 4 + W + 12).join('-'));
 
-        EMAIL_METRIC_ROWS.forEach(function (row) {
-            var a = _emailMetricValue(prev, row);
-            var b = _emailMetricValue(cur, row);
-            var missing = function (v) { return v === null || v === undefined || isNaN(v); };
-            // A metric nobody measured is not a row. Printing "-- -> --" only
-            // invites being asked what happened to it.
-            if (missing(a) && missing(b)) return;
+        // The month heading row, then one row per metric. Fixed columns, because
+        // a spaced table is the only kind that survives a plain-text mail body.
+        lines.push('  ' + _padEnd('', 13) + model.columns.map(function (c) {
+            return _padStart(c.label, CW);
+        }).join(''));
 
-            var shown = function (v) { return missing(v) ? '--' : _formatMetricDisplay(row.registry, v); };
-            var change = '';
-            if (!missing(a) && !missing(b)) {
-                var diff = b - a;
-                if (Math.abs(diff) < 0.05) {
-                    change = 'no change';
-                } else {
-                    // The arrow reports the outcome, not the direction of the
-                    // number: AHT going up is a step backwards.
-                    var better = row.lowerIsBetter ? diff < 0 : diff > 0;
-                    change = (better ? 'better by ' : 'worse by ') +
-                        (Math.round(Math.abs(diff) * 10) / 10) + ' ' + row.unit;
-                }
-            }
-            lines.push(col(row.label, shown(a), shown(b), change));
+        model.targets.forEach(function (tg, r) {
+            lines.push('  ' + _padEnd(tg.label, 13) + model.columns.map(function (c) {
+                var m = c.present ? c.metrics[r] : null;
+                if (!m || m.meets === null) return _padStart('-', CW);
+                return _padStart(m.meets ? 'meets' : 'below', CW);
+            }).join(''));
         });
 
-        lines.push('');
-        lines.push(col('KPIs met', prev.kpisMet + '/' + prev.measuredCount,
-            cur.kpisMet + '/' + cur.measuredCount, ''));
-        lines.push(col('Average', prev.kpiScore.toFixed(1), cur.kpiScore.toFixed(1), 'out of 3.0'));
-        lines.push(col('Overall', prev.trackLabel, cur.trackLabel, ''));
+        lines.push('  ' + new Array(13 + CW * model.columns.length + 1).join('-'));
+        lines.push('  ' + _padEnd('Meeting', 13) + model.columns.map(function (c) {
+            if (!c.present || !c.measuredAgainstTarget) return _padStart('-', CW);
+            return _padStart(c.meetsCount + '/' + c.measuredAgainstTarget, CW);
+        }).join(''));
 
-        /* No placing, no rank, no count of anybody else.
-
-           Where someone landed against the rest of the centre is a management
-           number. What the person needs from this note is whether their own
-           numbers moved, and the table above already says which way for each
-           one — so the closing line names the overall direction and stops. */
-        var swing = cur.kpiScore - prev.kpiScore;
+        // "Meets" is only a claim the reader can check if the bar is named.
         lines.push('');
-        if (Math.abs(swing) < 0.05) {
-            lines.push('Overall that holds you about where you were in ' + prev.label + '.');
-        } else if (swing > 0) {
-            lines.push('Overall that is a better month than ' + prev.label + '. Nice work.');
-        } else {
-            lines.push('Overall that is a step back from ' + prev.label + '.');
+        lines.push('What meets looks like:');
+        model.targets.forEach(function (tg) {
+            lines.push('  ' + _padEnd(tg.label, 13) + tg.phrase);
+        });
+
+        // The direction, off their own KPI average. No rank, no placing, no
+        // count of anybody else.
+        if (pair) {
+            var prev = pair[0], cur = pair[1];
+            var swing = cur.kpiScore - prev.kpiScore;
+            lines.push('');
+            if (Math.abs(swing) < 0.05) {
+                lines.push(cur.label + ' holds you about where you were in ' + prev.label + '.');
+            } else if (swing > 0) {
+                lines.push(cur.label + ' is a better month than ' + prev.label + '. Nice work.');
+            } else {
+                lines.push(cur.label + ' is a step back from ' + prev.label + '.');
+            }
         }
 
         lines.push('');
@@ -1492,13 +1459,11 @@
         return {
             to: _apsEmailFor(name),
             cc: COACHING_CC,
-            subject: prev.label + ' to ' + cur.label + ' - your numbers',
+            subject: 'Your ' + model.year + ' numbers, month by month',
             body: lines.join('\n'),
-            prevLabel: prev.label,
-            curLabel: cur.label
+            monthCount: scored.length
         };
     }
-
 
     /* ── The year, as a picture ──
 
@@ -1515,7 +1480,41 @@
        The model is separated from the drawing so what goes IN the picture can be
        asserted; a canvas can only be eyeballed. */
 
-    var IMG_SCORE_COLOR = { 3: '#2e7d32', 2: '#1565c0', 1: '#c62828' };
+    /* The published target for a metric, and whether a value clears it.
+
+       Not the 3/2/1 rating bands. Those are an internal scoring device — the
+       difference between a 2 and a 3 is a stretch mark nobody outside this tool
+       is measured on, and putting the digit in front of an associate invites a
+       conversation about a number they were never given. What they are given is
+       the target: 426 seconds, 93% adherence. Meets it or does not. */
+    function _targetFor(registryKey, year) {
+        var mp = window.DevCoachModules && window.DevCoachModules.metricProfiles;
+        if (!mp || !mp.getYearTarget) return null;
+        try {
+            return mp.getYearTarget(registryKey, year) || null;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function _meetsTarget(registryKey, value, year) {
+        var target = _targetFor(registryKey, year);
+        var num = parseFloat(value);
+        if (!target || !isFinite(num) || !isFinite(target.value)) return null;
+        return target.type === 'max' ? num <= target.value : num >= target.value;
+    }
+
+    // What the target reads as in a sentence, for the key under the picture and
+    // the footer of the email. "426 sec or lower", "93% or higher".
+    function _targetPhrase(registryKey, year) {
+        var target = _targetFor(registryKey, year);
+        if (!target || !isFinite(target.value)) return '';
+        return _formatMetricDisplay(registryKey, target.value) +
+            (target.type === 'max' ? ' or lower' : ' or higher');
+    }
+
+    var IMG_MEETS_COLOR = '#2e7d32';
+    var IMG_BELOW_COLOR = '#c62828';
     var IMG_FONT = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
 
     function buildYearImageModel(name) {
@@ -1523,6 +1522,8 @@
         if (!series || !series.length) return null;
         var columns = _trajectoryColumns(series);
         if (!columns.length) return null;
+        var tl = _timeline();
+        var year = (tl && tl.year) || new Date().getFullYear();
 
         // January through whatever has data, which is what _trajectoryColumns
         // already covers — the empty months included, so a gap reads as a gap
@@ -1531,8 +1532,12 @@
         return {
             name: name,
             title: name,
+            year: year,
             subtitle: _shortPeriodLabel(first.label) + ' to ' + _shortPeriodLabel(last.label) + ' ' +
                 (String(last.key).slice(0, 4) || ''),
+            targets: TRAJECTORY_METRIC_ROWS.map(function (row) {
+                return { label: row.label, phrase: _targetPhrase(row.registry, year) };
+            }).filter(function (tg) { return tg.phrase; }),
             columns: columns.map(function (col) {
                 var pt = col.point;
                 return {
@@ -1546,16 +1551,24 @@
                     overallTotal: pt ? pt.overallTotal : null,
                     kpisMet: pt ? pt.kpisMet : null,
                     measuredCount: pt ? pt.measuredCount : null,
+                    // Counted against the target, not the rating band, so it
+                    // agrees with the words printed beside it.
+                    meetsCount: pt ? TRAJECTORY_METRIC_ROWS.filter(function (row) {
+                        return _meetsTarget(row.registry, _trajectoryMetricValue(pt, row), year) === true;
+                    }).length : null,
+                    measuredAgainstTarget: pt ? TRAJECTORY_METRIC_ROWS.filter(function (row) {
+                        return _meetsTarget(row.registry, _trajectoryMetricValue(pt, row), year) !== null;
+                    }).length : null,
                     kpiScore: pt ? pt.kpiScore : null,
                     trackLabel: pt ? pt.trackLabel : null,
                     metrics: TRAJECTORY_METRIC_ROWS.map(function (row) {
                         var value = pt ? _trajectoryMetricValue(pt, row) : null;
-                        var score = pt ? (pt.scores || {})[row.scoreKey] : null;
+                        var has = !(value === null || value === undefined || isNaN(value));
                         return {
                             label: row.label,
-                            score: (score === undefined || score === null) ? null : score,
-                            display: (value === null || value === undefined || isNaN(value))
-                                ? '' : _formatMetricDisplay(row.registry, value)
+                            registry: row.registry,
+                            meets: has ? _meetsTarget(row.registry, value, year) : null,
+                            display: has ? _formatMetricDisplay(row.registry, value) : ''
                         };
                     })
                 };
@@ -1571,10 +1584,10 @@
 
         var n = model.columns.length;
         var padX = 34, labelW = 116, colW = 96;
-        var headerH = 96, chartH = 224, gap = 26, rowH = 34, headRowH = 30;
+        var headerH = 96, chartH = 224, gap = 26, rowH = 44, headRowH = 30;
         var rows = TRAJECTORY_METRIC_ROWS.length + 2;   // rank line + KPIs met + metrics
         var W = padX * 2 + labelW + colW * n;
-        var H = headerH + chartH + gap + headRowH + rowH * rows + 34;
+        var H = headerH + chartH + gap + headRowH + rowH * rows + 48;
 
         // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
         // display and still sharp on a high-DPI one.
@@ -1698,7 +1711,7 @@
                 c.inProgress ? '#b45309' : '#0f2a4a', '700', 'center');
         });
 
-        var rowLabels = ['Rank', 'KPIs met'].concat(TRAJECTORY_METRIC_ROWS.map(function (r) { return r.label; }));
+        var rowLabels = ['Rank', 'Meeting'].concat(TRAJECTORY_METRIC_ROWS.map(function (r) { return r.label; }));
         rowLabels.forEach(function (label, r) {
             var ry = gridTop + headRowH + rowH * r + rowH / 2;
             ctx.strokeStyle = '#eef2f7';
@@ -1717,19 +1730,30 @@
                     return;
                 }
                 if (r === 1) {
-                    text(c.kpisMet + '/' + c.measuredCount, cx, ry, 13, '#0f2a4a', '600', 'center');
+                    text(c.meetsCount + ' of ' + c.measuredAgainstTarget, cx, ry, 13, '#0f2a4a', '600', 'center');
                     return;
                 }
                 var m = c.metrics[r - 2];
                 if (!m || !m.display) { text('.', cx, ry, 12, '#c3ccd6', '400', 'center'); return; }
-                if (m.score) {
-                    ctx.beginPath();
-                    ctx.arc(cx - 30, ry, 7, 0, Math.PI * 2);
-                    ctx.fillStyle = IMG_SCORE_COLOR[m.score] || '#5b6b7c';
-                    ctx.fill();
-                    text(m.score, cx - 30, ry + 0.5, 9, '#ffffff', '700', 'center');
+
+                // A filled pill in the verdict's colour, with the word in it.
+                // The value sits above, because the value is context and the
+                // verdict is the point.
+                if (m.meets !== null) {
+                    var pw = 52, ph = 15, px = cx - pw / 2, py = ry + 1;
+                    ctx.fillStyle = m.meets ? IMG_MEETS_COLOR : IMG_BELOW_COLOR;
+                    if (typeof ctx.roundRect === 'function') {
+                        ctx.beginPath();
+                        ctx.roundRect(px, py, pw, ph, 7);
+                        ctx.fill();
+                    } else {
+                        ctx.fillRect(px, py, pw, ph);
+                    }
+                    text(m.meets ? 'meets' : 'below', cx, py + ph / 2 + 0.5, 10, '#ffffff', '700', 'center');
+                    text(m.display, cx, ry - 8, 12, '#26364a', '600', 'center');
+                } else {
+                    text(m.display, cx, ry, 12, '#26364a', '400', 'center');
                 }
-                text(m.display, cx - 18, ry, 12, '#26364a', '400');
             });
         });
 
@@ -1739,7 +1763,11 @@
         ctx.moveTo(padX, lastRow);
         ctx.lineTo(W - padX, lastRow);
         ctx.stroke();
-        text('3 exceeds  2 meets  1 below   *month still in progress', padX + 6, lastRow + 18, 11, '#9aa7b4');
+        // The key names the targets, so "meets" is a claim the reader can check
+        // rather than a colour they have to take on trust.
+        var key = (model.targets || []).map(function (tg) { return tg.label + ' ' + tg.phrase; }).join('   ');
+        text('Target:  ' + key, padX + 6, lastRow + 16, 11, '#7a8794');
+        text('* month still in progress', padX + 6, lastRow + 32, 11, '#9aa7b4');
 
         return canvas;
     }

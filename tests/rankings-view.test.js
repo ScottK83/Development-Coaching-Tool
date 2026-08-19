@@ -960,7 +960,7 @@ suite('rankings view: a rebuilt year says which month it really starts in', (t) 
 
 /* ── Month over month, as an email ── */
 
-suite('rankings view: the month-over-month email is addressed and readable', (t) => {
+suite('rankings view: the email is the whole year, in meets and below', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
     const mail = cr.buildMonthOverMonthEmail('P0');
@@ -968,52 +968,78 @@ suite('rankings view: the month-over-month email is addressed and readable', (t)
     t.check('there is a draft', !!mail);
     t.equal('addressed first.last at aps', mail.to, 'p0@aps.com');
     t.equal('copied to the coaching mailbox', mail.cc, 'Brandywine.Lockhart@aps.com');
-    t.check('the subject names both months', /June 2026 to July 2026/.test(mail.subject));
+    t.check('the subject is the year, not a pair of months',
+        /Your \d{4} numbers, month by month/.test(mail.subject));
 
     // Written to the associate, not about them.
     t.check('it opens to the person by first name', /^Hi P0,/.test(mail.body));
     t.check('and closes as an invitation', /Happy to walk through any of it\.$/.test(mail.body));
-    t.check('nothing in it is about other people', !/better than \d+/.test(mail.body));
 
-    // A spaced table is the only kind that survives a plain-text mail body, so
-    // the arrows have to line up in one column.
-    const arrows = mail.body.split(String.fromCharCode(10)).filter((l) => l.includes(' -> '));
-    t.check('every row is an arrow row', arrows.length >= 5);
-    t.check('and they all line up',
-        new Set(arrows.map((l) => l.indexOf(' -> '))).size === 1);
+    // The body has two halves: the grid, and the targets that explain it. The
+    // metric names appear in both, so the grid has to be cut out before any of
+    // it can be counted.
+    const half = mail.body.indexOf('What meets looks like:');
+    const grid = mail.body.slice(0, half);
+    const targets = mail.body.slice(half);
 
-    t.check('the average is spelled out rather than left to be inferred',
-        /Average\s+[\d.]+ ->\s+[\d.]+\s+out of 3\.0/.test(mail.body));
-    // No placing, no rank, no count of anybody else. Where someone landed
-    // against the rest of the centre is a management number; this note is about
-    // whether their own numbers moved.
-    t.check('no rank or placing appears at all',
-        !/place|rank|out of \d+ |#\d/.test(mail.body));
+    // The 3/2/1 rating is an internal scoring device. The difference between a 2
+    // and a 3 is a stretch mark nobody outside this tool is measured on, and the
+    // digit invites a conversation about a number they were never given.
+    t.check('the grid says only meets, below or nothing',
+        grid.split(String.fromCharCode(10))
+            .filter((l) => /^  (AHT|Adherence|Sentiment|CX Adv|Reliability) /.test(l))
+            .every((l) => l.slice(15).trim().split(/\s+/).every((cell) => /^(meets|below|-)$/.test(cell))));
+    t.check('the verdict is a word', /meets/.test(grid) && /below/.test(grid));
+
+    // Every month of the year, so a blank January reads as blank rather than as
+    // a year that started in June.
+    t.check('the year starts in January', /\bJan\b/.test(mail.body));
+    t.check('and every metric has a row',
+        ['AHT', 'Adherence', 'Sentiment', 'CX Adv', 'Reliability']
+            .every((m) => new RegExp('  ' + m.replace(' ', ' ') + ' ').test(mail.body)));
+
+    // "Meets" is only a claim the reader can check if the bar is named.
+    t.check('the targets are spelled out', /What meets looks like:/.test(mail.body));
+    t.check('with the real numbers behind them', /426 sec or lower/.test(mail.body));
+    t.check('and the direction they run', /93\.0% or higher/.test(mail.body));
+
+    t.check('no rank or placing appears at all', !/place|rank|out of \d+ |#\d/.test(mail.body));
     t.check('but the overall direction is still named',
-        /Overall that (is a better month|is a step back|holds you about where)/.test(mail.body));
+        /(is a better month|is a step back|holds you about where)/.test(mail.body));
 
-    // Short enough that a mail client will not truncate the body.
-    t.check('it fits in a mailto', mail.body.length < 1800);
+    // A spaced table is the only kind that survives a plain-text mail body.
+    const rows = grid.split(String.fromCharCode(10))
+        .filter((l) => /^  (AHT|Adherence|Sentiment|CX Adv|Reliability) /.test(l));
+    t.equal('five metric rows in the grid', rows.length, 5);
+    t.check('all the same width', new Set(rows.map((l) => l.length)).size === 1);
+    t.check('and one target line each', (targets.match(/or (lower|higher)/g) || []).length === 5);
+
+    t.check('it fits in a mailto', mail.body.length < 2000);
 });
 
-suite('rankings view: the email reports the outcome, not the arithmetic', (t) => {
+suite('rankings view: meets is measured against the published target', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+    const scored = model.columns.filter((c) => c.present);
 
-    // AHT rising is a step backwards; adherence rising is a step forwards. A
-    // bare "up 11" would read as praise on one line and a warning on the next.
-    const bodies = ['P0', 'P1', 'P2', 'P3', 'P4', 'P5'].map((n) => cr.buildMonthOverMonthEmail(n))
-        .filter(Boolean).map((m) => m.body);
-    t.check('some drafts were built', bodies.length > 0);
+    t.check('some months are scored', scored.length > 0);
+    // 2026: AHT 426 or lower, adherence 93 or higher.
+    const aht = scored.map((c) => c.metrics[0]).filter((m) => m.display);
+    t.check('AHT is judged against 426',
+        aht.every((m) => m.meets === (parseFloat(m.display) <= 426)));
+    const adh = scored.map((c) => c.metrics[1]).filter((m) => m.display);
+    t.check('adherence against 93',
+        adh.every((m) => m.meets === (parseFloat(m.display) >= 93)));
 
-    const ahtLines = bodies.map((b) => (b.match(/ {2}AHT.*/) || [''])[0]).filter(Boolean);
-    t.check('AHT is judged, not just measured',
-        ahtLines.every((l) => /no change|better by|worse by/.test(l)));
-    t.check('and a slower AHT is called worse',
-        ahtLines.filter((l) => /worse by/.test(l)).every((l) => {
-            const m = l.match(/([\d.]+) sec ->\s+([\d.]+) sec/);
-            return !m || Number(m[2]) > Number(m[1]);
-        }));
+    t.check('the count agrees with the words',
+        scored.every((c) => c.meetsCount === c.metrics.filter((m) => m.meets === true).length));
+    t.check('and only counts what could be judged',
+        scored.every((c) => c.measuredAgainstTarget === c.metrics.filter((m) => m.meets !== null).length));
+
+    t.check('every target is quotable', model.targets.length === 5);
+    t.check('and reads as a sentence',
+        model.targets.every((tg) => /(or lower|or higher)$/.test(tg.phrase)));
 });
 
 suite('rankings view: one month is not a month-over-month story', (t) => {
@@ -1077,8 +1103,8 @@ suite('rankings view: the year picture covers January through the data', (t) => 
     t.check('each scored month carries its rank and field size',
         scored.every((c) => Number.isFinite(c.rank) && c.total > 0));
     t.check('and its five KPIs', scored.every((c) => c.metrics.length === 5));
-    t.check('with a 3/2/1 score where one was earned',
-        scored.some((c) => c.metrics.some((m) => m.score >= 1 && m.score <= 3)));
+    t.check('with a meets-or-below verdict where one could be reached',
+        scored.some((c) => c.metrics.some((m) => m.meets === true || m.meets === false)));
 });
 
 suite('rankings view: the year picture stays inside its own canvas', (t) => {
@@ -1108,8 +1134,12 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
         t.check('the person is named', texts.indexOf('P0') !== -1);
         t.check('both lines are keyed', texts.indexOf('Rank that month') !== -1 &&
             texts.indexOf('Year to date') !== -1);
-        t.check('and the score dots are explained',
-            texts.some((s) => /3 exceeds\s+2 meets\s+1 below/.test(s)));
+        t.check('and the targets are named, so meets can be checked',
+            texts.some((s) => /^Target:/.test(s)));
+        t.check('with no rating digit drawn anywhere',
+            !texts.some((s) => /^[123]$/.test(s)));
+        t.check('the verdict is a word instead',
+            texts.indexOf('meets') !== -1 || texts.indexOf('below') !== -1);
         t.check('a month with no data says so', texts.indexOf('no data') !== -1);
     });
 });
