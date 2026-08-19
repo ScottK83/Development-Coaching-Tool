@@ -2248,6 +2248,7 @@ function bindDataAdminHandlers() {
     document.getElementById('deleteAllDataBtn')?.addEventListener('click', handleDeleteAllDataClick);
     document.getElementById('backupMetricDataBtn')?.addEventListener('click', handleBackupMetricDataClick);
     document.getElementById('resetMetricDataBtn')?.addEventListener('click', handleResetMetricDataClick);
+    document.getElementById('clearDriftBaselineBtn')?.addEventListener('click', clearUploadDriftBaseline);
     populateDeleteWeekDropdown();
     initializeRedFlag();
 }
@@ -2559,20 +2560,16 @@ const UPLOAD_UNDO_STORAGE_KEY = STORAGE_PREFIX + 'lastUploadUndo';
 const UPLOAD_HEADER_FINGERPRINT_KEY = STORAGE_PREFIX + 'lastUploadHeaderFingerprint';
 const UPLOAD_METRIC_COVERAGE_KEY = STORAGE_PREFIX + 'lastUploadMetricCoverage';
 
-// Metric keys tracked for drift detection
-const DRIFT_METRIC_KEYS = ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+// Metric keys and coverage maths live in the upload-drift module, which is
+// where the rules that read them live too. The fallbacks keep an unloaded
+// module from taking the upload page down with it.
+const _uploadDrift = () => window.DevCoachModules?.uploadDrift;
+const DRIFT_METRIC_KEYS = _uploadDrift()?.DRIFT_METRIC_KEYS
+    || ['scheduleAdherence', 'cxRepOverall', 'fcr', 'overallExperience', 'transfers', 'aht', 'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'reliability'];
+const DRIFT_METRIC_LABELS = _uploadDrift()?.DRIFT_METRIC_LABELS || {};
 
 function computeMetricCoverage(employees) {
-    if (!Array.isArray(employees) || !employees.length) return {};
-    const coverage = {};
-    DRIFT_METRIC_KEYS.forEach(key => {
-        const populated = employees.filter(e => {
-            const v = e?.[key];
-            return v !== '' && v !== null && v !== undefined && Number.isFinite(parseFloat(v));
-        }).length;
-        coverage[key] = populated / employees.length;
-    });
-    return coverage;
+    return _uploadDrift()?.computeMetricCoverage?.(employees) || {};
 }
 
 // Renders a post-upload summary panel that tells the user exactly what the
@@ -2748,37 +2745,45 @@ function refreshUploadUndoBanner() {
 // ============================================
 // UPLOAD DRIFT VALIDATION (hard errors)
 // ============================================
-function buildUploadDriftErrors(employees) {
-    const errors = [];
-    if (!Array.isArray(employees) || !employees.length) return errors;
 
-    const coverage = computeMetricCoverage(employees);
-    const populatedCount = Object.values(coverage).filter(c => c >= 0.5).length;
-    if (populatedCount < 3) {
-        errors.push(`Only ${populatedCount} metric column(s) detected with meaningful data. Check that you pasted the full table with headers — column mapping may have drifted.`);
-    }
-
+// One baseline per kind of upload. A week so far is only ever judged against
+// the last week so far — judging it against a finished week or a full month
+// blocked it for being smaller, which is the one thing it is guaranteed to be.
+function loadUploadCoverageBaselines() {
     try {
-        const raw = localStorage.getItem(UPLOAD_METRIC_COVERAGE_KEY);
-        if (raw) {
-            const prev = JSON.parse(raw);
-            const droppedMetrics = DRIFT_METRIC_KEYS.filter(k =>
-                (prev[k] || 0) >= 0.8 && (coverage[k] || 0) <= 0.1
-            );
-            if (droppedMetrics.length >= 3) {
-                errors.push(`These metrics had data last upload but are empty now: ${droppedMetrics.join(', ')}. That usually means a header changed or the wrong columns are selected.`);
-            }
-        }
-    } catch (e) { /* noop — no baseline yet */ }
-
-    return errors;
+        return _uploadDrift()?.readBaselines?.(localStorage.getItem(UPLOAD_METRIC_COVERAGE_KEY)) || {};
+    } catch (e) {
+        return {};
+    }
 }
 
-function saveUploadMetricCoverage(employees) {
+/**
+ * Blocking errors, and the softer notes that only warrant a question.
+ * The rules are in modules/upload-drift.module.js; this reads the baseline.
+ */
+function buildUploadDriftErrors(employees, periodType) {
+    const judge = _uploadDrift()?.judgeUpload;
+    if (!judge) return { errors: [], warnings: [] };
+    const verdict = judge({ employees, periodType, baselines: loadUploadCoverageBaselines() });
+    return { errors: verdict.errors || [], warnings: verdict.warnings || [] };
+}
+
+function describeUploadKind(periodType) {
+    return _uploadDrift()?.describeUploadKind?.(periodType) || 'previous';
+}
+
+function saveUploadMetricCoverage(employees, periodType) {
+    const drift = _uploadDrift();
+    if (!drift) return;
     try {
-        const coverage = computeMetricCoverage(employees);
-        localStorage.setItem(UPLOAD_METRIC_COVERAGE_KEY, JSON.stringify(coverage));
+        const next = drift.writeBaseline(loadUploadCoverageBaselines(), periodType, drift.computeMetricCoverage(employees));
+        localStorage.setItem(UPLOAD_METRIC_COVERAGE_KEY, JSON.stringify(next));
     } catch (e) { /* noop */ }
+}
+
+function clearUploadDriftBaseline() {
+    try { localStorage.removeItem(UPLOAD_METRIC_COVERAGE_KEY); } catch (e) { /* noop */ }
+    showToast('🧹 Drift baseline cleared — the next upload of each kind sets a new one.', 4000);
 }
 
 function buildMetricsUploadQualityWarnings(employees) {
@@ -2876,13 +2881,13 @@ function handleLoadPastedDataClick() {
             return;
         }
 
-        const driftErrors = buildUploadDriftErrors(employees);
-        if (driftErrors.length) {
-            alert(`🛑 Upload blocked — possible column drift:\n\n${driftErrors.join('\n\n')}\n\nFix the paste and try again. If this is intentional, use the "Clear drift baseline" button in Settings.`);
+        const drift = buildUploadDriftErrors(employees, periodType);
+        if (drift.errors.length) {
+            alert(`🛑 Upload blocked — possible column drift:\n\n${drift.errors.join('\n\n')}\n\nFix the paste and try again. If this is intentional, use "Clear drift baseline" under Settings → Delete Data.`);
             return;
         }
 
-        const qualityWarnings = buildMetricsUploadQualityWarnings(employees);
+        const qualityWarnings = drift.warnings.concat(buildMetricsUploadQualityWarnings(employees));
         if (qualityWarnings.length) {
             const proceed = confirm(`⚠️ Upload quality warning:\n\n${qualityWarnings.join('\n')}\n\nContinue saving this upload?`);
             if (!proceed) {
@@ -2901,7 +2906,7 @@ function handleLoadPastedDataClick() {
             // Check which metrics the new upload has that old didn't, and vice versa.
             // Same metric set used by drift detection (DRIFT_METRIC_KEYS).
             const metricKeys = DRIFT_METRIC_KEYS;
-            const metricLabels = { scheduleAdherence: 'Adherence', cxRepOverall: 'RepSat', fcr: 'FCR', overallExperience: 'OE', transfers: 'Transfers', aht: 'AHT', overallSentiment: 'Sentiment', positiveWord: '+Word', negativeWord: '-Word', managingEmotions: 'Emotions', reliability: 'Reliability' };
+            const metricLabels = DRIFT_METRIC_LABELS;
             const hasData = (emps, key) => emps.some(e => e[key] !== '' && e[key] !== 0 && e[key] !== null && e[key] !== undefined);
             const oldHas = metricKeys.filter(k => hasData(existingData.employees, k));
             const newHas = metricKeys.filter(k => hasData(employees, k));
@@ -3035,7 +3040,7 @@ function handleLoadPastedDataClick() {
         renderUploadColumnInspector(employees, periodType);
         document.getElementById('pasteDataTextarea').value = '';
 
-        saveUploadMetricCoverage(employees);
+        saveUploadMetricCoverage(employees, periodType);
         refreshUploadUndoBanner();
         refreshStorageQuotaWidget();
         window.DevCoachModules?.centerRanking?.resetPeriodSelection?.();

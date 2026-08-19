@@ -1250,6 +1250,12 @@ Box 2 - Future Improvement Areas:
                         <button type="button" id="backupMetricDataBtn" class="btn-secondary" style="background: #0d6efd; color: white; font-size: 1em; padding: 12px 24px;">📥 Download Backup</button>
                     </div>
 
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #6c757d;">
+                        <h3 style="color: #6c757d; margin-top: 0;">🧹 Clear Drift Baseline</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 15px;">Uploads are checked against the last upload of the same kind, so a report that suddenly loses columns gets stopped before it overwrites good data. If your report legitimately changed shape, clear the baseline and the next upload of each kind sets a fresh one. Uploaded data is <strong>not</strong> touched.</p>
+                        <button type="button" id="clearDriftBaselineBtn" class="btn-secondary" style="background: #6c757d; color: white; font-size: 1em; padding: 12px 24px;">🧹 Clear Drift Baseline</button>
+                    </div>
+
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #fd7e14;">
                         <h3 style="color: #fd7e14; margin-top: 0;">♻️ Reset Metric Data</h3>
                         <p style="color: var(--text-secondary); margin-bottom: 15px;">Wipe every uploaded period (weekly + YTD) so you can start fresh with the new dropdown-driven upload flow. Keeps coaching history, team members, tips, attendance, and pattern memory intact. <strong>Back up first.</strong></p>
@@ -1737,6 +1743,7 @@ Box 2 - Future Improvement Areas:
                 'modules/coaching-outcomes.module.js',
                 'modules/selected-associate.module.js',
                 'modules/data-integrity.module.js',
+                'modules/upload-drift.module.js',
                 'modules/pattern-memory.module.js',
                 // Feature Modules
                 'modules/tips.module.js',
