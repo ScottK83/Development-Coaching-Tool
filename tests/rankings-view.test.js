@@ -1177,3 +1177,43 @@ suite('rankings view: the year picture is on screen, not only on the clipboard',
     const balanced = (html.match(/<div/g) || []).length === (html.match(/<\/div>/g) || []).length;
     t.check('and the markup still balances', balanced);
 });
+
+suite('rankings view: a cell never contradicts itself on rounding', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+
+    /* Reported as "why didn't Johnathan meet July adherence at a 93". His raw
+       adherence was 92.96: percentages print to one decimal, so the cell read
+       "93.0%" and "below" at once, against a 93% target. The reader has no way
+       to resolve that, because they do not have the second decimal. */
+    const rows = cr.scoreAndRankEmployees([
+        { name: 'Rounds Up', aht: 400, scheduleAdherence: 92.96, overallSentiment: 92,
+          cxRepOverall: 90, surveyTotal: 9, totalCalls: 100, reliability: 0 },
+        { name: 'Genuinely Below', aht: 400, scheduleAdherence: 92.4, overallSentiment: 92,
+          cxRepOverall: 90, surveyTotal: 9, totalCalls: 100, reliability: 0 }
+    ], 2026);
+    t.check('both were scored', rows.length === 2);
+
+    // The picture reads its verdicts through the same helper the model uses, so
+    // asserting the model is asserting the cell.
+    const model = cr.buildYearImageModel('P0');
+    t.check('the model exists to read verdicts from', !!model);
+
+    // Every printed value must agree with its own verdict, at the precision it
+    // was printed to.
+    const targets = { AHT: { max: 426 }, Adherence: { min: 93 }, Sentiment: { min: 88 },
+        'CX Adv': { min: 82 }, Reliability: { max: 18 } };
+    const mismatches = [];
+    model.columns.filter((c) => c.present).forEach((c) => {
+        c.metrics.forEach((m) => {
+            if (m.meets === null || !m.display) return;
+            const shown = parseFloat(String(m.display).replace(/[^0-9.-]/g, ''));
+            const tg = targets[m.label];
+            if (!tg || !isFinite(shown)) return;
+            const expected = tg.max !== undefined ? shown <= tg.max : shown >= tg.min;
+            if (expected !== m.meets) mismatches.push(m.label + ' ' + m.display + ' -> ' + m.meets);
+        });
+    });
+    t.check('no cell disagrees with the number printed in it, ' + JSON.stringify(mismatches),
+        mismatches.length === 0);
+});

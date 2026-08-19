@@ -105,9 +105,40 @@
         return TARGETS_BY_YEAR[yearNum]?.[metricKey] || null;
     }
 
+    /* Round a value the way it will be printed, before judging it.
+
+       Percentages are displayed to one decimal, so 92.96 prints as "92.96 ->
+       93.0%" while comparing as 92.96. Against a 93 threshold the printed value
+       clears the bar and the raw one does not, and the surface then shows "93.0%"
+       and "below" in the same cell. The reader cannot resolve that, because the
+       second decimal is precisely what they were not given.
+
+       Judged at display precision, a cell can always be read as written. It hands
+       back at most half of the last displayed digit, which is a smaller error
+       than the one it removes. Units come from the registry, which loads before
+       this module, and mirror formatMetricDisplay. */
+    function roundToDisplayPrecision(metricKey, value) {
+        const numeric = parseFloat(value);
+        if (!Number.isFinite(numeric)) return numeric;
+        const registry = typeof window !== 'undefined' ? window.METRICS_REGISTRY : null;
+        const unit = registry?.[metricKey]?.unit || '%';
+        if (unit === 'sec' || unit === '#') return Math.round(numeric);
+        if (unit === 'hrs') return Math.round(numeric * 100) / 100;
+        return Math.round(numeric * 10) / 10;
+    }
+
+    // Whether a value clears the year's target, judged at display precision.
+    // One place, so no two surfaces can disagree about the same number.
+    function meetsYearTarget(metricKey, value, year) {
+        const target = getYearTarget(metricKey, year);
+        const numeric = roundToDisplayPrecision(metricKey, value);
+        if (!target || !Number.isFinite(numeric) || !Number.isFinite(target.value)) return null;
+        return target.type === 'max' ? numeric <= target.value : numeric >= target.value;
+    }
+
     function getRatingScore(metricKey, value, year) {
         const yearNum = parseInt(year, 10);
-        const numeric = parseFloat(value);
+        const numeric = roundToDisplayPrecision(metricKey, value);
         if (!Number.isInteger(yearNum) || Number.isNaN(numeric)) return null;
 
         const config = RATING_BANDS_BY_YEAR[yearNum]?.[metricKey];
@@ -147,6 +178,8 @@
         TARGETS_BY_YEAR,
         RATING_BANDS_BY_YEAR,
         getYearTarget,
+        roundToDisplayPrecision,
+        meetsYearTarget,
         getRatingScore,
         getRatingBandColor,
         hasRatingBand

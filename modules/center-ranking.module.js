@@ -1479,11 +1479,26 @@
         }
     }
 
+    /* Judged on the number that is SHOWN, not the one behind it.
+
+       Percentages display to one decimal, so 92.96 prints as "93.0%" — and
+       against a 93% target the raw value is below while the printed one is not.
+       The card then says "93.0%" and "below" in the same cell, which is a
+       contradiction the reader cannot resolve, because they do not have the
+       second decimal to resolve it with. Reported as "why didn't Johnathan meet
+       July adherence at a 93".
+
+       The rounding lives in metric-profiles alongside the targets and the rating
+       bands, so the badge on the rankings table and the pill on this card cannot
+       come to different conclusions about the same number. */
     function _meetsTarget(registryKey, value, year) {
-        var target = _targetFor(registryKey, year);
-        var num = parseFloat(value);
-        if (!target || !isFinite(num) || !isFinite(target.value)) return null;
-        return target.type === 'max' ? num <= target.value : num >= target.value;
+        var mp = window.DevCoachModules && window.DevCoachModules.metricProfiles;
+        if (!mp || !mp.meetsYearTarget) return null;
+        try {
+            return mp.meetsYearTarget(registryKey, value, year);
+        } catch (err) {
+            return null;
+        }
     }
 
     // What the target reads as in a sentence, for the key under the picture and
