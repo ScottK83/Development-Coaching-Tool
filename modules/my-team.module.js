@@ -19,6 +19,10 @@
 
     const PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     const DAY_KEY = PREFIX + 'myTeamDay';
+    // Which stretch of time the shout-out and the evidence under it cover.
+    // Remembered, because a manager who posts month to date posts month to date
+    // every week and should not have to say so every week.
+    const WINDOW_KEY = PREFIX + 'myTeamShoutOutWindow';
 
     // The high five is not a weekday post, so it gets its own id in the shared
     // outreach send log rather than borrowing a day's.
@@ -52,6 +56,38 @@
 
     function setActiveDay(dayId) {
         try { localStorage.setItem(DAY_KEY, dayId); } catch (e) { /* not persisted */ }
+    }
+
+    // --- The stretch of time the celebrations are measured over ---
+
+    function activeWindowId() {
+        try {
+            return localStorage.getItem(WINDOW_KEY) || 'latest';
+        } catch (e) {
+            return 'latest';
+        }
+    }
+
+    function setActiveWindow(windowId) {
+        try { localStorage.setItem(WINDOW_KEY, windowId); } catch (e) { /* not persisted */ }
+    }
+
+    const LATEST_WINDOW = { id: 'latest', label: 'Latest upload', key: null, dateRange: '', count: 0, available: true, reason: '' };
+
+    /**
+     * The window actually in force, which is not always the one saved. An
+     * upload can be deleted and a week always stops being this week, so a saved
+     * choice goes stale on its own. Falling back to the latest upload is what
+     * this page did before any of it was selectable.
+     */
+    function currentWindow() {
+        const resolve = mods().celebrations?.resolveShoutOutWindow;
+        if (!resolve) return LATEST_WINDOW;
+        try {
+            return resolve(activeWindowId()) || LATEST_WINDOW;
+        } catch (e) {
+            return LATEST_WINDOW;
+        }
     }
 
     // --- Day tab strip ---
@@ -121,11 +157,16 @@
         const celebrations = mods().celebrations;
         if (celebrations?.detectCelebrations) {
             try {
-                const result = celebrations.detectCelebrations(null);
+                // The same window the post is built from. These two sit one
+                // under the other, so a panel measuring a different stretch of
+                // time than the message above it is worse than no panel at all.
+                const chosen = currentWindow();
+                const result = celebrations.detectCelebrations(chosen.key);
 
                 // A rank means nothing without the period it was earned in and
                 // the size of the field. Both were being left to memory.
                 const headerBits = [];
+                if (chosen.id !== 'latest') headerBits.push(escapeHtml(chosen.label));
                 if (result.dateRange) headerBits.push(escapeHtml(result.dateRange));
                 if (result.totalEmployees) headerBits.push(`${result.totalEmployees} associates scored in the center`);
                 if (headerBits.length) {
@@ -172,9 +213,10 @@
             } catch (e) { /* context is optional — never block the message on it */ }
         }
 
-        if (!rows.length && !footer) {
-            return `<div style="font-size:0.9em; color:var(--text-tertiary);">Nothing standing out in the rankings for this period yet.</div>`;
-        }
+        // The header survives an empty result on purpose. "Nothing standing
+        // out" is a different fact about year to date than it is about two days
+        // of this week, and the window you are looking at is the only thing
+        // that tells them apart.
         if (!rows.length) {
             return header +
                 `<div style="font-size:0.9em; color:var(--text-tertiary);">Nothing standing out in the rankings for this period yet.</div>` +
@@ -582,6 +624,54 @@
      * page already shows underneath, so what goes in the channel and what you
      * see here can't drift apart.
      */
+    /**
+     * Pick the stretch of time the post covers.
+     *
+     * A window with no upload behind it, or one whose upload is too thin to
+     * rank a center against, stays on screen greyed out with the reason on
+     * hover. Hiding it leaves "why can't I post year to date" unanswerable
+     * without opening the Upload tab and counting rows.
+     */
+    function renderWindowPicker(chosenId) {
+        const windows = mods().celebrations?.listShoutOutWindows?.() || [];
+        if (windows.length < 2) return '';
+
+        const chips = windows.map(w => {
+            const on = w.id === chosenId;
+            const tip = w.available
+                ? (w.dateRange ? `${w.dateRange} · ${w.count} associates` : 'Whichever upload is newest')
+                : w.reason;
+            return `<button type="button" class="mt-so-window" data-window="${w.id}"${w.available ? '' : ' disabled'} title="${escapeHtml(tip)}" ` +
+                `style="padding:5px 12px; border:1px solid ${on ? '#e65100' : 'var(--border)'}; border-radius:999px; font-size:0.82em; font-weight:600; ` +
+                `cursor:${w.available ? 'pointer' : 'not-allowed'}; opacity:${w.available ? '1' : '0.45'}; ` +
+                `background:${on ? '#fff3e0' : 'var(--bg-surface-raised)'}; color:${on ? '#e65100' : 'var(--text-secondary)'};">${escapeHtml(w.label)}</button>`;
+        }).join('');
+
+        return `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">` +
+            `<span style="font-size:0.82em; color:var(--text-tertiary);">Covering:</span>${chips}` +
+        `</div>`;
+    }
+
+    /**
+     * Changing the window rewrites the post and the evidence panel together.
+     * Repainting only the post would leave the panel underneath quoting ranks
+     * from a different stretch of time, and the panel is there to back the post
+     * up rather than to argue with it.
+     */
+    function bindWindowPicker(slot) {
+        slot.querySelectorAll('.mt-so-window').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                setActiveWindow(btn.dataset.window);
+                renderShoutOut();
+                const contextEl = document.getElementById('myTeamDayContext');
+                if (contextEl) {
+                    contextEl.innerHTML = buildContextHtml(mods().teamScope?.getActiveMember?.() || null);
+                }
+            });
+        });
+    }
+
     function renderShoutOut() {
         const slot = document.getElementById('myTeamShoutOutSlot');
         if (!slot) return;
@@ -592,28 +682,44 @@
             return;
         }
 
+        const chosen = currentWindow();
+        const picker = renderWindowPicker(chosen.id);
+
         let text = '';
         let count = 0;
+        let dateRange = '';
         try {
-            const result = celebrations.detectCelebrations(null);
+            const result = celebrations.detectCelebrations(chosen.key);
             count = (result.celebrations || []).length;
+            dateRange = result.dateRange || chosen.dateRange || '';
             text = count
-                ? celebrations.generateAllShoutOuts(result.celebrations, result.dateRange)
+                ? celebrations.generateAllShoutOuts(result.celebrations, dateRange)
                 : '';
         } catch (e) { text = ''; }
 
+        // The picker stays on screen when a window comes back empty, because an
+        // empty answer is the reason to go and try a different one.
         if (!text) {
-            slot.innerHTML = `<div style="padding:20px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); color:var(--text-secondary);">` +
-                `Nobody cleared both the ranking bar and their own target this period, so there is nothing to put in the channel yet.` +
+            slot.innerHTML = `<div style="padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface);">` +
+                picker +
+                `<div style="color:var(--text-secondary); font-size:0.92em;">Nobody cleared both the ranking bar and their own target ` +
+                    `${chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase())}, so there is nothing to put in the channel yet.</div>` +
             `</div>`;
+            bindWindowPicker(slot);
             return;
         }
 
         slot.innerHTML = `<div style="padding:14px; border:1px solid #ffcc80; border-radius:10px; background:var(--bg-surface);">` +
-            `<div style="font-weight:700; color:#e65100; margin-bottom:8px;">📣 Team shout-out — ${count} ${count === 1 ? 'person' : 'people'}</div>` +
+            picker +
+            `<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">` +
+                `<div style="font-weight:700; color:#e65100;">📣 Team shout-out — ${count} ${count === 1 ? 'person' : 'people'}</div>` +
+                (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
+            `</div>` +
             `<textarea id="myTeamShoutOutText" style="width:100%; min-height:240px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
             `<button type="button" id="myTeamShoutOutCopy" style="margin-top:10px; background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
         `</div>`;
+
+        bindWindowPicker(slot);
 
         slot.querySelector('#myTeamShoutOutCopy')?.addEventListener('click', () => {
             const value = slot.querySelector('#myTeamShoutOutText')?.value || '';
@@ -635,6 +741,10 @@
         renderDayTabs,
         renderToneRow,
         renderShoutOut,
+        renderWindowPicker,
+        currentWindow,
+        activeWindowId,
+        setActiveWindow,
         buildHighFiveRound,
         renderHighFiveRound,
         buildContextHtml,
