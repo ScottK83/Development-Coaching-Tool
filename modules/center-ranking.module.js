@@ -1394,73 +1394,160 @@
         return [scored[scored.length - 2], scored[scored.length - 1]];
     }
 
+    /* ── The message ──
+
+       A mailto body is plain text, and Outlook renders plain text as HTML: runs
+       of spaces collapse to one. So a spaced table cannot survive the trip, no
+       matter how carefully it is aligned — it arrives as a wall of words. That
+       is what "Jan Feb Mar Apr May Jun Jul Aug / AHT below below below" was.
+
+       So the grid goes on the clipboard as real HTML and is pasted into the
+       draft, where Outlook renders it as the table it is. The mail body keeps a
+       version written to survive collapsing — one line per month, no alignment
+       load-bearing — so an unpasted draft is still readable rather than a wall.
+
+       Inline styles on every cell, tables rather than anything modern: Outlook's
+       renderer ignores stylesheets and most of the last fifteen years of CSS. */
+
+    var MSG_INK = '#26364a';
+    var MSG_HEAD_BG = '#0f2a4a';
+    var MSG_LINE = '#dfe6ee';
+    var MSG_MEETS_BG = '#e8f5e9';
+    var MSG_MEETS_INK = '#1b5e20';
+    var MSG_BELOW_BG = '#fdecea';
+    var MSG_BELOW_INK = '#b71c1c';
+
+    function _msgIntro(firstName) {
+        return { greeting: 'Hi ' + firstName + ',',
+                 lead: 'Here is where your numbers have landed each month this year, against target.' };
+    }
+
+    function _msgClosing(pair) {
+        var out = [];
+        if (pair) {
+            var prev = pair[0], cur = pair[1];
+            var swing = cur.kpiScore - prev.kpiScore;
+            if (Math.abs(swing) < 0.05) {
+                out.push(cur.label + ' holds you about where you were in ' + prev.label + '.');
+            } else if (swing > 0) {
+                out.push(cur.label + ' is a better month than ' + prev.label + '. Nice work.');
+            } else {
+                out.push(cur.label + ' is a step back from ' + prev.label + '.');
+            }
+        }
+        out.push('Happy to walk through any of it.');
+        return out;
+    }
+
+    function buildMonthOverMonthHtml(name) {
+        var model = buildYearImageModel(name);
+        if (!model) return null;
+        var pair = _lastTwoScored(_timelineFor(name));
+        var firstName = String(name || '').trim().split(/\s+/)[0] || name;
+        var intro = _msgIntro(firstName);
+
+        var cellBase = 'padding:8px 12px;border-bottom:1px solid ' + MSG_LINE + ';font-size:13px;';
+        var headBase = 'padding:9px 12px;background:' + MSG_HEAD_BG + ';color:#ffffff;' +
+            'font-size:12px;font-weight:bold;letter-spacing:0.4px;';
+
+        var html = '<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;color:' + MSG_INK + ';font-size:14px;line-height:1.5;">';
+        html += '<p style="margin:0 0 12px 0;">' + _escapeHtml(intro.greeting) + '</p>';
+        html += '<p style="margin:0 0 16px 0;">' + _escapeHtml(intro.lead) + '</p>';
+
+        html += '<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;' +
+            'border:1px solid ' + MSG_LINE + ';">';
+        html += '<tr><th style="' + headBase + 'text-align:left;">Metric</th>';
+        model.columns.forEach(function (c) {
+            html += '<th style="' + headBase + 'text-align:center;">' + _escapeHtml(c.label) +
+                (c.inProgress ? '<div style="font-weight:normal;font-size:10px;opacity:0.75;">so far</div>' : '') +
+                '</th>';
+        });
+        html += '</tr>';
+
+        model.targets.forEach(function (tg, r) {
+            html += '<tr><td style="' + cellBase + 'font-weight:600;">' + _escapeHtml(tg.label) + '</td>';
+            model.columns.forEach(function (c) {
+                var m = c.present ? c.metrics[r] : null;
+                if (!m || m.meets === null) {
+                    html += '<td style="' + cellBase + 'text-align:center;color:#b6c0cb;">&ndash;</td>';
+                    return;
+                }
+                // The value goes under the verdict, small: the verdict is the
+                // point and the number is what backs it up.
+                html += '<td style="' + cellBase + 'text-align:center;background:' +
+                    (m.meets ? MSG_MEETS_BG : MSG_BELOW_BG) + ';color:' +
+                    (m.meets ? MSG_MEETS_INK : MSG_BELOW_INK) + ';font-weight:bold;">' +
+                    (m.meets ? 'meets' : 'below') +
+                    '<div style="font-weight:normal;font-size:11px;opacity:0.8;">' +
+                    _escapeHtml(m.display) + '</div></td>';
+            });
+            html += '</tr>';
+        });
+
+        html += '<tr><td style="' + cellBase + 'font-weight:bold;background:#f4f7fb;">Meeting</td>';
+        model.columns.forEach(function (c) {
+            var shown = (c.present && c.measuredAgainstTarget)
+                ? c.meetsCount + ' of ' + c.measuredAgainstTarget : '&ndash;';
+            html += '<td style="' + cellBase + 'text-align:center;font-weight:bold;background:#f4f7fb;">' +
+                shown + '</td>';
+        });
+        html += '</tr></table>';
+
+        html += '<p style="margin:16px 0 6px 0;font-weight:600;">What meets looks like</p>';
+        html += '<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:13px;">';
+        model.targets.forEach(function (tg) {
+            html += '<tr><td style="padding:3px 16px 3px 0;color:#5b6b7c;">' + _escapeHtml(tg.label) + '</td>' +
+                '<td style="padding:3px 0;font-weight:600;">' + _escapeHtml(tg.phrase) + '</td></tr>';
+        });
+        html += '</table>';
+
+        _msgClosing(pair).forEach(function (line) {
+            html += '<p style="margin:16px 0 0 0;">' + _escapeHtml(line) + '</p>';
+        });
+        html += '</div>';
+        return html;
+    }
+
     function buildMonthOverMonthEmail(name) {
         var model = buildYearImageModel(name);
         if (!model) return null;
-        var series = _timelineFor(name);
-        var pair = _lastTwoScored(series);
+        var pair = _lastTwoScored(_timelineFor(name));
         var scored = model.columns.filter(function (c) { return c.present; });
         if (!scored.length) return null;
 
         var firstName = String(name || '').trim().split(/\s+/)[0] || name;
-        var CW = 7;   // "  below" / "  meets" fits, with a space between columns
+        var intro = _msgIntro(firstName);
 
-        var lines = [];
-        lines.push('Hi ' + firstName + ',');
-        lines.push('');
-        lines.push('Here is where your numbers have landed each month this year, against target.');
-        lines.push('');
-
-        // The month heading row, then one row per metric. Fixed columns, because
-        // a spaced table is the only kind that survives a plain-text mail body.
-        lines.push('  ' + _padEnd('', 13) + model.columns.map(function (c) {
-            return _padStart(c.label, CW);
-        }).join(''));
-
-        model.targets.forEach(function (tg, r) {
-            lines.push('  ' + _padEnd(tg.label, 13) + model.columns.map(function (c) {
-                var m = c.present ? c.metrics[r] : null;
-                if (!m || m.meets === null) return _padStart('-', CW);
-                return _padStart(m.meets ? 'meets' : 'below', CW);
-            }).join(''));
+        /* Written so it survives whitespace collapsing: one line per month, the
+           metric named inside the line, nothing carried by alignment. This is
+           what lands in the draft before the grid is pasted over it. */
+        var lines = [intro.greeting, '', intro.lead, ''];
+        scored.forEach(function (c) {
+            var below = c.metrics.filter(function (m) { return m.meets === false; })
+                .map(function (m) { return m.label; });
+            var meets = c.metrics.filter(function (m) { return m.meets === true; })
+                .map(function (m) { return m.label; });
+            var parts = [(c.fullLabel || c.label) + (c.inProgress ? ' so far' : '') + ': ' +
+                c.meetsCount + ' of ' + c.measuredAgainstTarget + ' on target'];
+            if (meets.length) parts.push('meets ' + meets.join(', '));
+            if (below.length) parts.push('below on ' + below.join(', '));
+            lines.push('- ' + parts.join('. ') + '.');
         });
 
-        lines.push('  ' + new Array(13 + CW * model.columns.length + 1).join('-'));
-        lines.push('  ' + _padEnd('Meeting', 13) + model.columns.map(function (c) {
-            if (!c.present || !c.measuredAgainstTarget) return _padStart('-', CW);
-            return _padStart(c.meetsCount + '/' + c.measuredAgainstTarget, CW);
-        }).join(''));
-
-        // "Meets" is only a claim the reader can check if the bar is named.
         lines.push('');
         lines.push('What meets looks like:');
         model.targets.forEach(function (tg) {
-            lines.push('  ' + _padEnd(tg.label, 13) + tg.phrase);
+            lines.push('- ' + tg.label + ': ' + tg.phrase);
         });
 
-        // The direction, off their own KPI average. No rank, no placing, no
-        // count of anybody else.
-        if (pair) {
-            var prev = pair[0], cur = pair[1];
-            var swing = cur.kpiScore - prev.kpiScore;
-            lines.push('');
-            if (Math.abs(swing) < 0.05) {
-                lines.push(cur.label + ' holds you about where you were in ' + prev.label + '.');
-            } else if (swing > 0) {
-                lines.push(cur.label + ' is a better month than ' + prev.label + '. Nice work.');
-            } else {
-                lines.push(cur.label + ' is a step back from ' + prev.label + '.');
-            }
-        }
-
-        lines.push('');
-        lines.push('Happy to walk through any of it.');
+        _msgClosing(pair).forEach(function (line) { lines.push(''); lines.push(line); });
 
         return {
             to: _apsEmailFor(name),
             cc: COACHING_CC,
             subject: 'Your ' + model.year + ' numbers, month by month',
             body: lines.join('\n'),
+            html: buildMonthOverMonthHtml(name),
             monthCount: scored.length
         };
     }
@@ -1543,6 +1630,7 @@
                 return {
                     key: col.key,
                     label: _shortPeriodLabel(col.label),
+                    fullLabel: col.label,
                     present: !!pt,
                     inProgress: !!col.inProgress,
                     rank: pt ? pt.rank : null,
@@ -1826,14 +1914,33 @@
             });
     }
 
+    function _copyRichMessage(html, text) {
+        var plain = new Blob([text], { type: 'text/plain' });
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write && html) {
+            try {
+                var item = new window.ClipboardItem({
+                    'text/html': new Blob([html], { type: 'text/html' }),
+                    'text/plain': plain
+                });
+                return navigator.clipboard.write([item]).then(function () { return 'rich'; });
+            } catch (err) { /* fall through to plain */ }
+        }
+        if (typeof window.copyToClipboard === 'function') {
+            return Promise.resolve(window.copyToClipboard(text, { silent: true })).then(function () { return 'plain'; });
+        }
+        return Promise.resolve(false);
+    }
+
     function _reportImageResult(result) {
         var say = function (msg) {
             if (typeof window.showToast === 'function') window.showToast(msg, 4000);
             else console.info('[center-ranking] ' + msg);
         };
-        if (result === 'copied') say('Year chart copied - paste it into the draft');
+        if (result === 'rich') say('Grid copied - paste it into the draft');
+        else if (result === 'plain') say('Summary copied as text - paste it into the draft');
+        else if (result === 'copied') say('Year chart copied - paste it into the draft');
         else if (result === 'downloaded') say('Year chart saved to your downloads - attach it to the draft');
-        else say('Could not copy the chart automatically - right-click the picture below it and copy');
+        else say('Could not copy automatically - select the grid below and copy it by hand');
     }
 
     /* Opens the draft addressed and subject-filled, and puts the year picture on
@@ -1853,11 +1960,14 @@
             '&subject=' + encodeURIComponent(mail.subject) +
             '&body=' + encodeURIComponent(mail.body);
 
-        // The picture is grabbed first, while the click still counts as user
-        // activation, and the draft opens after — opening it first moves focus
-        // to the mail client and the clipboard refuses a write from a document
-        // that is not focused.
-        _copyYearImage(_lastTrajectoryCanvas, name).then(function (result) {
+        /* The grid is copied first, while the click still counts as user
+           activation — opening the draft first moves focus to the mail client
+           and the clipboard refuses a write from a document that is not focused.
+
+           HTML rather than the picture, because a pasted table is selectable,
+           scales with the reader's font and cannot arrive as a broken image. The
+           picture is still one button along for anyone who wants it. */
+        _copyRichMessage(mail.html, mail.body).then(function (result) {
             _reportImageResult(result);
             var link = document.createElement('a');
             link.href = href;
