@@ -960,7 +960,7 @@ suite('rankings view: a rebuilt year says which month it really starts in', (t) 
 
 /* ── Month over month, as an email ── */
 
-suite('rankings view: the pasted grid is real HTML, not spaces', (t) => {
+suite('rankings view: the mail body is short, because the picture carries the year', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
     const mail = cr.buildMonthOverMonthEmail('P0');
@@ -970,62 +970,24 @@ suite('rankings view: the pasted grid is real HTML, not spaces', (t) => {
     t.equal('copied to the coaching mailbox', mail.cc, 'Brandywine.Lockhart@aps.com');
     t.check('the subject is the year', /Your \d{4} numbers, month by month/.test(mail.subject));
 
-    /* Outlook renders a plain-text mail body as HTML and collapses runs of
-       spaces, so a spaced table arrives as a wall of words however carefully it
-       was aligned. The grid has to be a real table. */
-    const html = mail.html;
-    t.check('a grid is built', !!html && /<table/.test(html));
-    t.check('every month is a column, January included', /<th[^>]*>Jan/.test(html));
-    t.check('and every metric a row',
-        ['AHT', 'Adherence', 'Sentiment', 'CX Adv', 'Reliability']
-            .every((m) => new RegExp('>' + m + '</td>').test(html)));
+    /* Two goes at putting the year in the body both failed the same way. A
+       mailto body is plain text and Outlook renders plain text as HTML with runs
+       of spaces collapsed, so a spaced table arrived as a wall of words and one
+       line per month arrived as eight dense lines of prose. The body now says
+       only what a body is good at. */
+    t.check('it is short', mail.body.length < 320);
+    const lines = mail.body.split(String.fromCharCode(10)).filter((l) => l.trim());
+    t.check('four lines at most', lines.length <= 4);
 
-    // Outlook ignores stylesheets, so nothing may rely on one.
-    t.check('there is no stylesheet to ignore', !/<style/.test(html));
-    t.check('every cell carries its own styling', !/<td>|<th>/.test(html));
-    t.check('and the layout is a table, not anything modern',
-        !/display:\s*(flex|grid)/.test(html));
+    t.check('it opens to the person', /^Hi P0,/.test(mail.body));
+    t.check('says what is coming', /landed each month this year, against target/.test(mail.body));
+    t.check('names the direction', /(is a better month|is a step back|holds you about where)/.test(mail.body));
+    t.check('and closes as an invitation', /Happy to walk through any of it\.$/.test(mail.body));
 
-    // Green for meets, red for below, and the number underneath to back it up.
-    t.check('meets is green', new RegExp('background:#e8f5e9[^"]*"[^>]*>meets').test(html));
-    t.check('below is red', new RegExp('background:#fdecea[^"]*"[^>]*>below').test(html));
-    t.check('no rating digit survives', !/>[123]<\/(td|div|span)>/.test(html));
-    t.check('the targets are named', /What meets looks like/.test(html));
-    t.check('with the real numbers', /426 sec or lower/.test(html));
-
-    // Hex colours are full of hashes and digits, so the styling comes out
-    // before anything is claimed about what the text says.
-    const words = html.replace(/style="[^"]*"/g, '');
-    t.check('no rank or placing appears', !/place|rank|#\d/.test(words));
-    t.check('but the direction is named',
-        /(is a better month|is a step back|holds you about where)/.test(html));
-});
-
-suite('rankings view: the mail body survives having its spaces collapsed', (t) => {
-    const { cr } = loadRankings(t, WEEKS, YTD);
-    cr.renderCenterRanking();
-    const mail = cr.buildMonthOverMonthEmail('P0');
-
-    /* This is what lands in the draft before the grid is pasted over it, so it
-       has to read correctly with every run of spaces squeezed to one — which is
-       exactly what Outlook does to it. Nothing may be carried by alignment. */
-    const collapsed = mail.body.split(String.fromCharCode(10))
-        .map((l) => l.replace(/\s+/g, ' ').trim());
-
-    t.check('it opens to the person', collapsed[0] === 'Hi P0,');
-    t.check('every month names itself inside its own line',
-        collapsed.filter((l) => /^- \w+ \d{4}/.test(l)).length > 0);
-    t.check('and says how many were on target',
-        collapsed.some((l) => /\d of \d on target/.test(l)));
-    t.check('naming the ones that missed', collapsed.some((l) => /below on /.test(l)));
-    t.check('the targets survive too', collapsed.some((l) => /^- AHT: 426 sec or lower$/.test(l)));
-    t.check('and it still closes as an invitation',
-        collapsed[collapsed.length - 1] === 'Happy to walk through any of it.');
-
-    // The old body was a spaced table. Collapsed, it read "AHT below below
-    // below below" with nothing to say which month was which.
-    t.check('no line is a run of bare verdicts',
-        !collapsed.some((l) => /^(AHT|Adherence|Sentiment|CX Adv|Reliability)( (meets|below|-)){3,}$/.test(l)));
+    // Nothing that depends on alignment, because alignment is what kept failing.
+    t.check('no table is attempted', !/  +\S+ +\S+ +\S/.test(mail.body));
+    t.check('no month-by-month prose either', !/on target\./.test(mail.body));
+    t.check('and still no rank or placing', !/place|rank|#\d/.test(mail.body));
 });
 
 suite('rankings view: meets is measured against the published target', (t) => {
