@@ -1559,6 +1559,14 @@
         };
     }
 
+    /* Rank appears nowhere on this card.
+
+       It is a management number, and this picture is sent to the associate. The
+       chart used to plot it, so taking the row out and leaving the chart would
+       have moved the placement rather than removed it — the whole thing is
+       redrawn around targets met instead, which answers "is the year moving"
+       without measuring anyone against anybody else. The modal keeps the rank
+       view; that one is not going anywhere near an inbox. */
     function _drawYearCard(model) {
         var canvas = document.createElement('canvas');
         if (!canvas || typeof canvas.getContext !== 'function') return null;
@@ -1567,8 +1575,8 @@
 
         var n = model.columns.length;
         var padX = 34, labelW = 116, colW = 96;
-        var headerH = 96, chartH = 224, gap = 26, rowH = 44, headRowH = 30;
-        var rows = TRAJECTORY_METRIC_ROWS.length + 2;   // rank line + KPIs met + metrics
+        var headerH = 96, chartH = 210, gap = 26, rowH = 44, headRowH = 30;
+        var rows = TRAJECTORY_METRIC_ROWS.length + 1;   // targets-met row + one per metric
         var W = padX * 2 + labelW + colW * n;
         var H = headerH + chartH + gap + headRowH + rowH * rows + 48;
 
@@ -1592,95 +1600,62 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, W, H);
 
-        // Header
         ctx.fillStyle = '#0f2a4a';
         ctx.fillRect(0, 0, W, headerH);
         text(model.title, padX, 38, 26, '#ffffff', '700');
         text(model.subtitle, padX, 68, 14, '#9fc0e4');
-        text('Your year so far', W - padX, 38, 14, '#9fc0e4', '400', 'right');
+        text('Targets met, month by month', W - padX, 38, 14, '#9fc0e4', '400', 'right');
 
-        // ── Chart ──
-        var chartTop = headerH + 20;
-        var chartBottom = headerH + chartH - 26;
-        var worst = model.columns.reduce(function (m, c) {
-            return Math.max(m, c.total || 0, c.overallTotal || 0);
+        // ── Chart: how many targets were met each month ──
+        var chartTop = headerH + 24;
+        var chartBottom = headerH + chartH - 30;
+        var most = model.columns.reduce(function (m, c) {
+            return Math.max(m, c.measuredAgainstTarget || 0);
         }, 1);
-        var span = Math.max(1, worst - 1);
         var x = function (i) { return padX + labelW + colW * (i + 0.5); };
-        var y = function (rank) { return chartTop + ((rank - 1) / span) * (chartBottom - chartTop); };
+        var y = function (v) { return chartBottom - (v / most) * (chartBottom - chartTop); };
 
-        [1, Math.round((1 + worst) / 2), worst].forEach(function (r) {
-            var yy = y(r);
+        // Up is better, which is the way the word reads.
+        [0, Math.round(most / 2), most].forEach(function (v) {
+            var yy = y(v);
             ctx.strokeStyle = '#e6ecf3';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(padX + labelW - 8, yy);
             ctx.lineTo(W - padX, yy);
             ctx.stroke();
-            text('#' + r, padX + labelW - 14, yy, 11, '#9aa7b4', '400', 'right');
+            text(v, padX + labelW - 14, yy, 11, '#9aa7b4', '400', 'right');
         });
-        text('Best', padX + labelW - 14, chartTop - 14, 11, '#9aa7b4', '600', 'right');
+        text('All ' + most, padX + labelW - 14, chartTop - 15, 11, '#2e7d32', '700', 'right');
 
-        var runs = function (valueOf, color, width, dashed) {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = width;
-            ctx.setLineDash(dashed ? [6, 4] : []);
-            ctx.lineJoin = 'round';
-            ctx.lineCap = 'round';
-            var drawing = false;
-            ctx.beginPath();
-            model.columns.forEach(function (c, i) {
-                var v = valueOf(c);
-                if (!Number.isFinite(v)) { drawing = false; return; }
-                if (!drawing) { ctx.moveTo(x(i), y(v)); drawing = true; }
-                else ctx.lineTo(x(i), y(v));
-            });
-            ctx.stroke();
-            ctx.setLineDash([]);
-        };
-
-        runs(function (c) { return c.overallRank; }, '#8e6bbf', 2.5, true);
-        runs(function (c) { return c.rank; }, '#1565c0', 3, false);
+        // One run per unbroken stretch, so a month with no upload shows as a gap
+        // rather than a line drawn through it.
+        ctx.strokeStyle = '#1565c0';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        var drawing = false;
+        ctx.beginPath();
+        model.columns.forEach(function (c, i) {
+            if (!c.present || !Number.isFinite(c.meetsCount)) { drawing = false; return; }
+            if (!drawing) { ctx.moveTo(x(i), y(c.meetsCount)); drawing = true; }
+            else ctx.lineTo(x(i), y(c.meetsCount));
+        });
+        ctx.stroke();
 
         model.columns.forEach(function (c, i) {
-            if (Number.isFinite(c.overallRank)) {
-                ctx.beginPath();
-                ctx.arc(x(i), y(c.overallRank), 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                ctx.strokeStyle = '#8e6bbf';
-                ctx.lineWidth = 2.5;
-                ctx.stroke();
-            }
-            if (!Number.isFinite(c.rank)) {
+            if (!c.present || !Number.isFinite(c.meetsCount)) {
                 text('no data', x(i), (chartTop + chartBottom) / 2, 11, '#c3ccd6', '400', 'center');
                 return;
             }
+            var all = c.measuredAgainstTarget > 0 && c.meetsCount === c.measuredAgainstTarget;
             ctx.beginPath();
-            ctx.arc(x(i), y(c.rank), 5.5, 0, Math.PI * 2);
-            ctx.fillStyle = '#1565c0';
+            ctx.arc(x(i), y(c.meetsCount), 6, 0, Math.PI * 2);
+            ctx.fillStyle = all ? IMG_MEETS_COLOR : '#1565c0';
             ctx.fill();
-            text('#' + c.rank, x(i), y(c.rank) - 16, 12, '#0f2a4a', '700', 'center');
+            text(c.meetsCount + ' of ' + c.measuredAgainstTarget, x(i), y(c.meetsCount) - 17,
+                12, '#0f2a4a', '700', 'center');
         });
-
-        // Legend
-        var legendY = headerH + chartH - 8;
-        var legend = function (lx, color, dashed, label) {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2.5;
-            ctx.setLineDash(dashed ? [5, 3] : []);
-            ctx.beginPath();
-            ctx.moveTo(lx, legendY);
-            ctx.lineTo(lx + 20, legendY);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            text(label, lx + 26, legendY, 11, '#5b6b7c');
-            ctx.font = '400 11px ' + IMG_FONT;
-            return lx + 26 + ctx.measureText(label).width + 22;
-        };
-        var lx = padX + labelW;
-        lx = legend(lx, '#1565c0', false, 'Rank that month');
-        legend(lx, '#8e6bbf', true, 'Year to date');
 
         // ── Grid ──
         var gridTop = headerH + chartH + gap;
@@ -1694,7 +1669,7 @@
                 c.inProgress ? '#b45309' : '#0f2a4a', '700', 'center');
         });
 
-        var rowLabels = ['Rank', 'Meeting'].concat(TRAJECTORY_METRIC_ROWS.map(function (r) { return r.label; }));
+        var rowLabels = ['Targets met'].concat(TRAJECTORY_METRIC_ROWS.map(function (r) { return r.label; }));
         rowLabels.forEach(function (label, r) {
             var ry = gridTop + headRowH + rowH * r + rowH / 2;
             ctx.strokeStyle = '#eef2f7';
@@ -1703,25 +1678,21 @@
             ctx.moveTo(padX, ry - rowH / 2);
             ctx.lineTo(W - padX, ry - rowH / 2);
             ctx.stroke();
-            text(label, padX + 6, ry, 12, '#5b6b7c', r < 2 ? '700' : '400');
+            text(label, padX + 6, ry, 12, '#5b6b7c', r === 0 ? '700' : '400');
 
             model.columns.forEach(function (c, i) {
                 var cx = x(i);
                 if (!c.present) { text('.', cx, ry, 12, '#c3ccd6', '400', 'center'); return; }
                 if (r === 0) {
-                    text('#' + c.rank, cx, ry, 13, '#0f2a4a', '700', 'center');
+                    text(c.meetsCount + ' of ' + c.measuredAgainstTarget, cx, ry, 13, '#0f2a4a', '700', 'center');
                     return;
                 }
-                if (r === 1) {
-                    text(c.meetsCount + ' of ' + c.measuredAgainstTarget, cx, ry, 13, '#0f2a4a', '600', 'center');
-                    return;
-                }
-                var m = c.metrics[r - 2];
+                var m = c.metrics[r - 1];
                 if (!m || !m.display) { text('.', cx, ry, 12, '#c3ccd6', '400', 'center'); return; }
 
-                // A filled pill in the verdict's colour, with the word in it.
-                // The value sits above, because the value is context and the
-                // verdict is the point.
+                // A filled pill in the verdict's colour, with the word in it. The
+                // value sits above, because the value is what backs the verdict up
+                // and the verdict is the point.
                 if (m.meets !== null) {
                     var pw = 52, ph = 15, px = cx - pw / 2, py = ry + 1;
                     ctx.fillStyle = m.meets ? IMG_MEETS_COLOR : IMG_BELOW_COLOR;
@@ -1746,6 +1717,7 @@
         ctx.moveTo(padX, lastRow);
         ctx.lineTo(W - padX, lastRow);
         ctx.stroke();
+
         // The key names the targets, so "meets" is a claim the reader can check
         // rather than a colour they have to take on trust.
         var key = (model.targets || []).map(function (tg) { return tg.label + ' ' + tg.phrase; }).join('   ');
@@ -1755,11 +1727,6 @@
         return canvas;
     }
 
-    /* Canvas to clipboard, so it can be pasted straight into the draft.
-
-       Falls back to downloading the file where the clipboard will not take an
-       image — Firefox and Safari still refuse — because a picture in the
-       downloads folder is recoverable and a silent failure is not. */
     function _canvasBlob(canvas) {
         return new Promise(function (resolve, reject) {
             if (!canvas || typeof canvas.toBlob !== 'function') { reject(new Error('no canvas')); return; }

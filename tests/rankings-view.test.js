@@ -1105,39 +1105,49 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
 
         const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
         t.check('the person is named', texts.indexOf('P0') !== -1);
-        t.check('both lines are keyed', texts.indexOf('Rank that month') !== -1 &&
-            texts.indexOf('Year to date') !== -1);
-        t.check('and the targets are named, so meets can be checked',
+
+        /* Rank appears nowhere on this card. It is a management number and this
+           picture is sent to the associate — so taking the row out and leaving
+           the rank chart would have moved the placement rather than removed it.
+           The chart is targets met instead. */
+        t.check('nothing on it is a placing', !texts.some((s) => /^#\d+$/.test(s)));
+        t.check('and no row is labelled Rank', texts.indexOf('Rank') === -1);
+        t.check('the chart is targets met',
+            texts.indexOf('Targets met, month by month') !== -1 &&
+            texts.indexOf('Targets met') !== -1);
+        t.check('with the count spelled out on each month',
+            texts.some((s) => /^\d+ of \d+$/.test(s)));
+
+        t.check('the targets are named, so meets can be checked',
             texts.some((s) => /^Target:/.test(s)));
-        t.check('with no rating digit drawn anywhere',
-            !texts.some((s) => /^[123]$/.test(s)));
-        t.check('the verdict is a word instead',
+        t.check('the verdict is a word',
             texts.indexOf('meets') !== -1 || texts.indexOf('below') !== -1);
         t.check('a month with no data says so', texts.indexOf('no data') !== -1);
     });
 });
 
-suite('rankings view: best rank is drawn at the top of the year picture', (t) => {
+suite('rankings view: a better month is drawn higher in the year picture', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
     const model = cr.buildYearImageModel('P0');
     const scored = model.columns.filter((c) => c.present);
-    if (scored.length < 2 || scored[0].rank === scored[1].rank) {
-        t.check('skipped - this fixture has no rank spread', true);
+    const counts = new Set(scored.map((c) => c.meetsCount));
+    if (scored.length < 2 || counts.size < 2) {
+        t.check('skipped - this fixture has no spread in targets met', true);
         return;
     }
 
     withRecordingCanvas(t, (rec) => {
         cr.drawYearCard(model);
-        // The month markers are the filled 5.5px circles, in column order.
-        const markers = rec.ops.filter((o) => o.op === 'arc' && o.r === 5.5);
+        // The month markers are the filled circles on the chart line.
+        const markers = rec.ops.filter((o) => o.op === 'arc' && o.r === 6);
         t.equal('one marker per scored month', markers.length, scored.length);
 
-        // Up is better, the way the word reads. A smaller rank number must sit
+        // Up is better, the way the word reads: meeting more targets must sit
         // higher on the canvas, which means a smaller y.
-        const pairs = scored.map((c, i) => ({ rank: c.rank, y: markers[i].y }));
-        const best = pairs.reduce((a, b) => (a.rank <= b.rank ? a : b));
-        const worst = pairs.reduce((a, b) => (a.rank >= b.rank ? a : b));
+        const pairs = scored.map((c, i) => ({ met: c.meetsCount, y: markers[i].y }));
+        const best = pairs.reduce((a, b) => (a.met >= b.met ? a : b));
+        const worst = pairs.reduce((a, b) => (a.met <= b.met ? a : b));
         t.check('the best month is drawn above the worst', best.y < worst.y);
     });
 });
