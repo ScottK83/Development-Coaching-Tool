@@ -447,51 +447,53 @@
         name => `${name}! Wrapping up the week and had to share this. \uD83C\uDF89`,
         name => `Quick shoutout before the weekend, ${name}! \uD83C\uDF89`,
     ];
+    // `when` names the week the upload actually covers, which is usually not
+    // the one in flight. See describeWeekRecency.
     const HF_JUMP = [
-        (label, delta, range) => `Incredible move in ${label} this week, ${delta}! (${range}) That kind of progress stands out.`,
-        (label, delta, range) => `You moved ${label} in a big way this week, ${delta}! (${range}) That's impressive.`,
-        (label, delta, range) => `${label} took a real swing this week, ${delta}! (${range}) Love to see it.`,
-        (label, delta, range) => `The progress on ${label} this week is awesome, ${delta}! (${range}) Keep that energy.`,
-        (label, delta, range) => `Your ${label} moved ${delta} this week and honestly it's one of the best improvements I've seen. (${range})`,
-        (label, delta, range) => `That ${delta} move in ${label} this week is worth celebrating. (${range}) That took real effort.`,
-        (label, delta, range) => `${label} went from good to great this week, ${delta}. (${range}) You should feel good about that.`,
-        (label, delta, range) => `I have to point out that ${label} swing this week, ${delta}. (${range}) That's not easy to do.`,
-        (label, delta, range) => `When I saw ${label} at ${delta} this week, I knew I had to say something. (${range}) Wow.`,
-        (label, delta, range) => `The kind of improvement you showed on ${label} this week, ${delta}, doesn't happen by accident. (${range})`,
+        (label, delta, range, when) => `Incredible move in ${label} ${when}, ${delta}! (${range}) That kind of progress stands out.`,
+        (label, delta, range, when) => `You moved ${label} in a big way ${when}, ${delta}! (${range}) That's impressive.`,
+        (label, delta, range, when) => `${label} took a real swing ${when}, ${delta}! (${range}) Love to see it.`,
+        (label, delta, range, when) => `The progress on ${label} ${when} is awesome, ${delta}! (${range}) Keep that energy.`,
+        (label, delta, range, when) => `Your ${label} moved ${delta} ${when} and honestly it's one of the best improvements I've seen. (${range})`,
+        (label, delta, range, when) => `That ${delta} move in ${label} ${when} is worth celebrating. (${range}) That took real effort.`,
+        (label, delta, range, when) => `${label} went from good to great ${when}, ${delta}. (${range}) You should feel good about that.`,
+        (label, delta, range, when) => `I have to point out that ${label} swing ${when}, ${delta}. (${range}) That's not easy to do.`,
+        (label, delta, range, when) => `When I saw ${label} at ${delta} ${when}, I knew I had to say something. (${range}) Wow.`,
+        (label, delta, range, when) => `The kind of improvement you showed on ${label} ${when}, ${delta}, doesn't happen by accident. (${range})`,
     ];
     const HF_TWO_WINS = [
-        (l1, v1, l2, v2) => `Your ${l1} at ${v1} and ${l2} at ${v2} were outstanding!`,
-        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Absolutely killing it!`,
-        (l1, v1, l2, v2) => `Crushed it on ${l1} (${v1}) and ${l2} (${v2}) this week!`,
-        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} are both legit impressive.`,
-        (l1, v1, l2, v2) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you had one heck of a week.`,
-        (l1, v1, l2, v2) => `I mean, ${l1} at ${v1} AND ${l2} at ${v2}? Come on now.`,
-        (l1, v1, l2, v2) => `Your ${l1} (${v1}) and ${l2} (${v2}) were both standout numbers this week.`,
-        (l1, v1, l2, v2) => `Two words: ${l1} at ${v1}. Two more: ${l2} at ${v2}. Just great.`,
-        (l1, v1, l2, v2) => `${l1} at ${v1}, ${l2} at ${v2}. That's the kind of week you want to have.`,
-        (l1, v1, l2, v2) => `Can we talk about ${l1} at ${v1} and ${l2} at ${v2}? Because those are excellent.`,
+        (l1, v1, l2, v2, when) => `Your ${l1} at ${v1} and ${l2} at ${v2} were outstanding!`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2}? Absolutely killing it!`,
+        (l1, v1, l2, v2, when) => `Crushed it on ${l1} (${v1}) and ${l2} (${v2}) ${when}!`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2} are both legit impressive.`,
+        (l1, v1, l2, v2, when) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you had one heck of a week.`,
+        (l1, v1, l2, v2, when) => `I mean, ${l1} at ${v1} AND ${l2} at ${v2}? Come on now.`,
+        (l1, v1, l2, v2, when) => `Your ${l1} (${v1}) and ${l2} (${v2}) were both standout numbers ${when}.`,
+        (l1, v1, l2, v2, when) => `Two words: ${l1} at ${v1}. Two more: ${l2} at ${v2}. Just great.`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1}, ${l2} at ${v2}. That's the kind of week you want to have.`,
+        (l1, v1, l2, v2, when) => `Can we talk about ${l1} at ${v1} and ${l2} at ${v2}? Because those are excellent.`,
     ];
     const HF_ONE_WIN = [
-        (label, val) => `Your ${label} at ${val} was outstanding!`,
-        (label, val) => `${label} at ${val}? That's what I'm talking about!`,
-        (label, val) => `Killed it on ${label} at ${val} this week!`,
-        (label, val) => `Your ${label} coming in at ${val} is seriously impressive.`,
-        (label, val) => `${label} at ${val} was the highlight of your week and it deserves a callout.`,
-        (label, val) => `I saw your ${label} at ${val} and honestly just wanted to say great job.`,
-        (label, val) => `That ${label} number at ${val}? Chef's kiss.`,
-        (label, val) => `${label} at ${val} tells me everything about how you showed up this week.`,
-        (label, val) => `Huge props on ${label} at ${val}. That's no small thing.`,
-        (label, val) => `Let's be real, ${label} at ${val} is just flat out good.`,
+        (label, val, when) => `Your ${label} at ${val} was outstanding!`,
+        (label, val, when) => `${label} at ${val}? That's what I'm talking about!`,
+        (label, val, when) => `Killed it on ${label} at ${val} ${when}!`,
+        (label, val, when) => `Your ${label} coming in at ${val} is seriously impressive.`,
+        (label, val, when) => `${label} at ${val} was the highlight of your week and it deserves a callout.`,
+        (label, val, when) => `I saw your ${label} at ${val} and honestly just wanted to say great job.`,
+        (label, val, when) => `That ${label} number at ${val}? Chef's kiss.`,
+        (label, val, when) => `${label} at ${val} tells me everything about how you showed up ${when}.`,
+        (label, val, when) => `Huge props on ${label} at ${val}. That's no small thing.`,
+        (label, val, when) => `Let's be real, ${label} at ${val} is just flat out good.`,
     ];
     const HF_NO_WINS = [
-        'I wanted to recognize your effort this week. You showed up and put in the work, and that matters.',
-        'Just want you to know I see the grind. Keep at it.',
-        'Appreciate the effort you put in this week. It doesn\'t go unnoticed.',
-        'The numbers are one thing, but showing up every day is the foundation. You did that.',
-        'I wanted to take a sec to acknowledge your work this week. It matters more than you think.',
-        'Not every week is going to be flashy, but the work ethic you bring is what builds a great track record.',
-        'I see you out there putting in the work. That consistency is going to pay off.',
-        'Wanted to make sure you know that the effort hasn\'t gone unnoticed. Keep going.',
+        when => `I wanted to recognize your effort ${when}. You showed up and put in the work, and that matters.`,
+        when => 'Just want you to know I see the grind. Keep at it.',
+        when => `Appreciate the effort you put in ${when}. It doesn't go unnoticed.`,
+        when => 'The numbers are one thing, but showing up every day is the foundation. You did that.',
+        when => `I wanted to take a sec to acknowledge your work ${when}. It matters more than you think.`,
+        when => 'Not every week is going to be flashy, but the work ethic you bring is what builds a great track record.',
+        when => 'I see you out there putting in the work. That consistency is going to pay off.',
+        when => 'Wanted to make sure you know that the effort hasn\'t gone unnoticed. Keep going.',
     ];
     const HF_EXTRAS = [
         extras => `On top of that, ${extras}... you're on a roll!`,
@@ -1142,8 +1144,16 @@
         return metric.target + '';
     }
 
-    function fmtRange(metricKey, baseVal, latestVal, periodType) {
+    // `labels` ({ when, prior }) overrides the possessive wording below. A
+    // label like "two weeks ago" has no possessive form, so when one is passed
+    // the numbers come first and the label trails them.
+    function fmtRange(metricKey, baseVal, latestVal, periodType, labels) {
         const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
+        if (labels) {
+            const base = `${fmtVal(metricKey, baseVal)} ${labels.prior}`;
+            const now = `${fmtVal(metricKey, latestVal)} ${labels.when}`;
+            return reverse ? `down from ${base} to ${now}` : `${base} \u2192 ${now}`;
+        }
         const priorLabel = periodType === 'quarter' ? "last quarter's"
             : periodType === 'month' ? "last month's"
             : "last week's";
@@ -1473,6 +1483,30 @@
         return dow === 5 || dow === 6 || dow === 0;
     }
 
+    // Which week the numbers actually describe. A weekly upload lands after the
+    // week closes, so on a Thursday the latest week is normally the one that
+    // ended the previous Friday. Calling that "this week" reads like the
+    // numbers are still live, and dates the message wrong by seven days.
+    function describeWeekRecency(latestKey, period, when) {
+        const today = when instanceof Date ? new Date(when.getTime()) : new Date();
+        today.setHours(12, 0, 0, 0);
+        const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const monday = new Date(today);
+        monday.setDate(monday.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+        const priorMonday = new Date(monday);
+        priorMonday.setDate(priorMonday.getDate() - 7);
+
+        const endIso = period?.metadata?.endDate
+            || (latestKey && latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey)
+            || '';
+
+        // No end date to judge by means no claim worth making — the in-flight
+        // wording is what the message has always used, so fall back to it.
+        if (!endIso || endIso >= iso(monday)) return { when: 'this week', prior: 'last week' };
+        if (endIso >= iso(priorMonday)) return { when: 'last week', prior: 'two weeks ago' };
+        return { when: `the week ending ${getEndDateLabel(latestKey, period)}`, prior: 'the week before' };
+    }
+
     // options.now lets a caller (and the tests) pin the day the copy is written
     // for instead of whatever day the machine happens to be on.
     async function generateHighFiveMessage(employeeName, latestKey, baselineKey, options) {
@@ -1483,8 +1517,6 @@
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
-
-        const endDate = getEndDateLabel(latestKey, period);
 
         const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
             ? getCallCenterAverageForPeriod(latestKey) || {}
@@ -1509,21 +1541,23 @@
 
         // Build the celebration — no coaching, no focus areas, pure praise
         const weekendClose = weekendIsInReach(options?.now);
+        const recency = describeWeekRecency(latestKey, period, options?.now);
         let message = pick(weekendClose ? HF_OPENERS.concat(HF_OPENERS_WEEKEND) : HF_OPENERS)(firstName);
         const namedWins = new Set();
 
         if (biggestJump && biggestJump.delta > 0) {
-            message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'))} \uD83D\uDD25`;
+            const range = fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week', recency);
+            message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), range, recency.when)} \uD83D\uDD25`;
             namedWins.add(biggestJump.metricKey);
         } else if (wins.length >= 2) {
-            message += ` ${pick(HF_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]))} \uD83D\uDD25\uD83D\uDCAA`;
+            message += ` ${pick(HF_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]), recency.when)} \uD83D\uDD25\uD83D\uDCAA`;
             namedWins.add(wins[0].metricKey);
             namedWins.add(wins[1].metricKey);
         } else if (wins.length === 1) {
-            message += ` ${pick(HF_ONE_WIN)(wins[0].label, fmtVal(wins[0]))} \uD83D\uDD25`;
+            message += ` ${pick(HF_ONE_WIN)(wins[0].label, fmtVal(wins[0]), recency.when)} \uD83D\uDD25`;
             namedWins.add(wins[0].metricKey);
         } else {
-            message += ` ${pick(HF_NO_WINS)} \uD83D\uDCAA`;
+            message += ` ${pick(HF_NO_WINS)(recency.when)} \uD83D\uDCAA`;
         }
 
         // Name every remaining win, not just the next couple \u2014 a strong
@@ -3463,6 +3497,7 @@
         generateCheckinMessage,
         generateHighFiveMessage,
         weekendIsInReach,
+        describeWeekRecency,
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
         generateWeekProgressMessage,
