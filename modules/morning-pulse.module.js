@@ -421,18 +421,30 @@
         'Go close it out. Message me anytime.',
     ];
 
+    // A high five goes out whenever the week backs one, which is often not a
+    // Friday. These openers say nothing about what day it is.
     const HF_OPENERS = [
         name => `Hey ${name}! \uD83C\uDF89`,
         name => `${name}! \uD83C\uDF89\uD83D\uDE4C`,
         name => `Yo ${name}! \uD83C\uDF89`,
         name => `What a week, ${name}! \uD83C\uDF89`,
-        name => `${name}, had to send you this before the weekend! \uD83C\uDF89`,
         name => `${name}! Gotta give credit where it's due. \uD83C\uDF89`,
+        name => `${name}, you need to see these numbers. \uD83C\uDF89`,
+        name => `Hey ${name}, just wanted to highlight your week real quick. \uD83C\uDF89`,
+        name => `${name}, dropping in with something worth celebrating. \uD83C\uDF89`,
+        name => `Had to stop what I was doing and send this, ${name}! \uD83C\uDF89`,
+        name => `Big props coming your way, ${name}! \uD83C\uDF89`,
+        name => `${name}! Pulled your week up and had to say something. \uD83C\uDF89`,
+        name => `Hey ${name}, this one deserves a callout. \uD83C\uDF89`,
+    ];
+    // Only drawn from when the weekend is actually in reach. Telling someone on
+    // a Tuesday to enjoy their weekend is how a real shout-out starts reading
+    // like a template.
+    const HF_OPENERS_WEEKEND = [
+        name => `${name}, had to send you this before the weekend! \uD83C\uDF89`,
         name => `Real quick, ${name}, before you head out for the weekend. \uD83C\uDF89`,
         name => `Couldn't let the week end without saying something, ${name}! \uD83C\uDF89`,
         name => `${name}! Wrapping up the week and had to share this. \uD83C\uDF89`,
-        name => `${name}, you need to see these numbers. \uD83C\uDF89`,
-        name => `Hey ${name}, just wanted to highlight your week real quick. \uD83C\uDF89`,
         name => `Quick shoutout before the weekend, ${name}! \uD83C\uDF89`,
     ];
     const HF_JUMP = [
@@ -503,21 +515,34 @@
         (on, total) => `Landing ${on} out of ${total} metrics shows real balance. That's hard to do.`,
         (on, total) => `${on} of ${total} on target. That doesn't happen by accident. You're putting in the work everywhere.`,
     ];
+    // Sign-offs that work on any day of the week.
     const HF_CLOSERS = [
+        'Awesome job. Have a good one!',
+        'Nothing left to say except well done. Have a great one.',
+        'Heck of a week. Go enjoy it.',
+        'Credit where it\'s due. Really nice work.',
+        'Keep that going. Proud of you.',
+        'Just wanted you to hear it from me. Great work.',
+        'Well done. Keep stacking weeks like this.',
+        'Proud to have you on this team.',
+        'Take the win, then keep rolling.',
+        'That is the standard now. Love it.',
+        'Great stuff. Keep doing what you\'re doing.',
+        'Hard to top a week like that. Well done.',
+    ];
+    // Held back until the weekend is actually in reach.
+    const HF_CLOSERS_WEEKEND = [
         'Proud of you. Enjoy your weekend!',
         'Have a great weekend. You earned it!',
         'Enjoy the weekend, you deserve it!',
         'Great week. Go relax, you\'ve earned it!',
-        'Awesome job. Have a good one!',
         'Seriously, great work. Now go enjoy your days off.',
         'Take this good energy into the weekend. You crushed it.',
         'That\'s a wrap on a great week. Rest up and recharge.',
         'Way to finish the week strong. See you Monday.',
         'Go do something fun this weekend, you earned it.',
-        'Nothing left to say except well done. Have a great one.',
         'I love ending the week on a high note like this. Enjoy!',
         'Couldn\'t be happier with how this week went. Relax and come back refreshed.',
-        'Heck of a week. Go enjoy it.',
     ];
     // Monthly review phrases
     const MO_GREETINGS = [
@@ -1439,9 +1464,18 @@
         return message;
     }
 
-    // --- Weekend High-Five message generation ---
+    // --- High-Five message generation ---
 
-    async function generateHighFiveMessage(employeeName, latestKey, baselineKey) {
+    // True Friday through Sunday, when "enjoy your weekend" is something a
+    // person would actually say. Any other day the weekend copy stays parked.
+    function weekendIsInReach(when) {
+        const dow = (when instanceof Date ? when : new Date()).getDay();
+        return dow === 5 || dow === 6 || dow === 0;
+    }
+
+    // options.now lets a caller (and the tests) pin the day the copy is written
+    // for instead of whatever day the machine happens to be on.
+    async function generateHighFiveMessage(employeeName, latestKey, baselineKey, options) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
         if (!emp) return null;
@@ -1474,7 +1508,8 @@
             });
 
         // Build the celebration — no coaching, no focus areas, pure praise
-        let message = pick(HF_OPENERS)(firstName);
+        const weekendClose = weekendIsInReach(options?.now);
+        let message = pick(weekendClose ? HF_OPENERS.concat(HF_OPENERS_WEEKEND) : HF_OPENERS)(firstName);
         const namedWins = new Set();
 
         if (biggestJump && biggestJump.delta > 0) {
@@ -1504,7 +1539,7 @@
             message += `\n\n${pick(HF_CONSISTENCY)(onTrackCount, allMetrics.length)} \u2B50`;
         }
 
-        message += `\n\n${pick(HF_CLOSERS)} \uD83D\uDE80`;
+        message += `\n\n${pick(weekendClose ? HF_CLOSERS.concat(HF_CLOSERS_WEEKEND) : HF_CLOSERS)} \uD83D\uDE80`;
 
         return message;
     }
@@ -2626,7 +2661,7 @@
             : isMidweek ? `Midweek Check-In for ${escapeHtml(firstName)}`
             : isQuarterly ? `Quarterly Review for ${escapeHtml(firstName)}`
             : isMonthly ? `Monthly Review for ${escapeHtml(firstName)}`
-            : isHighFive ? `Weekend High-Five for ${escapeHtml(firstName)}`
+            : isHighFive ? `High-Five for ${escapeHtml(firstName)}`
             : `Check-in for ${escapeHtml(firstName)}`;
         const copyGradient = isKickoff
             ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
@@ -3159,7 +3194,7 @@
         const baseDate = baselineKey ? getPeriodDisplayLabel(periodType, baselineKey) : null;
         const rangeText = baseDate && baseDate !== endDate ? `${baseDate} \u2013 ${endDate}` : endDate;
         const pulseDescription = periodType === 'week'
-            ? 'Your team\'s weekly trajectory at a glance. Use "Check-in" for coaching or "High-Five" for a Friday shoutout.'
+            ? 'Your team\'s weekly trajectory at a glance. Use "Check-in" for coaching or "High-Five" for a straight shoutout.'
             : periodType === 'month'
             ? 'Your team\'s monthly snapshot. Use each card to generate an individual monthly review.'
             : 'Your team\'s quarterly snapshot. Use each card to generate an individual quarterly review.';
@@ -3427,6 +3462,7 @@
         resolveCheckinPeriods,
         generateCheckinMessage,
         generateHighFiveMessage,
+        weekendIsInReach,
         generateMondayKickoffMessage,
         generateMidweekCheckinMessage,
         generateWeekProgressMessage,
