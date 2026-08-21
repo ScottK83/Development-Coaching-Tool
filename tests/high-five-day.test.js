@@ -1,6 +1,6 @@
 'use strict';
 
-const { suite } = require('./harness');
+const { suite, ROOT } = require('./harness');
 
 /**
  * When the high five is written, and which week it claims to be about.
@@ -131,4 +131,76 @@ suite('high five: an in-flight week still reads as this week', async (t) => {
     t.check('the comparison is written', Boolean(jump));
     t.check('the older number is last week', jump.indexOf('617s last week') > -1);
     t.check('and the live one is this week', jump.indexOf('415s this week') > -1);
+});
+
+/**
+ * A month is not a week.
+ *
+ * The recency label is what every message calls the stretch of time it just
+ * described, and it only ever spoke in weeks. Point the period picker at a
+ * month to date and the high five said "this week" over an Aug 1 to Aug 17
+ * range, which is the same defect the shout-out post had.
+ */
+suite('high five: names the period by its own shape', (t) => {
+    const pulse = loadPulse(t);
+    const of = (type, end) => ({ metadata: { periodType: type, endDate: end } });
+
+    const mtd = pulse.describeWeekRecency('k', of('month-to-date', '2026-08-17'), THURSDAY);
+    t.equal('a month to date is a month', mtd.when, 'this month');
+    t.equal('and it compares against last month', mtd.prior, 'last month');
+
+    t.equal('a finished month is too',
+        pulse.describeWeekRecency('k', of('month', '2026-07-31'), THURSDAY).when, 'this month');
+    t.equal('a rebuilt month as well',
+        pulse.describeWeekRecency('k', of('month-agg', '2026-07-31'), THURSDAY).when, 'this month');
+    t.equal('a quarter is a quarter',
+        pulse.describeWeekRecency('k', of('quarter', '2026-06-30'), THURSDAY).when, 'this quarter');
+    t.equal('year to date is the year',
+        pulse.describeWeekRecency('k', of('ytd', '2026-08-16'), THURSDAY).when, 'this year');
+    t.equal('and a day file is a day',
+        pulse.describeWeekRecency('k', of('daily', '2026-08-17'), THURSDAY).when, 'that day');
+
+    // The week rules are untouched, including the dating of an older one.
+    t.equal('a week in flight still reads as this week',
+        pulse.describeWeekRecency('k', of('week-in-progress', '2026-08-19'), THURSDAY).when, 'this week');
+    t.equal('and a finished one as last week',
+        pulse.describeWeekRecency('k', of('week', '2026-08-14'), THURSDAY).when, 'last week');
+    t.check('an older week is still dated outright',
+        pulse.describeWeekRecency('k', of('week', '2026-07-24'), THURSDAY).when.indexOf('the week ending') === 0);
+});
+
+suite('high five: the praise does not claim a week it cannot see', (t) => {
+    // Read as text, because the point is what is in the pools rather than which
+    // one a given run happens to draw. A phrase asserting the stretch just
+    // described was a week is wrong on a month, a quarter or the year.
+    const fs = require('fs');
+    const path = require('path');
+    const source = fs.readFileSync(path.join(ROOT, 'modules', 'morning-pulse.module.js'), 'utf8');
+
+    [
+        'What a week',
+        'highlight your week',
+        'Pulled your week up',
+        'heck of a week',
+        'kind of week you want',
+        'highlight of your week',
+        'all-around great week',
+        'the perfect week',
+        'Heck of a week',
+        'stacking weeks',
+        'top a week like that',
+        'grinding this week',
+        'Solid week',
+        'Nice work this week',
+        'good one this week',
+        'Go have a great week'
+    ].forEach(phrase => {
+        t.check('no pool still says "' + phrase + '"', source.indexOf(phrase) === -1);
+    });
+
+    // What stays: a turn of phrase that claims nothing about the period in
+    // hand, and anything gated on the weekend actually being in reach, which is
+    // a fact about the calendar rather than about the upload.
+    t.check('a general turn of phrase is left alone', source.indexOf('Some weeks the numbers') > -1);
+    t.check('and the weekend sign-offs are untouched', source.indexOf('Have a great weekend') > -1);
 });

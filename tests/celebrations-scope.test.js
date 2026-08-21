@@ -1,6 +1,6 @@
 'use strict';
 
-const { suite } = require('./harness');
+const { suite, ROOT } = require('./harness');
 
 // A minimal stand-in for centerRanking: two people on my team, each holding a
 // rank-1 metric, so both would be celebrated if nothing narrowed the list.
@@ -904,4 +904,72 @@ suite('celebrations: a rewording never drops a fact', (t) => {
     }
     t.check('twenty-five rewordings, every fact intact every time', true);
     t.check('and the spacing holds throughout', true);
+});
+
+/**
+ * Naming the stretch of time the reader chose.
+ *
+ * "PERFECT survey — the one that came in this week was flawless!" printed under
+ * a Month to date window covering Aug 1 to Aug 17. The window is picked on the
+ * page now, so any line that names a period has to read it rather than assume.
+ */
+suite('celebrations: the period is called what it is', (t) => {
+    const celebrations = load(t, null);
+
+    t.equal('a single day', celebrations.periodNoun('2026-08-17|2026-08-17'), 'that day');
+    t.equal('a working week', celebrations.periodNoun('2026-08-17|2026-08-21'), 'this week');
+    t.equal('a full week', celebrations.periodNoun('2026-08-10|2026-08-16'), 'this week');
+    t.equal('a month to date', celebrations.periodNoun('2026-08-01|2026-08-17'), 'this month');
+    t.equal('a whole month', celebrations.periodNoun('2026-07-01|2026-07-31'), 'this month');
+    t.equal('a quarter', celebrations.periodNoun('2026-04-01|2026-06-30'), 'this quarter');
+    t.equal('the year so far', celebrations.periodNoun('2026-01-01|2026-08-16'), 'this year');
+
+    // Nothing to measure is not a licence to guess a week.
+    t.equal('an unkeyed period says so', celebrations.periodNoun(''), 'this period');
+    t.equal('and so does nonsense', celebrations.periodNoun('whenever'), 'this period');
+});
+
+suite('celebrations: the perfect-survey line follows the window', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    t.equal('a month-to-date window says month',
+        celebrations.perfectSurveyLine({ count: 6, periodNoun: 'this month' }),
+        'PERFECT surveys — all 6 of them this month, not one off the mark!');
+    t.equal('and a single survey too',
+        celebrations.perfectSurveyLine({ count: 1, periodNoun: 'this month' }),
+        'PERFECT survey — the one that came in this month was flawless!');
+    t.equal('a week window still says week',
+        celebrations.perfectSurveyLine({ count: 3, periodNoun: 'this week' }),
+        'PERFECT surveys — all 3 of them this week, not one off the mark!');
+
+    // An entry from before this was stamped on has to read as something true.
+    t.check('an unstamped one falls back to a period, not a week',
+        celebrations.perfectSurveyLine({ count: 4 }).indexOf('this period') > -1);
+});
+
+suite('celebrations: the pools no longer claim a week', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const source = fs.readFileSync(path.join(ROOT, 'modules', 'celebrations.module.js'), 'utf8');
+
+    [
+        'came to WORK this week',
+        'was next level this week',
+        'look easy this week',
+        'WEEKLY WINS',
+        'OFF this week',
+        'POPPING OFF THIS WEEK',
+        'made a difference this week',
+        'into next week',
+        'fire every week',
+        'made it easy this week',
+        'the data this week',
+        'the weekly results',
+        'a great week'
+    ].forEach(phrase => {
+        t.check('no pool still says "' + phrase + '"', source.indexOf(phrase) === -1);
+    });
 });

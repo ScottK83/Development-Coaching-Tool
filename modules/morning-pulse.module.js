@@ -116,7 +116,7 @@
     ];
     const NO_WINS = [
         'I see you putting in the effort and I appreciate it!',
-        'Appreciate you showing up and grinding this week.',
+        'Appreciate you showing up and grinding.',
         'I know the numbers don\'t always show it, but the effort matters.',
         'Keep pushing, I see the work you\'re putting in.',
         'Some weeks the numbers don\'t cooperate. Doesn\'t change how I see your effort.',
@@ -158,17 +158,17 @@
     ];
     const CLOSERS = [
         'Keep it up! Let me know if you need anything.',
-        'Solid week. I\'m here if you want to chat about anything.',
+        'Solid work. I\'m here if you want to chat about anything.',
         'Keep doing your thing. Reach out if you need me.',
         'Good stuff. Let\'s keep the momentum going.',
-        'Nice work this week. My door\'s always open.',
+        'Nice work. My door\'s always open.',
         'Talk soon. You know where to find me.',
         'That\'s the update. Holler if anything comes up.',
-        'Appreciate you. Let\'s have a good one this week.',
+        'Appreciate you. Let\'s have a good one.',
         'Questions? Concerns? Random thoughts? I\'m around.',
         'Let me know if you want to dig into any of this together.',
         'Keep at it. Rooting for you.',
-        'That\'s all I got. Go have a great week.',
+        'That\'s all I got. Go have a great one.',
         'Catch me anytime if you want to talk through anything.',
         'Onward. I\'m always just a message away.',
     ];
@@ -427,14 +427,14 @@
         name => `Hey ${name}! \uD83C\uDF89`,
         name => `${name}! \uD83C\uDF89\uD83D\uDE4C`,
         name => `Yo ${name}! \uD83C\uDF89`,
-        name => `What a week, ${name}! \uD83C\uDF89`,
+        name => `What a run, ${name}! \uD83C\uDF89`,
         name => `${name}! Gotta give credit where it's due. \uD83C\uDF89`,
         name => `${name}, you need to see these numbers. \uD83C\uDF89`,
-        name => `Hey ${name}, just wanted to highlight your week real quick. \uD83C\uDF89`,
+        name => `Hey ${name}, just wanted to highlight your numbers real quick. \uD83C\uDF89`,
         name => `${name}, dropping in with something worth celebrating. \uD83C\uDF89`,
         name => `Had to stop what I was doing and send this, ${name}! \uD83C\uDF89`,
         name => `Big props coming your way, ${name}! \uD83C\uDF89`,
-        name => `${name}! Pulled your week up and had to say something. \uD83C\uDF89`,
+        name => `${name}! Pulled your numbers up and had to say something. \uD83C\uDF89`,
         name => `Hey ${name}, this one deserves a callout. \uD83C\uDF89`,
     ];
     // Only drawn from when the weekend is actually in reach. Telling someone on
@@ -466,11 +466,11 @@
         (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2}? Absolutely killing it!`,
         (l1, v1, l2, v2, when) => `Crushed it on ${l1} (${v1}) and ${l2} (${v2}) ${when}!`,
         (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2} are both legit impressive.`,
-        (l1, v1, l2, v2, when) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you had one heck of a week.`,
+        (l1, v1, l2, v2, when) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you had one heck of a run.`,
         (l1, v1, l2, v2, when) => `I mean, ${l1} at ${v1} AND ${l2} at ${v2}? Come on now.`,
         (l1, v1, l2, v2, when) => `Your ${l1} (${v1}) and ${l2} (${v2}) were both standout numbers ${when}.`,
         (l1, v1, l2, v2, when) => `Two words: ${l1} at ${v1}. Two more: ${l2} at ${v2}. Just great.`,
-        (l1, v1, l2, v2, when) => `${l1} at ${v1}, ${l2} at ${v2}. That's the kind of week you want to have.`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1}, ${l2} at ${v2}. That's the kind of stretch you want to have.`,
         (l1, v1, l2, v2, when) => `Can we talk about ${l1} at ${v1} and ${l2} at ${v2}? Because those are excellent.`,
     ];
     const HF_ONE_WIN = [
@@ -478,7 +478,7 @@
         (label, val, when) => `${label} at ${val}? That's what I'm talking about!`,
         (label, val, when) => `Killed it on ${label} at ${val} ${when}!`,
         (label, val, when) => `Your ${label} coming in at ${val} is seriously impressive.`,
-        (label, val, when) => `${label} at ${val} was the highlight of your week and it deserves a callout.`,
+        (label, val, when) => `${label} at ${val} was the highlight and it deserves a callout.`,
         (label, val, when) => `I saw your ${label} at ${val} and honestly just wanted to say great job.`,
         (label, val, when) => `That ${label} number at ${val}? Chef's kiss.`,
         (label, val, when) => `${label} at ${val} tells me everything about how you showed up ${when}.`,
@@ -491,19 +491,19 @@
         when => `Appreciate the effort you put in ${when}. It doesn't go unnoticed.`,
         when => 'The numbers are one thing, but showing up every day is the foundation. You did that.',
         when => `I wanted to take a sec to acknowledge your work ${when}. It matters more than you think.`,
-        when => 'Not every week is going to be flashy, but the work ethic you bring is what builds a great track record.',
+        when => 'Not every stretch is going to be flashy, but the work ethic you bring is what builds a great track record.',
         when => 'I see you out there putting in the work. That consistency is going to pay off.',
         when => 'Wanted to make sure you know that the effort hasn\'t gone unnoticed. Keep going.',
     ];
     const HF_EXTRAS = [
         extras => `On top of that, ${extras}... you're on a roll!`,
         extras => `And ${extras} too? You're firing on all cylinders.`,
-        extras => `Plus ${extras}. Just an all-around great week.`,
+        extras => `Plus ${extras}. Just an all-around great showing.`,
         extras => `Not to mention ${extras}. Seriously impressive.`,
         extras => `Oh and did I mention ${extras}? Because yeah, that happened too.`,
-        extras => `Throw in ${extras} and you've basically had the perfect week.`,
+        extras => `Throw in ${extras} and you've basically had the perfect run.`,
         extras => `As if that wasn't enough, ${extras} also hit.`,
-        extras => `And to top it all off, ${extras}. What a week.`,
+        extras => `And to top it all off, ${extras}. What a run.`,
         extras => `Then there's ${extras} on top of everything else. You went off.`,
         extras => `Can't forget about ${extras} either. Just stacking wins.`,
     ];
@@ -521,16 +521,16 @@
     const HF_CLOSERS = [
         'Awesome job. Have a good one!',
         'Nothing left to say except well done. Have a great one.',
-        'Heck of a week. Go enjoy it.',
+        'Heck of a run. Go enjoy it.',
         'Credit where it\'s due. Really nice work.',
         'Keep that going. Proud of you.',
         'Just wanted you to hear it from me. Great work.',
-        'Well done. Keep stacking weeks like this.',
+        'Well done. Keep stacking numbers like this.',
         'Proud to have you on this team.',
         'Take the win, then keep rolling.',
         'That is the standard now. Love it.',
         'Great stuff. Keep doing what you\'re doing.',
-        'Hard to top a week like that. Well done.',
+        'Hard to top a showing like that. Well done.',
     ];
     // Held back until the weekend is actually in reach.
     const HF_CLOSERS_WEEKEND = [
@@ -1495,6 +1495,20 @@
         monday.setDate(monday.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
         const priorMonday = new Date(monday);
         priorMonday.setDate(priorMonday.getDate() - 7);
+
+        // A month, a quarter or the year is not a week, and week words on top
+        // of one are simply wrong. The shape of the upload decides first; only
+        // a week-shaped one gets this week / last week / the week ending.
+        const NOT_A_WEEK = {
+            'month': { when: 'this month', prior: 'last month' },
+            'month-to-date': { when: 'this month', prior: 'last month' },
+            'month-agg': { when: 'this month', prior: 'last month' },
+            'quarter': { when: 'this quarter', prior: 'last quarter' },
+            'ytd': { when: 'this year', prior: 'last year' },
+            'daily': { when: 'that day', prior: 'the day before' }
+        };
+        const shape = NOT_A_WEEK[period?.metadata?.periodType];
+        if (shape) return shape;
 
         const endIso = period?.metadata?.endDate
             || (latestKey && latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey)
