@@ -1070,6 +1070,61 @@
         '\n\uD83D\uDD25 Keep bringing this fire every week! You all are incredible!'
     ];
 
+    /**
+     * The body of the batch post, which never used to move.
+     *
+     * The intro and the closer were drawn from pools and everything between
+     * them was one template stamped out per achievement, so regenerating a post
+     * changed two lines out of twenty and read as the same post. The facts are
+     * not negotiable: the metric, the number and the placing are stated every
+     * time. What varies is the frame built around them.
+     *
+     * Every stem closes on its own punctuation, because the placing, the tier
+     * badge and the tie clause are appended after it and the block endings have
+     * to stay uniform whichever stem comes up.
+     */
+    var BATCH_METRIC_STEMS = [
+        function(label, val) { return label + ': ' + val + '!'; },
+        function(label, val) { return val + ' on ' + label + '!'; },
+        function(label, val) { return label + ' came in at ' + val + '!'; },
+        function(label, val) { return 'Put up ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Look at ' + label + ': ' + val + '!'; },
+        function(label, val) { return 'Finished the period at ' + val + ' on ' + label + '!'; },
+        function(label, val) { return label + ' landed on ' + val + '!'; },
+        function(label, val) { return 'Took ' + label + ' to ' + val + '!'; },
+        function(label, val) { return val + ' on ' + label + ', and it holds up!'; }
+    ];
+
+    var BATCH_NO_VALUE_STEMS = [
+        function(label) { return 'Outstanding ' + label + '!'; },
+        function(label) { return 'Big ' + label + ' period!'; },
+        function(label) { return label + ' was a standout!'; },
+        function(label) { return 'Strong showing on ' + label + '!'; },
+        function(label) { return label + ' was the story here!'; }
+    ];
+
+    // The solo lines close with a tail out of SOLO_TOP_TAILS, so these stop on
+    // a full stop and hand over.
+    var BATCH_SOLO_STEMS = [
+        function(label, val) { return val ? label + ': ' + val + '.' : label + '.'; },
+        function(label, val) { return val ? val + ' on ' + label + '.' : label + '.'; },
+        function(label, val) { return val ? label + ' at ' + val + '.' : label + '.'; },
+        function(label, val) { return val ? 'Put up ' + val + ' on ' + label + '.' : label + '.'; },
+        function(label, val) { return val ? label + ' finished on ' + val + '.' : label + '.'; }
+    ];
+
+    // Kept off the emoji that already carry a meaning here: \uD83E\uDD47 is a solo top
+    // spot, \uD83D\uDCAF a flawless survey week, \uD83D\uDC51 and \uD83C\uDFC5 head a name.
+    var BATCH_LINE_ICONS = [
+        '\uD83C\uDF1F', '\u2B50', '\u2728', '\uD83D\uDCAB', '\uD83D\uDD25', '\uD83D\uDCAA', '\uD83D\uDCC8'
+    ];
+
+    // Walked rather than drawn fresh each time, so regenerating twice in a row
+    // cannot land on the same opening. A random pick out of ten repeats about
+    // one time in ten, which is often enough to look like nothing changed.
+    var nextBatchIntro = rotator(BATCH_INTRO);
+    var nextBatchCloser = rotator(BATCH_CLOSERS);
+
     function formatMetricValue(key, value) {
         if (value === null || value === undefined) return '';
         var registryKey = METRIC_RANK_LABELS[key]?.registry || key;
@@ -1266,7 +1321,13 @@
 
     function generateAllShoutOuts(celebrations, dateRange) {
         if (!celebrations.length) return 'No celebrations to report right now.';
-        var msg = pick(BATCH_INTRO);
+        var msg = nextBatchIntro();
+        // Fresh per post, so the lines inside one post read as separate
+        // sentences rather than one sentence with the nouns swapped.
+        var metricStem = rotator(BATCH_METRIC_STEMS);
+        var noValueStem = rotator(BATCH_NO_VALUE_STEMS);
+        var soloStem = rotator(BATCH_SOLO_STEMS);
+        var lineIcon = rotator(BATCH_LINE_ICONS);
         // At the foot of a nine-person post nobody ever reached it, so people
         // were reading a week-old shout-out as if it were today's.
         if (dateRange) msg += '\uD83D\uDCC5 ' + dateRange + '\n\n';
@@ -1295,21 +1356,20 @@
                 var placing = sentencePlacement(a);
                 var badge = tierBadge(a);
                 if (a.soloRank1) {
-                    msg += '   \uD83E\uDD47 ' + a.label + (valStr ? ': ' + valStr : '')
-                        + '. ' + soloTail() + '\n';
+                    msg += '   \uD83E\uDD47 ' + soloStem()(a.label, valStr) + ' ' + soloTail() + '\n';
                 } else {
                     if (valStr) {
-                        msg += '   \uD83C\uDF1F ' + a.label + ': ' + valStr + '!' + placing
+                        msg += '   ' + lineIcon() + ' ' + metricStem()(a.label, valStr) + placing
                             + (badge ? ' ' + badge : '')
                             + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
                     } else {
-                        msg += '   \u2B50 Outstanding ' + a.label + '!' + placing
+                        msg += '   ' + lineIcon() + ' ' + noValueStem()(a.label) + placing
                             + (badge ? ' ' + badge : '') + '\n';
                     }
                 }
             });
         });
-        msg += pick(BATCH_CLOSERS);
+        msg += nextBatchCloser();
         return msg;
     }
 

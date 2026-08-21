@@ -838,3 +838,70 @@ suite('celebrations: a rank inside the bar is never called a near miss', (t) => 
     t.check('and the wording admits it', celebrations.describeNoCelebration(info).indexOf('worth a look') > -1);
     t.check('without inventing a shortfall', celebrations.describeNoCelebration(info).indexOf('off the top') === -1);
 });
+
+/**
+ * The same week, written a different way each time.
+ *
+ * The intro and the closer came out of pools and everything between them was
+ * one template stamped out per achievement, so regenerating a post changed two
+ * lines out of twenty. It read as "nothing happened" and there was no reason
+ * to press the button twice.
+ */
+suite('celebrations: the post does not read the same twice', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const person = {
+        name: 'Oceane Ingram', firstName: 'Oceane', perfectSurveys: null,
+        achievements: [{ key: 'sentiment', label: 'Overall Sentiment', value: 97.6, rank: 2, tiedCount: 1, rankedCount: 126, soloRank1: false }]
+    };
+
+    // One full turn of each pool. Walked rather than drawn, so this is exact
+    // rather than probable: ten in a row cannot repeat.
+    const posts = [];
+    for (let i = 0; i < 10; i++) posts.push(celebrations.generateAllShoutOuts([person], ''));
+
+    t.equal('ten posts in a row open ten different ways',
+        new Set(posts.map(p => p.split('\n')[0])).size, 10);
+    t.equal('and close ten different ways',
+        new Set(posts.map(p => p.split('\n').pop())).size, 10);
+
+    // The line about the achievement itself is what used to be frozen.
+    const lines = posts.map(p => p.split('\n').find(l => l.indexOf('Overall Sentiment') > -1));
+    t.check('the line that names the win is written more than one way',
+        new Set(lines).size >= 4);
+
+    // Variation in the frame only. Everything that is a fact is on every one.
+    t.check('the number survives every rewording', lines.every(l => l.indexOf('97.6') > -1));
+    t.check('so does the placing', lines.every(l => l.indexOf('2nd best in the Call Center') > -1));
+    t.check('and so does the tier badge', lines.every(l => l.indexOf('Top 5!') > -1));
+});
+
+suite('celebrations: a rewording never drops a fact', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    t.loadModule('modules/highlights.module.js');
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const people = [
+        { name: 'Sabrina Ochoa', firstName: 'Sabrina', perfectSurveys: null, achievements: [
+            { key: 'adherence', label: 'Schedule Adherence', value: 100, rank: 1, tiedCount: 1, rankedCount: 126, soloRank1: true }] },
+        { name: 'Esperanza Ruiz', firstName: 'Esperanza', perfectSurveys: null, achievements: [
+            { key: 'managingEmotions', label: 'Managing Emotions', value: 98.6, rank: 6, tiedCount: 1, rankedCount: 126, soloRank1: false }] }
+    ];
+
+    for (let run = 0; run < 25; run++) {
+        const post = celebrations.generateAllShoutOuts(people, 'Aug 17, 2026 - Aug 20, 2026');
+        if (post.indexOf('@Sabrina') === -1) { t.check('every run mentions Sabrina', false); return; }
+        if (post.indexOf('@Esperanza') === -1) { t.check('every run mentions Esperanza', false); return; }
+        if (post.indexOf('#1 in the Call Center') === -1) { t.check('every run states the top spot', false); return; }
+        if (post.indexOf('6th best in the Call Center') === -1) { t.check('every run states the placing', false); return; }
+        if (post.indexOf('98.6') === -1) { t.check('every run states the number', false); return; }
+        if (post.indexOf('\n\n\n') > -1) { t.check('no run leaves a double gap', false); return; }
+    }
+    t.check('twenty-five rewordings, every fact intact every time', true);
+    t.check('and the spacing holds throughout', true);
+});

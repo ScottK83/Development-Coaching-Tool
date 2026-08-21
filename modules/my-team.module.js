@@ -779,7 +779,10 @@
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
             `</div>` +
             `<textarea id="myTeamShoutOutText" style="width:100%; min-height:240px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
-            `<button type="button" id="myTeamShoutOutCopy" style="margin-top:10px; background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
+            `<div style="display:flex; gap:8px; margin-top:10px;">` +
+                `<button type="button" id="myTeamShoutOutCopy" style="background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
+                `<button type="button" id="myTeamShoutOutRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Reword</button>` +
+            `</div>` +
         `</div>`;
 
         slot.querySelector('#myTeamShoutOutCopy')?.addEventListener('click', () => {
@@ -788,6 +791,11 @@
                 window.copyToClipboard(value, { message: 'Shout-out copied' });
             }
         });
+
+        // Same people, same numbers, written a different way. The post is built
+        // from pools, so this is just asking for another draw — worth having a
+        // button for, since the alternative was leaving the page and coming back.
+        slot.querySelector('#myTeamShoutOutRegen')?.addEventListener('click', () => renderShoutOut());
     }
 
     function initializeMyTeam() {
