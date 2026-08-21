@@ -1520,10 +1520,11 @@
         // were reading a week-old shout-out as if it were today's.
         if (dateRange) msg += '\uD83D\uDCC5 ' + dateRange + '\n\n';
         celebrations.forEach(function(person, idx) {
-            // One blank line either side of the rule. Every block already ends
-            // in a newline, so the old separator opened with two more and left
-            // a double gap above the rule and a single one below it.
-            if (idx > 0) msg += '\n---\n\n';
+            // One blank line between people, and nothing else. The rule used to
+            // sit between them with a blank line either side, which is three
+            // lines of separator for a list where the next name is already the
+            // start of the next block.
+            if (idx > 0) msg += '\n';
             // \uD83D\uDCAF as a header emoji only ever sat above a \uD83D\uDCAF line, which read as
             // a stutter. The header says whether they took a top spot; the
             // lines underneath say what for.

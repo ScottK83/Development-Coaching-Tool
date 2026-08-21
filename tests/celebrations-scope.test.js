@@ -531,8 +531,14 @@ suite('celebrations: the post is spaced evenly and the names are mentionable', (
     // Every block already ends in a newline, so a separator that opened with
     // two more left a double gap above the rule and a single one below it.
     t.check('no gap anywhere is more than one blank line', post.indexOf('\n\n\n') === -1);
-    t.check('the rule has a blank line above it', post.indexOf('!\n\n---\n') > -1);
-    t.check('and one below it', post.indexOf('\n---\n\n') > -1);
+
+    // The rule between people is gone. It sat with a blank line either side,
+    // which is three lines of separator for a list where the next name is
+    // already the start of the next block.
+    t.check('no rule between people', post.indexOf('---') === -1);
+    t.check('one blank line separates them instead', post.indexOf('!\n\n') > -1);
+    t.equal('and every name is still its own block',
+        (post.match(/ @[A-Z]/g) || []).length, 3);
 
     // Posted as written, every name should be pickable as a real mention
     // rather than retyped by hand.
