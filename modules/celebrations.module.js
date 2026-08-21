@@ -1535,7 +1535,7 @@
             // Leads, because there is no better thing on the board than a week
             // where every customer who was asked came back with a top score.
             if (person.perfectSurveys) {
-                msg += '\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys) + '\n';
+                msg += '\u2022 ' + '\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys) + '\n';
             }
             // Fresh per person, so four top spots read as four wins rather than
             // one sentence stamped four times.
@@ -1545,14 +1545,14 @@
                 var placing = sentencePlacement(a);
                 var badge = tierBadge(a);
                 if (a.soloRank1) {
-                    msg += '\uD83E\uDD47 ' + soloStem()(a.label, valStr) + ' ' + soloTail() + '\n';
+                    msg += '\u2022 ' + '\uD83E\uDD47 ' + soloStem()(a.label, valStr) + ' ' + soloTail() + '\n';
                 } else {
                     if (valStr) {
-                        msg += lineIcon() + ' ' + metricStem()(a.label, valStr) + placing
+                        msg += '\u2022 ' + lineIcon() + ' ' + metricStem()(a.label, valStr) + placing
                             + (badge ? ' ' + badge : '')
                             + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
                     } else {
-                        msg += lineIcon() + ' ' + noValueStem()(a.label) + placing
+                        msg += '\u2022 ' + lineIcon() + ' ' + noValueStem()(a.label) + placing
                             + (badge ? ' ' + badge : '') + '\n';
                     }
                 }

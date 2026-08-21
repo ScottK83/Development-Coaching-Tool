@@ -1092,3 +1092,36 @@ suite('celebrations: the near miss rides along with the result', (t) => {
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('and none of it reaches the channel post', post.indexOf('away from top') === -1);
 });
+
+suite('celebrations: what somebody did is a bulleted list', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    t.loadModule('modules/highlights.module.js');
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    const people = [
+        { name: 'James King', firstName: 'James', perfectSurveys: { count: 1, periodNoun: 'this month' }, achievements: [
+            { key: 'managingEmotions', label: 'Managing Emotions', value: 98.9, rank: 1, tiedCount: 1, rankedCount: 126, soloRank1: true },
+            { key: 'negativeWord', label: 'Negative Word Usage', value: 94, rank: 6, tiedCount: 2, rankedCount: 126, soloRank1: false }] },
+        { name: 'Oceane Ingram', firstName: 'Oceane', perfectSurveys: null, achievements: [
+            { key: 'sentiment', label: 'Overall Sentiment', value: 97, rank: 2, tiedCount: 1, rankedCount: 126, soloRank1: false }] }
+    ];
+    const post = celebrations.generateAllShoutOuts(people, 'Aug 1, 2026 - Aug 17, 2026');
+    const lines = post.split('\n');
+
+    // The name heads the block; everything under it is one of its bullets.
+    const detail = lines.filter(l => l.indexOf('in the Call Center') > -1 || l.indexOf('PERFECT') > -1);
+    t.equal('every line of evidence is there', detail.length, 4);
+    t.check('and every one of them is a bullet', detail.every(l => l.indexOf('\u2022 ') === 0));
+
+    // A solo top spot and a flawless survey week keep the emoji that says which
+    // kind of line they are; the bullet goes in front of it.
+    t.check('the top spot is still marked', post.indexOf('\u2022 \uD83E\uDD47') > -1);
+    t.check('so is the perfect survey week', post.indexOf('\u2022 \uD83D\uDCAF') > -1);
+
+    // The names themselves are headings, not list items.
+    lines.filter(l => l.indexOf(' @') > -1).forEach(l => {
+        t.check('a name is not bulleted', l.indexOf('\u2022') === -1);
+    });
+});
