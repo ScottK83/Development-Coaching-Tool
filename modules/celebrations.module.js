@@ -468,6 +468,77 @@
     // =====================
 
     /**
+     * Where everybody placed, per metric, at the precision people read.
+     *
+     * Lifted out of detectCelebrations so the near-miss line and the miss
+     * list work off the same ranks the shout-out gate does. Two functions
+     * deriving placings separately is how an explanation ends up quoting a
+     * different rank from the decision it is explaining.
+     */
+    function buildDisplayRanks(data) {
+            // Count rank-1 holders per metric across the full center. Standard
+            // competition ranking gives every tied leader rank 1, so "only one to
+            // hit this" should only fire when exactly one person sits at rank 1.
+            var rank1CountsByMetric = {};
+            // How many people sit on each rank, per metric. Standard competition
+            // ranking gives every tied associate the same number, so a metric where
+            // fifteen people all hit 100% hands all fifteen rank 1. Telling each of
+            // them they are "#1 in Center" overstates it; "one of fifteen at 100%"
+            // is both true and a nicer thing to read.
+            var rankCountsByMetric = {};
+            // The field an achievement was actually won against. Not every scored
+            // associate holds a rank on every metric — surveys get withheld, some
+            // numbers never land — so "out of 126" would overstate a metric only
+            // 84 people were ranked on.
+            var rankedCountByMetric = {};
+            // Placings are re-derived at the precision people actually read. Center
+            // ranking splits ties at 1e-9, so 99.96% and 100% land on separate ranks
+            // while both print as "100.0%" — and the higher one gets told nobody
+            // else matched a number three other names are visibly sitting on. Two
+            // associates whose scores display identically are tied, full stop.
+            var displayRankByMetric = {};
+            Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
+                var rows = [];
+                data.rankings.forEach(function(r) {
+                    var rank = r.metricRanks?.[metricKey];
+                    if (!rank) return;
+                    var val = getRankedValue(r, metricKey);
+                    rows.push({
+                        name: r.name,
+                        rank: rank,
+                        // No display value means nothing to compare, so it never ties.
+                        display: (val === null || val === undefined) ? null : formatMetricValue(metricKey, val)
+                    });
+                });
+                rows.sort(function(a, b) { return a.rank - b.rank; });
+
+                var ranksByName = {};
+                var counts = {};
+                var lastRank = 0, lastDisplay = null;
+                rows.forEach(function(row, idx) {
+                    // Standard competition ranking (1-1-3) over the displayed value.
+                    var tiedWithPrev = idx > 0 && row.display !== null && row.display === lastDisplay;
+                    var rank = tiedWithPrev ? lastRank : idx + 1;
+                    ranksByName[row.name] = rank;
+                    counts[rank] = (counts[rank] || 0) + 1;
+                    lastRank = rank;
+                    lastDisplay = row.display;
+                });
+
+                displayRankByMetric[metricKey] = ranksByName;
+                rankCountsByMetric[metricKey] = counts;
+                rankedCountByMetric[metricKey] = rows.length;
+                rank1CountsByMetric[metricKey] = counts[1] || 0;
+            });
+        return {
+            displayRankByMetric: displayRankByMetric,
+            rankCountsByMetric: rankCountsByMetric,
+            rankedCountByMetric: rankedCountByMetric,
+            rank1CountsByMetric: rank1CountsByMetric
+        };
+    }
+
+    /**
      * Scans rankings for team members who hit notable thresholds.
      * If periodKey is provided, ranks that specific period.
      * Otherwise uses the merged best-data approach.
@@ -489,60 +560,11 @@
         var maxTier = tiers[tiers.length - 1];
         var results = [];
 
-        // Count rank-1 holders per metric across the full center. Standard
-        // competition ranking gives every tied leader rank 1, so "only one to
-        // hit this" should only fire when exactly one person sits at rank 1.
-        var rank1CountsByMetric = {};
-        // How many people sit on each rank, per metric. Standard competition
-        // ranking gives every tied associate the same number, so a metric where
-        // fifteen people all hit 100% hands all fifteen rank 1. Telling each of
-        // them they are "#1 in Center" overstates it; "one of fifteen at 100%"
-        // is both true and a nicer thing to read.
-        var rankCountsByMetric = {};
-        // The field an achievement was actually won against. Not every scored
-        // associate holds a rank on every metric — surveys get withheld, some
-        // numbers never land — so "out of 126" would overstate a metric only
-        // 84 people were ranked on.
-        var rankedCountByMetric = {};
-        // Placings are re-derived at the precision people actually read. Center
-        // ranking splits ties at 1e-9, so 99.96% and 100% land on separate ranks
-        // while both print as "100.0%" — and the higher one gets told nobody
-        // else matched a number three other names are visibly sitting on. Two
-        // associates whose scores display identically are tied, full stop.
-        var displayRankByMetric = {};
-        Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
-            var rows = [];
-            data.rankings.forEach(function(r) {
-                var rank = r.metricRanks?.[metricKey];
-                if (!rank) return;
-                var val = getRankedValue(r, metricKey);
-                rows.push({
-                    name: r.name,
-                    rank: rank,
-                    // No display value means nothing to compare, so it never ties.
-                    display: (val === null || val === undefined) ? null : formatMetricValue(metricKey, val)
-                });
-            });
-            rows.sort(function(a, b) { return a.rank - b.rank; });
-
-            var ranksByName = {};
-            var counts = {};
-            var lastRank = 0, lastDisplay = null;
-            rows.forEach(function(row, idx) {
-                // Standard competition ranking (1-1-3) over the displayed value.
-                var tiedWithPrev = idx > 0 && row.display !== null && row.display === lastDisplay;
-                var rank = tiedWithPrev ? lastRank : idx + 1;
-                ranksByName[row.name] = rank;
-                counts[rank] = (counts[rank] || 0) + 1;
-                lastRank = rank;
-                lastDisplay = row.display;
-            });
-
-            displayRankByMetric[metricKey] = ranksByName;
-            rankCountsByMetric[metricKey] = counts;
-            rankedCountByMetric[metricKey] = rows.length;
-            rank1CountsByMetric[metricKey] = counts[1] || 0;
-        });
+        var ranked = buildDisplayRanks(data);
+        var rank1CountsByMetric = ranked.rank1CountsByMetric;
+        var rankCountsByMetric = ranked.rankCountsByMetric;
+        var rankedCountByMetric = ranked.rankedCountByMetric;
+        var displayRankByMetric = ranked.displayRankByMetric;
 
         // Ranks are still worked out across the whole center — that's what makes
         // an achievement mean something — but who gets celebrated follows the
@@ -633,6 +655,9 @@
             // spot shared with half the floor is the exact case that gets
             // suppressed. A thin week still gets no claim about "the week".
             var perfect = volume.ok ? perfectSurveyWeek(r) : null;
+            // Stamped here because this is the only place that knows which
+            // window the reader asked for.
+            if (perfect) perfect.periodNoun = periodNoun(data.periodKey || periodKey);
 
             if (achievements.length > 0 || perfect) {
                 achievements.sort(function(a, b) {
@@ -642,7 +667,12 @@
                     name: r.name,
                     firstName: _getFirstName(r.name),
                     perfectSurveys: perfect,
-                    achievements: achievements
+                    achievements: achievements,
+                    // A win on one metric and a near miss on another are both
+                    // true, and the private message is the place to say so.
+                    nearMiss: volume.ok
+                        ? findNearMiss(r, r.name, tiers, celebrationYear(data.periodKey || periodKey), ranked)
+                        : null
                 });
             }
         });
@@ -679,11 +709,10 @@
                 });
                 return;
             }
-            missed.push(explainNoCelebration(data, name, tiers, {
-                displayRankByMetric: displayRankByMetric,
-                rankCountsByMetric: rankCountsByMetric,
-                rankedCountByMetric: rankedCountByMetric
-            }));
+            var info = explainNoCelebration(data, name, tiers, ranked);
+            info.nearMiss = findNearMiss(_rowFor(data, name), name, tiers,
+                celebrationYear(data.periodKey || periodKey), ranked);
+            missed.push(info);
         });
         missed.sort(function(a, b) {
             var ra = a.best ? a.best.rank : Infinity;
@@ -700,6 +729,114 @@
         };
     }
 
+    // How far past the bar still counts as knocking on the door. Against the
+    // standard top-10 bar this is ranks 11 through 15.
+    var NEAR_MISS_WINDOW = 5;
+
+    /**
+     * The best placing that just missed the bar, if there is one.
+     *
+     * Only ever a number they are actually passing. Telling somebody they are
+     * three off the top ten on a metric they are behind on rewards the rank and
+     * ignores the number, which is the same mistake the shout-out target gate
+     * exists to prevent: it would have Kristin, sixth on the floor at 73.1%
+     * against an 83% bar, reading that she is nearly there.
+     */
+    function findNearMiss(row, name, tiers, year, ctx) {
+        if (!row) return null;
+        var maxTier = tiers[tiers.length - 1];
+        var context = ctx || {};
+        var best = null;
+
+        Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
+            if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
+            var rank = context.displayRankByMetric?.[metricKey]?.[name] || row.metricRanks?.[metricKey];
+            if (!rank || rank <= maxTier || rank > maxTier + NEAR_MISS_WINDOW) return;
+
+            var value = getRankedValue(row, metricKey);
+            if (value === null || value === undefined) return;
+            if (!TARGET_EXEMPT_METRICS[metricKey] && !meetsCelebrationTarget(metricKey, value, year)) return;
+
+            if (!best || rank < best.rank) {
+                best = {
+                    metricKey: metricKey,
+                    label: METRIC_RANK_LABELS[metricKey].label,
+                    rank: rank,
+                    away: rank - maxTier,
+                    bar: maxTier,
+                    value: value
+                };
+            }
+        });
+
+        return best;
+    }
+
+    /**
+     * The near miss for one person on one period, for callers holding a name
+     * and nothing else.
+     *
+     * Deliberately not scope-filtered: the private message this feeds is
+     * already addressed to somebody, and making it depend on who happens to be
+     * selected in the team picker would have a sweep write different messages
+     * depending on a dropdown.
+     */
+    function nearMissFor(name, periodKey) {
+        var centerRanking = window.DevCoachModules?.centerRanking;
+        if (!centerRanking || !name) return null;
+
+        var data = periodKey ? centerRanking.buildRankingsForPeriod?.(periodKey) : null;
+        if (!data) data = centerRanking.buildCenterRankings?.() || null;
+        if (!data || !data.rankings || !data.rankings.length) return null;
+
+        var row = null;
+        for (var i = 0; i < data.rankings.length; i++) {
+            if (data.rankings[i] && data.rankings[i].name === name) { row = data.rankings[i]; break; }
+        }
+        if (!row) return null;
+        // A period they did not work produces numbers that look like placings.
+        if (!volumeVerdict(row).ok) return null;
+
+        return findNearMiss(row, name, getActiveTiers(),
+            celebrationYear(data.periodKey || periodKey), buildDisplayRanks(data));
+    }
+
+    // Said more than one way, because a sweep sends eighteen of these at once
+    // and the same sentence eighteen times is a form letter.
+    var NEAR_MISS_LINES = [
+        function(m, v, rank, away, spots, bar) {
+            return 'One more thing: you are ' + away + ' ' + spots + ' away from top ' + bar
+                + ' in ' + m + '. ' + v + ' has you at #' + rank + ' in the Call Center.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return 'Worth knowing: ' + m + ' at ' + v + ' has you #' + rank
+                + ' in the Call Center, ' + away + ' ' + spots + ' away from top ' + bar + '.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return m + ' is close. ' + v + ' puts you #' + rank + ' in the Call Center, '
+                + away + ' ' + spots + ' off the top ' + bar + '.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return 'You are knocking on the door in ' + m + ': #' + rank
+                + ' in the Call Center at ' + v + ', ' + away + ' ' + spots + ' away from top ' + bar + '.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return 'Keep an eye on ' + m + '. ' + v + ' has you ' + away + ' ' + spots
+                + ' away from top ' + bar + ' in the Call Center.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return 'Almost there on ' + m + '. ' + v + ' is #' + rank + ' in the Call Center, and top '
+                + bar + ' is ' + away + ' ' + spots + ' up.';
+        }
+    ];
+
+    function describeNearMiss(info) {
+        if (!info || !info.rank) return '';
+        var value = formatMetricValue(info.metricKey, info.value);
+        var spots = info.away === 1 ? 'spot' : 'spots';
+        return pick(NEAR_MISS_LINES)(info.label, value, info.rank, info.away, spots, info.bar);
+    }
+
     /**
      * Why someone got no celebration.
      *
@@ -708,6 +845,14 @@
      * "they were #14 and the bar is top 10". Each of these is worth saying
      * out loud, because they call for different responses.
      */
+    function _rowFor(data, name) {
+        var rankings = (data && data.rankings) || [];
+        for (var i = 0; i < rankings.length; i++) {
+            if (rankings[i] && rankings[i].name === name) return rankings[i];
+        }
+        return null;
+    }
+
     function explainNoCelebration(data, name, tiers, context) {
         var maxTier = tiers[tiers.length - 1];
         var rankings = (data && data.rankings) || [];
@@ -975,7 +1120,7 @@
         function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' showed up and showed OUT! \uD83D\uDD25'; },
         function(name) { return '\uD83C\uDFC6 BIG TIME performance from ' + name + '! \uD83C\uDFC6'; },
         function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' just did! \uD83C\uDF1F\uD83C\uDF1F'; },
-        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' came to WORK this week! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; },
+        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' came to WORK! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; },
         function(name) { return '\uD83C\uDF89 Stop what you\'re doing and give ' + name + ' some love! \uD83C\uDF89'; },
         function(name) { return '\uD83D\uDE80\uD83D\uDE80 ' + name + ' is absolutely FLYING right now! \uD83D\uDE80\uD83D\uDE80'; },
         function(name) { return '\uD83D\uDCA5\uD83C\uDFC6 THIS is what greatness looks like! ' + name + ' take a bow! \uD83C\uDFC6\uD83D\uDCA5'; },
@@ -1016,12 +1161,12 @@
         function(label) { return '\u2B50 Outstanding ' + label + ' performance!'; },
         function(label) { return '\uD83D\uDCAA Elite-level ' + label + '! That\'s impressive!'; },
         function(label) { return '\uD83D\uDD25 Brought the heat in ' + label + '!'; },
-        function(label) { return '\uD83D\uDE80 ' + label + ' was next level this week!'; },
+        function(label) { return '\uD83D\uDE80 ' + label + ' was next level!'; },
         function(label) { return '\uD83C\uDFC6 Put up a monster ' + label + ' number!'; },
         function(label) { return '\uD83C\uDF1F Seriously impressive work in ' + label + '!'; },
         function(label) { return '\uD83D\uDCA5 Went OFF in ' + label + '! Love to see it!'; },
         function(label) { return '\uD83D\uDCAA Threw down a huge ' + label + ' performance!'; },
-        function(label) { return '\u2B50 Made ' + label + ' look easy this week!'; },
+        function(label) { return '\u2B50 Made ' + label + ' look easy!'; },
         function(label) { return '\uD83D\uDD25 ' + label + ' was absolutely on point!'; }
     ];
 
@@ -1049,11 +1194,11 @@
         '\uD83D\uDD25 TEAM WINS ALERT \uD83D\uDD25\n\nI\'ve got some incredible achievements to share. These folks are KILLING it:\n\n',
         '\u2B50 CELEBRATION TIME \u2B50\n\nLook at what this team is doing! So proud of these performers:\n\n',
         '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n',
-        '\uD83D\uDE80 WEEKLY WINS \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks showed up BIG:\n\n',
+        '\uD83D\uDE80 WINS WORTH SHARING \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks showed up BIG:\n\n',
         '\uD83D\uDCA5\uD83D\uDCA5 DROP EVERYTHING \u2014 WE\'RE CELEBRATING! \uD83D\uDCA5\uD83D\uDCA5\n\nThese performances deserve the spotlight:\n\n',
-        '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\nSome of our people went absolutely OFF this week. Check this out:\n\n',
+        '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\nSome of our people went absolutely OFF. Check this out:\n\n',
         '\uD83D\uDCAA TEAM FLEXES \uD83D\uDCAA\n\nI love getting to share wins like these. Look what our team is doing:\n\n',
-        '\uD83C\uDF89 WHO\'S POPPING OFF THIS WEEK?! \uD83C\uDF89\n\nSpoiler: these amazing people right here:\n\n',
+        '\uD83C\uDF89 WHO\'S POPPING OFF?! \uD83C\uDF89\n\nSpoiler: these amazing people right here:\n\n',
         '\uD83D\uDD25\uD83C\uDFC6 VICTORY LAP TIME \uD83C\uDFC6\uD83D\uDD25\n\nLet\'s give some well-deserved recognition to these standout performers:\n\n'
     ];
 
@@ -1062,12 +1207,12 @@
         '\n\uD83D\uDCAF This team is something special. Proud of each and every one of you!',
         '\n\uD83D\uDE80 The bar keeps rising and you all keep clearing it. Incredible!',
         '\n\uD83D\uDD25 This is what happens when a great team shows up and shows out!',
-        '\n\u2B50 Every single one of these people made a difference this week. Thank you!',
+        '\n\u2B50 Every single one of these people made a difference here. Thank you!',
         '\n\uD83C\uDFC6 I could brag about this team all day. Outstanding work across the board!',
         '\n\uD83D\uDCAA When you see your name up here, know that it means something. We see you!',
-        '\n\uD83C\uDF89 THIS is the energy! Let\'s carry this momentum into next week!',
+        '\n\uD83C\uDF89 THIS is the energy! Let\'s carry this momentum forward!',
         '\n\uD83D\uDE80 Proud doesn\'t even begin to cover it. This team is BUILT DIFFERENT!',
-        '\n\uD83D\uDD25 Keep bringing this fire every week! You all are incredible!'
+        '\n\uD83D\uDD25 Keep bringing this fire! You all are incredible!'
     ];
 
     /**
@@ -1270,11 +1415,54 @@
     // The count is the whole proof and is never left out: one perfect survey
     // reads very differently from eleven, and with no floor on the sample any
     // more the reader has to be able to tell which one they are looking at.
+    /**
+     * What to call the stretch of time in copy, since the reader picks the
+     * window. "All 6 of them this week" printed under a month-to-date
+     * shout-out is simply wrong, and it was wrong on every window but one.
+     *
+     * Metadata first. A key whose upload has since gone still carries its span,
+     * and the span alone is enough to name the shape of the period.
+     */
+    function periodNoun(periodKey) {
+        var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        var daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        var meta = (weekly[periodKey] || ytd[periodKey] || daily[periodKey] || {}).metadata || {};
+
+        var byType = {
+            daily: 'that day',
+            week: 'this week',
+            'week-in-progress': 'this week',
+            month: 'this month',
+            'month-to-date': 'this month',
+            'month-agg': 'this month',
+            quarter: 'this quarter',
+            ytd: 'this year'
+        };
+        if (byType[meta.periodType]) return byType[meta.periodType];
+
+        var parts = String(periodKey || '').split('|');
+        if (parts.length < 2) return 'this period';
+        var start = new Date(parts[0] + 'T00:00:00');
+        var end = new Date(parts[1] + 'T00:00:00');
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'this period';
+
+        var days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+        if (days <= 1) return 'that day';
+        if (days <= 8) return 'this week';
+        if (days <= 31) return 'this month';
+        if (days <= 95) return 'this quarter';
+        return 'this year';
+    }
+
     function perfectSurveyLine(perfect) {
         var n = perfect && perfect.count;
         if (!n) return '';
-        if (n === 1) return 'PERFECT survey — the one that came in this week was flawless!';
-        return 'PERFECT surveys — all ' + n + ' of them this week, not one off the mark!';
+        // Carried on the object rather than passed in, because this line is
+        // rendered from four places and only detection knows the period.
+        var when = (perfect && perfect.periodNoun) || 'this period';
+        if (n === 1) return 'PERFECT survey — the one that came in ' + when + ' was flawless!';
+        return 'PERFECT surveys — all ' + n + ' of them ' + when + ', not one off the mark!';
     }
 
     // The same fact as its own sentence, for lines that already close with
@@ -1403,24 +1591,24 @@
         'You earned every bit of this recognition. Enjoy the moment! \uD83C\uDF89',
         'This is the stuff that makes my job easy \u2014 watching people like you succeed. \uD83D\uDCAA',
         'Keep bringing this energy. It makes a bigger difference than you probably realize. \uD83C\uDF1F',
-        'I love getting to send messages like this. You made it easy this week! \u2B50',
+        'I love getting to send messages like this. You made it easy! \u2B50',
         'Your hard work is paying off in a real way. Don\'t stop now! \uD83D\uDE80',
         'Moments like this are why I love this team. Great job, seriously. \uD83D\uDE4C'
     ];
 
     var DM_INTROS = [
         'I was looking at the numbers and I had to reach out because you are doing incredible things:',
-        'I just pulled up this week\'s results and your name jumped right off the page:',
+        'I just pulled up the results and your name jumped right off the page:',
         'So I was going through the metrics and honestly, I had to stop and send you this because WOW:',
         'I don\'t always send these messages, but when I see performance like this I have to say something:',
         'Your numbers caught my attention and I wanted to make sure you knew about it:',
-        'I was reviewing the week and couldn\'t let this slide without reaching out to you:',
+        'I was going through the numbers and couldn\'t let this slide without reaching out to you:',
         'Real quick \u2014 I saw your results and just had to give you your flowers:',
-        'I noticed something really impressive when I was looking at the data this week:',
-        'I keep an eye on the numbers every week and yours are standing out in a big way:',
+        'I noticed something really impressive when I was looking at the data:',
+        'I keep an eye on the numbers and yours are standing out in a big way:',
         'Had to send this because what you\'re doing right now deserves to be recognized:',
-        'Just went through the weekly results and I\'m genuinely impressed by what I\'m seeing from you:',
-        'You probably already know you had a great week, but I wanted to tell you just how great:'
+        'Just went through the results and I\'m genuinely impressed by what I\'m seeing from you:',
+        'You probably already know you had a great run, but I wanted to tell you just how great:'
     ];
 
     /**
@@ -1455,6 +1643,14 @@
                 }
             }
         });
+        // The one just outside the bar, said only here. It is encouragement
+        // addressed to one person; in a channel post naming the winners it
+        // would read as marking somebody for not making it.
+        var nearMiss = describeNearMiss(person.nearMiss);
+        if (nearMiss) {
+            lines.push('');
+            lines.push(nearMiss);
+        }
         lines.push('');
         lines.push(pick(DM_CLOSERS));
         return lines.join('\n');
@@ -1544,7 +1740,7 @@
             html += '<div style="text-align:center; padding:40px 20px 20px; color:var(--text-tertiary);">';
             html += '<div style="font-size:3em; margin-bottom:16px;">\uD83C\uDFC6</div>';
             html += '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">Nobody cleared the bar this period</h3>';
-            html += '<p style="margin:0;">Celebrations fire on a <strong>top ' + tiers[tiers.length - 1] + '</strong> rank across the whole center, so a strong week can still come up empty here.</p>';
+            html += '<p style="margin:0;">Celebrations fire on a <strong>top ' + tiers[tiers.length - 1] + '</strong> rank across the whole center, so a strong period can still come up empty here.</p>';
             html += '</div>';
             html += renderMissedList(result.missed);
             container.innerHTML = html;
@@ -2016,8 +2212,13 @@
         rotator: rotator,
         perfectSurveyWeek: perfectSurveyWeek,
         perfectSurveyLine: perfectSurveyLine,
+        periodNoun: periodNoun,
         fieldSentence: fieldSentence,
         explainNoCelebration: explainNoCelebration,
+        findNearMiss: findNearMiss,
+        nearMissFor: nearMissFor,
+        describeNearMiss: describeNearMiss,
+        buildDisplayRanks: buildDisplayRanks,
         meetsCelebrationTarget: meetsCelebrationTarget,
         celebrationYear: celebrationYear,
         describeNoCelebration: describeNoCelebration,
