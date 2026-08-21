@@ -238,3 +238,76 @@ suite('shout-out picker: a picker needs no module to survive', (t) => {
     };
     t.equal('a resolver that throws does not take the day page with it', myTeam.currentWindow().id, 'latest');
 });
+
+/**
+ * The picker's home, and where it starts.
+ *
+ * It rendered only inside the shout-out card, so the one control that answers
+ * "can this be the week instead of the month" was behind a click on a button
+ * that already assumed the answer. And it opened on the newest upload whatever
+ * that was, which is how a page headed "the week you just worked" came to show
+ * a month-to-date field underneath.
+ */
+
+function outreachStub() {
+    const covers = {
+        monday: 'lastWeek',
+        tuesday: 'lastWeekPlusMonday',
+        wednesday: 'thisWeek',
+        thursday: 'thisWeek',
+        friday: 'thisWeek'
+    };
+    return {
+        WEEKDAY_IDS: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        planForDate: () => ({ id: 'monday' }),
+        planById: (id) => ({ id, covers: covers[id] })
+    };
+}
+
+function loadDayPage(t, dayId) {
+    const myTeam = loadMyTeam(t, windowSet());
+    global.window.DevCoachModules.dailyOutreach = outreachStub();
+    myTeam.setActiveDay(dayId);
+    return myTeam;
+}
+
+suite('shout-out picker: it lives on the day page', (t) => {
+    const myTeam = loadMyTeam(t, windowSet());
+    const html = myTeam.renderWindowPicker('mtd');
+
+    t.check('the row has an id so it can be repainted in place',
+        html.indexOf('id="myTeamWindowPicker"') > -1);
+    t.check('and is labelled for what it does', html.indexOf('Covering:') > -1);
+
+    // The chips render on their own so a repaint replaces the contents of the
+    // row rather than nesting a second row inside the first.
+    const chips = myTeam.renderWindowPickerChips('mtd');
+    t.check('the chips alone carry no wrapper', chips.indexOf('myTeamWindowPicker') === -1);
+    t.check('but are still the same buttons', chips.indexOf('data-window="mtd"') > -1);
+});
+
+suite('shout-out picker: the day decides where it starts', (t) => {
+    t.equal('Friday opens on the week it says it covers',
+        loadDayPage(t, 'friday').defaultWindowId(), 'thisWeek');
+    t.equal('and so does a midweek check-in',
+        loadDayPage(t, 'wednesday').defaultWindowId(), 'thisWeek');
+    t.equal('Monday opens on the week it is about',
+        loadDayPage(t, 'monday').defaultWindowId(), 'lastWeek');
+    t.equal('and Tuesday, which is last week plus a day',
+        loadDayPage(t, 'tuesday').defaultWindowId(), 'lastWeek');
+});
+
+suite('shout-out picker: a pick outranks the day', (t) => {
+    const myTeam = loadDayPage(t, 'friday');
+    t.equal('untouched, it follows the day', myTeam.activeWindowId(), 'thisWeek');
+
+    myTeam.setActiveWindow('mtd');
+    t.equal('picked, it stays picked', myTeam.activeWindowId(), 'mtd');
+    t.equal('and that is the window in force', myTeam.currentWindow().id, 'mtd');
+});
+
+suite('shout-out picker: no day module, no guessing', (t) => {
+    const myTeam = loadMyTeam(t, windowSet());
+    t.equal('without the day plans it opens on the latest upload', myTeam.defaultWindowId(), 'latest');
+    t.equal('which is what the page did before any of this', myTeam.activeWindowId(), 'latest');
+});

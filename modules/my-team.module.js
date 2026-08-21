@@ -60,9 +60,30 @@
 
     // --- The stretch of time the celebrations are measured over ---
 
+    // Where the page starts before anybody picks. The header announces what
+    // the day covers, so opening on a different stretch of time makes the two
+    // halves of one screen disagree — Friday saying "the week you just worked"
+    // over a month-to-date field is the version of that which got noticed. An
+    // unavailable default falls back to the latest upload the same as a stale
+    // saved pick does, so this only ever moves the starting point.
+    const DEFAULT_WINDOW_BY_COVERAGE = {
+        thisWeek: 'thisWeek',
+        lastWeek: 'lastWeek',
+        lastWeekPlusMonday: 'lastWeek'
+    };
+
+    function defaultWindowId() {
+        try {
+            const plan = mods().dailyOutreach?.planById?.(activeDayId());
+            return DEFAULT_WINDOW_BY_COVERAGE[plan?.covers] || 'latest';
+        } catch (e) {
+            return 'latest';
+        }
+    }
+
     function activeWindowId() {
         try {
-            return localStorage.getItem(WINDOW_KEY) || 'latest';
+            return localStorage.getItem(WINDOW_KEY) || defaultWindowId();
         } catch (e) {
             return 'latest';
         }
@@ -276,6 +297,7 @@
                 `<h3 style="margin:0; color:#4527a0;">${escapeHtml(plan.label)}</h3>` +
                 `<div style="font-size:0.86em; color:var(--text-secondary);">Covers ${escapeHtml(plan.coverageLabel)} · ${person ? escapeHtml(person) : 'whole team'}</div>` +
             `</div>` +
+            renderWindowPicker(currentWindow().id) +
             (person ? renderToneRow() : '') +
             `<div id="myTeamDayMessage"></div>` +
             `<details style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);" open>` +
@@ -305,6 +327,8 @@
                 await renderDayPage();
             });
         });
+
+        bindWindowPicker(container.querySelector('#myTeamWindowPicker'));
 
         container.querySelectorAll('.mt-other-tab').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -632,7 +656,7 @@
      * hover. Hiding it leaves "why can't I post year to date" unanswerable
      * without opening the Upload tab and counting rows.
      */
-    function renderWindowPicker(chosenId) {
+    function renderWindowPickerChips(chosenId) {
         const windows = mods().celebrations?.listShoutOutWindows?.() || [];
         if (windows.length < 2) return '';
 
@@ -647,9 +671,17 @@
                 `background:${on ? '#fff3e0' : 'var(--bg-surface-raised)'}; color:${on ? '#e65100' : 'var(--text-secondary)'};">${escapeHtml(w.label)}</button>`;
         }).join('');
 
-        return `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">` +
-            `<span style="font-size:0.82em; color:var(--text-tertiary);">Covering:</span>${chips}` +
-        `</div>`;
+        return `<span style="font-size:0.82em; color:var(--text-tertiary);">Covering:</span>${chips}`;
+    }
+
+    // The picker as it sits on the day page: one row, one id, above everything
+    // it governs. It used to render only inside the shout-out card, which meant
+    // the one control that answers "can this be the week instead of the month"
+    // was behind a click on a button that already assumed the answer.
+    function renderWindowPicker(chosenId) {
+        const chips = renderWindowPickerChips(chosenId);
+        if (!chips) return '';
+        return `<div id="myTeamWindowPicker" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:12px;">${chips}</div>`;
     }
 
     /**
@@ -658,18 +690,39 @@
      * from a different stretch of time, and the panel is there to back the post
      * up rather than to argue with it.
      */
-    function bindWindowPicker(slot) {
-        slot.querySelectorAll('.mt-so-window').forEach(btn => {
+    function bindWindowPicker(root) {
+        if (!root) return;
+        root.querySelectorAll('.mt-so-window').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.disabled) return;
                 setActiveWindow(btn.dataset.window);
-                renderShoutOut();
-                const contextEl = document.getElementById('myTeamDayContext');
-                if (contextEl) {
-                    contextEl.innerHTML = buildContextHtml(mods().teamScope?.getActiveMember?.() || null);
-                }
+                refreshForWindow();
             });
         });
+    }
+
+    /**
+     * Repaint the chips, the evidence panel and — only if it is already open —
+     * the post. Rebuilding a shout-out that nobody asked for would make picking
+     * a window the thing that opens the card, which is backwards: you change
+     * the window to see what the numbers say, and then decide whether to post.
+     */
+    function refreshForWindow() {
+        const chosen = currentWindow();
+
+        const pickerEl = document.getElementById('myTeamWindowPicker');
+        if (pickerEl) {
+            pickerEl.innerHTML = renderWindowPickerChips(chosen.id);
+            bindWindowPicker(pickerEl);
+        }
+
+        const contextEl = document.getElementById('myTeamDayContext');
+        if (contextEl) {
+            contextEl.innerHTML = buildContextHtml(mods().teamScope?.getActiveMember?.() || null);
+        }
+
+        const slot = document.getElementById('myTeamShoutOutSlot');
+        if (slot && slot.innerHTML.trim()) renderShoutOut();
     }
 
     function renderShoutOut() {
@@ -683,7 +736,6 @@
         }
 
         const chosen = currentWindow();
-        const picker = renderWindowPicker(chosen.id);
 
         let text = '';
         let count = 0;
@@ -697,20 +749,19 @@
                 : '';
         } catch (e) { text = ''; }
 
-        // The picker stays on screen when a window comes back empty, because an
-        // empty answer is the reason to go and try a different one.
+        // An empty window is the reason to go and try a different one, so the
+        // sentence names the window it came up empty on. The chips that switch
+        // it sit above this card on the day page.
         if (!text) {
             slot.innerHTML = `<div style="padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface);">` +
-                picker +
                 `<div style="color:var(--text-secondary); font-size:0.92em;">Nobody cleared both the ranking bar and their own target ` +
-                    `${chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase())}, so there is nothing to put in the channel yet.</div>` +
+                    `${chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase())}, so there is nothing to put in the channel yet. ` +
+                    `Try another window in <strong>Covering</strong> above.</div>` +
             `</div>`;
-            bindWindowPicker(slot);
             return;
         }
 
         slot.innerHTML = `<div style="padding:14px; border:1px solid #ffcc80; border-radius:10px; background:var(--bg-surface);">` +
-            picker +
             `<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">` +
                 `<div style="font-weight:700; color:#e65100;">📣 Team shout-out — ${count} ${count === 1 ? 'person' : 'people'}</div>` +
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
@@ -718,8 +769,6 @@
             `<textarea id="myTeamShoutOutText" style="width:100%; min-height:240px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
             `<button type="button" id="myTeamShoutOutCopy" style="margin-top:10px; background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
         `</div>`;
-
-        bindWindowPicker(slot);
 
         slot.querySelector('#myTeamShoutOutCopy')?.addEventListener('click', () => {
             const value = slot.querySelector('#myTeamShoutOutText')?.value || '';
@@ -742,6 +791,8 @@
         renderToneRow,
         renderShoutOut,
         renderWindowPicker,
+        renderWindowPickerChips,
+        defaultWindowId,
         currentWindow,
         activeWindowId,
         setActiveWindow,
