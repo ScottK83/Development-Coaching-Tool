@@ -973,3 +973,105 @@ suite('celebrations: the pools no longer claim a week', (t) => {
         t.check('no pool still says "' + phrase + '"', source.indexOf(phrase) === -1);
     });
 });
+
+/**
+ * "X away from top 10."
+ *
+ * A placing just outside the bar is worth telling somebody about, but only in
+ * private and only on a number they are actually passing. Telling a person they
+ * are three off the top ten on a metric they are behind on rewards the rank and
+ * ignores the number, which is the mistake the shout-out target gate exists to
+ * stop.
+ */
+// Ranks are re-derived by position, not read off the fixture, so the field has
+// to actually have that many people ahead of the subject.
+function nearMissStore(subjectValue, position) {
+    const rankings = [];
+    for (let i = 0; i < position - 1; i++) {
+        rankings.push({
+            name: 'Ahead ' + i, rank: i + 1,
+            metricRanks: { negativeWord: i + 1 },
+            extraValues: { negativeWord: Number((99.9 - i * 0.3).toFixed(1)) }
+        });
+    }
+    rankings.push({
+        name: 'Erica Mora', rank: position,
+        metricRanks: { negativeWord: position },
+        extraValues: { negativeWord: subjectValue }
+    });
+    for (let i = 0; i < 8; i++) {
+        rankings.push({
+            name: 'Behind ' + i, rank: position + 1 + i,
+            metricRanks: { negativeWord: position + 1 + i },
+            extraValues: { negativeWord: Number((93.0 - i * 0.1).toFixed(1)) }
+        });
+    }
+    return () => ({
+        periodKey: '2026-08-17|2026-08-21',
+        totalEmployees: 126,
+        teamMembers: new Set(['Erica Mora']),
+        rankings
+    });
+}
+
+function loadNearMiss(t, value, rank) {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    const data = nearMissStore(value, rank);
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    return t.loadModule('modules/celebrations.module.js').celebrations;
+}
+
+suite('celebrations: knocking on the door of the top 10', (t) => {
+    const celebrations = loadNearMiss(t, 93.4, 12);
+    const miss = celebrations.nearMissFor('Erica Mora', '2026-08-17|2026-08-21');
+
+    t.check('a placing just outside the bar is found', Boolean(miss));
+    t.equal('named by metric', miss.label, 'Negative Word Usage');
+    t.equal('with the placing', miss.rank, 12);
+    t.equal('and how far off the bar it is', miss.away, 2);
+    t.equal('against the bar itself', miss.bar, 10);
+
+    const line = celebrations.describeNearMiss(miss);
+    t.check('the sentence names the metric', line.indexOf('Negative Word Usage') > -1);
+    t.check('says the placing', line.indexOf('#12') > -1);
+    t.check('and how far from the top 10', line.indexOf('2 spots') > -1 && line.indexOf('top 10') > -1);
+});
+
+suite('celebrations: a near miss on a failing number is not a near miss', (t) => {
+    // #12 on the floor, but 73.1% is under the 83% bar for the metric itself.
+    const celebrations = loadNearMiss(t, 73.1, 12);
+    t.check('the target still gates it',
+        celebrations.nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
+});
+
+suite('celebrations: the door only stretches so far', (t) => {
+    t.check('inside the bar is a shout-out, not a near miss',
+        loadNearMiss(t, 93.4, 8).nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
+    t.check('and #16 is past knocking distance',
+        loadNearMiss(t, 93.4, 16).nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
+
+    // The edges of the window, spelled out.
+    t.equal('#11 is one away', loadNearMiss(t, 93.4, 11).nearMissFor('Erica Mora', '2026-08-17|2026-08-21').away, 1);
+    t.equal('and #15 is five', loadNearMiss(t, 93.4, 15).nearMissFor('Erica Mora', '2026-08-17|2026-08-21').away, 5);
+
+    const one = loadNearMiss(t, 93.4, 11);
+    t.check('one spot reads as a spot, not spots',
+        one.describeNearMiss(one.nearMissFor('Erica Mora', '2026-08-17|2026-08-21')).indexOf('1 spot ') > -1);
+});
+
+suite('celebrations: the near miss rides along with the result', (t) => {
+    const celebrations = loadNearMiss(t, 93.4, 12);
+    const result = celebrations.detectCelebrations('2026-08-17|2026-08-21');
+    const erica = result.missed.find(m => m.name === 'Erica Mora');
+
+    t.check('she is on the miss list', Boolean(erica));
+    t.check('carrying the near miss with her', Boolean(erica.nearMiss));
+    t.equal('two off the bar', erica.nearMiss.away, 2);
+
+    // Nothing public. The rule against listing near misses under a row of
+    // winners has not changed.
+    const post = celebrations.generateAllShoutOuts(result.celebrations, '');
+    t.check('and none of it reaches the channel post', post.indexOf('away from top') === -1);
+});

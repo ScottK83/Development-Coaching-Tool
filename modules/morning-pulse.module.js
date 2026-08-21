@@ -1587,6 +1587,10 @@
             message += `\n\n${pick(HF_CONSISTENCY)(onTrackCount, allMetrics.length)} \u2B50`;
         }
 
+        // Ahead of the sign-off, so the message still closes on the praise.
+        const closeBy = nearMissLine(employeeName, latestKey);
+        if (closeBy) message += `\n\n${closeBy}`;
+
         message += `\n\n${pick(weekendClose ? HF_CLOSERS.concat(HF_CLOSERS_WEEKEND) : HF_CLOSERS)} \uD83D\uDE80`;
 
         return message;
@@ -2810,6 +2814,30 @@
         return Boolean(end) && String(end).slice(0, 10) >= outreach.mondayOf(new Date());
     }
 
+    /**
+     * The placing that just missed the bar, for one person.
+     *
+     * Private messages only. The rule against putting near misses anywhere
+     * public still holds: under a list of winners, "3 away from top 10" reads
+     * as naming somebody for not making it. Addressed to one person it reads as
+     * what it is, which is how close they are.
+     */
+    function nearMissLine(employeeName, latestKey) {
+        const cel = window.DevCoachModules?.celebrations;
+        if (!cel?.nearMissFor || !cel?.describeNearMiss) return '';
+        try {
+            return cel.describeNearMiss(cel.nearMissFor(employeeName, latestKey)) || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function withNearMiss(message, employeeName, latestKey) {
+        if (!message) return message;
+        const line = nearMissLine(employeeName, latestKey);
+        return line ? message + '\n\n' + line : message;
+    }
+
     async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry) {
         let base;
         if (plan.base === 'weekProgress' || plan.base === 'weekClosing') {
@@ -2829,13 +2857,13 @@
 
         // When the weekly file already is this week, the recap would be the
         // same numbers a second time.
-        if (plan.dailyMode === 'none' || !dailyEntry) return base || '';
-        if (plan.dailyMode === 'wtd' && latestKeyCoversThisWeek(outreach, latestKey)) return base || '';
+        if (plan.dailyMode === 'none' || !dailyEntry) return withNearMiss(base || '', employeeName, latestKey);
+        if (plan.dailyMode === 'wtd' && latestKeyCoversThisWeek(outreach, latestKey)) return withNearMiss(base || '', employeeName, latestKey);
 
         const rows = plan.dailyMode === 'monday'
             ? (dailyEntry.mondayRow ? [dailyEntry.mondayRow] : [])
             : dailyEntry.rows;
-        if (!rows.length) return base || '';
+        if (!rows.length) return withNearMiss(base || '', employeeName, latestKey);
 
         const recap = outreach.buildDailyRecap(plan, computeRepWtdFromDailies(rows), {
             metrics: DAILY_CHECKIN_METRICS,
@@ -2843,7 +2871,7 @@
             dayCount: dailyEntry.dates.size
         });
 
-        return outreach.insertRecap(base || '', recap);
+        return withNearMiss(outreach.insertRecap(base || '', recap), employeeName, latestKey);
     }
 
     async function showRunMyDayModal(container) {
