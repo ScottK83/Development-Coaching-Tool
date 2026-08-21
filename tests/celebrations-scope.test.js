@@ -1033,10 +1033,21 @@ suite('celebrations: knocking on the door of the top 10', (t) => {
     t.equal('and how far off the bar it is', miss.away, 2);
     t.equal('against the bar itself', miss.bar, 10);
 
-    const line = celebrations.describeNearMiss(miss);
-    t.check('the sentence names the metric', line.indexOf('Negative Word Usage') > -1);
-    t.check('says the placing', line.indexOf('#12') > -1);
-    t.check('and how far from the top 10', line.indexOf('2 spots') > -1 && line.indexOf('top 10') > -1);
+    // Said more than one way, and every way carries the same four facts. A
+    // variant that dropped the rank is exactly the sort of thing a pool grows
+    // quietly, so this draws until it has seen several of them.
+    const lines = new Set();
+    for (let i = 0; i < 40; i++) lines.add(celebrations.describeNearMiss(miss));
+
+    t.check('it is written more than one way', lines.size >= 4);
+    t.check('every one names the metric',
+        Array.from(lines).every(l => l.indexOf('Negative Word Usage') > -1));
+    t.check('every one says the placing',
+        Array.from(lines).every(l => l.indexOf('#12') > -1));
+    t.check('every one says how far off the bar',
+        Array.from(lines).every(l => l.indexOf('2 spots') > -1));
+    t.check('and every one names the bar',
+        Array.from(lines).every(l => l.indexOf('top 10') > -1));
 });
 
 suite('celebrations: a near miss on a failing number is not a near miss', (t) => {

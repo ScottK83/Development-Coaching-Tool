@@ -821,8 +821,8 @@
                 + ' in the Call Center at ' + v + ', ' + away + ' ' + spots + ' away from top ' + bar + '.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'Keep an eye on ' + m + '. ' + v + ' has you ' + away + ' ' + spots
-                + ' away from top ' + bar + ' in the Call Center.';
+            return 'Keep an eye on ' + m + '. ' + v + ' has you #' + rank + ' in the Call Center, '
+                + away + ' ' + spots + ' away from top ' + bar + '.';
         },
         function(m, v, rank, away, spots, bar) {
             return 'Almost there on ' + m + '. ' + v + ' is #' + rank + ' in the Call Center, and top '
