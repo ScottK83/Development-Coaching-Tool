@@ -679,7 +679,11 @@
                 });
                 return;
             }
-            missed.push(explainNoCelebration(data, name, tiers));
+            missed.push(explainNoCelebration(data, name, tiers, {
+                displayRankByMetric: displayRankByMetric,
+                rankCountsByMetric: rankCountsByMetric,
+                rankedCountByMetric: rankedCountByMetric
+            }));
         });
         missed.sort(function(a, b) {
             var ra = a.best ? a.best.rank : Infinity;
@@ -704,9 +708,10 @@
      * "they were #14 and the bar is top 10". Each of these is worth saying
      * out loud, because they call for different responses.
      */
-    function explainNoCelebration(data, name, tiers) {
+    function explainNoCelebration(data, name, tiers, context) {
         var maxTier = tiers[tiers.length - 1];
         var rankings = (data && data.rankings) || [];
+        var ctx = context || {};
 
         var row = null;
         for (var i = 0; i < rankings.length; i++) {
@@ -717,17 +722,24 @@
         var best = null;
         var withheld = null;
         var belowTarget = null;
+        var shared = null;
         var year = celebrationYear(data && data.periodKey);
 
         Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
             // Excluded from shout-outs, so it must not explain a missing one either.
             if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
-            var rank = row.metricRanks?.[metricKey];
+            // The rank people can see, the same one detection gated on. Reading
+            // the raw rank here is how the explanation came to disagree with the
+            // decision it was explaining.
+            var rank = ctx.displayRankByMetric?.[metricKey]?.[name] || row.metricRanks?.[metricKey];
             if (!rank) return;
 
             var value = getRankedValue(row, metricKey);
             var hasValue = value !== null && value !== undefined;
-            var entry = { metricKey: metricKey, label: METRIC_RANK_LABELS[metricKey].label, rank: rank, hasValue: hasValue, value: value };
+            var tiedCount = ctx.rankCountsByMetric?.[metricKey]?.[rank] || 1;
+            var rankedCount = ctx.rankedCountByMetric?.[metricKey] || 0;
+            var entry = { metricKey: metricKey, label: METRIC_RANK_LABELS[metricKey].label, rank: rank, hasValue: hasValue, value: value,
+                tiedCount: tiedCount, rankedCount: rankedCount };
 
             if (!best || rank < best.rank) best = entry;
             // A qualifying rank whose value never made it through is the most
@@ -740,12 +752,26 @@
             if (rank <= maxTier && hasValue && !TARGET_EXEMPT_METRICS[metricKey]
                 && !meetsCelebrationTarget(metricKey, value, year)
                 && (!belowTarget || rank < belowTarget.rank)) belowTarget = entry;
+            // Top of a field most of which is sitting on the same number. The
+            // placing is real and detection still suppresses it, so "#1 and no
+            // shout-out" needs saying rather than falling through to a near-miss
+            // line that reported being #1 as nought off the top ten bar.
+            if (rank <= maxTier && hasValue
+                && tiedCount > 1 && rankedCount >= MIN_FIELD_FOR_TIE_SHARE
+                && (tiedCount / rankedCount) > MAX_TIED_SHARE_FOR_WIN
+                && (TARGET_EXEMPT_METRICS[metricKey] || meetsCelebrationTarget(metricKey, value, year))
+                && (!shared || rank < shared.rank)) shared = entry;
         });
 
         if (withheld) return { name: name, reason: 'valueWithheld', best: withheld, maxTier: maxTier };
         if (belowTarget) return { name: name, reason: 'belowTarget', best: belowTarget, maxTier: maxTier };
+        if (shared) return { name: name, reason: 'sharedPlacing', best: shared, maxTier: maxTier };
         if (!best) return { name: name, reason: 'noMetricRanks', maxTier: maxTier };
-        return { name: name, reason: 'belowBar', best: best, maxTier: maxTier, shortBy: Math.max(0, best.rank - maxTier) };
+        // A rank inside the bar that none of the above explains is a gap between
+        // detection and this function, not a near miss. Say so plainly instead
+        // of printing "0 off the top 10 bar" and calling it an answer.
+        if (best.rank <= maxTier) return { name: name, reason: 'unexplained', best: best, maxTier: maxTier };
+        return { name: name, reason: 'belowBar', best: best, maxTier: maxTier, shortBy: best.rank - maxTier };
     }
 
     function describeNoCelebration(info) {
@@ -762,6 +788,15 @@
         }
         if (info.reason === 'noMetricRanks') {
             return who + ' is ranked this period but holds no metric rank yet.';
+        }
+        if (info.reason === 'sharedPlacing') {
+            return who + ' is #' + info.best.rank + ' in ' + info.best.label
+                + ', but ' + info.best.tiedCount + ' of the ' + info.best.rankedCount
+                + ' scored on it are on the same number, so nobody stands out on it this period.';
+        }
+        if (info.reason === 'unexplained') {
+            return who + ' is #' + info.best.rank + ' in ' + info.best.label
+                + ', which clears the bar — worth a look, because nothing in the numbers says why that is not a shout-out.';
         }
         if (info.reason === 'belowTarget') {
             return who + ' ranks #' + info.best.rank + ' in ' + info.best.label

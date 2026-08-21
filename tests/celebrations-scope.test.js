@@ -83,6 +83,13 @@ suite('celebrations: a failing number is dropped, and explained', (t) => {
         totalEmployees: 126,
         teamMembers: new Set(['Kristin Villela', 'Betty Yanez']),
         rankings: [
+            // The rest of the floor, so the placings people are told about are
+            // the placings that exist. Ranks are re-derived over the displayed
+            // value, which a two-row fixture quietly turns into 1 and 2.
+            { name: 'Filler One', rank: 1, metricRanks: { negativeWord: 1 }, extraValues: { negativeWord: 99.1 } },
+            { name: 'Filler Two', rank: 2, metricRanks: { negativeWord: 2 }, extraValues: { negativeWord: 97.2 } },
+            { name: 'Filler Four', rank: 4, metricRanks: { negativeWord: 4 }, extraValues: { negativeWord: 90.3 } },
+            { name: 'Filler Five', rank: 5, metricRanks: { negativeWord: 5 }, extraValues: { negativeWord: 88.4 } },
             // Sixth on the floor, but ten points under the 83% bar.
             { name: 'Kristin Villela', rank: 6, metricRanks: { negativeWord: 6 }, extraValues: { negativeWord: 73.1 } },
             // Genuinely good, and ranked.
@@ -756,4 +763,78 @@ suite('celebrations: best on a floor that misses the goal is still best', (t) =>
         celebrations.describePlacement(esther.achievements[0]), '8.1% — 4th in call center');
     t.check('nobody is told they were held back by a gate that no longer fires',
         !result.missed.some(m => m.reason === 'belowTarget'));
+});
+
+/**
+ * "#1, 0 off the top 10 bar, and no shout-out."
+ *
+ * Detection suppresses a placing most of the field is sitting on — twenty of
+ * the twenty-four scored on Rep Satisfaction at 100% is not somebody standing
+ * out. The explainer knew nothing about that rule, so it fell through to the
+ * near-miss line and reported being first as nought off the bar, which reads
+ * as the tool losing track of its own arithmetic.
+ */
+suite('celebrations: a shared top spot is explained as a shared top spot', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+
+    const rankings = [];
+    // Twenty at 100%, Esther among them, and four behind on real numbers.
+    rankings.push({ name: 'Esther Salas', rank: 1, metricRanks: { associateOverall: 1 }, values: { associateOverall: 100 } });
+    for (let i = 1; i < 20; i++) {
+        rankings.push({ name: 'Tied ' + i, rank: 1, metricRanks: { associateOverall: 1 }, values: { associateOverall: 100 } });
+    }
+    [98.4, 97.1, 95.8, 93.2].forEach((v, i) => {
+        rankings.push({ name: 'Behind ' + i, rank: 21 + i, metricRanks: { associateOverall: 21 + i }, values: { associateOverall: v } });
+    });
+
+    const data = () => ({
+        periodKey: '2026-08-17|2026-08-20',
+        totalEmployees: 126,
+        teamMembers: new Set(['Esther Salas']),
+        rankings
+    });
+    global.window.DevCoachModules.centerRanking = { buildCenterRankings: data, buildRankingsForPeriod: data };
+    const celebrations = t.loadModule('modules/celebrations.module.js').celebrations;
+
+    // The premise: she is not being dropped for failing the number.
+    t.check('100% clears the target', celebrations.meetsCelebrationTarget('associateOverall', 100, 2026) === true);
+
+    const result = celebrations.detectCelebrations('2026-08-17|2026-08-20');
+    t.equal('one of twenty at the top is still not a shout-out', result.celebrations.length, 0);
+
+    const esther = result.missed.find(m => m.name === 'Esther Salas');
+    t.check('and she is on the miss list', Boolean(esther));
+    t.equal('reported as the shared placing it is', esther.reason, 'sharedPlacing');
+    t.equal('the placing is named as first', esther.best.rank, 1);
+    t.equal('with how many are on it', esther.best.tiedCount, 20);
+    t.equal('out of the field scored on it', esther.best.rankedCount, 24);
+
+    const text = celebrations.describeNoCelebration(esther);
+    t.check('the sentence says she is first', text.indexOf('#1') > -1);
+    t.check('names the metric', text.indexOf('Rep Satisfaction') > -1);
+    t.check('and counts the tie against the field', text.indexOf('20 of the 24') > -1);
+
+    // The line that started this.
+    t.check('nobody is told they are nought off the bar', text.indexOf('0 off the top') === -1);
+    t.check('and it is not called a bar miss at all', text.indexOf('off the top 10 bar') === -1);
+});
+
+suite('celebrations: a rank inside the bar is never called a near miss', (t) => {
+    const celebrations = load(t, null);
+    const tiers = [1, 5, 10];
+
+    // A qualifying rank that none of the known rules explains. Whatever the
+    // cause, "0 off the top 10 bar" is not the answer.
+    const data = {
+        totalEmployees: 126,
+        teamMembers: new Set(['Puzzling']),
+        rankings: [{ name: 'Puzzling', rank: 2, metricRanks: { transfers: 2 }, extraValues: { transfers: 1.2 } }]
+    };
+    const info = celebrations.explainNoCelebration(data, 'Puzzling', tiers);
+
+    t.equal('it is flagged as unexplained, not as a miss', info.reason, 'unexplained');
+    t.check('and the wording admits it', celebrations.describeNoCelebration(info).indexOf('worth a look') > -1);
+    t.check('without inventing a shortfall', celebrations.describeNoCelebration(info).indexOf('off the top') === -1);
 });
