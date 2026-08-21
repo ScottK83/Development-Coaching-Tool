@@ -27,6 +27,15 @@
     const MULTI_WEEK_PERIOD_TYPES = new Set(['month', 'quarter', 'custom']);
     const MAX_RANGE_GAPS_SHOWN = 16;
 
+    // Period kinds you upload again and again on purpose. Their range grows as
+    // the period runs on, and the save path replaces the row on file rather
+    // than leaving the older copy beside it, so there is nothing to protect by
+    // greying them out. Marking them "already uploaded" only blocked the
+    // correction — worst on the same day, when the end date hasn't moved yet,
+    // the key still matches and the option went dead until tomorrow. These stay
+    // selectable however many times they're pasted, and say what they replace.
+    const REUPLOADABLE_PERIOD_TYPES = new Set(['week-in-progress', 'month-to-date']);
+
     function getWeeklyStore() {
         return (typeof weeklyData !== 'undefined' ? weeklyData : null)
             || window.DevCoachModules?.storage?.loadWeeklyData?.()
@@ -466,6 +475,28 @@
         }, prior);
     }
 
+    // The copy already on file for a re-uploadable period: same kind, same
+    // start date, any end date. Matched on the start rather than the full key
+    // because the end moves every day and the key moves with it — yesterday's
+    // Monday-to-Tuesday row is still the row this paste is about to replace.
+    function latestSameStartUpload(weekly, opt) {
+        let best = null;
+        Object.keys(weekly).forEach(k => {
+            const meta = weekly[k]?.metadata || {};
+            if (meta.periodType !== opt.periodType) return;
+            const startText = meta.startDate || (k.includes('|') ? k.split('|')[0] : '');
+            if (startText !== opt.startDate) return;
+            const endText = meta.endDate || (k.includes('|') ? k.split('|')[1] : '');
+            const uploadedAt = meta.uploadedAt || null;
+            if (!best ||
+                endText > best.endDate ||
+                (endText === best.endDate && (uploadedAt || '') > (best.uploadedAt || ''))) {
+                best = { endDate: endText, uploadedAt };
+            }
+        });
+        return best;
+    }
+
     // Annotate each option with upload state by looking it up in
     // weeklyData / ytdData. For the YTD option, we don't mark it
     // uploaded (since end date is user-picked), but we record the
@@ -506,6 +537,10 @@
                 };
             }
             if (!opt.endDate) return opt;
+            if (REUPLOADABLE_PERIOD_TYPES.has(opt.periodType)) {
+                const prior = latestSameStartUpload(weekly, opt);
+                return prior ? { ...opt, priorUpload: prior } : opt;
+            }
             const key = `${opt.startDate}|${opt.endDate}`;
             const existing = weekly[key];
             if (existing) {
@@ -517,6 +552,18 @@
             }
             return opt;
         });
+    }
+
+    // Says in the dropdown itself that this period already has a copy on file,
+    // so picking it a second time doesn't look like a mistake.
+    function reuploadSuffix(opt) {
+        if (!opt.priorUpload) return '';
+        const when = opt.priorUpload.uploadedAt
+            ? new Date(opt.priorUpload.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : '';
+        return when
+            ? ` — ✓ uploaded ${when}, re-upload replaces it`
+            : ' — re-upload replaces what is on file';
     }
 
     // Render the dropdown options into the select element. Pending
@@ -542,7 +589,7 @@
         function appendOption(grp, opt, prefix) {
             const el = document.createElement('option');
             el.value = opt.id;
-            el.textContent = `${prefix || ''}${opt.label}`;
+            el.textContent = `${prefix || ''}${opt.label}${reuploadSuffix(opt)}`;
             el.dataset.periodType = opt.periodType;
             el.dataset.startDate = opt.startDate || '';
             el.dataset.endDate = opt.endDate || '';
@@ -552,6 +599,10 @@
             if (opt.latestYtdEnd) el.dataset.latestYtdEnd = opt.latestYtdEnd;
             if (Array.isArray(opt.dailyUploadedDates) && opt.dailyUploadedDates.length) {
                 el.dataset.dailyUploadedDates = opt.dailyUploadedDates.join(',');
+            }
+            if (opt.priorUpload) {
+                el.dataset.priorEndDate = opt.priorUpload.endDate || '';
+                el.dataset.priorUploadedAt = opt.priorUpload.uploadedAt || '';
             }
             grp.appendChild(el);
         }
@@ -660,7 +711,15 @@
         const startD = parseLocalDate(start);
         const endD = parseLocalDate(endDate);
         summaryEl.style.display = 'block';
-        summaryEl.textContent = `Will save as ${option.periodType} — ${fmtLong(startD)} through ${fmtLong(endD)}.`;
+        let text = `Will save as ${option.periodType} — ${fmtLong(startD)} through ${fmtLong(endD)}.`;
+        if (option.priorUpload) {
+            const priorEnd = parseLocalDate(option.priorUpload.endDate);
+            const through = isNaN(priorEnd) ? '' : ` through ${fmtLong(priorEnd)}`;
+            const uploadedAt = option.priorUpload.uploadedAt ? new Date(option.priorUpload.uploadedAt) : null;
+            const when = uploadedAt && !isNaN(uploadedAt) ? `, uploaded ${fmtLong(uploadedAt)}` : '';
+            text += ` Replaces the copy already on file (${option.periodType}${through}${when}).`;
+        }
+        summaryEl.textContent = text;
 
         // A range upload lands as a single row. Spell out which weeks inside
         // it are still missing, so it's obvious what else to paste if you
@@ -675,7 +734,7 @@
                 const more = gaps.length > shown.length
                     ? `<div style="margin-top:4px;">+ ${gaps.length - shown.length} more.</div>`
                     : '';
-                summaryEl.innerHTML = `<div>${summaryEl.textContent}</div>` +
+                summaryEl.innerHTML = `<div>${text}</div>` +
                     `<div style="margin-top:8px; font-weight:bold;">⚠️ ${gaps.length} week${gaps.length === 1 ? '' : 's'} inside this range ${gaps.length === 1 ? 'has' : 'have'} no weekly upload:</div>` +
                     `<div style="margin-top:4px;">${chips}</div>` +
                     more +
@@ -761,6 +820,28 @@
         bannerEl.innerHTML = gapBlock + startBlock;
     }
 
+    // Read the currently selected <option> back out as an option object. The
+    // dataset attributes set in appendOption are the only state that survives a
+    // re-render, so they are the source of truth here.
+    function optionFromSelect(selectEl) {
+        const opt = selectEl?.options?.[selectEl.selectedIndex];
+        if (!opt || !opt.value) return null;
+        return {
+            id: opt.value,
+            periodType: opt.dataset.periodType,
+            startDate: opt.dataset.startDate || null,
+            endDate: opt.dataset.endDate || null,
+            requiresEndDatePick: opt.dataset.requiresEndDatePick === '1',
+            requiresDailyDatePick: opt.dataset.requiresDailyDatePick === '1',
+            defaultDate: opt.dataset.defaultDate || null,
+            dailyUploadedDates: opt.dataset.dailyUploadedDates || '',
+            latestYtdEnd: opt.dataset.latestYtdEnd || null,
+            priorUpload: (opt.dataset.priorEndDate || opt.dataset.priorUploadedAt)
+                ? { endDate: opt.dataset.priorEndDate || '', uploadedAt: opt.dataset.priorUploadedAt || '' }
+                : null
+        };
+    }
+
     // Refresh the dropdown using current weeklyData / ytdData. Called
     // on initial render and whenever an upload completes (so the
     // dropdown instantly reflects the new upload state).
@@ -813,6 +894,20 @@
                 summaryEl.textContent = '';
             }
             applySelectionToHiddenInputs(null);
+        } else {
+            // The selection survived — a period that can be uploaded again.
+            // Re-render the summary so it names the copy that just landed
+            // rather than the one it replaced.
+            const option = optionFromSelect(selectEl);
+            const override = option?.requiresDailyDatePick
+                ? (document.getElementById('uploadWizardDailyDate')?.value || option.defaultDate || null)
+                : option?.requiresEndDatePick
+                    ? (document.getElementById('uploadWizardYtdEnd')?.value || null)
+                    : null;
+            // The end date moves at midnight, so re-sync the hidden inputs
+            // rather than trusting what the last selection wrote.
+            applySelectionToHiddenInputs(option, override);
+            updateSummary(document.getElementById('uploadWizardSummary'), option, override);
         }
     }
 
@@ -830,19 +925,7 @@
         refresh();
 
         function currentOptionFromDropdown() {
-            const opt = selectEl.options[selectEl.selectedIndex];
-            if (!opt || !opt.value) return null;
-            return {
-                id: opt.value,
-                periodType: opt.dataset.periodType,
-                startDate: opt.dataset.startDate || null,
-                endDate: opt.dataset.endDate || null,
-                requiresEndDatePick: opt.dataset.requiresEndDatePick === '1',
-                requiresDailyDatePick: opt.dataset.requiresDailyDatePick === '1',
-                defaultDate: opt.dataset.defaultDate || null,
-                dailyUploadedDates: opt.dataset.dailyUploadedDates || '',
-                latestYtdEnd: opt.dataset.latestYtdEnd || null
-            };
+            return optionFromSelect(selectEl);
         }
 
         selectEl.addEventListener('change', () => {
