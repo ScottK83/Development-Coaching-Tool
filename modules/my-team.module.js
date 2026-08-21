@@ -66,16 +66,28 @@
     // over a month-to-date field is the version of that which got noticed. An
     // unavailable default falls back to the latest upload the same as a stale
     // saved pick does, so this only ever moves the starting point.
+    // In order of preference, so a day whose own week has nothing usable
+    // behind it lands on a real finished week rather than on whichever upload
+    // happens to be newest. "Latest" is an honest choice when you make it and a
+    // poor one to be dropped into: it carries no label, so a month-to-date file
+    // sits unannounced under a header promising a week.
     const DEFAULT_WINDOW_BY_COVERAGE = {
-        thisWeek: 'thisWeek',
-        lastWeek: 'lastWeek',
-        lastWeekPlusMonday: 'lastWeek'
+        thisWeek: ['thisWeek', 'lastWeek'],
+        lastWeek: ['lastWeek'],
+        lastWeekPlusMonday: ['lastWeek']
     };
 
     function defaultWindowId() {
         try {
             const plan = mods().dailyOutreach?.planById?.(activeDayId());
-            return DEFAULT_WINDOW_BY_COVERAGE[plan?.covers] || 'latest';
+            const wanted = DEFAULT_WINDOW_BY_COVERAGE[plan?.covers];
+            if (!wanted) return 'latest';
+
+            const windows = mods().celebrations?.listShoutOutWindows?.() || [];
+            if (!windows.length) return wanted[0];
+
+            const usable = wanted.filter(id => windows.some(w => w.id === id && w.available));
+            return usable[0] || 'latest';
         } catch (e) {
             return 'latest';
         }

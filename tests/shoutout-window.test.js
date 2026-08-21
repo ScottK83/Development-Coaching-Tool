@@ -286,20 +286,53 @@ suite('shout-out picker: it lives on the day page', (t) => {
     t.check('but are still the same buttons', chips.indexOf('data-window="mtd"') > -1);
 });
 
+function usableWeekWindows() {
+    return windowSet().map((w) => (w.id === 'thisWeek'
+        ? { id: 'thisWeek', label: 'This week', key: '2026-08-17|2026-08-20', dateRange: 'Aug 17 - Aug 20', count: 121, available: true, reason: '' }
+        : w));
+}
+
 suite('shout-out picker: the day decides where it starts', (t) => {
+    function withUsableWeek(dayId) {
+        const myTeam = loadMyTeam(t, usableWeekWindows());
+        global.window.DevCoachModules.dailyOutreach = outreachStub();
+        myTeam.setActiveDay(dayId);
+        return myTeam;
+    }
+
     t.equal('Friday opens on the week it says it covers',
-        loadDayPage(t, 'friday').defaultWindowId(), 'thisWeek');
+        withUsableWeek('friday').defaultWindowId(), 'thisWeek');
     t.equal('and so does a midweek check-in',
-        loadDayPage(t, 'wednesday').defaultWindowId(), 'thisWeek');
+        withUsableWeek('wednesday').defaultWindowId(), 'thisWeek');
     t.equal('Monday opens on the week it is about',
-        loadDayPage(t, 'monday').defaultWindowId(), 'lastWeek');
+        withUsableWeek('monday').defaultWindowId(), 'lastWeek');
     t.equal('and Tuesday, which is last week plus a day',
-        loadDayPage(t, 'tuesday').defaultWindowId(), 'lastWeek');
+        withUsableWeek('tuesday').defaultWindowId(), 'lastWeek');
+});
+
+/**
+ * The fallback matters as much as the preference. Dropping onto "latest" means
+ * dropping onto whichever upload is newest with no label saying so, which is
+ * how a page headed "the week you just worked" ended up showing a month.
+ */
+suite('shout-out picker: an unusable week falls back to a real one', (t) => {
+    // windowSet() has this week greyed out — nothing week-shaped uploaded yet.
+    const friday = loadDayPage(t, 'friday');
+    t.equal('Friday lands on the last finished week, not the newest file',
+        friday.defaultWindowId(), 'lastWeek');
+
+    const noWeeks = loadMyTeam(t, windowSet().map((w) => (w.id === 'latest'
+        ? w
+        : Object.assign({}, w, { available: false }))));
+    global.window.DevCoachModules.dailyOutreach = outreachStub();
+    noWeeks.setActiveDay('friday');
+    t.equal('with no usable week at all it falls back to the latest upload',
+        noWeeks.defaultWindowId(), 'latest');
 });
 
 suite('shout-out picker: a pick outranks the day', (t) => {
     const myTeam = loadDayPage(t, 'friday');
-    t.equal('untouched, it follows the day', myTeam.activeWindowId(), 'thisWeek');
+    t.equal('untouched, it follows the day', myTeam.activeWindowId(), 'lastWeek');
 
     myTeam.setActiveWindow('mtd');
     t.equal('picked, it stays picked', myTeam.activeWindowId(), 'mtd');
@@ -310,4 +343,60 @@ suite('shout-out picker: no day module, no guessing', (t) => {
     const myTeam = loadMyTeam(t, windowSet());
     t.equal('without the day plans it opens on the latest upload', myTeam.defaultWindowId(), 'latest');
     t.equal('which is what the page did before any of this', myTeam.activeWindowId(), 'latest');
+});
+
+/**
+ * "This week" is a week, not the newest day file that happens to sit inside it.
+ *
+ * With no week-in-progress upload, thisWeekSoFar falls through to daily and
+ * hands back its newest row. The shout-out then ranked one day and printed the
+ * range Aug 17 to Aug 17 under the label "This week" — eighteen people tied at
+ * 100% on Managing Emotions, which is what one day of a percentage metric
+ * looks like. Only the newest daily is ever ranked, so five day files would be
+ * the same lie with more evidence behind it.
+ */
+suite('shout-out window: a day file is not the week', (t) => {
+    const celebrations = load(t, {
+        weeklyData: {
+            '2026-08-10|2026-08-16': { metadata: { periodType: 'week', endDate: '2026-08-16' }, employees: bigTeam(124) }
+        },
+        dailyData: {
+            '2026-08-17|2026-08-17': { metadata: { periodType: 'daily', endDate: '2026-08-17' }, employees: bigTeam(126) }
+        }
+    });
+    const thisWeek = byId(celebrations.listShoutOutWindows(TODAY), 'thisWeek');
+
+    t.check('one day cannot be posted as the week', thisWeek.available === false);
+    t.equal('and no key is handed back to rank it with', thisWeek.key, null);
+    t.check('the reason says day files are what is there', thisWeek.reason.indexOf('day files') > -1);
+    t.check('counting them', thisWeek.reason.indexOf('1 so far') > -1);
+    t.check('and names the upload that would fix it', thisWeek.reason.indexOf('week to date') > -1);
+});
+
+suite('shout-out window: a week of day files is still not the week', (t) => {
+    const celebrations = load(t, {
+        weeklyData: {},
+        dailyData: {
+            '2026-08-17|2026-08-17': { metadata: { periodType: 'daily', endDate: '2026-08-17' }, employees: bigTeam(126) },
+            '2026-08-18|2026-08-18': { metadata: { periodType: 'daily', endDate: '2026-08-18' }, employees: bigTeam(125) }
+        }
+    });
+    const thisWeek = byId(celebrations.listShoutOutWindows(TODAY), 'thisWeek');
+
+    t.check('two days is still not a week', thisWeek.available === false);
+    t.check('and the count says how many there are', thisWeek.reason.indexOf('2 so far') > -1);
+});
+
+suite('shout-out window: a week-shaped upload still wins over the day files', (t) => {
+    const celebrations = load(t, {
+        dailyData: {
+            '2026-08-17|2026-08-17': { metadata: { periodType: 'daily', endDate: '2026-08-17' }, employees: bigTeam(126) }
+        }
+    });
+    const thisWeek = byId(celebrations.listShoutOutWindows(TODAY), 'thisWeek');
+
+    // stores() has the Mon-Tue week-in-progress file. Day files sitting beside
+    // it change nothing — the aggregated upload was always the better answer.
+    t.check('the week-in-progress upload is used', thisWeek.available === true);
+    t.equal('and it is the file that gets ranked', thisWeek.key, '2026-08-17|2026-08-18');
 });

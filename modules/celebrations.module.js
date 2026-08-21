@@ -357,9 +357,30 @@
         return weekly[entry.key] || ytd[entry.key] || daily[entry.key] || null;
     }
 
+    /**
+     * The week so far, and only if something week-shaped says so.
+     *
+     * A day file is canonical for its day and nothing else — that is the whole
+     * reason dailies never roll up. Letting one stand in here is how "this
+     * week" came to read Aug 17 to Aug 17, with eighteen people tied at 100%
+     * on a metric that needs a week of calls to separate anybody. Five day
+     * files would be no better: only the newest is ever ranked, so the answer
+     * would still be one day wearing the name of the week.
+     */
     function _windowEntryThisWeek(pi, index, todayIso) {
         var covering = pi.thisWeekSoFar(index, todayIso);
-        return covering ? covering.primary : null;
+        if (!covering || covering.source === 'daily') return null;
+        return covering.primary;
+    }
+
+    // Day files are a different miss from nothing at all, and they have a
+    // different fix, so the greyed-out chip says which one this is.
+    function _thisWeekReason(pi, index, todayIso) {
+        var dailies = [];
+        try { dailies = pi.dailiesThisWeek(index, todayIso) || []; } catch (e) { dailies = []; }
+        if (!dailies.length) return NO_UPLOAD_REASON.thisWeek;
+        return 'Only day files for this week (' + dailies.length + ' so far). ' +
+            'A single day cannot rank a week — upload week to date on the Upload tab.';
     }
 
     // A month-to-date upload is the month so far straight from the source. An
@@ -410,8 +431,11 @@
                 : _windowEntryYearToDate(pi, index);
 
             if (!entry) {
+                var missing = spec.id === 'thisWeek'
+                    ? _thisWeekReason(pi, index, today)
+                    : (NO_UPLOAD_REASON[spec.id] || 'Nothing uploaded for that stretch yet.');
                 return { id: spec.id, label: spec.label, key: null, dateRange: '', count: 0,
-                    available: false, reason: NO_UPLOAD_REASON[spec.id] || 'Nothing uploaded for that stretch yet.' };
+                    available: false, reason: missing };
             }
 
             var count = entry.employeeCount || 0;
