@@ -1126,6 +1126,12 @@
         if (periodSelect) {
             periodSelect.removeEventListener('change', onPeriodChange);
             periodSelect.addEventListener('change', onPeriodChange);
+            // The same row of chips every other page shows, driving this
+            // dropdown rather than replacing it.
+            window.DevCoachModules?.periodPicker?.mountAboveSelect(periodSelect, {
+                id: 'snapshotPeriodChips',
+                chipClass: 'ts-period-chip'
+            });
         }
 
         var generateBtn = document.getElementById('snapshotGenerateBtn');

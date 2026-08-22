@@ -128,3 +128,57 @@ suite('period picker: no celebrations module, no windows, no crash', (t) => {
     };
     t.equal('and a thrower is caught', picker.windows().length, 0);
 });
+
+/**
+ * The bridge to a page that already has a dropdown.
+ *
+ * Snapshot and Metric Charts read their select from several places and write
+ * back to it from several more. Replacing the control would mean rewriting all
+ * of that to gain a row of chips; driving it gains the same row for the cost of
+ * a click handler.
+ */
+function fakeSelect(values, current) {
+    return {
+        id: 'someSelect',
+        value: current || '',
+        dataset: {},
+        options: values.map(v => ({ value: v })),
+        addEventListener() {},
+        dispatchEvent() { this.dispatched = true; return true; }
+    };
+}
+
+suite('period picker: an option is found however the page keys it', (t) => {
+    const picker = loadPicker(t);
+
+    // Metric Charts keys options as the period key alone.
+    const plain = fakeSelect(['2026-08-10|2026-08-16', '2026-08-01|2026-08-17']);
+    t.equal('a bare key matches',
+        picker.optionForKey(plain, '2026-08-01|2026-08-17').value, '2026-08-01|2026-08-17');
+
+    // Snapshot appends the store the period came out of.
+    const sourced = fakeSelect(['2026-08-10|2026-08-16|weekly', '2026-08-01|2026-08-17|weekly']);
+    t.equal('so does a key with the source on the end',
+        picker.optionForKey(sourced, '2026-08-01|2026-08-17').value, '2026-08-01|2026-08-17|weekly');
+
+    t.equal('a period the list does not hold matches nothing',
+        picker.optionForKey(plain, '2026-01-01|2026-08-16'), null);
+    t.equal('and neither does no key at all', picker.optionForKey(plain, ''), null);
+});
+
+suite('period picker: the chip follows the dropdown', (t) => {
+    const picker = loadPicker(t);
+    const items = windowSet().filter(w => w.key);
+
+    t.equal('the dropdown on month to date lights that chip',
+        picker.chosenIdForSelect(items, fakeSelect([], '2026-08-01|2026-08-17')), 'mtd');
+    t.equal('the source suffix does not throw it off',
+        picker.chosenIdForSelect(items, fakeSelect([], '2026-08-01|2026-08-17|weekly')), 'mtd');
+
+    // A period picked from the full list is none of the windows, so no chip is
+    // lit rather than the wrong one.
+    t.equal('a period outside the windows lights nothing',
+        picker.chosenIdForSelect(items, fakeSelect([], '2026-05-25|2026-05-31')), null);
+    t.equal('and an empty dropdown lights nothing',
+        picker.chosenIdForSelect(items, fakeSelect([], '')), null);
+});

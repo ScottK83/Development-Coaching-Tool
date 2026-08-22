@@ -303,6 +303,13 @@ function populateTrendPeriodDropdown() {
 
     trendPeriodSelect.innerHTML = options;
 
+    // Re-mounted with the options, since a chip is only offered when this list
+    // actually holds the upload behind it.
+    window.DevCoachModules?.periodPicker?.mountAboveSelect(trendPeriodSelect, {
+        id: 'trendPeriodChips',
+        chipClass: 'mt-period-chip'
+    });
+
     // Restore last selected period
     const savedPeriod = localStorage.getItem(LAST_TREND_PERIOD_KEY);
     if (savedPeriod && filteredPeriods.includes(savedPeriod)) {

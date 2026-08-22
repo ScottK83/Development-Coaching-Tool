@@ -136,8 +136,105 @@
         return match ? match.key : null;
     }
 
+    // The option in a page's own dropdown that covers a given period. Some
+    // pages key their options as "start|end" and some as "start|end|source",
+    // so a prefix match catches both without the page having to say which.
+    function optionForKey(selectEl, key) {
+        if (!selectEl || !key) return null;
+        var opts = selectEl.options || [];
+        for (var i = 0; i < opts.length; i++) {
+            var value = opts[i].value || '';
+            if (value === key || value.indexOf(key + '|') === 0) return opts[i];
+        }
+        return null;
+    }
+
+    function chosenIdForSelect(items, selectEl) {
+        var value = (selectEl && selectEl.value) || '';
+        if (!value) return null;
+        var match = (items || []).filter(function (item) {
+            return item.key && (value === item.key || value.indexOf(item.key + '|') === 0);
+        })[0];
+        return match ? match.id : null;
+    }
+
+    /**
+     * Put the same row of chips above a dropdown a page already relies on.
+     *
+     * Snapshot and Metric Charts read their select from several places and
+     * write back to it from several more. Replacing the control would mean
+     * rewriting all of that to gain a row of chips; driving it instead gains
+     * the same row for the cost of a click handler, and the page carries on
+     * working the way it already does.
+     *
+     * "Latest upload" is left out here, because it means "let the page decide"
+     * and these dropdowns have no such option to select.
+     */
+    function mountAboveSelect(selectEl, options) {
+        if (!selectEl || !selectEl.parentNode || !document) return;
+        var opts = options || {};
+        var rowId = opts.id || ((selectEl.id || 'period') + 'Chips');
+        var chipClass = opts.chipClass || (rowId + '-chip');
+
+        var row = document.getElementById(rowId);
+        if (!row) {
+            row = document.createElement('div');
+            row.id = rowId;
+            selectEl.parentNode.insertBefore(row, selectEl);
+        }
+
+        var items = windows().filter(function (w) { return w.key; }).map(function (w) {
+            // A window whose upload is not in this dropdown cannot be picked
+            // from here, whatever the stores say.
+            var option = optionForKey(selectEl, w.key);
+            return {
+                id: w.id,
+                key: w.key,
+                label: w.label,
+                dateRange: w.dateRange,
+                count: w.count,
+                available: w.available !== false && Boolean(option),
+                reason: w.available === false ? w.reason : 'That period is not in this list.'
+            };
+        });
+
+        if (items.length < 2) {
+            row.innerHTML = '';
+            row.style.display = 'none';
+            return;
+        }
+
+        function paint() {
+            row.style.cssText = 'display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;';
+            row.innerHTML = renderChips(items, chosenIdForSelect(items, selectEl), {
+                chipClass: chipClass,
+                label: opts.label
+            });
+            bindRow(row, function (id) {
+                var item = items.filter(function (x) { return x.id === id; })[0];
+                var option = item && optionForKey(selectEl, item.key);
+                if (!option) return;
+                selectEl.value = option.value;
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                paint();
+            }, { chipClass: chipClass });
+        }
+
+        paint();
+
+        // Picking from the dropdown lights the matching chip, so the two
+        // controls never show different answers.
+        if (!selectEl.dataset.periodChipsBound) {
+            selectEl.dataset.periodChipsBound = '1';
+            selectEl.addEventListener('change', paint);
+        }
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.periodPicker = {
+        optionForKey: optionForKey,
+        chosenIdForSelect: chosenIdForSelect,
+        mountAboveSelect: mountAboveSelect,
         windows: windows,
         renderChips: renderChips,
         renderRow: renderRow,
