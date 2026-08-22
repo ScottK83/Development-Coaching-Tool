@@ -290,7 +290,12 @@
         return prefix + ' ending ' + endDate;
     }
 
+    // Whether the full list of every upload on file is showing. The chips
+    // answer the common question; this is the rarer one, one click behind.
+    var _rankingShowAllPeriods = false;
+
     function _renderRankingPeriodSelector(selectedValue) {
+        var picker = window.DevCoachModules && window.DevCoachModules.periodPicker;
         var periods = _getAvailableRankingPeriods();
         var typeOrder = ['ytd', 'quarter', 'month-to-date', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
         var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', 'month-to-date': 'Month to Date', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
@@ -301,7 +306,30 @@
             grouped[t].push(p);
         });
 
-        var html = '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
+        // The chips first: the four or five windows anybody actually asks for,
+        // in the same row, in the same order, in the same colours as My Team.
+        var chipHtml = '';
+        var windows = picker ? picker.windows() : [];
+        if (picker && windows.length) {
+            var chosenChip = picker.idForKey(windows, selectedValue);
+            var items = windows.concat([{
+                id: 'pick',
+                label: 'Pick a period',
+                available: true,
+                title: 'Any single upload on file, by its own dates'
+            }]);
+            // A key that is none of the windows came out of the full list, so
+            // that is the chip that is lit and the list stays open under it.
+            var showAll = _rankingShowAllPeriods || (selectedValue && !chosenChip);
+            chipHtml = picker.renderRow(items, chosenChip || (showAll ? 'pick' : 'latest'), {
+                id: 'rankingPeriodChips',
+                chipClass: 'cr-period-chip',
+                marginBottom: showAll ? '10px' : '16px'
+            });
+            if (!showAll) return chipHtml;
+        }
+
+        var html = chipHtml + '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
         html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Period:</label>';
         html += '<select id="rankingPeriodSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
         html += '<option value="">Auto (Best Available)</option>';
@@ -327,6 +355,23 @@
         if (!select) return;
         _selectedRankingPeriodKey = select.value || null;
         renderCenterRanking();
+    }
+
+    // Clicking a chip either picks that window or opens the full list.
+    function _bindRankingPeriodChips() {
+        var picker = window.DevCoachModules && window.DevCoachModules.periodPicker;
+        var row = document.getElementById('rankingPeriodChips');
+        if (!picker || !row) return;
+        picker.bindRow(row, function (id) {
+            if (id === 'pick') {
+                _rankingShowAllPeriods = true;
+            } else {
+                _rankingShowAllPeriods = false;
+                _selectedRankingPeriodKey = picker.keyForId(picker.windows(), id);
+            }
+            _rankingPeriodInitialized = true;
+            renderCenterRanking();
+        }, { chipClass: 'cr-period-chip' });
     }
 
     /**
@@ -1993,6 +2038,7 @@
                 '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No ranking data available. Upload a full center data set (30+ employees) to see rankings.</p>';
             var sel = document.getElementById('rankingPeriodSelect');
             if (sel) sel.addEventListener('change', _onRankingPeriodChange);
+            _bindRankingPeriodChips();
             return;
         }
 
@@ -2192,6 +2238,7 @@
         // Bind period selector
         var sel = document.getElementById('rankingPeriodSelect');
         if (sel) sel.addEventListener('change', _onRankingPeriodChange);
+        _bindRankingPeriodChips();
 
         // A name opens that person's year. Scrolling to their row — what this
         // used to do — is a button inside it, because the row says no more than

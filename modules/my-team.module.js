@@ -669,21 +669,11 @@
      * without opening the Upload tab and counting rows.
      */
     function renderWindowPickerChips(chosenId) {
-        const windows = mods().celebrations?.listShoutOutWindows?.() || [];
-        if (windows.length < 2) return '';
-
-        const chips = windows.map(w => {
-            const on = w.id === chosenId;
-            const tip = w.available
-                ? (w.dateRange ? `${w.dateRange} · ${w.count} associates` : 'Whichever upload is newest')
-                : w.reason;
-            return `<button type="button" class="mt-so-window" data-window="${w.id}"${w.available ? '' : ' disabled'} title="${escapeHtml(tip)}" ` +
-                `style="padding:5px 12px; border:1px solid ${on ? '#e65100' : 'var(--border)'}; border-radius:999px; font-size:0.82em; font-weight:600; ` +
-                `cursor:${w.available ? 'pointer' : 'not-allowed'}; opacity:${w.available ? '1' : '0.45'}; ` +
-                `background:${on ? '#fff3e0' : 'var(--bg-surface-raised)'}; color:${on ? '#e65100' : 'var(--text-secondary)'};">${escapeHtml(w.label)}</button>`;
-        }).join('');
-
-        return `<span style="font-size:0.82em; color:var(--text-tertiary);">Covering:</span>${chips}`;
+        const picker = mods().periodPicker;
+        if (!picker) return '';
+        return picker.renderChips(mods().celebrations?.listShoutOutWindows?.() || [], chosenId, {
+            chipClass: 'mt-so-window'
+        });
     }
 
     // The picker as it sits on the day page: one row, one id, above everything
@@ -704,13 +694,10 @@
      */
     function bindWindowPicker(root) {
         if (!root) return;
-        root.querySelectorAll('.mt-so-window').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (btn.disabled) return;
-                setActiveWindow(btn.dataset.window);
-                refreshForWindow();
-            });
-        });
+        mods().periodPicker?.bindRow(root, (id) => {
+            setActiveWindow(id);
+            refreshForWindow();
+        }, { chipClass: 'mt-so-window' });
     }
 
     /**

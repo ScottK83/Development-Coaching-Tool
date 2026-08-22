@@ -464,7 +464,12 @@
     /**
      * Render the full Matchup view
      */
+    // Whether the full list of every upload on file is showing. Same idea as
+    // Rankings: chips for the question people ask, the list for the rarer one.
+    var _matchupShowAllPeriods = false;
+
     function _renderPeriodSelector(selectedValue) {
+        var picker = window.DevCoachModules && window.DevCoachModules.periodPicker;
         var periods = _getAvailablePeriods();
         var typeOrder = ['ytd', 'quarter', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
         var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
@@ -475,7 +480,29 @@
             grouped[t].push(p);
         });
 
-        var html = '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
+        // Matchup keys its own selection as "key||source", so the chip has to
+        // be matched on the key alone.
+        var chipHtml = '';
+        var windows = picker ? picker.windows() : [];
+        if (picker && windows.length) {
+            var selectedKey = String(selectedValue || '').split('||')[0];
+            var chosenChip = picker.idForKey(windows, selectedKey);
+            var items = windows.concat([{
+                id: 'pick',
+                label: 'Pick a period',
+                available: true,
+                title: 'Any single upload on file, by its own dates'
+            }]);
+            var showAll = _matchupShowAllPeriods || (selectedKey && !chosenChip);
+            chipHtml = picker.renderRow(items, chosenChip || (showAll ? 'pick' : 'latest'), {
+                id: 'matchupPeriodChips',
+                chipClass: 'mu-period-chip',
+                marginBottom: showAll ? '10px' : '16px'
+            });
+            if (!showAll) return chipHtml;
+        }
+
+        var html = chipHtml + '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
         html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Period:</label>';
         html += '<select id="matchupPeriodSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
         html += '<option value="">Auto (Best Available)</option>';
@@ -493,6 +520,25 @@
 
         html += '</select></div>';
         return html;
+    }
+
+    // Clicking a chip either picks that window or opens the full list.
+    function _bindMatchupPeriodChips() {
+        var picker = window.DevCoachModules && window.DevCoachModules.periodPicker;
+        var row = document.getElementById('matchupPeriodChips');
+        if (!picker || !row) return;
+        picker.bindRow(row, function (id) {
+            if (id === 'pick') {
+                _matchupShowAllPeriods = true;
+            } else {
+                _matchupShowAllPeriods = false;
+                _selectedPeriodKey = picker.keyForId(picker.windows(), id);
+                // The window knows which upload it is, not which store it came
+                // out of. Left blank, the resolver works that out for itself.
+                _selectedPeriodSource = '';
+            }
+            renderMatchup();
+        }, { chipClass: 'mu-period-chip' });
     }
 
     function _onPeriodChange() {
@@ -533,6 +579,7 @@
                 '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No matchup data available. Upload a full center data set and assign supervisors in Settings > Team Members.</p>';
             var sel = document.getElementById('matchupPeriodSelect');
             if (sel) sel.addEventListener('change', _onPeriodChange);
+            _bindMatchupPeriodChips();
             return;
         }
 
@@ -555,6 +602,7 @@
                 '</div>';
             var sel = document.getElementById('matchupPeriodSelect');
             if (sel) sel.addEventListener('change', _onPeriodChange);
+            _bindMatchupPeriodChips();
             // Bound here too, or the buttons the message points at do nothing.
             _bindScopeButtons(container);
             return;
@@ -598,6 +646,7 @@
         // Bind period selector
         var sel = document.getElementById('matchupPeriodSelect');
         if (sel) sel.addEventListener('change', _onPeriodChange);
+        _bindMatchupPeriodChips();
         _bindScopeButtons(container);
     }
 

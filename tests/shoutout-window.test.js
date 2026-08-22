@@ -162,6 +162,9 @@ suite('shout-out window: a stale pick falls back rather than breaking', (t) => {
 
 function loadMyTeam(t, windows, capture) {
     t.installFakeBrowser();
+    // The chip row is a shared component now, so the page cannot draw one
+    // without it. That is the point: every page draws the same row.
+    t.loadModule('modules/period-picker.module.js');
     const myTeam = t.loadModule('modules/my-team.module.js').myTeam;
     global.window.DevCoachModules.celebrations = {
         listShoutOutWindows: () => windows,
@@ -194,12 +197,12 @@ suite('shout-out picker: every window is on screen, usable or not', (t) => {
     t.check('all four windows are offered', ['This week', 'Last week', 'Month to date', 'Year to date']
         .every((label) => html.indexOf(label) > -1));
     t.check('along with the old behaviour', html.indexOf('Latest upload') > -1);
-    t.check('the chosen one is marked', html.indexOf('data-window="mtd"') > -1 && html.indexOf('#e65100') > -1);
+    t.check('the chosen one is marked', html.indexOf('data-period-id="mtd"') > -1 && html.indexOf('#e65100') > -1);
 
     // Greyed out rather than dropped: a missing window that simply vanishes
     // leaves "why can't I post this week" unanswerable without counting rows
     // on the Upload tab.
-    t.check('a window with no upload is disabled, not hidden', html.indexOf('data-window="thisWeek" disabled') > -1);
+    t.check('a window with no upload is disabled, not hidden', html.indexOf('data-period-id="thisWeek" disabled') > -1);
     t.check('and the reason rides along on hover', html.indexOf('Nothing uploaded for this week yet.') > -1);
     t.check('a usable window shows its range and field size', html.indexOf('Aug 1 - Aug 17 · 126 associates') > -1);
 });
@@ -283,7 +286,7 @@ suite('shout-out picker: it lives on the day page', (t) => {
     // row rather than nesting a second row inside the first.
     const chips = myTeam.renderWindowPickerChips('mtd');
     t.check('the chips alone carry no wrapper', chips.indexOf('myTeamWindowPicker') === -1);
-    t.check('but are still the same buttons', chips.indexOf('data-window="mtd"') > -1);
+    t.check('but are still the same buttons', chips.indexOf('data-period-id="mtd"') > -1);
 });
 
 function usableWeekWindows() {
