@@ -1125,3 +1125,85 @@ suite('celebrations: what somebody did is a bulleted list', (t) => {
         t.check('a name is not bulleted', l.indexOf('\u2022') === -1);
     });
 });
+
+/**
+ * "Month to date says Robert finished the period. We still have 10 days left."
+ *
+ * The wording pool grew a stem that states the period is over. On a finished
+ * week that is true; on a month to date with ten days still to run it is a
+ * false statement about the month, sitting in a post going to a channel.
+ */
+function closedWordings() {
+    return ['Finished the period at', 'came in at', 'landed on', 'Closed out at',
+        'finished on', 'closed out on'];
+}
+
+function loadWithPeriod(t, key, periodType) {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    const store = {};
+    store[key] = { metadata: { periodType, startDate: key.split('|')[0], endDate: key.split('|')[1] }, employees: [] };
+    global.weeklyData = store;
+    global.window.weeklyData = store;
+    global.ytdData = {};
+    global.window.ytdData = {};
+    global.dailyData = {};
+    global.window.dailyData = {};
+    return t.loadModule('modules/celebrations.module.js').celebrations;
+}
+
+const wordingPerson = () => ([
+    { name: 'Robert Diaz', firstName: 'Robert', perfectSurveys: null, achievements: [
+        { key: 'negativeWord', label: 'Negative Word Usage', value: 93.8, rank: 8, tiedCount: 1, rankedCount: 126, soloRank1: false },
+        { key: 'adherence', label: 'Schedule Adherence', value: 99.2, rank: 1, tiedCount: 1, rankedCount: 126, soloRank1: true }] }
+]);
+
+suite('celebrations: a period still running is never said to have ended', (t) => {
+    const celebrations = loadWithPeriod(t, '2026-08-01|2026-08-17', 'month-to-date');
+
+    t.check('a month to date is not a finished period',
+        celebrations.periodIsComplete('2026-08-01|2026-08-17') === false);
+
+    // Drawn enough times to walk the whole pool several times over.
+    for (let run = 0; run < 30; run++) {
+        const post = celebrations.generateAllShoutOuts(wordingPerson(), '', '2026-08-01|2026-08-17');
+        const offender = closedWordings().find(w => post.indexOf(w) > -1);
+        if (offender) {
+            t.check('no wording claims the month is over, but found "' + offender + '"', false);
+            return;
+        }
+    }
+    t.check('thirty posts and not one says the month is over', true);
+});
+
+suite('celebrations: a period that has ended can say so', (t) => {
+    const celebrations = loadWithPeriod(t, '2026-08-10|2026-08-16', 'week');
+
+    t.check('a finished week is a finished period',
+        celebrations.periodIsComplete('2026-08-10|2026-08-16') === true);
+
+    let sawClosed = false;
+    for (let run = 0; run < 40 && !sawClosed; run++) {
+        const post = celebrations.generateAllShoutOuts(wordingPerson(), '', '2026-08-10|2026-08-16');
+        sawClosed = closedWordings().some(w => post.indexOf(w) > -1);
+    }
+    t.check('the closing wordings come back once the period has ended', sawClosed);
+});
+
+suite('celebrations: an unknown period is treated as still running', (t) => {
+    const celebrations = loadWithPeriod(t, '2026-08-01|2026-08-17', 'month-to-date');
+
+    // The cost of guessing wrong is not symmetric: an open period costs a
+    // duller sentence, a closed claim on an open period is simply false.
+    t.check('no key at all is open', celebrations.periodIsComplete('') === false);
+    t.check('an unheard-of key is open', celebrations.periodIsComplete('2026-01-01|2026-12-31') === false);
+    t.check('and year to date is open, because the year is not over',
+        loadWithPeriod(t, '2026-01-01|2026-08-16', 'ytd').periodIsComplete('2026-01-01|2026-08-16') === false);
+    t.check('a week in progress too',
+        loadWithPeriod(t, '2026-08-17|2026-08-20', 'week-in-progress').periodIsComplete('2026-08-17|2026-08-20') === false);
+    t.check('but a finished month has ended',
+        loadWithPeriod(t, '2026-07-01|2026-07-31', 'month').periodIsComplete('2026-07-01|2026-07-31') === true);
+    t.check('and so has a quarter',
+        loadWithPeriod(t, '2026-04-01|2026-06-30', 'quarter').periodIsComplete('2026-04-01|2026-06-30') === true);
+});

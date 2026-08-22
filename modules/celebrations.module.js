@@ -1231,21 +1231,30 @@
     var BATCH_METRIC_STEMS = [
         function(label, val) { return label + ': ' + val + '!'; },
         function(label, val) { return val + ' on ' + label + '!'; },
-        function(label, val) { return label + ' came in at ' + val + '!'; },
         function(label, val) { return 'Put up ' + val + ' on ' + label + '!'; },
         function(label, val) { return 'Look at ' + label + ': ' + val + '!'; },
-        function(label, val) { return 'Finished the period at ' + val + ' on ' + label + '!'; },
-        function(label, val) { return label + ' landed on ' + val + '!'; },
         function(label, val) { return 'Took ' + label + ' to ' + val + '!'; },
-        function(label, val) { return val + ' on ' + label + ', and it holds up!'; }
+        function(label, val) { return val + ' on ' + label + ', and it holds up!'; },
+        function(label, val) { return label + ' is at ' + val + '!'; },
+        function(label, val) { return 'That is ' + val + ' on ' + label + '!'; }
+    ];
+
+    // Only drawn from once the period has actually ended. "Finished the period
+    // at 93.8%" under a month to date with ten days still to run is not a
+    // wording problem, it is a false statement about the month.
+    var BATCH_CLOSED_STEMS = [
+        function(label, val) { return 'Finished the period at ' + val + ' on ' + label + '!'; },
+        function(label, val) { return label + ' came in at ' + val + '!'; },
+        function(label, val) { return label + ' landed on ' + val + '!'; },
+        function(label, val) { return 'Closed out at ' + val + ' on ' + label + '!'; }
     ];
 
     var BATCH_NO_VALUE_STEMS = [
         function(label) { return 'Outstanding ' + label + '!'; },
         function(label) { return 'Big ' + label + ' period!'; },
-        function(label) { return label + ' was a standout!'; },
+        function(label) { return label + ' is a standout!'; },
         function(label) { return 'Strong showing on ' + label + '!'; },
-        function(label) { return label + ' was the story here!'; }
+        function(label) { return label + ' is the story here!'; }
     ];
 
     // The solo lines close with a tail out of SOLO_TOP_TAILS, so these stop on
@@ -1254,8 +1263,12 @@
         function(label, val) { return val ? label + ': ' + val + '.' : label + '.'; },
         function(label, val) { return val ? val + ' on ' + label + '.' : label + '.'; },
         function(label, val) { return val ? label + ' at ' + val + '.' : label + '.'; },
-        function(label, val) { return val ? 'Put up ' + val + ' on ' + label + '.' : label + '.'; },
-        function(label, val) { return val ? label + ' finished on ' + val + '.' : label + '.'; }
+        function(label, val) { return val ? 'Put up ' + val + ' on ' + label + '.' : label + '.'; }
+    ];
+
+    var BATCH_SOLO_CLOSED_STEMS = [
+        function(label, val) { return val ? label + ' finished on ' + val + '.' : label + '.'; },
+        function(label, val) { return val ? label + ' closed out on ' + val + '.' : label + '.'; }
     ];
 
     // Kept off the emoji that already carry a meaning here: \uD83E\uDD47 is a solo top
@@ -1455,6 +1468,25 @@
         return 'this year';
     }
 
+    /**
+     * Has the stretch of time this covers actually ended?
+     *
+     * Decided by the kind of period, not by its end date: a month-to-date
+     * upload runs to yesterday, so its end date is always in the past while the
+     * month itself is not. Anything unrecognised counts as still running, which
+     * is the safe way round -- the worst an open period costs is a duller
+     * sentence, where a closed claim on an open period is simply wrong.
+     */
+    var CLOSED_PERIOD_TYPES = { week: true, month: true, 'month-agg': true, quarter: true, daily: true };
+
+    function periodIsComplete(periodKey) {
+        var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        var daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        var meta = (weekly[periodKey] || ytd[periodKey] || daily[periodKey] || {}).metadata || {};
+        return Boolean(CLOSED_PERIOD_TYPES[meta.periodType]);
+    }
+
     function perfectSurveyLine(perfect) {
         var n = perfect && perfect.count;
         if (!n) return '';
@@ -1507,14 +1539,17 @@
         return lines.join('\n');
     }
 
-    function generateAllShoutOuts(celebrations, dateRange) {
+    function generateAllShoutOuts(celebrations, dateRange, periodKey) {
         if (!celebrations.length) return 'No celebrations to report right now.';
         var msg = nextBatchIntro();
         // Fresh per post, so the lines inside one post read as separate
         // sentences rather than one sentence with the nouns swapped.
-        var metricStem = rotator(BATCH_METRIC_STEMS);
+        // A period still running gets only the wordings that are true while it
+        // is running.
+        var closed = periodIsComplete(periodKey);
+        var metricStem = rotator(closed ? BATCH_METRIC_STEMS.concat(BATCH_CLOSED_STEMS) : BATCH_METRIC_STEMS);
         var noValueStem = rotator(BATCH_NO_VALUE_STEMS);
-        var soloStem = rotator(BATCH_SOLO_STEMS);
+        var soloStem = rotator(closed ? BATCH_SOLO_STEMS.concat(BATCH_SOLO_CLOSED_STEMS) : BATCH_SOLO_STEMS);
         var lineIcon = rotator(BATCH_LINE_ICONS);
         // At the foot of a nine-person post nobody ever reached it, so people
         // were reading a week-old shout-out as if it were today's.
@@ -2214,6 +2249,7 @@
         perfectSurveyWeek: perfectSurveyWeek,
         perfectSurveyLine: perfectSurveyLine,
         periodNoun: periodNoun,
+        periodIsComplete: periodIsComplete,
         fieldSentence: fieldSentence,
         explainNoCelebration: explainNoCelebration,
         findNearMiss: findNearMiss,

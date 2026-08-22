@@ -757,7 +757,7 @@
             count = (result.celebrations || []).length;
             dateRange = result.dateRange || chosen.dateRange || '';
             text = count
-                ? celebrations.generateAllShoutOuts(result.celebrations, dateRange)
+                ? celebrations.generateAllShoutOuts(result.celebrations, dateRange, result.periodKey || chosen.key)
                 : '';
         } catch (e) { text = ''; }
 
