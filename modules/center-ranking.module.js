@@ -868,7 +868,26 @@
             totalEmployees: rankings.length,
             source: agg.label + (agg.fromUpload ? ' (uploaded month)' : ' (rebuilt from ' + agg.weekCount + ' weeks)'),
             periodKey: MONTH_KEY_PREFIX + monthKey,
-            teamMembers: new Set(_getTeamMembersForWeek(lastWeekKey))
+            teamMembers: new Set(_getTeamMembersForWeek(lastWeekKey)),
+
+            /* What this month ACTUALLY covers, carried rather than left behind.
+
+               A rebuild buckets whole weekly uploads by the date they end on, so
+               January 2026 can hold five of them and start on 28 December. A
+               consumer that throws this away and re-derives the window from the
+               calendar month gets a shorter month than the volume in these
+               rankings was banked over, and then reads a pace out of it that no
+               real month could produce. The what-if ladder did exactly that and
+               inflated every projected value and placing by a quarter.
+
+               weekCount is the number of weekly uploads behind a rebuild, which
+               is a week apiece and therefore exact where dividing days by seven
+               only rounds. It is deliberately null for an uploaded month, where
+               the single entry is a month rather than a week and counting it as
+               one would overstate the pace fourfold. */
+            spanStart: agg.spanStart || null,
+            spanEnd: agg.spanEnd || null,
+            weekCount: agg.fromUpload ? null : agg.weekCount
         };
     }
 
@@ -1181,6 +1200,393 @@
             '; text-align: center; margin-right: 3px;">' + score + '</span>';
     }
 
+
+    /* ── The what-if ladder ──
+
+       A supervisor preparing a one-to-one keeps asking the same question and
+       until now had to answer it on paper: if this person held a better number
+       for a month, where would that actually leave them? The value half of that
+       is safe arithmetic. The placing half is not, because it is computed on a
+       frozen field and the field is never frozen — the other 126 people are
+       working the same month and a good many of them are pushing the same way.
+       Somebody who does exactly what they were asked and lands three places
+       short of what they were promised has been made a liar of by their coach.
+
+       So the ladder is built here, in the modal that opens when a manager
+       clicks a name, and nowhere an associate can be shown it. The caveat is
+       printed beside every block rather than left to be remembered, because the
+       numbers are persuasive and a remembered caveat is not.
+
+       Every piece of arithmetic below belongs to rank-projection.module.js.
+       Nothing in this file recomputes a blend or a placing; it decides what is
+       worth saying and refuses to say the rest. The module is reached at call
+       time and its absence is silence rather than a crash, because it is not in
+       every page that loads this one.
+
+       Reliability is absent by design, and the section says so out loud rather
+       than quietly dropping a metric the table above lists. It is hours missed
+       against a budget for the whole year, not an average, so "hold this for a
+       month" has nothing to blend. */
+
+    /* The number the ladder holds somebody to.
+
+       It has to be a figure that survives being said out loud in a one-to-one,
+       which rules out a round number chosen because it looks like a goal. The
+       figure standing at #10 in this same period is defensible on its own: a
+       colleague in this centre is producing it right now, on this metric, under
+       the same conditions, and the top 10 is the door supervisors actually ask
+       about.
+
+       Somebody already inside that door cannot be held to it. The blend would
+       pull their year DOWN and the ladder would print a fall dressed as a plan,
+       so for them the held figure is the one at the very top of the field
+       instead. Somebody already at the top of the field has nothing above them
+       to hold to, and the block says so rather than inventing a stretch. */
+    var LADDER_DOOR_RANK = 10;
+
+    /* The rungs, measured in weeks.
+
+       Four weeks rather than a calendar month because every volume behind every
+       other number in this modal is counted in whole weeks; a 30.4-day month
+       would be the only quantity here measured in days, and the extra precision
+       buys nothing a supervisor can act on. The third rung is the weeks left in
+       the year and is appended per period, since a December period has none. */
+    var LADDER_RUNGS = [
+        { label: '1 week', weeks: 1 },
+        { label: '1 month', weeks: 4 }
+    ];
+
+    /* The projectable KPIs, in the order the table above reads them, with the
+       two survey metrics that rank but sit outside the five-KPI scorecard added
+       on the end. Labels are copied from TRAJECTORY_METRIC_ROWS where the two
+       overlap, so one modal never names the same number two ways. */
+    var LADDER_ROWS = [
+        { label: 'AHT', rankKey: 'aht' },
+        { label: 'Adherence', rankKey: 'adherence' },
+        { label: 'Sentiment', rankKey: 'sentiment' },
+        { label: 'CX Adv', rankKey: 'associateOverall' },
+        { label: 'FCR', rankKey: 'fcr' },
+        { label: 'Overall Experience', rankKey: 'overallExperience' }
+    ];
+
+    var LADDER_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+    function _rankProjection() {
+        var mod = window.DevCoachModules && window.DevCoachModules.rankProjection;
+        return (mod && mod.projectValue) ? mod : null;
+    }
+
+    function _ladderIsReverse(rp, rankKey) {
+        var registryKey = rp.registryKeyFor ? rp.registryKeyFor(rankKey) : null;
+        if (!registryKey) return false;
+        if (typeof window.isReverseMetric === 'function') return !!window.isReverseMetric(registryKey);
+        var entry = window.METRICS_REGISTRY && window.METRICS_REGISTRY[registryKey];
+        return !!(entry && entry.isReverse);
+    }
+
+    function _ladderBetter(value, other, reverse) {
+        return reverse ? value < other : value > other;
+    }
+
+    function _ladderIsDate(value) {
+        return /^\d{4}-\d{2}-\d{2}$/.test(String(value == null ? '' : value));
+    }
+
+    /* The dates the selected period really covers, plus the exact number of
+       weeks banked inside them where the period knows it.
+
+       The blend needs a volume per week, and the only honest way to get one is
+       to divide the volume already banked by the weeks it was banked over. A
+       week or a year-to-date file carries startDate and endDate on the upload,
+       with the pipe-separated key as the fallback for older files that were
+       stored without metadata.
+
+       A month used to be derived from its name, and that was the bug. A rebuilt
+       month is aggregated from whole weekly uploads bucketed by the date they
+       END on, so January 2026 can hold five weeks and begin on 28 December.
+       Measuring it as the 31 days on the calendar called five weeks of banked
+       calls four, lifted the per-week pace by a quarter, and every rung then
+       printed a value and a placing better than a real month could deliver: for
+       somebody on 91.2% adherence held to a 96.0% door, 93.6% and approx #16
+       where the truth was 93.3% and #17. Nothing about that error was visible on
+       the page, which is what makes it worth this much comment. So the span the
+       aggregate really covered is carried through _buildRankingsForMonth and
+       read here instead. It runs the other way too: a month rebuilt from two or
+       three weeks was being read as four and its pace understated. */
+    function _ladderSpan(data) {
+        var key = String((data && data.periodKey) || _selectedRankingPeriodKey || '');
+        if (!key) return null;
+        if (key.indexOf(MONTH_KEY_PREFIX) === 0) {
+            var counted = (data && Number.isFinite(data.weekCount) && data.weekCount > 0) ? data.weekCount : null;
+            if (_ladderIsDate(data && data.spanStart) && _ladderIsDate(data && data.spanEnd)) {
+                return { start: data.spanStart, end: data.spanEnd, weeks: counted };
+            }
+
+            // Last resort, for an aggregate that came back without dates on it:
+            // the calendar month, which is the approximation described above and
+            // is only reached when there is nothing truer to read. A rebuild
+            // still gets its pace right here, because the week count travels
+            // separately from the dates.
+            var month = key.slice(MONTH_KEY_PREFIX.length);
+            var y = parseInt(month.slice(0, 4), 10);
+            var m = parseInt(month.slice(5, 7), 10);
+            if (!y || !m) return null;
+            // Day 0 of the next month is the last day of this one, which beats
+            // carrying a table of month lengths and a leap-year rule beside it.
+            var lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+            return {
+                start: month + '-01',
+                end: month + '-' + (lastDay < 10 ? '0' : '') + lastDay,
+                weeks: counted
+            };
+        }
+        var period = _getWeeklyData()[key] || _getYtdData()[key];
+        var meta = (period && period.metadata) || {};
+        var parts = key.split('|');
+        var start = meta.startDate || parts[0] || '';
+        var end = meta.endDate || parts[1] || '';
+        if (!_ladderIsDate(start) || !_ladderIsDate(end)) return null;
+        return { start: start, end: end, weeks: null };
+    }
+
+    // Both ends inclusive: a Monday-to-Sunday week is seven days of work, not
+    // six, and rounding it to one week matters because the per-week volume this
+    // divides out is what every rung is scaled by. A counted week total beats
+    // that rounding wherever the period carried one, since those weeks are whole
+    // uploads and no arithmetic on the dates can be surer than a count of them.
+    function _ladderWeeks(span) {
+        var start = Date.parse(span.start + 'T00:00:00Z');
+        var end = Date.parse(span.end + 'T00:00:00Z');
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+        var yearEnd = Date.parse(span.end.slice(0, 4) + '-12-31T00:00:00Z');
+        var covered = (Number.isFinite(span.weeks) && span.weeks > 0)
+            ? span.weeks
+            : Math.round((end - start + 86400000) / LADDER_WEEK_MS);
+        return {
+            covered: Math.max(1, covered),
+            left: Number.isFinite(yearEnd) ? Math.max(0, Math.round((yearEnd - end) / LADDER_WEEK_MS)) : 0
+        };
+    }
+
+    function _ladderHoldValue(rp, rankings, rankKey, currentValue) {
+        var reverse = _ladderIsReverse(rp, rankKey);
+        var door = rp.thresholdValueForRank(rankings, rankKey, LADDER_DOOR_RANK);
+        if (door !== null && _ladderBetter(door, currentValue, reverse)) {
+            return { value: door, place: LADDER_DOOR_RANK };
+        }
+        var front = rp.thresholdValueForRank(rankings, rankKey, 1);
+        if (front !== null && _ladderBetter(front, currentValue, reverse)) {
+            return { value: front, place: 1 };
+        }
+        return null;
+    }
+
+    /* isProjectable answers yes or no, and yes or no is not enough here.
+
+       The modal already names the months it has no ranking for instead of
+       showing eleven columns and hoping nobody counts; a metric that silently
+       vanishes from this list would send the reader back to the upload to work
+       out why. So the two floors are re-tested against the same numbers purely
+       to say WHICH one stopped it. If the gate ever changes, this changes with
+       it or the page starts naming a floor that is no longer the reason. */
+    function _ladderFloorReason(rp, rankKey, row) {
+        var callFloor = Number.isFinite(window.MIN_CALLS_TO_JUDGE) ? window.MIN_CALLS_TO_JUDGE : 20;
+        var calls = parseFloat(row.totalCalls);
+        if (Number.isFinite(calls) && calls < callFloor) {
+            return 'not paced &mdash; ' + calls + ' call' + (calls === 1 ? '' : 's') + ' in this period, under the ' +
+                callFloor + ' the centre needs before it judges a number.';
+        }
+        var surveyFloor = Number.isFinite(rp.MIN_SURVEYS_TO_PROJECT) ? rp.MIN_SURVEYS_TO_PROJECT : 3;
+        var surveys = parseFloat(row.surveyTotal);
+        var isSurveyKey = !!(rp.SURVEY_WEIGHTED_RANK_KEYS && rp.SURVEY_WEIGHTED_RANK_KEYS.has(rankKey));
+        if (isSurveyKey && Number.isFinite(surveys) && surveys < surveyFloor) {
+            return 'not paced &mdash; ' + surveys + ' survey' + (surveys === 1 ? '' : 's') + ' returned, under the ' +
+                surveyFloor + ' a survey metric needs before it ranks.';
+        }
+        return 'not paced &mdash; the volume behind it is too thin to build a pace on.';
+    }
+
+    /**
+     * The ladder itself. Returns '' rather than a placeholder whenever the
+     * pieces are not there, because an empty section under a heading reads as a
+     * bug and a missing section reads as a view that had nothing to add.
+     */
+    function _buildLadderHtml(name) {
+        var rp = _rankProjection();
+        if (!rp || !_lastRankingData) return '';
+        var rankings = _lastRankingData.rankings || [];
+        var row = rankings.filter(function (r) { return r.name === name; })[0];
+        if (!row) return '';
+
+        var wrap = 'margin-top: 18px; padding-top: 14px; border-top: 2px solid var(--border);';
+        var note = 'margin: 0 0 8px 0; color: var(--text-secondary); font-size: 0.82em; line-height: 1.5;';
+
+        var span = _ladderSpan(_lastRankingData);
+        var weeks = span ? _ladderWeeks(span) : null;
+        if (!weeks) {
+            return '<div id="rankLadderBlock" style="' + wrap + '"><p style="' + note + '">' +
+                'No what-if ladder for this period: it carries no start and end date, and without them there is ' +
+                'no way to work out how much volume a week of it is worth. Pick a dated period and the ladder ' +
+                'comes back.</p></div>';
+        }
+
+        /* The last rung is the weeks left in the year, and late in December those
+           run down into the stretches already on the list. A period ending on 27
+           December leaves one week, which printed a second rung reading "the rest
+           of the year (1 weeks)" directly under a "1 week" rung carrying the
+           identical number: a grammar slip and a duplicated row in one place.
+           Where the two stretches coincide the standing rung is marked as the
+           rest of the year rather than repeated underneath it.
+
+           The singular is still spelled out below. What keeps 1 away from that
+           line is the contents of LADDER_RUNGS, a list somebody may reasonably
+           edit, and grammar should not be resting on it. */
+        var rungs = LADDER_RUNGS.slice();
+        if (weeks.left > 0) {
+            var coincides = rungs.some(function (rung) { return rung.weeks === weeks.left; });
+            if (coincides) {
+                rungs = rungs.map(function (rung) {
+                    return rung.weeks === weeks.left
+                        ? { label: rung.label, weeks: rung.weeks, tail: 'the rest of the year' }
+                        : rung;
+                });
+            } else {
+                rungs.push({
+                    label: 'the rest of the year',
+                    weeks: weeks.left,
+                    tail: weeks.left + ' week' + (weeks.left === 1 ? '' : 's')
+                });
+            }
+        }
+
+        var th = 'padding: 5px 8px; border-bottom: 2px solid var(--border); font-size: 0.76em; ' +
+            'color: var(--text-secondary); text-align: left; font-weight: 600;';
+        var tdBase = 'padding: 5px 8px; border-bottom: 1px solid var(--border); font-size: 0.84em;';
+        var tdRung = tdBase + ' padding-left: 26px; color: var(--text-secondary);';
+        var numeric = ' text-align: right; white-space: nowrap;';
+        var quiet = 'color: var(--text-tertiary);';
+
+        var html = '<div id="rankLadderBlock" style="' + wrap + '">';
+        html += '<h4 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.95em;">' +
+            'What a stretch would do for ' + _escapeHtml(name) + '</h4>';
+
+        html += '<p style="' + note + '">' +
+            'Each rung holds one number for a stretch of weeks and blends it onto what is already banked ' +
+            _escapeHtml(_selectedPeriodPhrase(_lastRankingData)) + ', weighted by volume the same way the ' +
+            'year-to-date figures are built. That weighting is most of the story: the calls already behind ' +
+            'the number keep their weight, so a month at a much better figure moves the year by far less than ' +
+            'the two numbers averaged.</p>';
+
+        html += '<p style="' + note + '">' +
+            '<strong>The placings assume every other person in the centre finishes the year exactly where they ' +
+            'stand today.</strong> Nobody does. The whole field is working the same weeks and a good many of ' +
+            'them are pushing the same way, so these placings flatter, and that is why they live in this modal ' +
+            'and go into nobody&rsquo;s inbox. Read them as the shape of what is possible, not as anything ' +
+            'anyone can be held to. Where a rung moves the value by less than the metric&rsquo;s own noise ' +
+            'threshold no placing is shown at all: in a field this dense a tenth of a point can be twenty ' +
+            'places, and that is churn rather than progress.</p>';
+
+        html += '<p style="' + note + '">' +
+            'The number held is whichever figure is standing at #' + LADDER_DOOR_RANK + ' in the centre for that ' +
+            'metric right now, because a colleague is producing it this period under the same conditions. ' +
+            'Anyone already inside that door is held to the figure at the top of the field instead, since ' +
+            'holding the #' + LADDER_DOOR_RANK + ' number would drag them backwards.</p>';
+
+        html += '<p style="' + note + '">' +
+            'Reliability is not on the ladder. It is hours missed against a budget for the whole year rather ' +
+            'than an average, so there is no value to hold for a month and nothing to blend.</p>';
+
+        html += '<table style="width: 100%; border-collapse: collapse; background: var(--bg-surface);">';
+        html += '<thead><tr><th style="' + th + '">Metric</th>' +
+            '<th style="' + th + numeric + '">Value</th>' +
+            '<th style="' + th + ' padding-left: 16px;">Where that lands</th></tr></thead><tbody>';
+
+        LADDER_ROWS.forEach(function (spec) {
+            var rankKey = spec.rankKey;
+            var registryKey = rp.registryKeyFor(rankKey);
+            var label = '<td style="' + tdBase + '"><strong class="rank-ladder-metric">' +
+                _escapeHtml(spec.label) + '</strong></td>';
+
+            // Said before anything else, because the floors are the reason a
+            // metric has no ladder and the reader is owed the reason rather
+            // than a gap.
+            if (!rp.isProjectable(rankKey, row)) {
+                html += '<tr>' + label + '<td colspan="2" style="' + tdBase + ' padding-left: 16px; ' + quiet + '">' +
+                    _ladderFloorReason(rp, rankKey, row) + '</td></tr>';
+                return;
+            }
+
+            var current = rp.rankedValueFor(row, rankKey);
+            if (current === null || current === undefined || isNaN(current)) {
+                html += '<tr>' + label + '<td colspan="2" style="' + tdBase + ' padding-left: 16px; ' + quiet + '">' +
+                    'not measured in this period.</td></tr>';
+                return;
+            }
+
+            // Ranked over the people who have the metric at all. A blank is not
+            // a bad score and must not pad the denominator into a bigger field
+            // than the placing was taken from.
+            var measured = rankings.filter(function (r) {
+                var value = rp.rankedValueFor(r, rankKey);
+                return value !== null && value !== undefined && !isNaN(value);
+            }).length;
+            var rank = (row.metricRanks || {})[rankKey];
+
+            html += '<tr>' + label +
+                '<td style="' + tdBase + numeric + '"><strong>' +
+                _escapeHtml(_formatMetricDisplay(registryKey, current)) + '</strong></td>' +
+                '<td style="' + tdBase + ' padding-left: 16px;">' +
+                (Number.isFinite(rank) ? '#' + rank + ' of ' + measured : '<span style="' + quiet + '">not ranked</span>') +
+                '</td></tr>';
+
+            // Survey metrics are weighted by responses returned and everything
+            // else by calls taken, matching how the year aggregate is built. A
+            // hundred calls carrying two surveys is two responses of evidence.
+            var isSurveyKey = !!(rp.SURVEY_WEIGHTED_RANK_KEYS && rp.SURVEY_WEIGHTED_RANK_KEYS.has(rankKey));
+            var volumeSoFar = parseFloat(isSurveyKey ? row.surveyTotal : row.totalCalls);
+            if (!Number.isFinite(volumeSoFar) || volumeSoFar <= 0) {
+                html += '<tr><td colspan="3" style="' + tdRung + '">' +
+                    'no ' + (isSurveyKey ? 'survey' : 'call') + ' volume on this upload, so there is nothing to ' +
+                    'weight a blend against.</td></tr>';
+                return;
+            }
+
+            var hold = _ladderHoldValue(rp, rankings, rankKey, current);
+            if (!hold) {
+                html += '<tr><td colspan="3" style="' + tdRung + '">' +
+                    'already the best figure in the field, so there is nothing above it to hold to.</td></tr>';
+                return;
+            }
+
+            var perWeek = volumeSoFar / weeks.covered;
+            var holdText = _escapeHtml(_formatMetricDisplay(registryKey, hold.value));
+
+            rungs.forEach(function (rung) {
+                var projected = rp.projectValue(current, volumeSoFar, hold.value, perWeek * rung.weeks);
+                if (projected === null) return;
+
+                var where;
+                if (rp.moveIsNoise(rankKey, projected - current)) {
+                    where = '<span style="' + quiet + '">rank move is inside the noise</span>';
+                } else {
+                    var landed = rp.projectRank(rankings, rankKey, name, projected);
+                    where = Number.isFinite(landed)
+                        ? 'approx #' + landed
+                        : '<span style="' + quiet + '">no placing to give</span>';
+                }
+
+                html += '<tr><td style="' + tdRung + '">hold ' + holdText + ' for ' + rung.label +
+                    (rung.tail ? ' <span style="' + quiet + '">(' + rung.tail + ')</span>' : '') + '</td>' +
+                    '<td style="' + tdRung + numeric + '">' +
+                    _escapeHtml(_formatMetricDisplay(registryKey, projected)) + '</td>' +
+                    '<td style="' + tdRung + ' padding-left: 16px;">' + where + '</td></tr>';
+            });
+        });
+
+        html += '</tbody></table></div>';
+        return html;
+    }
+
     function buildTrajectoryHtml(name) {
         var series = _timelineFor(name);
         if (!series || !series.length) {
@@ -1386,7 +1792,13 @@
             '<div id="rankTrajectoryImage" style="overflow: auto; border: 1px solid var(--border); ' +
             'border-radius: 8px; background: #fff; padding: 6px;"></div></div>';
 
-        html += '</div></div>';
+        // The fixed-width strip closes first so the ladder gets the modal's own
+        // width instead of the year table's. It stays inside the scroller, so a
+        // long ladder scrolls with everything else rather than squeezing the
+        // chart out of a flex column.
+        html += '</div>';
+        html += _buildLadderHtml(name);
+        html += '</div>';
 
         if (geom.width > 620) {
             html += '<p style="flex: 0 0 auto; margin: 8px 0 0 0; color: var(--text-tertiary); font-size: 0.78em;">' +

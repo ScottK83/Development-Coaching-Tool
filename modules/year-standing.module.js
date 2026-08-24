@@ -12,6 +12,14 @@
      *
      * So ranks are computed, used to work out which way they are travelling,
      * and then thrown away. Only the direction survives into the message.
+     *
+     * A direction on its own turned out to be half a conversation. Somebody
+     * told the floor has been passing them all year has been handed a worry
+     * and no way to act on it, and the fix is not to give the position back:
+     * it is to say what holding a particular number would do to their own year
+     * figure. That sentence comes in on an entry as paceText, and it goes
+     * through the same rule as everything else here, which is that no position
+     * of any kind reaches the person reading.
      */
 
     // A place or two either way is churn, not movement — one good week from
@@ -71,12 +79,46 @@
         return pool[0];
     }
 
+    // The shapes a position takes on its way into a sentence. This module
+    // cannot see who is calling it, and the one thing it exists to prevent is
+    // exactly what a well-meaning caller might hand it: a pace sentence
+    // assembled somewhere else with "you would be 18th" sitting in the middle
+    // of it. Anything matching these is dropped whole rather than scrubbed,
+    // because a sentence with a hole cut in it is worse than no sentence.
+    const PLACING_PATTERNS = [
+        /\b\d+(st|nd|rd|th)\b/,
+        /\b\d+\s+(of|out of)\s+\d+/,
+        /top \d/i,
+        /\brank(ed|ing)?\b/i
+    ];
+
+    /**
+     * A pace sentence earns its place under a bullet only if it says nothing
+     * about where they sit. rankProjection.buildPaceClause is written to that
+     * rule and is the intended source, but the check lives here so the rule
+     * survives whoever fills the field in next.
+     */
+    function safePaceText(paceText) {
+        const text = typeof paceText === 'string' ? paceText.trim() : '';
+        if (!text) return '';
+        return PLACING_PATTERNS.some(pattern => pattern.test(text)) ? '' : text;
+    }
+
     /**
      * The block that goes into a check-in.
      *
-     * entries: [{ label, valueText, targetText, movement }]
+     * entries: [{ label, valueText, targetText, movement, paceText }]
      * Only entries carrying a movement are worth a line — without one there is
      * nothing to say beyond the number they already know.
+     *
+     * paceText is optional and renders as a continuation line indented under
+     * its bullet: what holding a given number for a stretch would do to the
+     * year. A direction is the one thing this module can say safely and also
+     * the one thing that cannot answer "what would move it", so "the floor has
+     * been passing you here" on its own is a worry handed over with no way to
+     * act on it. The sentence is composed elsewhere because the arithmetic
+     * behind it needs call and survey volumes this module has never carried.
+     * An entry without one renders exactly as it always has.
      */
     function buildYearStandingText(entries, options) {
         const opts = options || {};
@@ -86,7 +128,9 @@
         const lines = list.slice(0, opts.limit || 3).map(e => {
             const value = e.valueText ? `${e.label} ${e.valueText}` : e.label;
             const against = e.targetText ? ` against a ${e.targetText} target` : '';
-            return `  • ${value}${against} — ${phraseFor(e.movement, opts.pick)}.`;
+            const bullet = `  • ${value}${against} — ${phraseFor(e.movement, opts.pick)}.`;
+            const pace = safePaceText(e.paceText);
+            return pace ? `${bullet}\n    ${pace}` : bullet;
         });
 
         const header = opts.header || 'Where the year stands';
@@ -162,6 +206,7 @@
         PHRASES,
         classifyMovement,
         phraseFor,
+        safePaceText,
         buildYearStandingText,
         monthsLeftInYear,
         urgencyLine,

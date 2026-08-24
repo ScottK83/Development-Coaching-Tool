@@ -997,27 +997,50 @@
         return null;
     }
 
+    // Prefer the most recently-ending YTD period (real uploads sort alongside
+    // auto-generated ones; latest end date wins either way). Split out because
+    // the pace arithmetic below needs the raw row from the same period the YTD
+    // numbers came from, and two spellings of "the latest YTD upload" would
+    // eventually pick two different uploads.
+    //
+    // The closing date rides along with the key for the same reason. The pace
+    // arithmetic needs to know how much of the year that upload covers, and a
+    // second walk of ytdData to go and find that date is the near-copy this
+    // comment is already warning about.
+    function latestYtdPeriod() {
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        return Object.keys(ytd)
+            .map(k => {
+                const endText = ytd[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
+                return { key: k, endText: String(endText || ''), end: new Date(endText) };
+            })
+            .filter(x => !isNaN(x.end))
+            .sort((a, b) => b.end - a.end)[0] || null;
+    }
+
+    function latestYtdKey() {
+        return latestYtdPeriod()?.key || null;
+    }
+
+    // The raw YTD row rather than the analysed metrics. Analysis keeps the
+    // values and drops the volume columns, and a volume-weighted projection
+    // without totalCalls or surveyTotal is a straight average wearing a
+    // disguise.
+    function getYtdEmployeeRow(employeeName) {
+        const key = latestYtdKey();
+        if (!key) return null;
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        return ytd[key]?.employees?.find(e => e.name === employeeName) || null;
+    }
+
     // Fetch YTD-level metric analysis for a single employee, for cross-checking
     // weekly numbers against longer-run performance. Returns a Map keyed by
     // metricKey. Returns null if no YTD data is available.
     function getYtdMetricsMapForEmployee(employeeName) {
-        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-        const ytdKeys = Object.keys(ytd);
-        if (!ytdKeys.length) return null;
-
-        // Prefer the most recently-ending YTD period (real uploads sort
-        // alongside auto-generated ones; latest end date wins either way).
-        const latestKey = ytdKeys
-            .map(k => {
-                const endText = ytd[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
-                return { k, end: new Date(endText) };
-            })
-            .filter(x => !isNaN(x.end))
-            .sort((a, b) => b.end - a.end)[0]?.k;
+        const latestKey = latestYtdKey();
         if (!latestKey) return null;
 
-        const ytdPeriod = ytd[latestKey];
-        const emp = ytdPeriod?.employees?.find(e => e.name === employeeName);
+        const emp = getYtdEmployeeRow(employeeName);
         if (!emp) return null;
 
         const analyzeFn = window.DevCoachModules?.metricTrends?.analyzeTrendMetrics
@@ -1769,11 +1792,262 @@
             focusText = `\n\n${pick(MK_ALL_GOOD)}`;
         }
 
-        const yearBlock = buildYearStandingBlock(employeeName, allMetrics);
+        // ytdMap is already built for the focal point; handing it over saves a
+        // second full YTD analysis pass per associate on a bulk generate.
+        const yearBlock = buildYearStandingBlock(employeeName, allMetrics, ytdMap);
         let message = `${pick(MK_OPENERS)(firstName)} ${praiseText}${focusText}`;
         if (yearBlock) message += `\n\n${yearBlock}`;
         message += `\n\n${pick(MK_CLOSERS)}`;
         return message;
+    }
+
+    // Three bullets is as much of a standings block as a Monday message can
+    // carry before it stops being read, and two pace sentences under them is
+    // as much arithmetic as still reads like coaching.
+    const YEAR_STANDING_LIMIT = 3;
+    const YEAR_PACE_LINES = 2;
+
+    // The near-term stretch a pace sentence describes first. Four weeks is a
+    // month, which is a length of time somebody can picture themselves holding
+    // a number for.
+    const YEAR_PACE_STRETCH = 4;
+
+    /**
+     * The best full week they have actually posted this year for one metric.
+     *
+     * This is the ceiling on what a pace sentence is allowed to ask for, and it
+     * exists because the required average has no ceiling of its own. Late in a
+     * year with most of the volume banked, "what the rest of the year has to
+     * average" comes back at 343 seconds against a 426 second target: the
+     * arithmetic is really saying "not this year", but it says it in a voice
+     * that sounds like a plan. Nobody reading that believes it, and once they
+     * have been handed one number they know is impossible they stop believing
+     * the next one too. Their own best week is a bar somebody in the room has
+     * actually cleared, so an ask above it is one we do not make at all.
+     *
+     * Thin weeks are skipped on the same floor calcWeekDeltas puts on its
+     * baseline: a six call week at 100% is not a week anybody can repeat.
+     */
+    function bestWeekValue(employeeName, metricKey, yearKeys) {
+        const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
+        const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
+        let best = null;
+        (yearKeys || []).forEach(key => {
+            const emp = weekly[key]?.employees?.find(e => e.name === employeeName);
+            if (!emp) return;
+            const calls = parseInt(emp.totalCalls, 10);
+            if (Number.isFinite(calls) && calls < MIN_BASELINE_CALLS) return;
+            const value = parseFloat(emp[metricKey]);
+            if (!Number.isFinite(value)) return;
+            if (best === null || (reverse ? value < best : value > best)) best = value;
+        });
+        return best;
+    }
+
+    // A required average of 104% is arithmetic, not an ask. futures.isAchievable
+    // makes the same judgement for the Futures table but is not exported, so its
+    // two live conditions are restated here rather than reached for.
+    function askIsPossible(metricKey, value) {
+        if (!Number.isFinite(value) || value <= 0) return false;
+        const unit = window.METRICS_REGISTRY?.[metricKey]?.unit || '';
+        return !(unit === '%' && value > 100);
+    }
+
+    /**
+     * The pace sentence for one slipping metric, or nothing.
+     *
+     * The number it asks for is the number the Futures tab asks for: what the
+     * rest of the year has to average for the year figure to land on target,
+     * weighted by the volume that actually carries it. Two surfaces quoting two
+     * different answers to the same question is how a coaching conversation
+     * gets argued instead of had, so this borrows futures' arithmetic whole
+     * rather than keeping a second copy of it here.
+     *
+     * The stretch it describes starts at a month and widens to the rest of the
+     * year when a month does not move the figure far enough to be worth
+     * printing. That is not a presentational choice. Four weeks of good work
+     * against a year with forty thousand calls already banked in it moves the
+     * YTD number by a tenth of a point, and "brings the year to 91.3%" printed
+     * under a bullet that just said 91.2% reads as a rounding error, which is
+     * exactly what moveIsNoise is there to catch.
+     */
+    function buildYearPaceText(entry, context) {
+        const rp = window.DevCoachModules?.rankProjection;
+        const futures = window.DevCoachModules?.futures;
+        if (!rp?.buildPaceClause || !futures?.calculateRequiredAverage) return '';
+
+        const rankKey = entry.rankKey;
+        const metricKey = entry.metricKey;
+        const ytdMetric = context.ytdMap.get(metricKey);
+        if (!ytdMetric) return '';
+        if (!rp.isProjectable(rankKey, context.ytdRow)) return '';
+
+        const current = Number(ytdMetric.employeeValue);
+        const target = Number(ytdMetric.target);
+        if (!Number.isFinite(current) || !Number.isFinite(target)) return '';
+
+        const weekInfo = context.weekInfo;
+        const weeksLeft = weekInfo.weeksRemaining;
+        const volume = futures.projectedVolume(context.ytdRow, context.rates, metricKey, weekInfo);
+        // With no volume columns to weight by, week counting is what is left.
+        // It is what futures falls back to and it is honest enough as long as
+        // nothing downstream dresses it up as more than a guess.
+        const banked = volume ? volume.done : weekInfo.weeksCompleted;
+        const perWeek = volume ? volume.perWeek : 1;
+        if (!(perWeek > 0) || !(banked >= 0)) return '';
+
+        const ask = futures.calculateRequiredAverage(current, weekInfo.weeksCompleted, weeksLeft, target, volume);
+        if (!askIsPossible(metricKey, ask)) return '';
+
+        // No weekly uploads to read is no evidence either way, and that gets the
+        // same answer as an ask above their best week does: nothing.
+        const reverse = typeof isReverseMetric === 'function' && isReverseMetric(metricKey);
+        const ceiling = bestWeekValue(context.employeeName, metricKey, weekInfo.yearKeys);
+        if (ceiling === null || (reverse ? ask < ceiling : ask > ceiling)) return '';
+
+        const stretches = weeksLeft > YEAR_PACE_STRETCH ? [YEAR_PACE_STRETCH, weeksLeft] : [weeksLeft];
+        let clause = '';
+        stretches.some(periods => {
+            const projected = rp.projectValue(current, banked, ask, periods * perWeek);
+            if (projected === null) return false;
+            if (rp.moveIsNoise(rankKey, projected - current)) return false;
+            clause = rp.buildPaceClause({
+                rankKey,
+                currentValue: current,
+                target,
+                assumedValue: ask,
+                projectedValue: projected,
+                periods,
+                // The real volumes are in hand here, so the period count that
+                // crosses the target is walked rather than recovered from the
+                // projection, which is the better of the two answers wherever
+                // it is available.
+                periodsToTarget: rp.periodsToReach({
+                    currentValue: current,
+                    volumeSoFar: banked,
+                    volumePerPeriod: perWeek,
+                    assumedValue: ask,
+                    goalValue: target,
+                    isReverse: reverse,
+                    maxPeriods: weeksLeft
+                }),
+                maxPeriods: weeksLeft
+            });
+            return !!clause;
+        });
+        return clause;
+    }
+
+    /**
+     * How much of the year is behind this associate, and how much is ahead.
+     *
+     * futures.estimateWeekCounts answers a different question than the one this
+     * arithmetic asks. It counts weekly upload FILES for the year, and the
+     * ordinary state of the folder is a dozen weekly files sitting beside a YTD
+     * file that closed in July, because people upload the YTD file and stop
+     * bothering with the weeks. Read off the file count, a message written in
+     * late August told an associate there were forty weeks of the year left to
+     * fix things in, and worked out the average it asked them to hold against
+     * forty weeks of call volume the calendar does not contain.
+     *
+     * That error only ever runs one way, which is what makes it worse than a
+     * wrong number. Inflating the volume still to come drags the required
+     * average toward the target, so the ask always comes out softer than the
+     * truth, and the ceiling below refuses to print any ask better than the
+     * associate's best posted week. An ask that has been quietly softened
+     * clears that gate. The bug did not just misstate a figure, it manufactured
+     * the sentence the gate exists to withhold.
+     *
+     * So the weeks come off the closing date of the YTD upload the values
+     * themselves came from. That is the rule buildFuturesData settled on, and
+     * the reason futures exports weeksCompletedThroughDate at all: same upload,
+     * same denominator, same required average on both surfaces. The alternative
+     * of asking futures for a corrected count wholesale means running
+     * buildFuturesData, which builds the entire team table, once per associate
+     * inside a loop that already runs once per associate.
+     *
+     * Nothing is printed when the count cannot be established, or when the
+     * newest YTD upload belongs to a year that is already over. Last year's
+     * values measured against this year's calendar is not a pace, and the
+     * failure mode here has to stay "say nothing" rather than "say something
+     * gentler than the truth".
+     */
+    function yearPaceWeekInfo() {
+        const futures = window.DevCoachModules?.futures;
+        if (!futures?.estimateWeekCounts || typeof futures.weeksCompletedThroughDate !== 'function') return null;
+
+        // The same upload getYtdEmployeeRow reads the values out of, on purpose:
+        // values and denominator have to describe the same stretch of the year.
+        const ytdPeriod = latestYtdPeriod();
+        if (!ytdPeriod) return null;
+
+        const weekInfo = futures.estimateWeekCounts();
+        if (!weekInfo) return null;
+
+        // The four-digit prefix rather than the parsed Date. "2026-01-01" is UTC
+        // midnight, and every local getter west of Greenwich reads it back as
+        // December 31 of the year before, which is the one day where being an
+        // hour out moves the answer into a different year.
+        const stamped = /^(\d{4})-/.exec(ytdPeriod.endText);
+        const year = stamped ? parseInt(stamped[1], 10) : ytdPeriod.end.getFullYear();
+        if (year !== weekInfo.currentYear) return null;
+
+        const weeksDone = futures.weeksCompletedThroughDate(ytdPeriod.endText, ytdPeriod.end);
+        if (!(weeksDone > 0)) return null;
+
+        return {
+            currentYear: weekInfo.currentYear,
+            totalWeeks: weekInfo.totalWeeks,
+            weeksCompleted: weeksDone,
+            weeksRemaining: Math.max(0, weekInfo.totalWeeks - weeksDone),
+            // The weekly keys are left exactly as they came. Two things read
+            // them, the forward run rate and the best-week ceiling, and both are
+            // asking what is on file rather than what the calendar says.
+            yearKeys: weekInfo.yearKeys
+        };
+    }
+
+    /**
+     * Fill in the pace sentences, on the lines that need one.
+     *
+     * Slipping lines only. Somebody gaining ground can already see that what
+     * they are doing is working, and a second paragraph of arithmetic under
+     * good news reads as a lecture. The slipping lines are also the ones with
+     * months left to act on, which is why the block leads with them in the
+     * first place.
+     *
+     * Every piece of this is optional at call time. rank-projection absent,
+     * futures absent, no YTD upload, an upload left over from a year already
+     * finished, no weeks left in the year: the block renders exactly as it did
+     * before any of it existed.
+     */
+    function attachYearPace(entries, employeeName, ytdMap) {
+        const futures = window.DevCoachModules?.futures;
+        if (!futures?.estimateWeekCounts) return;
+
+        const slipping = entries.filter(e => e.movement === 'slipping' && e.rankKey);
+        if (!slipping.length) return;
+
+        const ytdRow = getYtdEmployeeRow(employeeName);
+        const map = ytdMap || getYtdMetricsMapForEmployee(employeeName);
+        if (!ytdRow || !map || typeof map.get !== 'function') return;
+
+        const weekInfo = yearPaceWeekInfo();
+        if (!weekInfo || !(weekInfo.weeksRemaining > 0)) return;
+
+        const rates = futures.weeklyVolumeRates
+            ? (futures.weeklyVolumeRates(weekInfo.yearKeys) || {})[employeeName] || null
+            : null;
+
+        const context = { employeeName, ytdMap: map, ytdRow, weekInfo, rates };
+        let written = 0;
+        slipping.forEach(entry => {
+            if (written >= YEAR_PACE_LINES) return;
+            const pace = buildYearPaceText(entry, context);
+            if (!pace) return;
+            entry.paceText = pace;
+            written += 1;
+        });
     }
 
     /**
@@ -1782,8 +2056,14 @@
      * Ranks decide the direction and are then discarded — associates see which
      * way they are moving, never where they sit. A number would have them
      * comparing themselves to a colleague; a direction has them moving.
+     *
+     * The direction alone was half a message, so the lines that are going the
+     * wrong way also carry what holding a particular number would do to the
+     * year figure. That sentence never mentions a position either; see
+     * buildYearPaceText, and yearStanding.safePaceText, which refuses one that
+     * does.
      */
-    function buildYearStandingBlock(employeeName, allMetrics) {
+    function buildYearStandingBlock(employeeName, allMetrics, ytdMap) {
         const standing = window.DevCoachModules?.yearStanding;
         if (!standing?.gatherYearMovement) return '';
 
@@ -1791,7 +2071,11 @@
         if (!movement) return '';
 
         // Rank keys differ from registry keys, so map back to the metric name
-        // the associate would actually recognise.
+        // the associate would actually recognise. Reliability has no row here
+        // and must not gain one: it is hours missed against an annual budget
+        // rather than an average, so there is no pace to hold and no honest way
+        // to project it, quite apart from what mailing somebody a projection of
+        // their attendance would amount to.
         const RANK_TO_METRIC = {
             aht: 'aht',
             adherence: 'scheduleAdherence',
@@ -1815,6 +2099,10 @@
 
             const metric = byKey[metricKey];
             entries.push({
+                // Both keys ride along so the pace pass can find its way back
+                // to the metric after the sort has moved the rows around.
+                rankKey,
+                metricKey,
                 label: window.METRICS_REGISTRY?.[metricKey]?.label || metricKey,
                 valueText: metric ? fmtVal(metric) : '',
                 targetText: metric ? fmtTarget(metric) : '',
@@ -1827,8 +2115,11 @@
         // Lead with what slipped — that is the part with months left to fix.
         entries.sort((a, b) => (b.movement === 'slipping' ? 1 : 0) - (a.movement === 'slipping' ? 1 : 0));
 
+        // Only the lines that will actually be printed are worth the work.
+        attachYearPace(entries.slice(0, YEAR_STANDING_LIMIT), employeeName, ytdMap);
+
         return standing.buildYearStandingText(entries, {
-            limit: 3,
+            limit: YEAR_STANDING_LIMIT,
             pick,
             closer: standing.urgencyLine(new Date())
         });
@@ -3550,7 +3841,15 @@
         generateMonthlyCheckinMessage,
         generateQuarterlyCheckinMessage,
         generateGrowthMessage,
-        showGrowthModal
+        showGrowthModal,
+        // Exported for the pace tests rather than for any caller. These two
+        // decide what an associate is told the rest of their year has to look
+        // like, and the last defect in them was invisible from the message: a
+        // required average that has been softened reads exactly like one that
+        // has not. Reachable without a DOM, a rendered block or a clipboard in
+        // the way, they can be held to the Futures table directly.
+        yearPaceWeekInfo,
+        attachYearPace
     };
 })();
 

@@ -573,6 +573,25 @@
 
         var thinVolume = {};
 
+        // Both near misses below are the same question asked about the same
+        // period, and the only thing that ever differed between the two call
+        // sites was a dropped argument. The celebrated branch passed five where
+        // the missed branch passed six, leaving `data` undefined, and `data` is
+        // what carries the rankings buildNearMissPace needs to find the door.
+        // So every associate who won something AND had a near miss got the
+        // placing sentence with no pace behind it, while the identical near miss
+        // fetched through nearMissFor got the full "top 10 sits at 94.6%" tail.
+        // Same person, same week, two different direct messages depending on
+        // which button the manager pressed.
+        //
+        // Binding the period-wide arguments once is what stops that being
+        // expressible again: a caller can only supply the row and the name,
+        // which are the only two things that genuinely vary between the two.
+        var nearMissYear = celebrationYear(data.periodKey || periodKey);
+        var nearMissOn = function(row, name) {
+            return findNearMiss(row, name, tiers, nearMissYear, ranked, data);
+        };
+
         data.rankings.forEach(function(r) {
             if (!data.teamMembers.has(r.name)) return;
             if (scope?.isInScope && !scope.isInScope(r.name)) return;
@@ -670,9 +689,7 @@
                     achievements: achievements,
                     // A win on one metric and a near miss on another are both
                     // true, and the private message is the place to say so.
-                    nearMiss: volume.ok
-                        ? findNearMiss(r, r.name, tiers, celebrationYear(data.periodKey || periodKey), ranked)
-                        : null
+                    nearMiss: volume.ok ? nearMissOn(r, r.name) : null
                 });
             }
         });
@@ -710,8 +727,7 @@
                 return;
             }
             var info = explainNoCelebration(data, name, tiers, ranked);
-            info.nearMiss = findNearMiss(_rowFor(data, name), name, tiers,
-                celebrationYear(data.periodKey || periodKey), ranked);
+            info.nearMiss = nearMissOn(_rowFor(data, name), name);
             missed.push(info);
         });
         missed.sort(function(a, b) {
@@ -733,6 +749,230 @@
     // standard top-10 bar this is ranks 11 through 15.
     var NEAR_MISS_WINDOW = 5;
 
+    // The longest pace worth naming. Ten periods is most of a quarter of weeks,
+    // and the projection copy spells counts up to ten as words. Past that the
+    // honest answer is that the door is not in reach from here, and printing
+    // "17 weeks at 95.7%" instead of saying nothing hands somebody a number they
+    // will never act on and will resent having been given.
+    var MAX_PACE_PERIODS = 10;
+
+    // Period types a "one more of the same" pace can be told about, and the noun
+    // it gets told in. A day file is too small a slice to hold a pace to, and a
+    // quarter or a year has no next slice the same size that anybody is going to
+    // work through, so neither is listed and the clause simply does not appear
+    // for them.
+    var PACE_NOUN_BY_TYPE = {
+        week: 'week',
+        'week-in-progress': 'week',
+        month: 'month',
+        'month-to-date': 'month',
+        'month-agg': 'month'
+    };
+
+    function _rankProjection() {
+        return (window.DevCoachModules && window.DevCoachModules.rankProjection) || null;
+    }
+
+    function _registryKeyFor(metricKey) {
+        return METRIC_RANK_LABELS[metricKey]?.registry || metricKey;
+    }
+
+    function _metricIsReverse(metricKey) {
+        var registryKey = _registryKeyFor(metricKey);
+        if (typeof window.isReverseMetric === 'function') {
+            try { return Boolean(window.isReverseMetric(registryKey)); } catch (e) { /* fall through */ }
+        }
+        return Boolean(window.METRICS_REGISTRY?.[registryKey]?.isReverse);
+    }
+
+    /**
+     * What one more period of the same size is called here.
+     *
+     * Falls back to the span in the key when the upload carried no period type,
+     * the same way periodNoun does, and answers null rather than guessing
+     * whenever the slice is a day, a quarter or a year. The clause this feeds
+     * says "four weeks at 95.7%", so the noun has to name a stretch the
+     * associate is about to work through. "Four years at 95.7%" is arithmetic
+     * wearing the clothes of a plan.
+     */
+    function pacePeriodNoun(periodKey) {
+        var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
+        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        var daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        var meta = (weekly[periodKey] || ytd[periodKey] || daily[periodKey] || {}).metadata || {};
+        if (meta.periodType) return PACE_NOUN_BY_TYPE[meta.periodType] || null;
+
+        var parts = String(periodKey || '').split('|');
+        if (parts.length < 2) return null;
+        var start = new Date(parts[0] + 'T00:00:00');
+        var end = new Date(parts[1] + 'T00:00:00');
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+
+        var days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+        if (days < 2) return null;
+        if (days <= 8) return 'week';
+        if (days <= 31) return 'month';
+        return null;
+    }
+
+    /**
+     * The volume behind the number on this row, in whatever the metric weighs in.
+     *
+     * Surveys for the survey metrics and calls for everything else, matching
+     * both buildYtdAggregateForYear and the split rankProjection already keeps
+     * in SURVEY_WEIGHTED_RANK_KEYS. A hundred calls carrying two surveys is two
+     * responses worth of evidence about Rep Satisfaction, and weighting that by
+     * the hundred would have four good weeks barely shifting a figure that in
+     * truth turns over completely every month.
+     *
+     * Null whenever the number is missing or zero. That is deliberately stricter
+     * than rankProjection.isProjectable, which lets an unknown volume through so
+     * that an upload without the column does not silence every celebration on
+     * the board at once. The gate can afford to be generous because it is only
+     * deciding whether to stay quiet about a pace; the arithmetic cannot, because
+     * a blend run against an invented volume produces a sentence indistinguishable
+     * from a real one. So an unknown volume keeps the near miss and loses the
+     * tail.
+     */
+    function paceVolumeFor(row, metricKey) {
+        var projection = _rankProjection();
+        var surveyWeighted = projection?.SURVEY_WEIGHTED_RANK_KEYS?.has?.(metricKey);
+        var raw = surveyWeighted ? row?.surveyTotal : row?.totalCalls;
+        if (raw === undefined || raw === null || raw === '') return null;
+        var volume = parseFloat(raw);
+        return Number.isFinite(volume) && volume > 0 ? volume : null;
+    }
+
+    // The precision the associate reads the metric at, so the figure named in the
+    // ask is the figure they will see on their own report rather than one that
+    // rounds to it.
+    function _paceStepFor(metricKey) {
+        var unit = window.METRICS_REGISTRY?.[_registryKeyFor(metricKey)]?.unit;
+        return (unit === 'sec' || unit === '#') ? 1 : 0.1;
+    }
+
+    /**
+     * The pace to ask for: the door plus one noise threshold, and no more.
+     *
+     * There were two defensible ways to pick this number and only one of them
+     * survives contact with somebody reading it. Solving for a round number of
+     * weeks produces an assumed value nobody can place: "eleven weeks" is tidy,
+     * but "97.3%" is a figure with no meaning attached to it, and the first
+     * question back is always "why that?". The door plus the smallest move that
+     * counts as a real move answers that question in the sentence itself. Top 10
+     * sits at 94.6, a point is what it takes for adherence to have moved at all
+     * rather than wobbled, so 95.6 is the number that puts you plainly past the
+     * door instead of oscillating around it.
+     *
+     * It is also the smallest ask the clause will accept. buildDoorClause refuses
+     * an assumed value equal to the door, and it is right to: the blend converges
+     * on whatever is held, so holding exactly the door value approaches it forever
+     * and "holding it keeps you there" would be false. One noise threshold past is
+     * the least that makes that second clause true.
+     *
+     * Snapped away from the door rather than to nearest, so the printed figure is
+     * never a softer ask than the one periodsToReach was run against. A percentage
+     * that lands at 100 or a reverse metric that lands at zero gives up instead:
+     * a pace nobody can hold is not a pace, and "hold 100.0% and it keeps you
+     * there" is the kind of promise that costs a coach the next ten things they
+     * say.
+     */
+    function assumedPaceValue(metricKey, doorValue) {
+        var door = parseFloat(doorValue);
+        if (!Number.isFinite(door)) return null;
+
+        var registryKey = _registryKeyFor(metricKey);
+        var margin = typeof window.getMetricNoiseThreshold === 'function'
+            ? window.getMetricNoiseThreshold(registryKey)
+            : 1;
+        if (!Number.isFinite(margin) || margin <= 0) return null;
+
+        var reverse = _metricIsReverse(metricKey);
+        var step = _paceStepFor(metricKey);
+        var raw = reverse ? door - margin : door + margin;
+        var snapped = reverse
+            ? Math.floor((raw + 1e-9) / step) * step
+            : Math.ceil((raw - 1e-9) / step) * step;
+        var assumed = Number(snapped.toFixed(6));
+
+        if (reverse) return assumed > 0 ? assumed : null;
+        if (window.METRICS_REGISTRY?.[registryKey]?.unit === '%' && assumed >= 100) return null;
+        return assumed;
+    }
+
+    /**
+     * Everything the door clause needs, or nothing at all.
+     *
+     * The volumes are the honest part and the part worth reading twice. Both come
+     * off the ranking row, and both are the same figure: a ranking row covers one
+     * uploaded period, so the volume behind the value IS one period of work, and
+     * one more period of the same size adds that much again. Nothing here is
+     * assumed, estimated or averaged from elsewhere, which is why an unknown
+     * volume drops the clause rather than substituting a typical week.
+     *
+     * The blend it feeds is over the associate's running figure, not over next
+     * week's table. That is the honest reading and it is the one the door makes
+     * possible: the value standing at top 10 barely moves across the year even as
+     * the names on it shuffle every week, so "get your number to 95.6% and you
+     * are through" survives where "you will be 9th" does not. The count answers
+     * how long at that pace before their number is a door-clearing number.
+     */
+    function buildNearMissPace(row, best, data) {
+        var projection = _rankProjection();
+        if (!projection || !best || !row) return null;
+        // Belt and braces against reliability, which SHOUTOUT_EXCLUDED_METRICS has
+        // already kept out of findNearMiss. It is hours missed against an annual
+        // budget rather than an average, so pacing it is a category error before
+        // it is anything else, and a projection of somebody's attendance standing
+        // is the single line in this app most likely to become a real problem for
+        // a real person. Two locks on that door is the right number.
+        if (typeof projection.isProjectable !== 'function') return null;
+        if (!projection.isProjectable(best.metricKey, row)) return null;
+
+        var rankings = data?.rankings;
+        if (!rankings || !rankings.length) return null;
+
+        var noun = pacePeriodNoun(data?.periodKey || '');
+        if (!noun) return null;
+
+        var volume = paceVolumeFor(row, best.metricKey);
+        if (volume === null) return null;
+
+        var door = projection.thresholdValueForRank(rankings, best.metricKey, best.bar);
+        if (door === null || door === undefined) return null;
+
+        var assumed = assumedPaceValue(best.metricKey, door);
+        if (assumed === null) return null;
+
+        var current = parseFloat(best.value);
+        if (!Number.isFinite(current)) return null;
+        // Asking somebody to move by less than the metric's own measurement wobble
+        // is asking them to do nothing and calling it a plan.
+        if (projection.moveIsNoise(best.metricKey, assumed - current)) return null;
+
+        var periods = projection.periodsToReach({
+            currentValue: current,
+            volumeSoFar: volume,
+            volumePerPeriod: volume,
+            assumedValue: assumed,
+            goalValue: door,
+            isReverse: _metricIsReverse(best.metricKey),
+            maxPeriods: MAX_PACE_PERIODS
+        });
+        // Zero means they are already past the door, which cannot be true of a
+        // near miss and is not a sentence worth building either way.
+        if (!periods) return null;
+
+        return {
+            rankKey: best.metricKey,
+            doorRank: best.bar,
+            doorValue: door,
+            assumedValue: assumed,
+            periods: periods,
+            periodNoun: noun
+        };
+    }
+
     /**
      * The best placing that just missed the bar, if there is one.
      *
@@ -741,8 +981,16 @@
      * ignores the number, which is the same mistake the shout-out target gate
      * exists to prevent: it would have Kristin, sixth on the floor at 73.1%
      * against an 83% bar, reading that she is nearly there.
+     *
+     * That gate is also the only "is this door in reach" rule there is. The pace
+     * hung off the winner below does not get a second opinion on whether the
+     * placing is worth mentioning; it only works out what would open the door
+     * that this gate has already decided is worth naming, and stays quiet when it
+     * cannot work that out honestly. `data` is optional for exactly that reason:
+     * a caller that has no rankings to hand still gets the near miss it always
+     * got, minus the tail.
      */
-    function findNearMiss(row, name, tiers, year, ctx) {
+    function findNearMiss(row, name, tiers, year, ctx, data) {
         if (!row) return null;
         var maxTier = tiers[tiers.length - 1];
         var context = ctx || {};
@@ -769,6 +1017,7 @@
             }
         });
 
+        if (best) best.pace = buildNearMissPace(row, best, data);
         return best;
     }
 
@@ -798,7 +1047,7 @@
         if (!volumeVerdict(row).ok) return null;
 
         return findNearMiss(row, name, getActiveTiers(),
-            celebrationYear(data.periodKey || periodKey), buildDisplayRanks(data));
+            celebrationYear(data.periodKey || periodKey), buildDisplayRanks(data), data);
     }
 
     // Said more than one way, because a sweep sends eighteen of these at once
@@ -830,11 +1079,38 @@
         }
     ];
 
+    /**
+     * Where the door is, and what opens it.
+     *
+     * The line on its own has always stopped one sentence short. "94.1% has you
+     * at #14" tells somebody exactly where they are standing and nothing about
+     * what to do next, and the answer they reach for on their own is "try
+     * harder", which is not a number and cannot be checked against anything a
+     * week later.
+     *
+     * The tail is strictly optional. A projection module that is absent, a
+     * metric it will not pace, a volume it cannot read: every one of those has
+     * to leave the sentence exactly as it was rather than half-finish it, so the
+     * clause is only ever appended when it comes back whole.
+     */
+    function nearMissDoorClause(info) {
+        var projection = _rankProjection();
+        if (!projection || typeof projection.buildDoorClause !== 'function') return '';
+        if (!info || !info.pace) return '';
+        try {
+            return projection.buildDoorClause(info.pace) || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
     function describeNearMiss(info) {
         if (!info || !info.rank) return '';
         var value = formatMetricValue(info.metricKey, info.value);
         var spots = info.away === 1 ? 'spot' : 'spots';
-        return pick(NEAR_MISS_LINES)(info.label, value, info.rank, info.away, spots, info.bar);
+        var line = pick(NEAR_MISS_LINES)(info.label, value, info.rank, info.away, spots, info.bar);
+        var door = nearMissDoorClause(info);
+        return door ? line + ' ' + door : line;
     }
 
     /**
@@ -2255,6 +2531,11 @@
         findNearMiss: findNearMiss,
         nearMissFor: nearMissFor,
         describeNearMiss: describeNearMiss,
+        buildNearMissPace: buildNearMissPace,
+        nearMissDoorClause: nearMissDoorClause,
+        assumedPaceValue: assumedPaceValue,
+        paceVolumeFor: paceVolumeFor,
+        pacePeriodNoun: pacePeriodNoun,
         buildDisplayRanks: buildDisplayRanks,
         meetsCelebrationTarget: meetsCelebrationTarget,
         celebrationYear: celebrationYear,

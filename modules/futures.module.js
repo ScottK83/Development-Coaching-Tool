@@ -34,14 +34,23 @@
     // The "need to average" projection doesn't apply — it's "budget remaining".
     var CUMULATIVE_METRICS = new Set(['reliability']);
 
+    // The year is 52 weeks everywhere on this screen. It lives here rather than
+    // inside estimateWeekCounts because the YTD week count below has to clamp
+    // against the same number, and two 52s in one file is one 52 too many.
+    var TOTAL_WEEKS_IN_YEAR = 52;
+
     /**
      * Find the most recent real (non-auto) YTD upload for a year.
-     * Returns { employees, source } or null.
+     * Returns { employees, source, endDate, endDateText } or null.
+     *
+     * The end date is carried out because the caller needs to know how much of
+     * the year that upload actually covers, not just what is in it.
      */
     function findRealYtdUpload(year) {
         var ytd = _getYtdData();
         var best = null;
         var bestDate = 0;
+        var bestEndText = '';
 
         Object.keys(ytd).forEach(function (key) {
             var period = ytd[key];
@@ -54,16 +63,87 @@
             if (endDate.getTime() > bestDate) {
                 best = period;
                 bestDate = endDate.getTime();
+                bestEndText = String(endStr);
             }
         });
 
         if (best && best.employees) {
             return {
                 employees: best.employees,
-                source: best.metadata?.label || 'YTD upload'
+                source: best.metadata?.label || 'YTD upload',
+                endDate: new Date(bestDate),
+                endDateText: bestEndText
             };
         }
         return null;
+    }
+
+    // ISO date text pulled apart by hand rather than through a Date, because
+    // "2026-01-01" parses as UTC midnight and reads back as December 31 through
+    // the local getters in every timezone west of Greenwich. January 1 is the one
+    // date where being a day out moves the answer into a different year.
+    function _ymdParts(dateText) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateText || ''));
+        if (!m) return null;
+        return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) - 1, day: parseInt(m[3], 10) };
+    }
+
+    /*
+     * How many weeks of the year are already spent as of a date.
+     *
+     * The projection needs a denominator, and until this existed the only one on
+     * offer was "how many weekly files did somebody upload". Those are not the
+     * same question. A YTD upload closing on July 25 covers thirty weeks of the
+     * year whether the weekly folder holds thirty files, twelve, or none, and
+     * twelve is the ordinary case, because people upload the YTD file and stop
+     * bothering with the weeks. The screen then read twelve weeks done and forty
+     * to go, and every required average on it was computed against a year that
+     * was still two thirds ahead when in truth it was two thirds gone. It told
+     * people they had time they did not have.
+     *
+     * The rule chosen is whole weeks elapsed since January 1, ceil(dayOfYear / 7),
+     * clamped into 0..52. Two alternatives were rejected. Counting weekly files is
+     * the bug above. ISO week numbers do not fit a fixed 52-week year: an ISO year
+     * can hold 53 weeks, which drives weeksRemaining negative, and an early
+     * January date belongs to week 52 or 53 of the PRIOR ISO year, which would
+     * report a January 2 upload as a year already over. Day-of-year over seven has
+     * neither problem and agrees with the other denominator in this file, where 52
+     * weekly uploads is a full year. It rounds up because a part week already
+     * lived through is a week nobody gets back.
+     */
+    function weeksCompletedThroughDate(endDateText, endDate) {
+        var parts = _ymdParts(endDateText);
+        var year, month, day;
+        if (parts) {
+            year = parts.year; month = parts.month; day = parts.day;
+        } else if (endDate instanceof Date && !isNaN(endDate)) {
+            year = endDate.getFullYear(); month = endDate.getMonth(); day = endDate.getDate();
+        } else {
+            return null;
+        }
+        var dayOfYear = Math.round((Date.UTC(year, month, day) - Date.UTC(year, 0, 1)) / 86400000) + 1;
+        if (!Number.isFinite(dayOfYear)) return null;
+        var weeks = Math.ceil(dayOfYear / 7);
+        if (weeks < 0) weeks = 0;
+        if (weeks > TOTAL_WEEKS_IN_YEAR) weeks = TOTAL_WEEKS_IN_YEAR;
+        return weeks;
+    }
+
+    /*
+     * Write a weeks-completed figure into a week split.
+     *
+     * Both branches of buildFuturesData have to do this, and for a while only one
+     * of them did it properly, so the arithmetic lives here where a fix cannot
+     * land on one branch and miss the other. A count of zero or less is refused
+     * rather than written, which is how a caller learns its date was unreadable
+     * and it needs to try something else; the return value says which happened.
+     */
+    function applyWeeksCompleted(weekInfo, weeks) {
+        if (weeks === null || !Number.isFinite(weeks) || weeks <= 0) return false;
+        var capped = Math.min(weeks, weekInfo.totalWeeks);
+        weekInfo.weeksCompleted = capped;
+        weekInfo.weeksRemaining = Math.max(0, weekInfo.totalWeeks - capped);
+        return true;
     }
 
     /**
@@ -78,7 +158,7 @@
         });
 
         var weeksCompleted = yearKeys.length;
-        var totalWeeks = 52;
+        var totalWeeks = TOTAL_WEEKS_IN_YEAR;
         var weeksRemaining = Math.max(0, totalWeeks - weeksCompleted);
 
         return {
@@ -101,22 +181,18 @@
     ]);
 
     /**
-     * Aggregate YTD values directly from weekly data uploads.
-     * Uses the same rules as buildYtdAggregateForYear but WITHOUT the
-     * anchor pattern, so it always reflects the actual weekly uploads.
+     * Narrow a set of period keys down to a single granularity.
      *
-     * - Rate metrics: weighted average (by totalCalls or surveyTotal)
-     * - Cumulative metrics (reliability): summed
+     * Weekly, monthly and quarterly uploads routinely cover the same calendar
+     * days, and calls and surveys accumulate, so counting a month beside the four
+     * weeks inside it counts that volume twice. Matches buildYtdAggregateForYear's
+     * sourceTypePriority logic. Returns { keys, type }.
      */
-    function aggregateFromWeeklyData(yearKeys) {
+    function chooseSingleSourceKeys(yearKeys) {
         var wData = _getWeeklyData();
-
-        // Filter to one source type to avoid double-counting overlapping periods
-        // (e.g., weekly + monthly/quarterly covering the same timeframe).
-        // Matches buildYtdAggregateForYear's sourceTypePriority logic.
         var sourceTypePriority = ['week', 'week-in-progress', 'month', 'quarter', 'custom', 'daily'];
         var periodsByType = {};
-        yearKeys.forEach(function (weekKey) {
+        (yearKeys || []).forEach(function (weekKey) {
             var period = wData[weekKey];
             if (!period) return;
             var pType = period.metadata?.periodType || 'week';
@@ -131,13 +207,52 @@
                 break;
             }
         }
-        var filteredKeys = chosenType ? periodsByType[chosenType] : yearKeys;
+        return {
+            keys: chosenType ? periodsByType[chosenType] : (yearKeys || []),
+            type: chosenType
+        };
+    }
+
+    /**
+     * Aggregate YTD values directly from weekly data uploads.
+     * Uses the same rules as buildYtdAggregateForYear but WITHOUT the
+     * anchor pattern, so it always reflects the actual weekly uploads.
+     *
+     * - Rate metrics: weighted average (by totalCalls or surveyTotal)
+     * - Cumulative metrics (reliability): summed
+     */
+    function aggregateFromWeeklyData(yearKeys) {
+        var wData = _getWeeklyData();
+        var chosen = chooseSingleSourceKeys(yearKeys);
+        var filteredKeys = chosen.keys;
+        var chosenType = chosen.type;
 
         var empAgg = {}; // { name: { totalCalls, surveyTotal, reliability, weightedSums, weightedCounts } }
+
+        // How much of the calendar these periods actually cover. It is tracked
+        // here, while the periods are being read, rather than inferred later from
+        // the number of them, because the number of them answers a different
+        // question. Six monthly uploads are six periods and half a year. The
+        // caller needs the half year; see the fallback branch in buildFuturesData
+        // for what happened when it was handed the six.
+        var coverageEndText = '';
+        var coverageEndStamp = -1;
+        var weeksCovered = 0;
 
         filteredKeys.forEach(function (weekKey) {
             var period = wData[weekKey];
             if (!period || !period.employees) return;
+
+            weeksCovered += _periodWeekSpan(period, weekKey);
+            var endText = period.metadata?.endDate || (weekKey.indexOf('|') > -1 ? weekKey.split('|')[1] : '');
+            var endParts = _ymdParts(endText);
+            if (endParts) {
+                var endStamp = (endParts.year * 10000) + (endParts.month * 100) + endParts.day;
+                if (endStamp > coverageEndStamp) {
+                    coverageEndStamp = endStamp;
+                    coverageEndText = String(endText);
+                }
+            }
 
             period.employees.forEach(function (emp) {
                 if (!emp || !emp.name) return;
@@ -191,7 +306,21 @@
         var employees = [];
         Object.keys(empAgg).forEach(function (name) {
             var agg = empAgg[name];
-            var result = { name: name, reliability: agg.reliability, totalCalls: agg.totalCalls };
+
+            // surveyTotal travels with totalCalls because projectedVolume asks a
+            // row for whichever column its metric is weighted by, and the three
+            // survey metrics ask for this one. It was accumulated above and then
+            // dropped here, so parseFloat(undefined) came back NaN, projectedVolume
+            // returned null, and cxRepOverall, fcr and overallExperience quietly
+            // fell back to week counting while every call-weighted metric beside
+            // them on the same row was blended by volume. Two denominators in one
+            // table, and nothing on screen to say which row got which.
+            var result = {
+                name: name,
+                reliability: agg.reliability,
+                totalCalls: agg.totalCalls,
+                surveyTotal: agg.surveyTotal
+            };
 
             RATE_METRICS.forEach(function (mk) {
                 var totalWeight = agg.weightedCounts[mk] || 0;
@@ -205,20 +334,175 @@
 
         var sourceLabel = filteredKeys.length + ' ' + (chosenType || 'period') + (filteredKeys.length !== 1 ? 's' : '') + ' aggregated';
         return employees.length > 0
-            ? { employees: employees, source: sourceLabel, periodCount: filteredKeys.length, periodType: chosenType }
+            ? {
+                employees: employees,
+                source: sourceLabel,
+                periodCount: filteredKeys.length,
+                periodType: chosenType,
+                coverageEndText: coverageEndText,
+                weeksCovered: weeksCovered
+            }
             : null;
     }
 
+    // What a period type is nominally worth in weeks. Only consulted when a key
+    // carries no readable dates, which ordinary uploads always do carry. The old
+    // fallback was a flat one week for every type: right for the undated weekly
+    // key this is almost always reached by, and wrong by a factor of four for a
+    // month, an error that would then ride into a per-week run rate and out onto
+    // the screen.
+    var NOMINAL_WEEK_SPAN = {
+        week: 1,
+        'week-in-progress': 1,
+        month: TOTAL_WEEKS_IN_YEAR / 12,
+        quarter: TOTAL_WEEKS_IN_YEAR / 4,
+        daily: 1 / 7
+    };
+
     /**
-     * Calculate what an employee needs to average for the rest of the year
-     * to hit a specific target (for rate/averaged metrics only).
+     * Calendar weeks a period covers, from its start and end dates, falling back
+     * to what its declared period type is nominally worth.
      */
-    function calculateRequiredAverage(currentAvg, weeksCompleted, weeksRemaining, target) {
+    function _periodWeekSpan(period, periodKey) {
+        var meta = (period && period.metadata) || {};
+        var hasBar = String(periodKey || '').indexOf('|') > -1;
+        var start = _ymdParts(meta.startDate || (hasBar ? periodKey.split('|')[0] : ''));
+        var end = _ymdParts(meta.endDate || (hasBar ? periodKey.split('|')[1] : ''));
+        if (!start || !end) {
+            var nominal = NOMINAL_WEEK_SPAN[meta.periodType];
+            return nominal > 0 ? nominal : 1;
+        }
+        var days = Math.round(
+            (Date.UTC(end.year, end.month, end.day) - Date.UTC(start.year, start.month, start.day)) / 86400000
+        ) + 1;
+        if (!(days > 0)) return 1;
+        return days / 7;
+    }
+
+    /**
+     * Per-week call and survey volume for each employee, read off the weekly
+     * uploads on file for the year.
+     *
+     * This is the forward run rate: the weeks still to come are worth roughly
+     * what the weeks on hand are worth, and the weekly uploads are the only place
+     * that says what somebody is currently handling. A YTD file cannot answer it,
+     * because its per-week average is smeared across the whole year and hides
+     * exactly the change that matters, somebody moving onto a light schedule or
+     * off one. Volume is divided by calendar weeks covered rather than by period
+     * count, so a month upload is not mistaken for a week's worth of calls.
+     *
+     * Returns { name: { callsPerWeek, surveysPerWeek, weeks } }.
+     */
+    function weeklyVolumeRates(yearKeys) {
+        var wData = _getWeeklyData();
+        var chosen = chooseSingleSourceKeys(yearKeys);
+        var rates = {};
+
+        chosen.keys.forEach(function (periodKey) {
+            var period = wData[periodKey];
+            if (!period || !period.employees) return;
+            var span = _periodWeekSpan(period, periodKey);
+
+            period.employees.forEach(function (emp) {
+                if (!emp || !emp.name) return;
+                if (!rates[emp.name]) {
+                    rates[emp.name] = { calls: 0, surveys: 0, weeks: 0, callsPerWeek: null, surveysPerWeek: null };
+                }
+                var row = rates[emp.name];
+                var tc = parseFloat(emp.totalCalls);
+                var st = parseFloat(emp.surveyTotal);
+                if (Number.isFinite(tc)) row.calls += tc;
+                if (Number.isFinite(st)) row.surveys += st;
+                row.weeks += span;
+            });
+        });
+
+        Object.keys(rates).forEach(function (name) {
+            var row = rates[name];
+            if (row.weeks > 0) {
+                row.callsPerWeek = row.calls > 0 ? row.calls / row.weeks : null;
+                row.surveysPerWeek = row.surveys > 0 ? row.surveys / row.weeks : null;
+            }
+        });
+
+        return rates;
+    }
+
+    /**
+     * The weights for one employee and one metric: volume already banked, and
+     * volume the rest of the year is expected to carry.
+     *
+     * Which column counts is the same question buildYtdAggregateForYear answers
+     * with SURVEY_WEIGHTED, so the answer is taken from the same set. Returns null
+     * when the banked volume is missing or zero, which is the signal to fall back
+     * to week counts rather than to invent a weight.
+     */
+    function projectedVolume(ytdEmp, rate, metricKey, weekInfo) {
+        if (!ytdEmp || !weekInfo) return null;
+        var isSurvey = SURVEY_WEIGHTED.has(metricKey);
+        var done = parseFloat(isSurvey ? ytdEmp.surveyTotal : ytdEmp.totalCalls);
+        if (!Number.isFinite(done) || done <= 0) return null;
+
+        var perWeek = rate ? (isSurvey ? rate.surveysPerWeek : rate.callsPerWeek) : null;
+        if (!Number.isFinite(perWeek) || perWeek <= 0) {
+            // No weekly uploads to read a current run rate from. Spreading the
+            // banked volume evenly over the weeks it covers is the only remaining
+            // guess, and it lands on the same answer week counting would give,
+            // which is the right result when nothing better is known.
+            if (!(weekInfo.weeksCompleted > 0)) return null;
+            perWeek = done / weekInfo.weeksCompleted;
+        }
+
+        var remaining = perWeek * weekInfo.weeksRemaining;
+        if (!Number.isFinite(remaining) || remaining <= 0) return null;
+        return { done: done, remaining: remaining, perWeek: perWeek };
+    }
+
+    /*
+     * What the rest of the year has to average for the year to land on target.
+     *
+     * The weights matter more than the arithmetic here. A YTD figure in this app
+     * is volume-weighted and not a flat average of weeks: buildYtdAggregateForYear
+     * weights every rate metric by totalCalls, and the three survey metrics by
+     * surveyTotal, which is why SURVEY_WEIGHTED and RATE_METRICS exist above.
+     * This function used to blend by week count, and blending by week count only
+     * gives the same answer when every week carries identical volume, which no
+     * week does.
+     *
+     * The gap is not a rounding difference and it does not point one way. AHT is
+     * where it hurts most. Somebody who has handled 6,000 calls at 470 seconds and
+     * has since moved to a light schedule of 90 calls a week cannot drag the year
+     * back to 426, because the weeks left are worth a fraction of what is already
+     * banked. Week counting reported a required average that looked reachable,
+     * isAchievable waved it through, and the coaching conversation was built on a
+     * number that could not happen. Weighted the other way, a heavy final quarter
+     * after a quiet start, it overstates the climb and talks somebody out of a
+     * target still well within reach.
+     *
+     * So the weights are handed in. `volume` is { done, remaining } in whatever
+     * unit the metric is weighted by; when it is missing or unusable the function
+     * falls back to week counts, which is the old behaviour and the honest guess
+     * when nothing better is known. An upload with no call-count column still has
+     * to produce a number rather than blanking the screen.
+     *
+     * There is one implementation because there used to be two: calculateDailyTarget
+     * held a line-for-line copy of this formula, so the check-in summary and the
+     * table could quietly disagree the moment either was touched.
+     */
+    function calculateRequiredAverage(currentAvg, weeksCompleted, weeksRemaining, target, volume) {
         if (weeksRemaining <= 0) return null;
-        var totalNeeded = target * (weeksCompleted + weeksRemaining);
-        var currentTotal = currentAvg * weeksCompleted;
-        var required = (totalNeeded - currentTotal) / weeksRemaining;
-        return required;
+
+        var done = volume ? parseFloat(volume.done) : NaN;
+        var remaining = volume ? parseFloat(volume.remaining) : NaN;
+        var weighted = Number.isFinite(done) && done > 0 && Number.isFinite(remaining) && remaining > 0;
+
+        var weightDone = weighted ? done : weeksCompleted;
+        var weightLeft = weighted ? remaining : weeksRemaining;
+        if (!(weightLeft > 0) || !(weightDone >= 0)) return null;
+
+        var totalNeeded = target * (weightDone + weightLeft);
+        var currentTotal = currentAvg * weightDone;
+        return (totalNeeded - currentTotal) / weightLeft;
     }
 
     /**
@@ -292,21 +576,49 @@
         if (realYtd) {
             ytdEmployees = realYtd.employees;
             ytdSource = realYtd.source;
+            // The values now come from the YTD file, so the weeks have to come
+            // from it as well. estimateWeekCounts counted weekly uploads, and a
+            // YTD file closing at week 30 beside twelve weekly files was reported
+            // as twelve weeks done and forty to go, so the branch that is supposed
+            // to be the source of truth was the one telling people the year had
+            // barely started. The fallback branch below now asks the same question
+            // of its own periods; whichever data the screen is built on, weeks
+            // completed means calendar weeks elapsed and never a count of files.
+            applyWeeksCompleted(weekInfo, weeksCompletedThroughDate(realYtd.endDateText, realYtd.endDate));
         } else {
             // Fallback: aggregate from weekly data when no YTD upload exists
             var weeklyAgg = aggregateFromWeeklyData(weekInfo.yearKeys);
             if (weeklyAgg) {
                 ytdEmployees = weeklyAgg.employees;
                 ytdSource = weeklyAgg.source;
-                if (weeklyAgg.periodCount) {
-                    weekInfo.weeksCompleted = weeklyAgg.periodCount;
-                    weekInfo.weeksRemaining = Math.max(0, weekInfo.totalWeeks - weekInfo.weeksCompleted);
+                // Same rule as the YTD branch above, for the same reason: the
+                // values came from these periods, so the weeks come from the date
+                // those periods close on. This used to count the uploads instead,
+                // which is only right when every upload is a week. Six monthly
+                // files covering January through June reported six weeks done and
+                // forty-six to go, on the last day of June, and then every
+                // required average was blended against a year that had barely
+                // started while projectedVolume multiplied a perfectly good
+                // per-week rate by forty-six weeks that do not exist. The upload
+                // wizard offers month and quarter uploads and recommends them as a
+                // replacement for four or five weekly ones, so this is a path the
+                // app actively steers people onto, not a corner.
+                if (!applyWeeksCompleted(weekInfo, weeksCompletedThroughDate(weeklyAgg.coverageEndText))) {
+                    // Nothing in the uploads carried a readable end date. The
+                    // calendar span of the periods themselves is the last thing
+                    // left that knows a month is not a week, and on the undated
+                    // weekly keys this branch is actually reached by, it lands on
+                    // the same answer counting them used to give.
+                    applyWeeksCompleted(weekInfo, Math.ceil(weeklyAgg.weeksCovered));
                 }
             }
         }
 
         var targets = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[currentYear] || {};
         var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[currentYear] || {};
+
+        // Read once for the whole team rather than per employee per metric.
+        var volumeRates = weeklyVolumeRates(weekInfo.yearKeys);
 
         var results = [];
         teamMembers.forEach(function (empName) {
@@ -352,6 +664,7 @@
                 var currentlyMeeting, currentlyExceeding;
                 var budgetRemaining = null;
                 var exceedBudgetRemaining = null;
+                var volume = isCumulative ? null : projectedVolume(ytdEmp, volumeRates[empName], metricKey, weekInfo);
 
                 if (isCumulative) {
                     // Cumulative metrics (reliability): compare total used vs annual max
@@ -368,8 +681,8 @@
                         ? (isReverse ? (currentValue <= exceedTarget) : (currentValue >= exceedTarget))
                         : currentlyMeeting;
 
-                    requiredToMeet = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, meetTarget);
-                    requiredToExceed = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, exceedTarget);
+                    requiredToMeet = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, meetTarget, volume);
+                    requiredToExceed = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, exceedTarget, volume);
                     meetAchievable = requiredToMeet !== null ? isAchievable(metricKey, requiredToMeet) : null;
                     exceedAchievable = requiredToExceed !== null ? isAchievable(metricKey, requiredToExceed) : null;
                 }
@@ -388,7 +701,11 @@
                     hasExceedBand: !!bandConfig,
                     isCumulative: isCumulative,
                     budgetRemaining: budgetRemaining,
-                    exceedBudgetRemaining: exceedBudgetRemaining
+                    exceedBudgetRemaining: exceedBudgetRemaining,
+                    // Carried so the check-in summary blends on the same weights
+                    // the table did. Passing week counts there and volume here is
+                    // how the two surfaces used to disagree about the same person.
+                    volume: volume
                 };
             });
 
@@ -684,16 +1001,22 @@
     }
 
     /**
-     * Calculate required daily average for a rate metric to reach a target.
-     * Uses weeks completed/remaining to compute overall required average,
-     * then converts to a daily figure based on working days left.
+     * The figure the check-in summary quotes as a daily aim.
+     *
+     * This used to hold its own copy of the required-average formula, identical
+     * line for line to calculateRequiredAverage, which meant the table and the
+     * check-in could be given different weights and print different numbers for
+     * the same person on the same day. The name is kept because that is what the
+     * check-in asks for, but the arithmetic now lives in exactly one place.
+     *
+     * Note it returns the required AVERAGE for the rest of the year, not a value
+     * divided across working days. That was always true, despite the old comment
+     * claiming a conversion; an average is in fact the right thing for the
+     * check-in to quote, because "hold at or above this each day" is how a person
+     * hits an average.
      */
-    function calculateDailyTarget(currentAvg, weeksCompleted, weeksRemaining, target) {
-        if (weeksRemaining <= 0) return null;
-        var totalNeeded = target * (weeksCompleted + weeksRemaining);
-        var currentTotal = currentAvg * weeksCompleted;
-        var required = (totalNeeded - currentTotal) / weeksRemaining;
-        return required;
+    function calculateDailyTarget(currentAvg, weeksCompleted, weeksRemaining, target, volume) {
+        return calculateRequiredAverage(currentAvg, weeksCompleted, weeksRemaining, target, volume);
     }
 
     /**
@@ -774,7 +1097,7 @@
             // Calculate required daily average
             var dailyTarget = null;
             if (!m.isCumulative) {
-                var requiredAvg = calculateDailyTarget(m.currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, nextTarget);
+                var requiredAvg = calculateDailyTarget(m.currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, nextTarget, m.volume);
                 if (requiredAvg !== null && isAchievable(metricKey, requiredAvg)) {
                     dailyTarget = requiredAvg;
                 }
@@ -882,7 +1205,21 @@
         renderFutures: renderFutures,
         buildFuturesData: buildFuturesData,
         buildCheckInSummary: buildCheckInSummary,
-        showCheckInModal: showCheckInModal
+        showCheckInModal: showCheckInModal,
+        // Exported for the projection tests. These are the pieces that decide
+        // what a person is told they have to do for the rest of the year, and
+        // they are worth pinning down without a DOM in the way.
+        calculateRequiredAverage: calculateRequiredAverage,
+        calculateDailyTarget: calculateDailyTarget,
+        weeksCompletedThroughDate: weeksCompletedThroughDate,
+        estimateWeekCounts: estimateWeekCounts,
+        findRealYtdUpload: findRealYtdUpload,
+        weeklyVolumeRates: weeklyVolumeRates,
+        projectedVolume: projectedVolume,
+        // Exported for the same reason as the rest: the shape of the row it hands
+        // back is what decides whether a metric gets weighted at all, and a
+        // dropped column there is invisible from every screen.
+        aggregateFromWeeklyData: aggregateFromWeeklyData
     };
 
     window.renderFutures = renderFutures;
