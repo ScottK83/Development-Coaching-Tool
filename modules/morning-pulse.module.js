@@ -87,6 +87,63 @@
         (l1, v1, l2, v2) => `You nailed it on ${l1} (${v1}) and ${l2} (${v2}) this week.`,
     ];
     const SURVEY_METRIC_KEYS = new Set(['fcr', 'overallExperience', 'overallExperienceTop3', 'cxRepOverall']);
+
+    /* Which response count stands behind each survey rate.
+     *
+     * The same table period-compare weights by, for the same reason. A rate and
+     * its denominator have to travel together or a week where nobody answered
+     * the rep-sat question cannot be told from a week that scored 0%: both
+     * arrive as the number 0. Falls back to the overall count when the export
+     * did not carry the rate's own column, which is what every caller did
+     * before these were parsed at all.
+     */
+    const SURVEY_COUNT_FIELD = {
+        cxRepOverall: 'repSurveyTotal',
+        fcr: 'fcrSurveyTotal',
+        overallExperience: 'surveyTotal',
+        overallExperienceTop3: 'surveyTotal'
+    };
+
+    function surveyResponsesFor(emp, metricKey) {
+        const field = SURVEY_COUNT_FIELD[metricKey];
+        if (!field) return null;
+        const own = emp ? emp[field] : undefined;
+        // Null, undefined and blank all mean "column absent", not "nobody
+        // answered", so they fall through to the overall count rather than
+        // being read as a zero.
+        if (own !== null && own !== undefined && own !== '') {
+            const n = parseInt(own, 10);
+            if (Number.isInteger(n)) return n;
+        }
+        const total = parseInt(emp?.surveyTotal, 10);
+        return Number.isInteger(total) ? total : 0;
+    }
+
+    /* Did anybody actually answer?
+     *
+     * A rep satisfaction of 0 on a week with no surveys returned is not a score
+     * of nought, it is an empty column, and every surface downstream reads it as
+     * a detractor. That gets the week wrong twice over: it prints "Rep
+     * Satisfaction at 0.0%" as the thing to work on, and it suppresses the real
+     * survey wins as coming from the same unhappy customer. Nobody was asked, so
+     * nothing is said — no win, no opportunity, no placing, no zero.
+     *
+     * Only the survey metrics are gated. Everything else is measured off calls
+     * the person actually took and stands on its own.
+     */
+    function hasSurveyBehind(emp, metricKey) {
+        if (!SURVEY_METRIC_KEYS.has(metricKey)) return true;
+        return surveyResponsesFor(emp, metricKey) > 0;
+    }
+
+    // The metrics a pulse message is allowed to talk about for one person: the
+    // fixed exclusions, then the survey metrics nobody answered.
+    function speakableMetrics(emp, analysis) {
+        return (analysis?.allMetrics || [])
+            .filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey))
+            .filter(m => hasSurveyBehind(emp, m.metricKey));
+    }
+
     const PERFECT_SURVEYS_SOLO = [
         (surveys) => `${surveys} perfect this week — can't do better than that.`,
         (surveys) => `${surveys} — every single one a perfect score. That's special.`,
@@ -1210,7 +1267,7 @@
     // --- Card rendering ---
 
     function buildEmployeeCard(emp, analysis, weekDeltas, biggestJump, options = {}) {
-        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const allMetrics = speakableMetrics(emp, analysis);
         const badge = getStatusBadge(allMetrics);
         const focalPoint = pickFocalPoint(allMetrics);
         const deltaContextLabel = options.deltaContextLabel || 'this week';
@@ -1433,7 +1490,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
 
-        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const allMetrics = speakableMetrics(emp, analysis);
 
         // Week trajectory
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
@@ -1562,7 +1619,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
 
-        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const allMetrics = speakableMetrics(emp, analysis);
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
         const biggestJump = getBiggestJump(weekDeltas);
 
@@ -1665,7 +1722,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
 
-        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const allMetrics = speakableMetrics(emp, analysis);
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
 
         // If any survey metric came back as a detractor (0), suppress the rest
@@ -2387,6 +2444,15 @@
             // that already decides that for the pace sentences decides it here.
             if (!rp.isProjectable(rankKey, row)) return;
 
+            // Nobody answered, so there is nothing to place them on. The value
+            // that reaches this point for a survey metric with no responses
+            // behind it is 0, which sorts as the worst week in the building, and
+            // the pin above would then print it every time. isProjectable does
+            // not catch this on its own: it lets an unknown count through so a
+            // missing column cannot silence a whole board at once, which is the
+            // right call for a call volume and the wrong one for a survey.
+            if (SURVEY_METRIC_KEYS.has(registryKey) && !(parseFloat(row.surveyTotal) > 0)) return;
+
             // Number(null) is 0 and Number('') is 0, and a zero is a perfect
             // score on a reverse metric. Every value on every row enters through
             // here so a blank can never be counted as one of the places.
@@ -2607,7 +2673,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
 
-        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const allMetrics = speakableMetrics(emp, analysis);
 
         // Try to recall the focal point set on Monday
         const savedFocal = loadFocalPoint(employeeName, latestKey);
@@ -2728,7 +2794,7 @@
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, periodKey);
         if (!analysis) return null;
 
-        const allMetrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
+        const allMetrics = speakableMetrics(emp, analysis);
         const periodDeltas = prevPeriodKey ? calcWeekDeltas(employeeName, prevPeriodKey, periodKey) : [];
         const biggestJump = getBiggestJump(periodDeltas);
 
