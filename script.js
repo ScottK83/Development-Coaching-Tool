@@ -30,7 +30,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.08.25.1'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.08.25.2'; // Version: YYYY.MM.DD.NN
 const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
 // Sourced from modules/constants.module.js (loaded first).
 const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
@@ -7341,10 +7341,14 @@ async function bootAppSafely() {
     setAppVersionLabel();
     try {
         await initApp();
+        const actionAudit = window.DevCoachModules?.actionRegistry?.report?.();
+        window.__appActionAudit = actionAudit || null;
         window.__appBootOk = true;
     } catch (error) {
         window.__appBootOk = false;
-        console.error('Fatal startup error:', error);
+        const logger = window.DevCoachModules?.logger;
+        if (logger) logger.error('startup', 'Fatal startup error', error);
+        else console.error('Fatal startup error:', error);
         try {
             addDebugEntry('startup', error?.message || String(error), {
                 stack: error?.stack || null
