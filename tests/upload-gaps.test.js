@@ -244,3 +244,225 @@ suite('upload gaps: a month-to-date upload covers its month', (t) => {
     t.check('and is not offered for backfill',
         gaps.monthOptions.every((o) => o.id !== 'month-2026-08-01'));
 });
+
+
+/* ── Quarters ──
+   A quarter was the one period the scan never looked at, so a year with no Q1
+   file and no January, February or March either was reported as three missing
+   months and nothing else. */
+
+function monthRow(startISO, endISO) {
+    return {
+        [`${startISO}|${endISO}`]: {
+            employees: [{ name: 'A' }],
+            metadata: { startDate: startISO, endDate: endISO, periodType: 'month' }
+        }
+    };
+}
+
+suite('upload gaps: a completed quarter nothing covers is a gap', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY);
+    const ids = gaps.quarterOptions.map((o) => o.id);
+
+    t.check('Q1 is missing, nothing in the year covers it', ids.indexOf('quarter-2026-q1') !== -1);
+    t.check('and Q2, because April never landed', ids.indexOf('quarter-2026-q2') !== -1);
+    t.check('the quarter still running is not demanded', ids.indexOf('quarter-2026-q3') === -1);
+    t.check('they come back as real quarter periods',
+        gaps.quarterOptions.every((o) => o.periodType === 'quarter' && o.isMissingPeriod));
+    t.check('spanning the whole quarter',
+        gaps.quarterOptions.some((o) => o.startDate === '2026-01-01' && o.endDate === '2026-03-31'));
+    t.check('nearest first, like the weeks and the months',
+        gaps.quarterOptions[0].id === 'quarter-2026-q2');
+    t.equal('and the tally agrees with the list', gaps.quarterCount, gaps.quarterOptions.length);
+
+    // The id has to be the shape the dropdown already builds, or the chip is
+    // pointing at an option that does not exist.
+    t.check('the id matches the one computeUploadOptions uses',
+        wiz.computeUploadOptions(TODAY).some((o) => o.id === 'quarter-2026-q2'));
+});
+
+suite('upload gaps: a quarter covered by its three months is not a gap', (t) => {
+    const wiz = loadWizard(t);
+    const withQ1Months = Object.assign({}, STORE,
+        monthRow('2026-01-01', '2026-01-31'),
+        monthRow('2026-02-01', '2026-02-28'),
+        monthRow('2026-03-01', '2026-03-31'));
+    const gaps = wiz.computeMissingWeeks(withQ1Months, TODAY);
+
+    t.check('Q1 drops off the offer list',
+        gaps.quarterOptions.every((o) => o.id !== 'quarter-2026-q1'));
+
+    const cov = wiz.quarterCoverage(withQ1Months, TODAY);
+    t.equal('it reads as rebuilt from its months', cov[0].status, 'rebuilt');
+    t.equal('Q2 does not, April is still blank', cov[1].status, 'partial');
+    t.check('and April is named as the reason', cov[1].monthsMissing.indexOf('April') !== -1);
+    t.check('Q3 is not judged at all, it has not finished', cov[2].complete === false);
+});
+
+suite('upload gaps: a quarterly upload covers its quarter and nothing inside it', (t) => {
+    const wiz = loadWizard(t);
+    const withQ2 = Object.assign({}, STORE, {
+        '2026-04-01|2026-06-30': {
+            employees: [{ name: 'A' }],
+            metadata: { startDate: '2026-04-01', endDate: '2026-06-30', periodType: 'quarter' }
+        }
+    });
+    const cov = wiz.quarterCoverage(withQ2, TODAY);
+    t.equal('the quarter reads as uploaded', cov[1].status, 'uploaded');
+
+    // Nothing in the app splits a quarter row back into three months, so the
+    // months inside it must not go quiet just because the quarter did.
+    const gaps = wiz.computeMissingWeeks(withQ2, TODAY);
+    t.check('April is still an empty month', gaps.emptyMonths.indexOf('April') !== -1);
+    t.check('and still offered as a month to upload',
+        gaps.monthOptions.some((o) => o.id === 'month-2026-04-01'));
+});
+
+/* ── Year to date ──
+   Not a hole in a trend line: a switch. morning-pulse's attachYearPace reads
+   the newest YTD, compares its year to this one, and writes nothing at all if
+   they differ, so a missing or stale YTD reaches the user as a sentence that
+   quietly stopped appearing. */
+
+function ytdRow(endISO) {
+    const startISO = `${endISO.slice(0, 4)}-01-01`;
+    return {
+        [`${startISO}|${endISO}`]: {
+            employees: [{ name: 'A' }],
+            metadata: { startDate: startISO, endDate: endISO, periodType: 'ytd' }
+        }
+    };
+}
+
+suite('upload gaps: no YTD upload at all is reported', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY, 12, {});
+
+    t.check('the store was checked', !!gaps.ytd);
+    t.check('and reported as missing', gaps.ytd.isMissing === true && gaps.ytd.latestEnd === null);
+
+    const el = { style: {}, innerHTML: '' };
+    wiz.renderGapBanner(el, gaps);
+    t.check('the banner says so in those words', /No YTD on file for 2026/.test(el.innerHTML));
+    t.check('and says what goes quiet without one',
+        /morning pulse refuses to say anything about year pace/.test(el.innerHTML));
+    t.check('and that this one cannot be a chip', /needs the end date it covers/.test(el.innerHTML));
+});
+
+suite('upload gaps: last year YTD is not this year YTD', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY, 12, ytdRow('2025-12-31'));
+
+    t.check('it still counts as missing for 2026', gaps.ytd.isMissing === true);
+    t.equal('but the one on file is named', gaps.ytd.latestYear, 2025);
+
+    const el = { style: {}, innerHTML: '' };
+    wiz.renderGapBanner(el, gaps);
+    t.check('the banner says which year it belongs to', /which is last year/.test(el.innerHTML));
+});
+
+suite('upload gaps: a stale YTD is reported with its date', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY, 12, ytdRow('2026-04-30'));
+
+    t.check('it is on file for this year', gaps.ytd.hasCurrentYear === true && gaps.ytd.isMissing === false);
+    t.check('but months behind', gaps.ytd.isStale === true && gaps.ytd.daysBehind > 100);
+    t.equal('and the month it stopped in is named', gaps.ytd.closedMonth, 'April');
+
+    const el = { style: {}, innerHTML: '' };
+    wiz.renderGapBanner(el, gaps);
+    t.check('the banner says it the way the owner said it', /Your YTD closed in April/.test(el.innerHTML));
+    t.check('with the actual end date, not just the month', /Apr 30, 2026/.test(el.innerHTML));
+});
+
+suite('upload gaps: a current YTD is left alone', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY, 12, ytdRow('2026-08-16'));
+
+    t.check('nothing to report', gaps.ytd.isMissing === false && gaps.ytd.isStale === false);
+
+    const el = { style: {}, innerHTML: '' };
+    wiz.renderGapBanner(el, gaps);      // the weeks and months are still missing
+    t.check('the banner does not mention YTD at all',
+        !/No YTD on file/.test(el.innerHTML) && !/YTD closed/.test(el.innerHTML));
+
+    // A caller holding only the weekly store has not said "there is no YTD",
+    // it has said nothing about YTD, and the banner must not invent a warning
+    // out of an argument nobody passed.
+    const unasked = wiz.computeMissingWeeks(STORE, TODAY);
+    t.equal('and an unasked question gets no answer', unasked.ytd, null);
+});
+
+/* ── The chips ──
+   The dates were inert text. Every one of them names a period that is already
+   an <option> in the dropdown six inches below it, so the whole feature was a
+   lookup by id away. */
+
+suite('upload gaps: every chip is a button carrying a real dropdown id', (t) => {
+    const wiz = loadWizard(t);
+    const gaps = wiz.computeMissingWeeks(STORE, TODAY, 12, {});
+    const el = { style: {}, innerHTML: '' };
+    wiz.renderGapBanner(el, gaps);
+
+    const PREFIX = 'data-upload-option="';
+    const chipIds = (el.innerHTML.match(/data-upload-option="[^"]*"/g) || [])
+        .map((m) => m.slice(PREFIX.length, -1));
+
+    // Built the way refresh() builds the dropdown: the standard options, plus
+    // the gap options folded in beside them.
+    const dropdownIds = new Set(wiz.computeUploadOptions(TODAY).map((o) => o.id)
+        .concat(gaps.weeks.map((o) => o.id))
+        .concat(gaps.quarterOptions.map((o) => o.id))
+        .concat(gaps.monthOptions.map((o) => o.id))
+        .concat(gaps.priorWeeks.map((o) => o.id)));
+
+    t.check('there are chips', chipIds.length > 0);
+    t.check('they are buttons, keyboard reachable, not spans with handlers',
+        /<button type="button" class="upload-gap-chip"/.test(el.innerHTML));
+    t.check('every chip points at an option the dropdown really has',
+        chipIds.every((id) => dropdownIds.has(id)));
+    t.check('each kind of period got one',
+        chipIds.indexOf('week-2026-08-10') !== -1 &&
+        chipIds.indexOf('month-2026-04-01') !== -1 &&
+        chipIds.indexOf('quarter-2026-q1') !== -1);
+    // YTD needs an end date only the user knows, so a one-click chip for it
+    // would be a chip that cannot finish the job.
+    t.check('YTD is not offered as a chip', chipIds.indexOf('ytd') === -1);
+});
+
+suite('upload gaps: clicking a chip fills the picker, and says so', (t) => {
+    const wiz = loadWizard(t);
+    const status = { style: {}, textContent: '' };
+    const select = {
+        value: '',
+        dispatched: [],
+        options: [
+            { value: 'week-2026-08-10', textContent: 'Aug 10 - Aug 16, 2026', disabled: false },
+            { value: 'week-2026-08-03', textContent: 'Aug 3 - Aug 9, 2026', disabled: true }
+        ],
+        dispatchEvent(ev) { this.dispatched.push(ev.type); return true; },
+        scrollIntoView() { this.scrolled = true; },
+        focus() { this.focused = true; }
+    };
+    global.document.getElementById = (id) =>
+        id === 'uploadWizardSelect' ? select : (id === 'uploadWizardGapStatus' ? status : null);
+
+    const ok = wiz.selectPeriodFromChip('week-2026-08-10', null);
+    t.check('the option is selected', ok.ok === true && select.value === 'week-2026-08-10');
+    // Assigning .value fires nothing, and the YTD and daily date pickers both
+    // hang off this select's change event.
+    t.check('a real change event is dispatched', select.dispatched.indexOf('change') !== -1);
+    t.check('the dropdown is brought into view', select.scrolled === true);
+    t.check('and the click is confirmed on screen', /Loaded into the picker/.test(status.textContent));
+
+    const gone = wiz.selectPeriodFromChip('week-2020-01-06', null);
+    t.check('a chip whose option is absent fails rather than doing nothing',
+        gone.ok === false && gone.reason === 'no-option');
+    t.check('and fails visibly, naming what it could not find',
+        /not in the list any more/.test(status.textContent) && /week-2020-01-06/.test(status.textContent));
+
+    const done = wiz.selectPeriodFromChip('week-2026-08-03', null);
+    t.check('an already-uploaded period is refused with a reason',
+        done.ok === false && done.reason === 'disabled' && /already uploaded/.test(status.textContent));
+});

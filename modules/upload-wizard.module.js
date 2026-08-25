@@ -16,6 +16,12 @@
     //   #pasteStartDate      — inclusive range start (YYYY-MM-DD)
     //   #pasteWeekEndingDate — inclusive range end   (YYYY-MM-DD)
     // The save path in script.js reads those three values.
+    //
+    // Above the dropdown sits the coverage report: what the store is missing,
+    // by kind of period — weeks, months, quarters, and whether a real YTD
+    // exists for this year at all — with a clickable chip for each one that can
+    // be filled. The chips carry the ids of options in the dropdown below them,
+    // so a click is a lookup rather than a second derivation of the same dates.
     // ============================================
 
     const MS_PER_DAY = 86_400_000;
@@ -381,6 +387,176 @@
             .reverse();   // nearest first, like the missing weeks
     }
 
+    // The month indices each quarter owns. Used both for the "all three months
+    // are covered" test and for the calendar bounds of a quarter option.
+    const QUARTER_MONTHS = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]];
+
+    /* How each completed quarter of this year is covered, and by what.
+
+       Two things count as coverage and they are not the same thing. A real
+       quarter upload IS the quarter, one row, whole. Three covered months add
+       up to the same span with month-over-month detail inside it, so they count
+       too, on the same reasoning that lets a month rebuilt from weeklies rank
+       beside a month uploaded whole.
+
+       It does not run the other way, and that asymmetry is the part worth
+       saying out loud. A quarter upload does not make its months covered:
+       monthCoverage only counts month, month-to-date and week rows, and nothing
+       in the app splits a quarter row back into three months. Clearing a Q1
+       warning by uploading Q1 leaves January, February and March exactly as
+       blank as they were for the rankings trajectory, so the banner has to name
+       that rather than let a chip imply the quarter fixed everything under it.
+
+       Unlike months there is no minimum span here. The fortnight floor on a
+       month upload exists to mirror the month rebuild, which throws short rows
+       out; no code rebuilds a quarter from anything, so a row labelled quarter
+       is taken at its word. */
+    function quarterCoverage(weeklyStore, today) {
+        const year = today.getFullYear();
+        const weekly = weeklyStore || {};
+        const now = startOfDay(today);
+
+        const quarterUploads = new Set();
+        Object.keys(weekly).forEach(k => {
+            const meta = weekly[k]?.metadata || {};
+            if ((meta.periodType || 'week') !== 'quarter') return;
+            const end = parseLocalDate(meta.endDate || (k.includes('|') ? k.split('|')[1] : ''));
+            if (isNaN(end) || end.getFullYear() !== year) return;
+            quarterUploads.add(Math.floor(end.getMonth() / 3));
+        });
+
+        // monthCoverage has already applied its own floor, so a month that
+        // reads as covered here needs no second opinion. It only reports
+        // months up to the current one, which is why a month with no entry is
+        // treated as uncovered — that only ever happens in a quarter the
+        // calendar has not finished, and those are filtered out below anyway.
+        const byMonth = {};
+        monthCoverage(weekly, today).forEach(mo => { byMonth[mo.month] = mo; });
+
+        const out = [];
+        for (let q = 0; q < 4; q++) {
+            const start = new Date(year, q * 3, 1);
+            const end = new Date(year, q * 3 + 3, 0);
+            const monthsMissing = QUARTER_MONTHS[q]
+                .filter(m => !byMonth[m] || !byMonth[m].covered)
+                .map(m => MONTH_NAMES[m]);
+            const uploaded = quarterUploads.has(q);
+            const rebuilt = !uploaded && monthsMissing.length === 0;
+            out.push({
+                quarter: q + 1,
+                name: `Q${q + 1}`,
+                year,
+                startDate: isoDate(start),
+                endDate: isoDate(end),
+                complete: end < now,
+                status: uploaded ? 'uploaded'
+                    : rebuilt ? 'rebuilt'
+                        : monthsMissing.length === 3 ? 'none' : 'partial',
+                monthsMissing,
+                covered: uploaded || rebuilt
+            });
+        }
+        return out;
+    }
+
+    // Completed quarters of this year that nothing covers, offered as quarter
+    // periods. The id is the same shape computeUploadOptions builds for "last
+    // completed quarter" on purpose: the two lists meet in the dropdown, and a
+    // chip whose id is one character off is a chip that does nothing.
+    function missingQuarterOptions(weeklyStore, today) {
+        const year = today.getFullYear();
+        return quarterCoverage(weeklyStore, today)
+            .filter(q => q.complete && !q.covered)
+            .map(q => {
+                const short = q.monthsMissing.length;
+                return {
+                    id: `quarter-${year}-q${q.quarter}`,
+                    label: `${q.name} ${year} (never uploaded)` +
+                        (short && short < 3
+                            ? ` — ${short} of its 3 months ${short === 1 ? 'is' : 'are'} blank too`
+                            : ''),
+                    periodType: 'quarter',
+                    quarter: q.quarter,
+                    startDate: q.startDate,
+                    endDate: q.endDate,
+                    monthsMissing: q.monthsMissing,
+                    isMissingPeriod: true,
+                    priority: 2.3
+                };
+            })
+            .reverse();   // nearest first, like the weeks and the months
+    }
+
+    /* How far behind the last finished week a YTD upload may fall before it
+       counts as stale. Five weeks, because a YTD re-uploaded once a month is
+       the normal rhythm here and a four-week line would nag at the ordinary
+       cadence. Past five weeks it is not a cadence any more, it is a YTD that
+       stopped. */
+    const STALE_YTD_DAYS = 35;
+
+    /* Whether a real year-to-date upload exists for this year, and how old it is.
+
+       This is the one entry in the coverage report that is not a hole in a
+       trend line, and it matters more than it looks. A YTD upload is the source
+       of truth for the whole app, and the code downstream does not improvise
+       without one: morning-pulse's attachYearPace reads the newest YTD, checks
+       its year against the current one, and returns without writing a word if
+       they differ. So "no YTD on file" and "your YTD closed in April" both
+       reach the user as the year-pace sentence quietly vanishing from their
+       messages, with nothing anywhere saying why. The banner is the only place
+       that can say it.
+
+       A null store means "nobody asked", not "nothing on file", which is why it
+       returns null rather than a missing verdict. computeMissingWeeks is called
+       from tests and from callers holding only the weekly store, and inventing
+       a YTD warning out of an argument nobody passed would light the banner up
+       over a year that is completely covered. */
+    function ytdCoverage(ytdStore, today) {
+        if (!ytdStore) return null;
+        const year = today.getFullYear();
+        const lastCompleteSun = addDays(mondayOf(today), -1);
+
+        /* Only a REAL year-to-date upload counts here.
+         *
+         * The app writes an auto-generated year-to-date row of its own, stitched
+         * from whatever weeks are on file, and stamps it autoGeneratedYtd. That
+         * row is useful and it is also not the thing this block is asking about:
+         * counting it would mean the banner sees a year-to-date file for the
+         * current year on almost every install, so "no YTD on file" could never
+         * fire and the one warning that explains why the year-pace features stay
+         * quiet would be dead code that always passed.
+         *
+         * futures.findRealYtdUpload draws the same line for the same reason, and
+         * the two have to agree: a banner saying the year-to-date file is fine
+         * while futures ignores it as auto-built is worse than no banner. */
+        let latest = null;
+        Object.keys(ytdStore).forEach(k => {
+            const meta = ytdStore[k]?.metadata || {};
+            if (meta.autoGeneratedYtd) return;
+            const endText = meta.endDate || (k.includes('|') ? k.split('|')[1] : '');
+            const end = parseLocalDate(endText);
+            if (isNaN(end)) return;
+            if (!latest || end > latest.end) latest = { end, endText };
+        });
+
+        const latestYear = latest ? latest.end.getFullYear() : null;
+        const hasCurrentYear = latestYear === year;
+        const daysBehind = hasCurrentYear
+            ? Math.round((lastCompleteSun - latest.end) / MS_PER_DAY)
+            : null;
+
+        return {
+            year,
+            latestEnd: latest ? latest.endText : null,
+            latestYear,
+            hasCurrentYear,
+            daysBehind,
+            closedMonth: hasCurrentYear ? MONTH_NAMES[latest.end.getMonth()] : null,
+            isMissing: !hasCurrentYear,
+            isStale: hasCurrentYear && daysBehind > STALE_YTD_DAYS
+        };
+    }
+
     /* Weeks of this year that sit BEFORE the first upload, and the months that
        have no weekly upload at all.
 
@@ -437,14 +613,28 @@
         };
     }
 
-    function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12) {
+    // The whole coverage picture, every kind of period at once.
+    //
+    // The name is now half the truth — it started as weeks and grew months,
+    // quarters and the YTD check — but the shape it returns is what refresh()
+    // and the tests read, so the weeks half is left exactly as it was and the
+    // rest is added beside it. ytdStore is last and optional for the same
+    // reason: every existing caller passes two arguments.
+    function computeMissingWeeks(weeklyStore, today = new Date(), maxOptions = 12, ytdStore = null) {
         const lastWeekMon = addDays(mondayOf(today), -7);
         const { mondays: uploadedMondays } = scanUploadedWeeks(weeklyStore);
         const earliestMon = earliestCoveredMonday(weeklyStore);
 
         const prior = priorYearCoverage(weeklyStore, today, earliestMon, maxOptions);
+        const quarterOptions = missingQuarterOptions(weeklyStore, today);
+        const wider = {
+            year: today.getFullYear(),
+            quarterOptions,
+            quarterCount: quarterOptions.length,
+            ytd: ytdCoverage(ytdStore, today)
+        };
         if (!earliestMon) {
-            return Object.assign({ weeks: [], totalMissing: 0, shownCount: 0 }, prior);
+            return Object.assign({ weeks: [], totalMissing: 0, shownCount: 0 }, prior, wider);
         }
 
         const oldestScanned = addDays(lastWeekMon, -7 * 51);
@@ -472,7 +662,7 @@
             weeks: missing.slice(0, maxOptions),
             totalMissing: missing.length,
             shownCount: Math.min(missing.length, maxOptions)
-        }, prior);
+        }, prior, wider);
     }
 
     // The copy already on file for a re-uploadable period: same kind, same
@@ -771,53 +961,329 @@
         summaryEl.textContent = `This week so far: ${parts.join(' · ')}`;
     }
 
-    // Show a summary of the weeks that never got uploaded. All strings
-    // here are locally formatted dates, so plain innerHTML is safe.
+    /* ── Clickable gap chips ──
+
+       Every chip carries the id of an <option> that the same refresh() already
+       put in #uploadWizardSelect: refresh folds gaps.weeks, gaps.monthOptions,
+       gaps.quarterOptions and gaps.priorWeeks into the dropdown, then hands the
+       identical gaps object to the banner. So filling the picker is a lookup by
+       id rather than a second, drifting derivation of the same dates. */
+
+    const CHIP_CLASS = 'upload-gap-chip';
+    const CHIP_STYLE_ID = 'uploadGapChipStyles';
+    const GAP_STATUS_ID = 'uploadWizardGapStatus';
+    const CHIP_BASE_STYLE = 'display:inline-block; padding:3px 9px; margin:2px 4px 2px 0; ' +
+        'background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); ' +
+        'border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.82em; ' +
+        'white-space:nowrap; cursor:pointer; font-family:inherit;';
+
+    function _escapeHtml(str) {
+        const mod = window.DevCoachModules?.sharedUtils;
+        if (mod?.escapeHtml) return mod.escapeHtml(str);
+        return String(str ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /* Hover and focus cannot be said in a style attribute, and a chip you can
+       tab to with no visible focus ring is a chip only a mouse can find. The
+       two rules go in one injected stylesheet rather than into styles-v2.css
+       because this module owns the banner outright and nothing else renders
+       these.
+
+       They carry !important because the chips also hold their resting look in
+       an inline style attribute, which beats a class selector every time — the
+       hover and focus colours would otherwise lose to the chip's own
+       background. The inline base stays regardless, so a chip is still a
+       readable chip on a page where this injection found no <head> to write to. */
+    function ensureChipStyles() {
+        if (typeof document === 'undefined' || !document.head || !document.createElement) return;
+        if (document.getElementById && document.getElementById(CHIP_STYLE_ID)) return;
+        const el = document.createElement('style');
+        el.id = CHIP_STYLE_ID;
+        el.textContent =
+            `.${CHIP_CLASS}:hover { background: var(--yellow, #e0a800) !important; color: #2b2000 !important; }` +
+            `.${CHIP_CLASS}:focus { outline: 3px solid var(--brand, #0d6efd) !important; outline-offset: 2px; }` +
+            `.${CHIP_CLASS}:focus-visible { outline: 3px solid var(--brand, #0d6efd) !important; outline-offset: 2px; }`;
+        document.head.appendChild(el);
+    }
+
+    // A chip is a real <button>, never a styled <span> with a handler on it.
+    // The banner is a list of actions: a span cannot be tabbed to, does not
+    // fire on Enter or Space, and is announced by a screen reader as nothing
+    // at all.
+    function gapChip(optionId, text) {
+        const label = _escapeHtml(text);
+        return `<button type="button" class="${CHIP_CLASS}" ` +
+            `data-upload-option="${_escapeHtml(optionId || '')}" ` +
+            `title="${_escapeHtml('Load ' + text + ' into the period picker')}" ` +
+            `style="${CHIP_BASE_STYLE}">${label}</button>`;
+    }
+
+    function weekChipText(opt) {
+        return `${fmtShort(parseLocalDate(opt.startDate))} – ${fmtShort(parseLocalDate(opt.endDate))}`;
+    }
+
+    function monthChipText(opt) {
+        const d = parseLocalDate(opt.startDate);
+        return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    function quarterChipText(opt) {
+        return `Q${opt.quarter} ${parseLocalDate(opt.startDate).getFullYear()}`;
+    }
+
+    function chipsFor(items, textOf) {
+        return (items || []).map(it => gapChip(it.id, textOf(it))).join('');
+    }
+
+    // "January, February, March and April", the way the empty-month sentence
+    // has always read it.
+    function andList(names) {
+        if (!names || !names.length) return '';
+        if (names.length === 1) return names[0];
+        return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    }
+
+    function gapStatusEl(bannerEl) {
+        const byId = typeof document !== 'undefined' && document.getElementById
+            ? document.getElementById(GAP_STATUS_ID)
+            : null;
+        if (byId) return byId;
+        return bannerEl && typeof bannerEl.querySelector === 'function'
+            ? bannerEl.querySelector(`#${GAP_STATUS_ID}`)
+            : null;
+    }
+
+    // The status line is the only feedback a click has. Once the banner is
+    // carrying four blocks the dropdown is below the fold on a laptop, and
+    // "nothing happened" and "it worked, off screen" look identical from where
+    // the user is sitting.
+    function setGapStatus(bannerEl, text, tone) {
+        const el = gapStatusEl(bannerEl);
+        if (!el) return;
+        el.textContent = text || '';
+        if (!el.style) return;
+        el.style.display = text ? 'block' : 'none';
+        el.style.color = tone === 'bad'
+            ? 'var(--red-text, #b3261e)'
+            : 'var(--text-primary, var(--text-primary))';
+    }
+
+    /* Put a chip's period into the picker.
+
+       The change event is dispatched rather than the select's handler called
+       directly, because more than one thing listens to that select: the YTD end
+       date picker and the daily date picker both open off it, and the summary
+       line under the dropdown is written by it. Assigning .value fires nothing,
+       so without the dispatch the picker would show the right period while the
+       hidden inputs the save path reads still held the last one — the worst
+       possible version of this feature, since the upload would look correct and
+       land on the wrong dates.
+
+       Failures are reported into the banner rather than returned quietly. A
+       chip whose option is not in the dropdown means the two lists have drifted
+       apart, and a dead chip that says nothing when clicked is the version of
+       that bug nobody ever reports. */
+    function selectPeriodFromChip(optionId, bannerEl) {
+        const selectEl = typeof document !== 'undefined' && document.getElementById
+            ? document.getElementById('uploadWizardSelect')
+            : null;
+        if (!selectEl) {
+            setGapStatus(bannerEl, 'The period picker is not on screen. Open the Upload tab and try again.', 'bad');
+            return { ok: false, reason: 'no-select' };
+        }
+
+        const options = selectEl.options ? Array.prototype.slice.call(selectEl.options) : [];
+        const match = options.find(o => o && o.value === optionId);
+        if (!match) {
+            setGapStatus(bannerEl,
+                `That period (${optionId}) is not in the list any more. Reload the page to rebuild it.`, 'bad');
+            return { ok: false, reason: 'no-option' };
+        }
+        if (match.disabled) {
+            setGapStatus(bannerEl,
+                `${match.textContent || optionId} is already uploaded, so there is nothing to backfill.`, 'bad');
+            return { ok: false, reason: 'disabled' };
+        }
+
+        selectEl.value = optionId;
+        if (typeof selectEl.dispatchEvent === 'function' && typeof Event === 'function') {
+            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        if (typeof selectEl.scrollIntoView === 'function') {
+            selectEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (typeof selectEl.focus === 'function') selectEl.focus();
+        setGapStatus(bannerEl,
+            `Loaded into the picker: ${match.textContent || optionId}. Paste that period's data below and press Load Data.`);
+        return { ok: true, label: match.textContent || optionId };
+    }
+
+    /* One listener on the banner, not one per chip.
+
+       The banner's innerHTML is rebuilt on every upload and on every refresh,
+       so per-chip listeners would be re-attached to brand new nodes each time
+       while the old ones went out with the nodes they were on. Delegation binds
+       to the one element that survives the re-render.
+
+       The bound flag lives on the element for the same reason the select's
+       does: refresh() runs many times in a session, and a listener that stacks
+       up fires the fill once per past render. */
+    function bindGapChips(bannerEl) {
+        if (!bannerEl || typeof bannerEl.addEventListener !== 'function') return;
+        if (bannerEl.dataset) {
+            if (bannerEl.dataset.gapChipsBound) return;
+            bannerEl.dataset.gapChipsBound = '1';
+        } else {
+            if (bannerEl._gapChipsBound) return;
+            bannerEl._gapChipsBound = true;
+        }
+        bannerEl.addEventListener('click', (ev) => {
+            const target = ev && ev.target;
+            const chip = target && typeof target.closest === 'function'
+                ? target.closest('[data-upload-option]')
+                : null;
+            if (!chip) return;
+            if (typeof ev.preventDefault === 'function') ev.preventDefault();
+            selectPeriodFromChip(chip.getAttribute('data-upload-option'), bannerEl);
+        });
+    }
+
+    /* The coverage report: every kind of period the scan knows about, grouped
+       by kind, with a chip for each one that can be filled in a click.
+
+       The blocks stay separate and the separations are not cosmetic. A hole
+       between uploads is probably an oversight. A blank start to the year is a
+       decision about how far back to go. A missing quarter is neither, and a
+       missing YTD is not a gap in a trend line at all — it is a feature switch
+       nobody knows is off. Rolling them into one number is exactly what made
+       four blank months read as "1 week never uploaded".
+
+       The strings are still locally formatted dates and month names, so the
+       innerHTML stays reasonable, but the chips now carry option ids in
+       attributes and ids are data: they are built from period keys that the
+       user's own uploads write into the store. Every id and every label goes
+       through escapeHtml, on the principle that an attribute is the one place
+       where a stray quote stops being a typo and starts being markup. */
     function renderGapBanner(bannerEl, gaps) {
         if (!bannerEl) return;
-        if (!gaps || (!gaps.totalMissing && !gaps.priorCount && !(gaps.emptyMonths || []).length)) {
+        const months = (gaps && gaps.emptyMonths) || [];
+        const monthOptions = (gaps && gaps.monthOptions) || [];
+        const quarterOptions = (gaps && gaps.quarterOptions) || [];
+        const priorWeeks = (gaps && gaps.priorWeeks) || [];
+        const ytd = (gaps && gaps.ytd) || null;
+        const ytdProblem = !!(ytd && (ytd.isMissing || ytd.isStale));
+
+        if (!gaps || (!gaps.totalMissing && !gaps.priorCount && !months.length
+            && !quarterOptions.length && !ytdProblem)) {
             bannerEl.style.display = 'none';
             bannerEl.innerHTML = '';
             return;
         }
+
         const { weeks, totalMissing, shownCount } = gaps;
         // Colors come from the theme variables so the banner stays legible in
         // both light and dark mode — hardcoded hex reads as invisible text
         // once the dark theme swaps the surface underneath it.
-        const chips = weeks.map(w => {
-            const mon = parseLocalDate(w.startDate);
-            const sun = parseLocalDate(w.endDate);
-            return `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.82em; white-space:nowrap;">${fmtShort(mon)} – ${fmtShort(sun)}</span>`;
-        }).join('');
+        const HEAD = 'font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);';
+        const BODY = 'font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));';
+        const RULE = 'margin-top:12px; padding-top:10px; border-top:1px solid var(--border);';
+        const FAINT = 'margin-top:6px; font-size:0.8em; color:var(--yellow-text, #6c4400);';
+
+        const weekChips = chipsFor(weeks, weekChipText);
+        const monthChips = chipsFor(monthOptions, monthChipText);
+        const quarterChips = chipsFor(quarterOptions, quarterChipText);
+        const priorChips = chipsFor(priorWeeks, weekChipText);
+
+        // A tally across the kinds, so the shape of the problem is readable
+        // before any of the detail is.
+        const tally = [];
+        if (totalMissing) tally.push(`${totalMissing} week${totalMissing === 1 ? '' : 's'} missing`);
+        // The blank start counts here as well, or the tally reads "1 week
+        // missing" over a banner that goes on to list eighteen more.
+        if (gaps.priorCount) tally.push(`${gaps.priorCount} week${gaps.priorCount === 1 ? '' : 's'} before your first upload`);
+        if (monthOptions.length) tally.push(`${monthOptions.length} month${monthOptions.length === 1 ? '' : 's'} missing`);
+        if (quarterOptions.length) tally.push(`${quarterOptions.length} quarter${quarterOptions.length === 1 ? '' : 's'} missing`);
+        if (ytd && ytd.isMissing) tally.push('no YTD on file');
+        else if (ytd && ytd.isStale) tally.push(`YTD ${ytd.daysBehind} days old`);
+        const anyChips = !!(weekChips || monthChips || quarterChips || priorChips);
+        const header =
+            `<div style="${HEAD}">📋 Coverage${gaps.year ? ` for ${gaps.year}` : ''}: ${tally.join(' · ')}</div>` +
+            (anyChips ? `<div style="${BODY}">Click any chip to load that period into the picker below.</div>` : '');
+
+        // YTD leads, because it is the only one here that turns something off.
+        const ytdBlock = !ytdProblem ? '' :
+            `<div style="${HEAD}">${ytd.isMissing
+                ? `🚫 No YTD on file for ${ytd.year}`
+                : `🕓 Your YTD closed in ${ytd.closedMonth}`}</div>` +
+            `<div style="${BODY}">${ytd.isMissing
+                ? (ytd.latestEnd
+                    ? `The newest YTD upload ends ${fmtLong(parseLocalDate(ytd.latestEnd))}, which is last year's.`
+                    : 'Nothing has ever been uploaded as a YTD file.')
+                : `It ends ${fmtLong(parseLocalDate(ytd.latestEnd))}, ${ytd.daysBehind} days behind the last finished week.`}
+                A real YTD upload is the source of truth for the whole app, and the parts that need one do not guess without it: the morning pulse refuses to say anything about year pace until a current-year YTD is on file. That is what "the feature went quiet for no reason" looks like from here.</div>` +
+            `<div style="${BODY}">YTD is the one period with no chip. It needs the end date it covers, which only you know, so pick "YTD (pick end date)" from the dropdown below and set that date.</div>`;
+
         const more = totalMissing > shownCount
-            ? `<div style="margin-top:6px; font-size:0.8em; color:var(--yellow-text, #6c4400);">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
+            ? `<div style="${FAINT}">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
             : '';
-        // Two different problems, said separately. A hole between uploads is
-        // probably an oversight; a blank start to the year is a decision about
-        // how far back to go, and lumping them into one count made the January
-        // to April hole read as "1 week never uploaded".
-        const gapBlock = totalMissing ? `
-            <div style="font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>
-            <div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">Week-over-week trends skip these gaps. Pick one from the dropdown below to backfill it.</div>
-            <div>${chips}</div>
-            ${more}` : '';
+        const gapBlock = !totalMissing ? '' :
+            `<div style="${HEAD}">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>` +
+            `<div style="${BODY}">Week-over-week trends skip these gaps. Click one to load it into the picker below.</div>` +
+            `<div>${weekChips}</div>${more}`;
 
-        const months = gaps.emptyMonths || [];
-        const monthText = months.length === 1
-            ? `${months[0]} has`
-            : `${months.slice(0, -1).join(', ')} and ${months[months.length - 1]} have`;
-        // Monthly first, because it is one file per month against four or five,
-        // and the rankings cannot tell the difference: a month rebuilt from weeks
-        // and a month uploaded whole are ranked by the same code.
-        const monthCount = (gaps.monthOptions || []).length;
-        const startBlock = (gaps.priorCount || months.length) ? `
-            <div style="${totalMissing ? 'margin-top:12px; padding-top:10px; border-top:1px solid var(--border);' : ''} font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);">📅 Nothing uploaded before ${fmtLong(parseLocalDate(gaps.firstCoveredDate))}</div>
-            ${months.length ? `<div style="font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));">${monthText} no data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>` : ''}
-            ${monthCount ? `<div style="font-size:0.85em; margin-bottom:4px; color:var(--text-primary, var(--text-primary));"><strong>You do not need the weeks.</strong> Upload each one as a Monthly period — one file per month, ranked exactly like a month rebuilt from weeklies. ${monthCount === 1 ? 'It is' : 'All ' + monthCount + ' are'} in the dropdown.</div>` : ''}
-            ${gaps.priorCount ? `<div style="font-size:0.85em; color:var(--text-primary, var(--text-primary));">The ${gaps.priorCount} individual week${gaps.priorCount === 1 ? ' is' : 's are'} there too, if you want week-over-week detail inside those months.</div>` : ''}` : '';
+        // Monthly first inside this block, because it is one file per month
+        // against four or five, and the rankings cannot tell the difference: a
+        // month rebuilt from weeks and a month uploaded whole are ranked by the
+        // same code.
+        const priorMore = (gaps.priorCount || 0) > priorWeeks.length
+            ? `<div style="${FAINT}">+ ${gaps.priorCount - priorWeeks.length} older week${gaps.priorCount - priorWeeks.length === 1 ? '' : 's'} not shown.</div>`
+            : '';
+        // firstCoveredDate is null when the store is empty, and formatting that
+        // rendered a heading reading "Nothing uploaded before Invalid Date" on
+        // exactly the install least able to interpret it.
+        const startHead = gaps.firstCoveredDate
+            ? `📅 Nothing uploaded before ${fmtLong(parseLocalDate(gaps.firstCoveredDate))}`
+            : '📅 Nothing uploaded yet this year';
+        const startBlock = !(gaps.priorCount || months.length) ? '' :
+            `<div style="${HEAD}">${startHead}</div>` +
+            (months.length
+                ? `<div style="${BODY}">${andList(months)} ${months.length === 1 ? 'has' : 'have'} no data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>`
+                : '') +
+            (monthOptions.length
+                ? `<div style="${BODY}"><strong>You do not need the weeks.</strong> Upload each one as a Monthly period — one file per month, ranked exactly like a month rebuilt from weeklies.</div>` +
+                  `<div style="margin-bottom:6px;">${monthChips}</div>`
+                : '') +
+            (gaps.priorCount
+                ? `<div style="${BODY}">The ${gaps.priorCount} individual week${gaps.priorCount === 1 ? ' is' : 's are'} there too, if you want week-over-week detail inside those months.</div>` +
+                  `<div>${priorChips}</div>${priorMore}`
+                : '');
 
+        const quarterBlock = !quarterOptions.length ? '' :
+            `<div style="${HEAD}">📆 ${quarterOptions.length} completed quarter${quarterOptions.length === 1 ? '' : 's'} with no quarterly upload</div>` +
+            `<div style="${BODY}">${quarterOptions.map(q => {
+                const miss = q.monthsMissing || [];
+                return miss.length >= 3
+                    ? `${quarterChipText(q)} has nothing on file for any of its three months`
+                    : `${quarterChipText(q)} is missing ${andList(miss)}`;
+            }).join('. ')}. A quarterly upload lands as one row for the whole quarter, so it fills the quarter and nothing inside it: the months and weeks it spans stay exactly as blank as they are now.</div>` +
+            `<div>${quarterChips}</div>`;
+
+        const status = `<div id="${GAP_STATUS_ID}" role="status" aria-live="polite" ` +
+            `style="display:none; ${RULE} font-size:0.85em; font-weight:bold; color:var(--text-primary, var(--text-primary));"></div>`;
+
+        const blocks = [ytdBlock, gapBlock, startBlock, quarterBlock].filter(Boolean);
+
+        ensureChipStyles();
         bannerEl.style.display = 'block';
-        bannerEl.innerHTML = gapBlock + startBlock;
+        // Every block is ruled off from the one above it, the header included:
+        // four kinds of period stacked with no divider read as one long
+        // complaint rather than four separate answers.
+        bannerEl.innerHTML = header +
+            blocks.map(b => `<div style="${RULE}">${b}</div>`).join('') +
+            status;
+        bindGapChips(bannerEl);
     }
 
     // Read the currently selected <option> back out as an option object. The
@@ -860,11 +1326,17 @@
 
         // Fold in missing weeks, skipping any the standard option list
         // already covers (e.g. "Last week" when last week is a gap).
-        const gaps = computeMissingWeeks(weekly, today);
+        // The ytd store goes in so the banner can report whether a real YTD
+        // exists for this year at all: it is the source of truth downstream,
+        // and its absence is invisible everywhere else.
+        const gaps = computeMissingWeeks(weekly, today, 12, ytd);
         const knownIds = new Set(options.map(o => o.id));
         // Weeks before the first upload are offered too — telling someone four
         // months are blank and giving them no way to fill them is half a feature.
+        // Quarters ride the same path; the last completed one is already in the
+        // standard list, so the filter below keeps it from appearing twice.
         const extraGaps = gaps.weeks
+            .concat(gaps.quarterOptions || [])
             .concat(gaps.monthOptions || [])
             .concat(gaps.priorWeeks || [])
             .filter(w => !knownIds.has(w.id));
@@ -992,9 +1464,16 @@
         missingWeeksInRange,
         monthCoverage,
         missingMonthOptions,
+        quarterCoverage,
+        missingQuarterOptions,
+        ytdCoverage,
         // Exported for the tests: this banner is the thing a supervisor reads
         // to decide whether their year is complete, so its wording is pinned.
         renderGapBanner,
+        // Exported because the chips are the one part of the banner with a
+        // consequence, and a test that only reads the markup would never notice
+        // the change event going missing.
+        selectPeriodFromChip,
         refresh,
         bind
     };

@@ -2125,6 +2125,368 @@
         });
     }
 
+    /* --- Where they stood, and what one step would have moved ---------------
+
+       This is the block the year standing block above deliberately is not, and
+       the two have to stay apart.
+
+       yearStanding refuses to hand an associate a position at all, and the
+       refusal is structural rather than editorial: safePaceText drops any
+       sentence carrying an ordinal or an "N of M" before it can reach a bullet,
+       and four regexes in the test suite hold it to that. None of that moves.
+       What follows is a second block, built and gated on its own, which says
+       the thing out loud for a named period: where they finished in the call
+       center, where they finished on the team, and what one honest step off
+       their current number would have been worth in places.
+
+       The standing objection to a placing is that the field is not frozen, and
+       nothing here pretends it is. What this does instead is refuse every
+       version of the claim that would be a guess:
+
+         - The placings are facts about a period that has already closed, and
+           the header names that period. A placing off last week and a placing
+           off the year are different claims about the same person, and a block
+           that does not say which one it is making invites the reader to assume
+           the bigger one.
+         - The gain is never estimated from a gap, a percentile or a spacing.
+           The improved value goes back through rankProjection.projectRank,
+           which re-ranks the real field under the real tie rule, and the number
+           printed is the difference between two placings on the same board.
+         - A gain of nought or one is not printed. On a field of a hundred, one
+           place is somebody else having an ordinary week, and a milestone that
+           promises nothing teaches the reader that none of these numbers mean
+           anything.
+         - The step is a round amount in the metric's own unit and never below
+           the metric's noise threshold, so "take five seconds off your handle
+           time" cannot appear beside a fifteen second floor that says five
+           seconds is not a move at all.
+         - The frozen field is stated once, in plain words, at the bottom.
+
+       Reliability is absent and has to stay absent. It is attendance: hours
+       missed against an annual budget rather than an average, so there is no
+       step to take and no honest re-rank to do, and mailing somebody a placing
+       on their attendance is the single line in this app most likely to become
+       a real problem for a real person. It has no row in RANK_TO_REGISTRY, so
+       it cannot be mapped to a label or a noise floor and drops out of the loop
+       below on its own. STANDINGS_NEVER says it a second time anyway, because
+       "drops out on its own" is exactly the kind of property a later edit
+       removes without noticing it was load bearing. */
+
+    // Three metrics is a standings block. Six is a spreadsheet, and a
+    // spreadsheet in a direct message does not get read.
+    const STANDINGS_LIMIT = 3;
+
+    // Below this a "gain" is noise in somebody else's week rather than movement
+    // in this one. Two places is the smallest move worth putting a name to.
+    const STANDINGS_MIN_GAIN = 2;
+
+    // A placing out of four people is a true fact about a very small room, and
+    // it reads like one. Nothing is said about a metric that few were scored on.
+    const STANDINGS_MIN_FIELD = 5;
+    const STANDINGS_MIN_TEAM = 3;
+
+    // Never, whatever a caller or a later edit puts into PROJECTABLE_RANK_KEYS.
+    const STANDINGS_NEVER = new Set(['reliability']);
+
+    /* The four metrics this block is allowed to talk about.
+     *
+     * rank-projection will happily project six: it also ranks First Call
+     * Resolution and Overall Experience, and an earlier cut of this block
+     * walked that whole list. But the five KPIs an associate is actually scored
+     * on at year end are adherence, sentiment, rep satisfaction, handle time
+     * and reliability, and reliability is attendance, which this block does not
+     * report. Four is what is left, and four is what was asked for.
+     *
+     * The wider list is not wrong, it is a different question. Ranking somebody
+     * on a metric nobody grades them on invites "so what happens if I am 40th
+     * at this", and the honest answer is nothing, which is not a sentence worth
+     * sending. Kept as its own list rather than as a filter over
+     * PROJECTABLE_RANK_KEYS so that adding a projectable metric for the manager
+     * ladder cannot quietly widen what lands in somebody's inbox.
+     */
+    const STANDINGS_METRICS = ['adherence', 'sentiment', 'associateOverall', 'aht'];
+
+    // Round amounts a person can picture, keyed by the unit the metric is
+    // measured in rather than by the metric itself, so a metric added later
+    // arrives with a sensible ladder instead of inheriting somebody else's
+    // fifteen seconds. Rungs below the metric's own noise threshold are dropped
+    // where the ladder is walked, which is what keeps a one point step off a
+    // survey metric that only moves two points at a time.
+    const STANDINGS_STEPS_BY_UNIT = {
+        sec: [5, 10, 15, 20, 30, 45, 60],
+        '%': [1, 2, 3, 5, 10],
+        hrs: [0.5, 1, 2, 4]
+    };
+
+    function standingsOrdinal(n) {
+        const tens = n % 100;
+        if (tens >= 11 && tens <= 13) return n + 'th';
+        return n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+    }
+
+    /**
+     * The period the placings came from, said the way a person would say it.
+     *
+     * Not decoration on the header. It is the scope of every number underneath,
+     * and the one thing that stops "12th of 118" being read as a claim about
+     * the whole year when it is a claim about five days.
+     */
+    function standingsPeriodName(periodKey) {
+        const key = String(periodKey || '');
+        if (key.indexOf('month:') === 0) {
+            const parts = key.slice(6).split('-');
+            const when = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+            return isNaN(when.getTime()) ? 'this period' : when.toLocaleString('default', { month: 'long', year: 'numeric' });
+        }
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const period = getPeriodData(key) || ytd[key] || null;
+        const type = period?.metadata?.periodType || (ytd[key] ? 'ytd' : 'week');
+        if (type === 'ytd') return 'the year so far';
+        if (type === 'quarter') return getQuarterName(key);
+        const ending = period?.metadata?.endDate || (key.indexOf('|') > -1 ? key.split('|')[1] : '');
+        const label = typeof formatDateMMDDYYYY === 'function' ? formatDateMMDDYYYY(ending) : ending;
+        return label ? 'the week ending ' + label : 'this period';
+    }
+
+    // The step in the words the metric is actually measured in. An empty string
+    // for a unit with no natural step word, which stops the milestone rather
+    // than inventing one: "add 3" is not an instruction anybody can follow.
+    function standingsStepText(registryKey, step) {
+        const unit = window.METRICS_REGISTRY?.[registryKey]?.unit || '';
+        if (unit === 'sec') return step + (step === 1 ? ' second' : ' seconds');
+        if (unit === 'hrs') return step + (step === 1 ? ' hour' : ' hours');
+        if (unit === '%') return step + (step === 1 ? ' point' : ' points');
+        return '';
+    }
+
+    /**
+     * Where the step lands them, or null when it lands somewhere the metric
+     * cannot go. A percentage over a hundred and a handle time of zero are both
+     * arithmetic the units forbid, and asking for either would tell the reader
+     * that nobody checked.
+     */
+    function standingsImprovedValue(registryKey, current, step, reverse) {
+        const improved = reverse ? current - step : current + step;
+        if (!Number.isFinite(improved)) return null;
+        if (reverse && improved <= 0) return null;
+        const unit = window.METRICS_REGISTRY?.[registryKey]?.unit || '';
+        if (unit === '%' && (improved > 100 || improved < 0)) return null;
+        return improved;
+    }
+
+    /**
+     * One step off their number, and what it would have been worth in places.
+     *
+     * Walks the ladder from the smallest rung upward and takes the first one
+     * worth saying, so the ask is always the smallest honest ask. Three gates
+     * can end the walk with nothing, and every one of them is meant to:
+     *
+     *   - a rung under the metric's noise threshold is skipped, because a move
+     *     the app itself calls churn everywhere else cannot be sold as a
+     *     milestone here;
+     *   - a rung that would put them past the best number anybody in the field
+     *     posted ends the walk outright rather than skipping it, since every
+     *     larger rung is further past it. That is not a step, it is the whole
+     *     ladder, and if the smallest rung already clears the field then the
+     *     field is too tight for a milestone to mean anything;
+     *   - a gain under two places is skipped, and if no rung ever reaches two
+     *     the answer is nothing at all rather than a promise of nothing.
+     */
+    function standingsMilestone(options) {
+        const rp = options.rp;
+        const registryKey = options.registryKey;
+        const ladder = STANDINGS_STEPS_BY_UNIT[window.METRICS_REGISTRY?.[registryKey]?.unit || ''];
+        if (!ladder) return null;
+
+        for (let i = 0; i < ladder.length; i++) {
+            const step = ladder[i];
+            if (rp.moveIsNoise(options.rankKey, step)) continue;
+
+            const stepText = standingsStepText(registryKey, step);
+            if (!stepText) return null;
+
+            const improved = standingsImprovedValue(registryKey, options.current, step, options.reverse);
+            if (improved === null) continue;
+            if (options.fieldBest !== null
+                && (options.reverse ? improved < options.fieldBest : improved > options.fieldBest)) return null;
+
+            const newRank = rp.projectRank(options.rows, options.rankKey, options.employeeName, improved);
+            if (!(newRank >= 1)) continue;
+
+            const gain = options.baseRank - newRank;
+            if (gain < STANDINGS_MIN_GAIN) continue;
+
+            const verb = options.reverse ? 'Take ' + stepText + ' off' : 'Add ' + stepText;
+            return { step, gain, text: verb + ' and you would have finished about ' + gain + ' places higher.' };
+        }
+        return null;
+    }
+
+    /**
+     * The standings block for one associate, for one period.
+     *
+     * Private messages only. Every caller is one person writing to one other
+     * person; nothing public gets a placing out of here, for the same reason a
+     * channel shout-out names a placing and never a beaten count.
+     *
+     * Degrades to an empty string at every step rather than throwing or
+     * guessing: no ranking module, no row for this person, a period that will
+     * not build, a metric they are too thin on to be judged on at all. An
+     * associate who gets no block gets the message exactly as it read before
+     * any of this existed, which is the failure everybody can live with.
+     */
+    function buildStandingsBlock(employeeName, periodKey, spokenFor) {
+        const ranking = window.DevCoachModules?.centerRanking;
+        const rp = window.DevCoachModules?.rankProjection;
+        if (!ranking?.buildRankingsForPeriod || !rp?.projectRank || !rp?.isProjectable) return '';
+
+        let data = null;
+        try { data = ranking.buildRankingsForPeriod(periodKey); } catch (e) { return ''; }
+        const rows = data && Array.isArray(data.rankings) ? data.rankings : [];
+        if (!rows.length) return '';
+        const row = rows.find(r => r && r.name === employeeName);
+        if (!row) return '';
+
+        // teamMembers is the supervisor's roster for the period. Ranking only
+        // those rows is the team placing, and it has to be computed rather than
+        // read off the center rank: "3rd of 18" is a different question from
+        // "12th of 118" and the center number cannot answer it.
+        const teamSet = data.teamMembers instanceof Set ? data.teamMembers : null;
+        const teamRows = teamSet && teamSet.has(employeeName)
+            ? rows.filter(r => r && teamSet.has(r.name))
+            : [];
+
+        const candidates = [];
+        // The scorecard four, not everything rank-projection can project. See
+        // STANDINGS_METRICS for why the two lists are deliberately different.
+        STANDINGS_METRICS.forEach(rankKey => {
+            if (STANDINGS_NEVER.has(rankKey)) return;
+            if (!(rp.PROJECTABLE_RANK_KEYS || []).includes(rankKey)) return;
+            const registryKey = rp.registryKeyFor(rankKey);
+            if (!registryKey || STANDINGS_NEVER.has(registryKey)) return;
+
+            // Thin volume, or too few surveys to be judged on at all. A placing
+            // built on four calls is a placing built on nothing, and the gate
+            // that already decides that for the pace sentences decides it here.
+            if (!rp.isProjectable(rankKey, row)) return;
+
+            // Number(null) is 0 and Number('') is 0, and a zero is a perfect
+            // score on a reverse metric. Every value on every row enters through
+            // here so a blank can never be counted as one of the places.
+            const valueOf = (r) => {
+                const raw = rp.rankedValueFor(r, rankKey);
+                if (raw === null || raw === undefined || raw === '') return null;
+                const n = Number(raw);
+                return Number.isFinite(n) ? n : null;
+            };
+
+            const current = valueOf(row);
+            if (current === null) return;
+
+            // The denominator is who was scored on THIS metric, not how many
+            // rows the period has. Center ranking leaves a missing metric
+            // unranked and it takes no place, so "12th of 127" against a column
+            // only a hundred people filled in is a bigger field than the one the
+            // placing was won in.
+            const measured = rows.filter(r => valueOf(r) !== null);
+            if (measured.length < STANDINGS_MIN_FIELD) return;
+
+            const centerRank = rp.projectRank(rows, rankKey, employeeName, current);
+            if (!(centerRank >= 1)) return;
+
+            // The rankings table already carries a number for this metric,
+            // computed the same way over the same field, so the two agree or one
+            // of them is wrong. Nobody is served by picking a winner inside a
+            // message the associate can hold up next to the table, so a
+            // disagreement is a reason to say nothing about this metric at all.
+            const tableRank = (row.metricRanks || {})[rankKey];
+            if (Number.isFinite(tableRank) && tableRank !== centerRank) return;
+
+            const reverse = typeof isReverseMetric === 'function'
+                ? !!isReverseMetric(registryKey)
+                : !!window.METRICS_REGISTRY?.[registryKey]?.isReverse;
+
+            const teamMeasured = teamRows.filter(r => valueOf(r) !== null);
+            const teamRank = teamMeasured.length >= STANDINGS_MIN_TEAM
+                ? rp.projectRank(teamRows, rankKey, employeeName, current)
+                : null;
+
+            let fieldBest = null;
+            measured.forEach(r => {
+                const v = valueOf(r);
+                if (fieldBest === null) { fieldBest = v; return; }
+                fieldBest = reverse ? Math.min(fieldBest, v) : Math.max(fieldBest, v);
+            });
+
+            candidates.push({
+                rankKey,
+                label: window.METRICS_REGISTRY?.[registryKey]?.label || registryKey,
+                centerRank,
+                centerField: measured.length,
+                teamRank: teamRank >= 1 ? teamRank : null,
+                teamField: teamMeasured.length,
+                milestone: standingsMilestone({
+                    rp, rows, rankKey, registryKey, employeeName,
+                    current, reverse, fieldBest, baseRank: centerRank
+                })
+            });
+        });
+
+        if (!candidates.length) return '';
+
+        // Their best placing leads, because it is the line they will actually
+        // want to read and a block that opens on their worst number gets closed.
+        // After that come the metrics a step would genuinely move, biggest move
+        // first, since those are the ones there is anything to do about. Any
+        // slot still empty is filled in placing order.
+        const byPlacing = candidates.slice().sort((a, b) => a.centerRank - b.centerRank);
+        const chosen = [byPlacing[0]];
+        byPlacing.slice(1)
+            .filter(c => c.milestone)
+            .sort((a, b) => b.milestone.gain - a.milestone.gain)
+            .forEach(c => { if (chosen.length < STANDINGS_LIMIT) chosen.push(c); });
+        byPlacing.slice(1).forEach(c => {
+            if (chosen.length < STANDINGS_LIMIT && chosen.indexOf(c) === -1) chosen.push(c);
+        });
+
+        const lines = chosen.map(c => {
+            const where = c.teamRank
+                ? standingsOrdinal(c.centerRank) + ' of ' + c.centerField + ' in the call center, '
+                    + standingsOrdinal(c.teamRank) + ' of ' + c.teamField + ' on our team'
+                : standingsOrdinal(c.centerRank) + ' of ' + c.centerField + ' in the call center';
+            const bullet = '  • ' + c.label + ': ' + where + '.';
+            return c.milestone ? bullet + '\n    ' + c.milestone.text : bullet;
+        });
+
+        // Said once, at the bottom, in the plainest words available. Once,
+        // because a caveat repeated under every bullet stops being read by the
+        // second one; at the bottom, because it is about the milestones rather
+        // than the placings, and the placings are simply what happened.
+        const caveat = chosen.some(c => c.milestone)
+            ? '\n  Those position gains assume everybody else stays exactly where they finished.'
+            : '';
+
+        // Which metrics this block spoke for, so the near-miss tail after it can
+        // avoid naming one of them a second time with a placing counted over a
+        // different field. An out-parameter rather than a changed return type
+        // because the block itself is a string everywhere it is used, and a
+        // caller that does not care about the overlap should not have to unpack
+        // a wrapper to get at it.
+        if (spokenFor instanceof Set) chosen.forEach(c => spokenFor.add(c.rankKey));
+
+        return '📊 Where you stood for ' + standingsPeriodName(periodKey) + '\n'
+            + lines.join('\n') + caveat;
+    }
+
+    // Appended to a one-to-one message and nowhere else. The seam is here on
+    // purpose: one function decides the block is private, and a channel post or
+    // a shout-out stays clear of it by not calling this.
+    function withStandings(message, employeeName, periodKey, spokenFor) {
+        if (!message) return message;
+        const block = buildStandingsBlock(employeeName, periodKey, spokenFor);
+        return block ? message + '\n\n' + block : message;
+    }
+
     // --- Week-progress message (Wed/Thu midweek, Fri closing) ---
 
     /**
@@ -3123,13 +3485,52 @@
         }
     }
 
-    function withNearMiss(message, employeeName, latestKey) {
+    /* The near-miss line, unless the standings block already spoke for that
+     * metric.
+     *
+     * Both tails name a placing and both are welcome in a one-to-one, but they
+     * count different fields. The standings block ranks over the people scored
+     * on that metric, so it says "10th of 30". The near-miss line comes from
+     * celebrations, which ranks over its own display ranks for the period, so
+     * it says "#12 in the Call Center". Neither is wrong and they are answers
+     * to slightly different questions, but arriving two paragraphs apart in one
+     * message about one metric they read as the app contradicting itself, and
+     * the reader has no way to tell which number to believe.
+     *
+     * So the block wins where they overlap, because it is the one that also
+     * says what to do about it, and the near-miss line is kept for the metrics
+     * the block did not reach: it caps at three, and "you are two spots off the
+     * top ten" on a fourth metric is still worth sending.
+     */
+    function withNearMiss(message, employeeName, latestKey, spokenFor) {
         if (!message) return message;
+        const cel = window.DevCoachModules?.celebrations;
+        const already = spokenFor instanceof Set ? spokenFor : null;
+        if (already && already.size && cel?.nearMissFor) {
+            try {
+                const miss = cel.nearMissFor(employeeName, latestKey);
+                // METRIC_RANK_LABELS keys are center-ranking's rank keys, which
+                // is what the block records, so the two can be compared without
+                // a translation table in between.
+                if (miss && already.has(miss.metricKey)) return message;
+            } catch (e) { /* fall through and let the line be written */ }
+        }
         const line = nearMissLine(employeeName, latestKey);
         return line ? message + '\n\n' + line : message;
     }
 
     async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry) {
+        // Every exit from here goes through finish(), which is what makes the
+        // standings block a property of the one-to-one message rather than of
+        // whichever generator happened to write the body. A fifth exit added
+        // later gets both tails by using the same door.
+        // One set, filled by the block and read by the near-miss line after it,
+        // so the two tails cannot both name the same metric with placings
+        // counted over different fields.
+        const spokenFor = new Set();
+        const finish = (text) =>
+            withNearMiss(withStandings(text, employeeName, latestKey, spokenFor), employeeName, latestKey, spokenFor);
+
         let base;
         if (plan.base === 'weekProgress' || plan.base === 'weekClosing') {
             base = await generateWeekProgressMessage(employeeName, latestKey, baselineKey, {
@@ -3148,13 +3549,13 @@
 
         // When the weekly file already is this week, the recap would be the
         // same numbers a second time.
-        if (plan.dailyMode === 'none' || !dailyEntry) return withNearMiss(base || '', employeeName, latestKey);
-        if (plan.dailyMode === 'wtd' && latestKeyCoversThisWeek(outreach, latestKey)) return withNearMiss(base || '', employeeName, latestKey);
+        if (plan.dailyMode === 'none' || !dailyEntry) return finish(base || '');
+        if (plan.dailyMode === 'wtd' && latestKeyCoversThisWeek(outreach, latestKey)) return finish(base || '');
 
         const rows = plan.dailyMode === 'monday'
             ? (dailyEntry.mondayRow ? [dailyEntry.mondayRow] : [])
             : dailyEntry.rows;
-        if (!rows.length) return withNearMiss(base || '', employeeName, latestKey);
+        if (!rows.length) return finish(base || '');
 
         const recap = outreach.buildDailyRecap(plan, computeRepWtdFromDailies(rows), {
             metrics: DAILY_CHECKIN_METRICS,
@@ -3162,7 +3563,7 @@
             dayCount: dailyEntry.dates.size
         });
 
-        return withNearMiss(outreach.insertRecap(base || '', recap), employeeName, latestKey);
+        return finish(outreach.insertRecap(base || '', recap));
     }
 
     async function showRunMyDayModal(container) {
@@ -3837,6 +4238,14 @@
         DAILY_CHECKIN_METRICS,
         showRunMyDayModal,
         buildOutreachMessage,
+        // Exported for the standings tests rather than for any caller. What it
+        // prints is a position, which is the one thing the rest of this file
+        // spends its length withholding, so it has to be reachable without a
+        // DOM or a clipboard in the way and held to its gates directly.
+        buildStandingsBlock,
+        // Exported so the rule that the two tails never name the same metric
+        // twice can be asserted rather than reasoned about.
+        withNearMiss,
         collectDailyRowsThisWeek,
         generateMonthlyCheckinMessage,
         generateQuarterlyCheckinMessage,
