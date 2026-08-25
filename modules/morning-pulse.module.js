@@ -2188,6 +2188,23 @@
     // Never, whatever a caller or a later edit puts into PROJECTABLE_RANK_KEYS.
     const STANDINGS_NEVER = new Set(['reliability']);
 
+    /* The one metric that keeps its slot when the block is full.
+     *
+     * Four metrics qualify and three get printed, so one is always dropped, and
+     * the rule that decides which used to be "whichever a step would move
+     * least". That is a sensible rule for a coaching line and the wrong one
+     * here: rep satisfaction is the number an associate is asked about by name,
+     * and a survey week that went well or badly is the week they already know
+     * about. Leaving it out to make room for a larger projected gain answers a
+     * question nobody asked.
+     *
+     * This pins a slot, it does not lower a bar. Rep satisfaction still has to
+     * become a candidate on its own — isProjectable withholds it under three
+     * surveys and the field and agreement gates below apply to it unchanged, so
+     * a thin survey week prints nothing here exactly as before.
+     */
+    const STANDINGS_PINNED = 'associateOverall';
+
     /* The four metrics this block is allowed to talk about.
      *
      * rank-projection will happily project six: it also ranks First Call
@@ -2441,11 +2458,16 @@
         // slot still empty is filled in placing order.
         const byPlacing = candidates.slice().sort((a, b) => a.centerRank - b.centerRank);
         const chosen = [byPlacing[0]];
-        byPlacing.slice(1)
-            .filter(c => c.milestone)
+        // Rep satisfaction takes the next slot whenever it qualified at all.
+        // See STANDINGS_PINNED: it is the line they will be asked about, and it
+        // does not lose its place to somebody else's bigger projected gain.
+        const pinned = byPlacing.find(c => c.rankKey === STANDINGS_PINNED);
+        if (pinned && chosen.indexOf(pinned) === -1) chosen.push(pinned);
+        byPlacing
+            .filter(c => chosen.indexOf(c) === -1 && c.milestone)
             .sort((a, b) => b.milestone.gain - a.milestone.gain)
             .forEach(c => { if (chosen.length < STANDINGS_LIMIT) chosen.push(c); });
-        byPlacing.slice(1).forEach(c => {
+        byPlacing.forEach(c => {
             if (chosen.length < STANDINGS_LIMIT && chosen.indexOf(c) === -1) chosen.push(c);
         });
 

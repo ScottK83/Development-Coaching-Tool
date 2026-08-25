@@ -19,7 +19,10 @@ const { suite, ROOT } = require('./harness');
  *     nothing teaches the reader that none of these numbers mean anything;
  *   - a step under the metric's own noise threshold is churn and prints
  *     nothing, whatever the ladder offers;
- *   - thin volume is skipped rather than ranked;
+ *   - thin volume is skipped rather than ranked, and the pinned slot below
+ *     does not buy rep satisfaction past that gate;
+ *   - rep satisfaction keeps its slot once it qualifies, whatever a larger
+ *     projected gain elsewhere would otherwise have taken it;
  *   - the frozen field is admitted once, in plain words;
  *   - reliability is attendance and never appears, whatever a caller does to
  *     the rank keys on the way in.
@@ -147,10 +150,10 @@ const EXPECTED =
     '📊 Where you stood for the week ending 08/21/2026\n'
     + '  • Schedule Adherence: 10th of 30 in the call center, 3rd of 8 on our team.\n'
     + '    Add 1 point and you would have finished about 4 places higher.\n'
-    + '  • Average Handle Time: 12th of 30 in the call center, 4th of 8 on our team.\n'
-    + '    Take 15 seconds off and you would have finished about 8 places higher.\n'
     + '  • Rep Satisfaction: 15th of 30 in the call center, 4th of 8 on our team.\n'
     + '    Add 2 points and you would have finished about 7 places higher.\n'
+    + '  • Average Handle Time: 12th of 30 in the call center, 4th of 8 on our team.\n'
+    + '    Take 15 seconds off and you would have finished about 8 places higher.\n'
     + '  Those position gains assume everybody else stays exactly where they finished.';
 
 suite('pulse standings: both placings and a milestone, for a named period', (t) => {
@@ -199,6 +202,55 @@ suite('pulse standings: the block is a block, not a spreadsheet', (t) => {
     // because the two slots after the lead go to the metrics a step moves most.
     t.check('the crowded-out metric really was a candidate',
         block.indexOf('Overall Sentiment') === -1 && block.indexOf('First Call Resolution') === -1);
+});
+
+suite('pulse standings: rep satisfaction keeps its slot', (t) => {
+    /*
+     * Four metrics qualify and three get printed, so one is always dropped.
+     * Rep satisfaction is not the one, ever. It is the number an associate is
+     * asked about by name, and a block that trades it away for a bigger
+     * projected gain somewhere else is answering a question nobody asked.
+     *
+     * Dana is put last in the field on it, far enough back that no rung on the
+     * ladder is worth a sentence. That is the worst case the old rule had: no
+     * milestone and the worst placing of the four, so it lost both sorts and
+     * fell out. Sentiment is what it displaces, and the second half of this
+     * checks sentiment really did have a slot to be displaced from rather than
+     * being absent for reasons of its own.
+     */
+    const rows = [];
+    for (let i = 0; i < 29; i++) rows.push(peerRow(i));
+    rows.push(danaRow({ values: { aht: 422, adherence: 93.9, sentiment: 90.1, associateOverall: 70 } }));
+
+    const block = load(t, { rows }).buildStandingsBlock('Dana Reed', WEEK_KEY);
+    const bullets = block.split('\n').filter(line => line.indexOf('  • ') === 0);
+
+    t.check('rep satisfaction is placed', block.indexOf('Rep Satisfaction: 30th of 30 in the call center') > -1);
+    t.check('and it takes the slot straight after the lead', bullets[1].indexOf('Rep Satisfaction') === 4);
+
+    // Nothing was invented to justify the slot. Bottom of a field that tight
+    // has no step worth naming, and the placing stands without one.
+    t.check('with no milestone attached to it', bullets[1].indexOf('places higher') === -1);
+    t.check('the metric it displaced is gone', block.indexOf('Overall Sentiment') === -1);
+    t.equal('and the block is still three metrics', bullets.length, 3);
+
+    // The proof it was displaced rather than missing: with rep satisfaction
+    // withheld for thin surveys, sentiment takes that same slot and prints a
+    // five place milestone.
+    const withoutSurveys = load(t, {
+        rows: rows.slice(0, 29).concat([danaRow({
+            surveyTotal: 2,
+            values: { aht: 422, adherence: 93.9, sentiment: 90.1, associateOverall: 70 }
+        })])
+    }).buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('it really did have a milestone to lose',
+        withoutSurveys.indexOf('Overall Sentiment: 26th of 30') > -1
+        && withoutSurveys.indexOf('Add 1 point and you would have finished about 5 places higher.') > -1);
+
+    // The pin is a slot, not a lower bar. Three surveys is still the floor, and
+    // a week under it hands the slot back to the metric that earned it.
+    t.check('the pin does not carry a thin survey week past the floor',
+        withoutSurveys.indexOf('Rep Satisfaction') === -1);
 });
 
 suite('pulse standings: the frozen field is admitted once', (t) => {
