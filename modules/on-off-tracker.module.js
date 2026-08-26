@@ -18,6 +18,8 @@
         return window.getYearEndEmployees();
     }
 
+    function _picker() { return window.DevCoachModules.associatePicker; }
+
     function _getLatestYearPeriodForEmployee(employeeName, reviewYear) {
         return window.getLatestYearPeriodForEmployee(employeeName, reviewYear);
     }
@@ -480,15 +482,7 @@
     /* ── Panel / UI wiring ── */
 
     function populateOnOffTrackerEmployeeSelect(employeeSelect) {
-        employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
-        const employees = _getYearEndEmployees();
-        employees.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            employeeSelect.appendChild(option);
-        });
-        return employees;
+        return _picker().populateSelect(employeeSelect, _getYearEndEmployees());
     }
 
     function resetOnOffTrackerPanel(panel, factsSummary, summary, details) {

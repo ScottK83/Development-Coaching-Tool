@@ -1512,10 +1512,15 @@
         html += '<div>';
         html += '<label style="display:block; font-size:0.78em; color:var(--text-secondary); margin-bottom:2px;">Employee breakdown</label>';
         html += '<select id="relEmployeeSelect" style="padding:6px 10px; border:1px solid #cdd; border-radius:4px; min-width:260px;">';
-        html += '<option value="">Select employee...</option>';
-        prioritized.forEach(function(item) {
-            html += '<option value="' + escapeHtml(item.name) + '">' + escapeHtml(item.label) + '</option>';
-        });
+        // Ordered by review priority, worst first, so sort is switched off. The
+        // option text carries the review marker, which is why it needs a label
+        // separate from the value.
+        var labelByName = {};
+        prioritized.forEach(function(item) { labelByName[item.name] = item.label; });
+        html += window.DevCoachModules.associatePicker.optionsHtml(
+            prioritized.map(function(item) { return item.name; }),
+            { sort: false, teamFilter: false, label: function(n) { return labelByName[n]; } }
+        );
         html += '</select>';
         html += '</div>';
         html += '<div style="font-size:0.78em; color:var(--text-secondary);">Tip: choose one checked team member to view detail.</div>';

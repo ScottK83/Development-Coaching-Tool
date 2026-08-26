@@ -8,7 +8,7 @@ no application code was changed to make anything on this list reachable.
 
 ## Files that failed to load
 
-None. All 68 modules and `script.js`
+None. All 69 modules and `script.js`
 evaluate cleanly under the harness.
 
 ## Entry points not called

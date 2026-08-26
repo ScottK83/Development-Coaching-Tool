@@ -331,7 +331,7 @@ function populateTrendPeriodDropdown() {
 function initializeEmployeeDropdown() {
     const trendEmployeeSelect = document.getElementById('trendEmployeeSelect');
     if (trendEmployeeSelect) {
-        trendEmployeeSelect.innerHTML = '<option value="">-- Choose an employee --</option>';
+        window.DevCoachModules.associatePicker.populateSelect(trendEmployeeSelect, []);
     }
 }
 
@@ -344,7 +344,7 @@ function populateEmployeeDropdownForPeriod(weekKey) {
 
     if (!weekKey) {
         // No period selected, show blank option only
-        trendEmployeeSelect.innerHTML = '<option value="">-- Choose an employee --</option>';
+        window.DevCoachModules.associatePicker.populateSelect(trendEmployeeSelect, []);
         updateTrendButtonsVisibility();
         return;
     }
@@ -352,7 +352,9 @@ function populateEmployeeDropdownForPeriod(weekKey) {
     // Get employees only for selected period
     const periodData = ytdData[weekKey] || weeklyData[weekKey];
     if (!periodData || !periodData.employees) {
-        trendEmployeeSelect.innerHTML = '<option value="">No employees in this period</option>';
+        // Keeps its own wording: "no employees in this period" tells the reader why
+        // the list is empty, which the generic placeholder would not.
+        window.DevCoachModules.associatePicker.populateSelect(trendEmployeeSelect, [], { placeholder: 'No employees in this period' });
         updateTrendButtonsVisibility();
         return;
     }
@@ -363,14 +365,11 @@ function populateEmployeeDropdownForPeriod(weekKey) {
         .map(emp => emp.name)
         .sort();
 
-    // Build options
-    let options = '<option value="">Select Employee...</option>';
-    options += '<option value="ALL">All Associates</option>';
-    employees.forEach(name => {
-        options += `<option value="${name}">${name}</option>`;
+    // "All Associates" is an instruction, not a person, so it is passed as an
+    // extra option rather than mixed into the roster.
+    window.DevCoachModules.associatePicker.populateSelect(trendEmployeeSelect, employees, {
+        extraOptions: [{ value: 'ALL', label: 'All Associates' }]
     });
-
-    trendEmployeeSelect.innerHTML = options;
 
     updateTrendButtonsVisibility();
 }
@@ -650,7 +649,7 @@ function setupMetricTrendsListeners() {
             populateTrendPeriodDropdown(); // Metric Trends dropdown
 
             // Clear employee selection
-            document.getElementById('trendEmployeeSelect').innerHTML = '<option value="">-- Choose an employee --</option>';
+            window.DevCoachModules.associatePicker.populateSelect(document.getElementById('trendEmployeeSelect'), []);
             updateTrendButtonsVisibility();
         });
     });

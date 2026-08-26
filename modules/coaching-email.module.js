@@ -603,13 +603,12 @@ Generate the coaching email for ${preferredName} now.`;
         select.innerHTML = '<option value="">-- Choose an associate --</option>';
     }
 
+    // Replaces the whole option list, placeholder included. The previous version
+    // only appended names and relied on resetCoachingEmailUiState having written
+    // the placeholder first; the visible result is the same either way, but this
+    // no longer depends on a caller several steps earlier having done its part.
     function populateCoachingEmployeeSelectOptions(select, employees) {
-        employees.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            select.appendChild(option);
-        });
+        window.DevCoachModules.associatePicker.populateSelect(select, employees);
     }
 
     function getCoachingLatestPeriodEmployees(coachingWeekKey) {

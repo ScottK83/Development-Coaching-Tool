@@ -746,30 +746,24 @@ function populateAssociateSelect() {
     const select = document.getElementById('ptoAssociateSelect');
     if (!select) return;
 
-    const current = select.value;
-    select.innerHTML = '<option value="">-- Choose an associate --</option>';
-
-    const names = getEmployeeNames();
     const store = loadPtoStore();
     const storeLookup = {};
     Object.keys(store.associates || {}).forEach(n => { storeLookup[n.toLowerCase()] = n; });
 
-    names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        let entries = store.associates?.[name]?.payrollEntries || [];
-        if (!entries.length) {
-            const storeName = storeLookup[name.toLowerCase()];
-            if (storeName) entries = store.associates[storeName]?.payrollEntries || [];
+    // The option text is not just the name here: it carries how many payroll
+    // entries are on file, which is the whole point of the PTO picker. That is
+    // a label, not a different roster, so it stays as a label function.
+    window.DevCoachModules.associatePicker.populateSelect(select, getEmployeeNames(), {
+        preserveSelection: true,
+        label: (name) => {
+            let entries = store.associates?.[name]?.payrollEntries || [];
+            if (!entries.length) {
+                const storeName = storeLookup[name.toLowerCase()];
+                if (storeName) entries = store.associates[storeName]?.payrollEntries || [];
+            }
+            return entries.length > 0 ? `${name} (${entries.length})` : name;
         }
-        const count = entries.length;
-        opt.textContent = count > 0 ? `${name} (${count})` : name;
-        select.appendChild(opt);
     });
-
-    if (current && names.includes(current)) {
-        select.value = current;
-    }
 }
 
 // ============================================

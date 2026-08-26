@@ -151,9 +151,7 @@
         const dateInput = document.getElementById('oneOnOneDate');
         const meetingDate = dateInput?.value || todayIso();
 
-        const options = ['<option value="">Pick an associate…</option>']
-            .concat(names.map(n => `<option value="${escapeHtml(n)}"${n === selected ? ' selected' : ''}>${escapeHtml(n)}</option>`))
-            .join('');
+        const options = mods().associatePicker.optionsHtml(names, { selected: selected });
 
         container.innerHTML = `<div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:18px;">` +
                 `<div><label for="oneOnOneWho" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Associate</label>` +

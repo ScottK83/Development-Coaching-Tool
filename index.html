@@ -172,7 +172,7 @@
                     <div style="margin-bottom: 15px;">
                         <label for="sentimentUploadAssociate" style="font-weight: bold; display: block; margin-bottom: 5px;">Select Associate:</label>
                         <select id="sentimentUploadAssociate" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em;">
-                            <option value="">-- Select an associate --</option>
+                            <option value="">-- Choose an associate --</option>
                         </select>
                     </div>
                     
@@ -992,7 +992,7 @@ Box 2 - Future Improvement Areas:
                         <div style="margin-bottom: 15px;">
                             <label for="trendEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">2. Select Employee:</label>
                             <select id="trendEmployeeSelect" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 1em;">
-                                <option value="">-- Choose an employee --</option>
+                                <option value="">-- Choose an associate --</option>
                             </select>
                         </div>
                         
@@ -1534,7 +1534,7 @@ Box 2 - Future Improvement Areas:
                             <div>
                                 <label for="followUpPersonName" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Associate Name:</label>
                                 <select id="followUpPersonName" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
-                                    <option value="">-- Select Associate --</option>
+                                    <option value="">-- Choose an associate --</option>
                                 </select>
                             </div>
                         </div>
@@ -1747,6 +1747,9 @@ Box 2 - Future Improvement Areas:
                 'modules/metric-movement.module.js',
                 'modules/coaching-outcomes.module.js',
                 'modules/selected-associate.module.js',
+                // Turns a roster into option elements. Every picker in the app
+                // goes through it; the roster itself still comes from the feature.
+                'modules/associate-picker.module.js',
                 'modules/data-integrity.module.js',
                 'modules/upload-drift.module.js',
                 'modules/pattern-memory.module.js',

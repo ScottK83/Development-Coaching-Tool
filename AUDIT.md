@@ -820,13 +820,21 @@ format. **[S]**
 
 Remaining work, ranked by risk of the copies drifting apart.
 
-### 1. Associate picker population — 2.3
+### 1. Associate picker population — 2.3  ✅ DONE (pass 1)
 Eight roster definitions, three filtering techniques plus one picker with none, two sort
 orders, six placeholder strings. The shared module synchronises the selection but owns no
 population code, so the duplication sits underneath it untouched.
 **If this is wrong:** someone is missing from a picker, or Follow-Up shows associates outside
 your team (`red-flag.module.js:294-324` applies no team filter at all). Also folds in the one
 unescaped picker, `metric-trends.module.js:370`.
+
+**Outcome.** `modules/associate-picker.module.js` now owns team filtering, sort, dedupe,
+escaping, placeholder and empty-state for all fourteen pickers. All eight roster sources kept.
+Verified against the original code with identical baseline coverage: **no associate name was
+added, removed or reordered anywhere**. Four placeholder strings changed, as agreed. Two
+deliberate exceptions are now explicit at their call sites rather than merely absent:
+Follow-Up passes `teamFilter: false`, and Reliability passes `sort: false` because its order
+is review priority, not the alphabet.
 
 ### 2. Tip lookup keying — 2.11
 Label-keyed and key-keyed copies of the same pool, plus `tips.csv` and `EMBEDDED_TIPS_CSV`

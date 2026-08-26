@@ -295,9 +295,6 @@ function populateFollowUpAssociateDropdown() {
     const associateSelect = document.getElementById('followUpPersonName');
     if (!associateSelect) return;
 
-    const previousValue = associateSelect.value;
-    associateSelect.innerHTML = '<option value="">-- Select Associate --</option>';
-
     const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     const employeeSet = new Set();
 
@@ -311,16 +308,14 @@ function populateFollowUpAssociateDropdown() {
         });
     });
 
-    Array.from(employeeSet).sort((a, b) => a.localeCompare(b)).forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        associateSelect.appendChild(option);
+    // teamFilter: false is deliberate and is the only picker that opts out.
+    // Follow-Up has never applied team scope, so this preserves what it does
+    // today rather than quietly changing who appears in the list. Whether that
+    // is right is an open question -- see AUDIT.md 2.3.
+    window.DevCoachModules.associatePicker.populateSelect(associateSelect, Array.from(employeeSet), {
+        teamFilter: false,
+        preserveSelection: true
     });
-
-    if (previousValue && employeeSet.has(previousValue)) {
-        associateSelect.value = previousValue;
-    }
 }
 
 // ============================================

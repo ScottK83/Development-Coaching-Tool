@@ -174,7 +174,8 @@ function installBrowser() {
 
 
 
-    return { store, elements, makeElement };
+    global.__DOM = { store: store, elements: elements, makeElement: makeElement };
+    return global.__DOM;
 }
 
 /* ---------- injecting the fixture ---------- */
@@ -427,6 +428,7 @@ function recordAll() {
     recordKpiScoring();
     recordPeriodMath();
     recordRoster();
+    recordPickers();
     recordTips();
     recordPromptsAndEmails();
     recordReviewPrompts();
@@ -1153,6 +1155,182 @@ function recordClipboardAndMail() {
         };
     });
 }
+/* --- associate pickers (pass 1) --- */
+
+// A <select> that actually behaves like one for the two things the pickers do
+// to it: assigning innerHTML clears its children, and appendChild adds one.
+// The fake element in installBrowser treats innerHTML as an inert property,
+// which would let cleared options survive and make this section a fiction.
+function fakeSelect(id) {
+    const el = global.__DOM.makeElement(id);
+    let html = '';
+    el.children = [];
+
+    // Assigning innerHTML has to actually produce options, not just store a
+    // string. Half the pickers built their entire list as HTML and the other
+    // half appended elements; if this setter only cleared, the HTML-built ones
+    // would read as empty and a before/after comparison would be worthless.
+    // Only <option> needs parsing, which is all these selects ever contain.
+    function parseOptions(source) {
+        const out = [];
+        const re = /<option([^>]*)>([\s\S]*?)<\/option>/g;
+        let m;
+        while ((m = re.exec(source)) !== null) {
+            const attrs = m[1] || '';
+            const valueMatch = attrs.match(/value\s*=\s*"([^"]*)"/);
+            out.push({
+                value: valueMatch ? unescapeHtml(valueMatch[1]) : unescapeHtml(m[2]),
+                textContent: unescapeHtml(m[2]),
+                selected: /\bselected\b/.test(attrs)
+            });
+        }
+        return out;
+    }
+
+    function unescapeHtml(s) {
+        return String(s)
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
+            .replace(/&amp;/g, '&');
+    }
+
+    Object.defineProperty(el, 'innerHTML', {
+        get() { return html; },
+        // A real <select> drops its selection when its options are replaced.
+        set(v) { html = String(v); el.children = parseOptions(html); el.value = ''; }
+    });
+    el.appendChild = function (child) { el.children.push(child); return child; };
+    // The Trends group-analysis picker reads its existing blank option back to
+    // keep its own label, so this has to answer for real.
+    el.querySelector = function (sel) {
+        if (sel === 'option[value=""]') {
+            return el.children.filter(function (o) { return String(o.value) === ''; })[0] || null;
+        }
+        return null;
+    };
+    if (id) global.__DOM.elements[id] = el;
+    return el;
+}
+
+function readOptions(select) {
+    return (select.children || []).map((o) =>
+        JSON.stringify(String(o.value)) + ' => ' + JSON.stringify(String(o.textContent)));
+}
+
+function recordPickers() {
+    record('picker / year-end, on-off and mid-year share one population fn', () => {
+        const out = {};
+        const ye = fakeSelect('yearEndEmployeeSelect');
+        M().yearEndComments.populateYearEndEmployeeSelect(ye);
+        out['yearEndEmployeeSelect'] = readOptions(ye);
+
+        const oo = fakeSelect('onOffTrackerEmployeeSelect');
+        M().onOffTracker.populateOnOffTrackerEmployeeSelect(oo);
+        out['onOffTrackerEmployeeSelect (also Mid-Year)'] = readOptions(oo);
+        return out;
+    });
+
+    record('picker / coaching', () => {
+        const sel = fakeSelect('coachingEmployeeSelect');
+        const { employees } = M().coachingEmail.getCoachingLatestPeriodEmployees(fixture.LATEST_WEEK_KEY);
+        M().coachingEmail.populateCoachingEmployeeSelectOptions(sel, employees);
+        return readOptions(sel);
+    });
+
+    record('picker / call listening, delete-year data', () => {
+        const out = {};
+        const cl = fakeSelect('callListeningEmployeeSelect');
+        G('populateCallListeningEmployeeSelect')(cl, G('getCallListeningEmployeeOptions')(), 'Cara Floor');
+        out['callListeningEmployeeSelect (with a live selection)'] = readOptions(cl);
+        out['  selection kept'] = String(cl.value);
+
+        const dy = fakeSelect('deleteEmployeeYearSelect');
+        G('populateDeleteEmployeeYearOptions')();
+        out['deleteEmployeeYearSelect'] = readOptions(dy);
+        return out;
+    });
+
+    record('picker / trends, sentiment, follow-up, 1:1 prep', () => {
+        const out = {};
+        const te = fakeSelect('trendEmployeeSelect');
+        G('populateEmployeeDropdownForPeriod')(fixture.LATEST_WEEK_KEY);
+        out['trendEmployeeSelect'] = readOptions(te);
+
+        G('populateEmployeeDropdownForPeriod')('');
+        out['trendEmployeeSelect (no period selected)'] = readOptions(te);
+
+        G('populateEmployeeDropdownForPeriod')('2099-01-01|2099-01-07');
+        out['trendEmployeeSelect (period with no employees)'] = readOptions(te);
+
+        const su = fakeSelect('sentimentUploadAssociate');
+        M().sentiment.populateSentimentAssociateDropdown
+            ? M().sentiment.populateSentimentAssociateDropdown()
+            : G('populateSentimentAssociateDropdown') && G('populateSentimentAssociateDropdown')();
+        out['sentimentUploadAssociate'] = readOptions(su);
+
+        const fu = fakeSelect('followUpPersonName');
+        G('populateFollowUpAssociateDropdown') && G('populateFollowUpAssociateDropdown')();
+        out['followUpPersonName (no team filter, deliberately)'] = readOptions(fu);
+
+        const sa = fakeSelect('summaryAssociateSelect');
+        const oo = fakeSelect('oneOnOneAssociateSelect');
+        G('populateExecutiveSummaryAssociate') && G('populateExecutiveSummaryAssociate')();
+        out['summaryAssociateSelect'] = readOptions(sa);
+        out['oneOnOneAssociateSelect'] = readOptions(oo);
+        return out;
+    });
+
+    record('picker / trends group-analysis selector keeps its own blank label', () => {
+        // Its blank option is not a "pick someone" prompt: choosing it runs the
+        // group analysis. The label has to survive repopulation, twice over,
+        // because the second call reads back what the first one wrote.
+        const sel = fakeSelect('trendEmployeeSelector');
+        sel.innerHTML = '<option value="">🏢 All Team Members (Group Analysis)</option>';
+        const out = {};
+        G('initializeTrendIntelligence')();
+        out['after first populate'] = readOptions(sel);
+        G('initializeTrendIntelligence')();
+        out['after second populate'] = readOptions(sel);
+        return out;
+    });
+
+    record('picker / reliability keeps review-priority order and its own labels', () => {
+        const sel = fakeSelect('relEmployeeSelect');
+        const ap = M().associatePicker;
+        const priority = ['Dan Under', 'Cara Floor', 'Ada Stretch'];
+        const labels = { 'Dan Under': 'Dan Under (review)', 'Cara Floor': 'Cara Floor', 'Ada Stretch': 'Ada Stretch' };
+        sel.innerHTML = ap.optionsHtml(priority, {
+            sort: false, teamFilter: false, label: (n) => labels[n]
+        });
+        return readOptions(sel);
+    });
+
+    record('picker / the shared builder itself', () => {
+        const ap = M().associatePicker;
+        const messy = ['  Cara Floor ', 'Ada Stretch', 'Cara Floor', '', null, 'Ben Ongoal', '   '];
+        return {
+            defaultPlaceholder: ap.DEFAULT_PLACEHOLDER,
+            normalize_dedupesTrimsSorts: ap.normalizeNames(messy),
+            normalize_sortFalseKeepsOrder: ap.normalizeNames(messy, { sort: false }),
+            normalize_teamFilterOff: ap.normalizeNames(['Not On The Team'].concat(fixture.ALL_NAMES), { teamFilter: false }),
+            normalize_teamFilterOn: ap.normalizeNames(['Not On The Team'].concat(fixture.ALL_NAMES)),
+            optionsHtml_escapesNames: ap.optionsHtml(['a<b>c', 'x"y', "O'Brien", 'p&q'], { teamFilter: false }),
+            optionsHtml_marksSelected: ap.optionsHtml(fixture.ALL_NAMES, { selected: 'Cara Floor' }),
+            optionsHtml_labelDiffersFromValue: ap.optionsHtml(['Ada Stretch', 'Ben Ongoal'], { label: (n) => n + ' (3)' }),
+            populate_emptyRosterLeavesPlaceholder: (() => {
+                const s = fakeSelect();
+                ap.populateSelect(s, []);
+                return readOptions(s);
+            })(),
+            populate_extraOptions: (() => {
+                const s = fakeSelect();
+                ap.populateSelect(s, ['Ada Stretch'], { extraOptions: [{ value: 'ALL', label: 'All Associates' }] });
+                return readOptions(s);
+            })()
+        };
+    });
+}
+
 /* ---------- report rendering ---------- */
 
 function renderReport() {

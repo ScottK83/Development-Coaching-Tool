@@ -8,7 +8,7 @@ This file is a contract, not documentation. After a refactoring pass, an
 empty `git diff` here means the pass changed no behaviour. A non-empty diff
 is either an intended change that needs explaining line by line, or a bug.
 
-Entries: 72   Not covered: 4
+Entries: 79   Not covered: 4
 
 ------------------------------------------------------------------------------
 metric-profiles / getYearTarget, every metric, both years
@@ -11970,6 +11970,236 @@ shared-utils / escapeHtml against names that need it
   "\"p&q\" -> \"p&amp;q\"",
   "\"\" -> \"\""
 ]
+
+------------------------------------------------------------------------------
+picker / year-end, on-off and mid-year share one population fn
+------------------------------------------------------------------------------
+{
+  "onOffTrackerEmployeeSelect (also Mid-Year)": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "yearEndEmployeeSelect": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ]
+}
+
+------------------------------------------------------------------------------
+picker / coaching
+------------------------------------------------------------------------------
+[
+  "\"\" => \"-- Choose an associate --\"",
+  "\"Ada Stretch\" => \"Ada Stretch\"",
+  "\"Ben Ongoal\" => \"Ben Ongoal\"",
+  "\"Cara Floor\" => \"Cara Floor\"",
+  "\"Dan Under\" => \"Dan Under\"",
+  "\"Eve Rounding\" => \"Eve Rounding\"",
+  "\"Fay Mixed\" => \"Fay Mixed\"",
+  "\"Gus Nocalls\" => \"Gus Nocalls\"",
+  "\"Hal Blanks\" => \"Hal Blanks\"",
+  "\"Ida Partial\" => \"Ida Partial\""
+]
+
+------------------------------------------------------------------------------
+picker / call listening, delete-year data
+------------------------------------------------------------------------------
+{
+  "  selection kept": "Cara Floor",
+  "callListeningEmployeeSelect (with a live selection)": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "deleteEmployeeYearSelect": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ]
+}
+
+------------------------------------------------------------------------------
+picker / trends, sentiment, follow-up, 1:1 prep
+------------------------------------------------------------------------------
+{
+  "followUpPersonName (no team filter, deliberately)": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "oneOnOneAssociateSelect": [],
+  "sentimentUploadAssociate": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "summaryAssociateSelect": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "trendEmployeeSelect": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"ALL\" => \"All Associates\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "trendEmployeeSelect (no period selected)": [
+    "\"\" => \"-- Choose an associate --\""
+  ],
+  "trendEmployeeSelect (period with no employees)": [
+    "\"\" => \"No employees in this period\""
+  ]
+}
+
+------------------------------------------------------------------------------
+picker / trends group-analysis selector keeps its own blank label
+------------------------------------------------------------------------------
+{
+  "after first populate": [
+    "\"\" => \"🏢 All Team Members (Group Analysis)\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ],
+  "after second populate": [
+    "\"\" => \"🏢 All Team Members (Group Analysis)\"",
+    "\"Ada Stretch\" => \"Ada Stretch\"",
+    "\"Ben Ongoal\" => \"Ben Ongoal\"",
+    "\"Cara Floor\" => \"Cara Floor\"",
+    "\"Dan Under\" => \"Dan Under\"",
+    "\"Eve Rounding\" => \"Eve Rounding\"",
+    "\"Fay Mixed\" => \"Fay Mixed\"",
+    "\"Gus Nocalls\" => \"Gus Nocalls\"",
+    "\"Hal Blanks\" => \"Hal Blanks\"",
+    "\"Ida Partial\" => \"Ida Partial\""
+  ]
+}
+
+------------------------------------------------------------------------------
+picker / reliability keeps review-priority order and its own labels
+------------------------------------------------------------------------------
+[
+  "\"\" => \"-- Choose an associate --\"",
+  "\"Dan Under\" => \"Dan Under (review)\"",
+  "\"Cara Floor\" => \"Cara Floor\"",
+  "\"Ada Stretch\" => \"Ada Stretch\""
+]
+
+------------------------------------------------------------------------------
+picker / the shared builder itself
+------------------------------------------------------------------------------
+{
+  "defaultPlaceholder": "-- Choose an associate --",
+  "normalize_dedupesTrimsSorts": [
+    "Ada Stretch",
+    "Ben Ongoal",
+    "Cara Floor"
+  ],
+  "normalize_sortFalseKeepsOrder": [
+    "Cara Floor",
+    "Ada Stretch",
+    "Ben Ongoal"
+  ],
+  "normalize_teamFilterOff": [
+    "Ada Stretch",
+    "Ben Ongoal",
+    "Cara Floor",
+    "Dan Under",
+    "Eve Rounding",
+    "Fay Mixed",
+    "Gus Nocalls",
+    "Hal Blanks",
+    "Ida Partial",
+    "Not On The Team"
+  ],
+  "normalize_teamFilterOn": [
+    "Ada Stretch",
+    "Ben Ongoal",
+    "Cara Floor",
+    "Dan Under",
+    "Eve Rounding",
+    "Fay Mixed",
+    "Gus Nocalls",
+    "Hal Blanks",
+    "Ida Partial"
+  ],
+  "optionsHtml_escapesNames": "<option value=\"\">-- Choose an associate --</option><option value=\"a&lt;b&gt;c\">a&lt;b&gt;c</option><option value=\"O&#039;Brien\">O&#039;Brien</option><option value=\"p&amp;q\">p&amp;q</option><option value=\"x&quot;y\">x&quot;y</option>",
+  "optionsHtml_labelDiffersFromValue": "<option value=\"\">-- Choose an associate --</option><option value=\"Ada Stretch\">Ada Stretch (3)</option><option value=\"Ben Ongoal\">Ben Ongoal (3)</option>",
+  "optionsHtml_marksSelected": "<option value=\"\">-- Choose an associate --</option><option value=\"Ada Stretch\">Ada Stretch</option><option value=\"Ben Ongoal\">Ben Ongoal</option><option value=\"Cara Floor\" selected>Cara Floor</option><option value=\"Dan Under\">Dan Under</option><option value=\"Eve Rounding\">Eve Rounding</option><option value=\"Fay Mixed\">Fay Mixed</option><option value=\"Gus Nocalls\">Gus Nocalls</option><option value=\"Hal Blanks\">Hal Blanks</option><option value=\"Ida Partial\">Ida Partial</option>",
+  "populate_emptyRosterLeavesPlaceholder": [
+    "\"\" => \"-- Choose an associate --\""
+  ],
+  "populate_extraOptions": [
+    "\"\" => \"-- Choose an associate --\"",
+    "\"ALL\" => \"All Associates\"",
+    "\"Ada Stretch\" => \"Ada Stretch\""
+  ]
+}
 
 ------------------------------------------------------------------------------
 tips / getMetricTips called by KEY, the way Trends calls it

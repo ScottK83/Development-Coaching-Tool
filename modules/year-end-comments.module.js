@@ -6,6 +6,7 @@
      * ────────────────────────────────────────────── */
     function _showToast(msg, ms) { return window.showToast(msg, ms); }
     function _getYearEndEmployees() { return window.getYearEndEmployees(); }
+    function _picker() { return window.DevCoachModules.associatePicker; }
     function _getLatestYearPeriodForEmployee(name, year) { return window.getLatestYearPeriodForEmployee(name, year); }
     function _getYearEndDraftState(name, year) { return window.getYearEndDraftState(name, year); }
     function _persistYearEndDraftState(name, year) { return window.persistYearEndDraftState(name, year); }
@@ -136,15 +137,7 @@
     }
 
     function populateYearEndEmployeeSelect(employeeSelect) {
-        employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
-        const employees = _getYearEndEmployees();
-        employees.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            employeeSelect.appendChild(option);
-        });
-        return employees;
+        return _picker().populateSelect(employeeSelect, _getYearEndEmployees());
     }
 
     /* ──────────────────────────────────────────────

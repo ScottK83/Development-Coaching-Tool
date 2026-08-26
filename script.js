@@ -4367,20 +4367,9 @@ function populateDeleteEmployeeYearOptions() {
     const dropdown = document.getElementById('deleteEmployeeYearSelect');
     if (!dropdown) return;
 
-    const currentValue = dropdown.value;
-    dropdown.innerHTML = '<option value="">-- Choose an associate --</option>';
-
-    const employees = getYearEndEmployees();
-    employees.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        dropdown.appendChild(option);
+    window.DevCoachModules.associatePicker.populateSelect(dropdown, getYearEndEmployees(), {
+        preserveSelection: true
     });
-
-    if (currentValue && employees.includes(currentValue)) {
-        dropdown.value = currentValue;
-    }
 }
 
 function getPeriodReviewYear(periodKey, period) {
@@ -6323,21 +6312,15 @@ function initializeTrendIntelligence() {
             }
         }
         
-        const currentValue = employeeSelect.value;
+        // The blank option here is not a "pick someone" prompt: selecting it runs
+        // the group analysis. Its label is kept rather than replaced with the
+        // shared placeholder, because the shared wording would misdescribe what
+        // choosing it does.
         const firstOption = employeeSelect.querySelector('option[value=""]');
-        employeeSelect.innerHTML = '';
-        if (firstOption) employeeSelect.appendChild(firstOption.cloneNode(true));
-        
-        Array.from(allEmployees).sort().forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            employeeSelect.appendChild(option);
+        window.DevCoachModules.associatePicker.populateSelect(employeeSelect, Array.from(allEmployees), {
+            placeholder: firstOption ? firstOption.textContent : undefined,
+            preserveSelection: true
         });
-        
-        if (currentValue && Array.from(allEmployees).includes(currentValue)) {
-            employeeSelect.value = currentValue;
-        }
     }
 
     // Attach event listeners once
@@ -7926,17 +7909,9 @@ function renderCallListeningHistoryForSelectedEmployee() {
 }
 
 function populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection) {
-    employeeSelect.innerHTML = '<option value="">-- Choose an associate --</option>';
-    employees.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        employeeSelect.appendChild(option);
+    window.DevCoachModules.associatePicker.populateSelect(employeeSelect, employees, {
+        selected: currentSelection
     });
-
-    if (currentSelection && employees.includes(currentSelection)) {
-        employeeSelect.value = currentSelection;
-    }
 }
 
 function setCallListeningSectionStatus(status, employeeCount) {

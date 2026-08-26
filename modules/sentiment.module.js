@@ -1205,15 +1205,7 @@
             }
         }
 
-        // Sort and populate dropdown
-        const sortedEmployees = Array.from(allEmployees).sort();
-        select.innerHTML = '<option value="">-- Select an associate --</option>';
-        sortedEmployees.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            select.appendChild(option);
-        });
+        window.DevCoachModules.associatePicker.populateSelect(select, Array.from(allEmployees));
     }
 
     function handleSentimentUploadSubmit() {

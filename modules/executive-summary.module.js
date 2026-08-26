@@ -694,14 +694,7 @@
             }
         }
 
-        var sortedEmployees = Array.from(allEmployees).sort();
-        select.innerHTML = '<option value="">-- Choose an associate --</option>';
-        sortedEmployees.forEach(function(name) {
-            var option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            select.appendChild(option);
-        });
+        window.DevCoachModules.associatePicker.populateSelect(select, Array.from(allEmployees));
 
         syncOneOnOneAssociateSelect();
     }
@@ -738,19 +731,9 @@
             }
         }
 
-        // Sort and populate dropdown
-        var sortedEmployees = filterAssociateNamesByTeamSelection(Array.from(allEmployees)).sort();
-        select.innerHTML = '<option value="">-- Choose an associate --</option>';
-        sortedEmployees.forEach(function(name) {
-            var option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            select.appendChild(option);
+        window.DevCoachModules.associatePicker.populateSelect(select, Array.from(allEmployees), {
+            selected: currentSelection
         });
-
-        if (currentSelection && sortedEmployees.includes(currentSelection)) {
-            select.value = currentSelection;
-        }
     }
 
     // ============================================
