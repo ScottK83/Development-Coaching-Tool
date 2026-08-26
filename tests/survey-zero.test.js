@@ -233,3 +233,46 @@ suite('survey zero: no placing off a survey nobody answered', (t) => {
     }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a surveyed week is placed as before', surveyed.indexOf('Rep Satisfaction') > -1);
 });
+
+suite('survey zero: a substituted number gets no placing under a borrowed label', (t) => {
+    /*
+     * When rep sat comes back blank or zero the scorer substitutes Overall
+     * Experience and marks the row. Center ranking flags that for the manager
+     * with an orange OE beside the cell; this block cannot flag it, because a
+     * placing off a substituted row is wrong twice over. It answers a different
+     * question from the one the label asks, and it answers it against a column
+     * where some rows are rep sat and some are Overall Experience, which is not
+     * a field anybody actually finished in.
+     *
+     * Dropped rather than relabelled, and the pinned slot goes back to a metric
+     * that was measured.
+     */
+    const substituted = loadStandings(t, {
+        surveyTotal: 12,
+        associateOverallSource: 'overallExperience',
+        values: { aht: 422, adherence: 93.9, sentiment: 90.1, associateOverall: 88 }
+    }).buildStandingsBlock('Dana Reed', WEEK_KEY);
+
+    t.check('the block is still written', substituted.indexOf('Where you stood') > -1);
+    t.check('no rep satisfaction bullet', substituted.indexOf('Rep Satisfaction') === -1);
+    t.check('and it is not relabelled either', substituted.indexOf('Overall Experience') === -1);
+    t.check('the slot goes to a metric that was measured',
+        substituted.indexOf('Overall Sentiment') > -1 || substituted.indexOf('Schedule Adherence') > -1);
+
+    // The identical row with the substitution flag cleared is placed as normal,
+    // so this is the flag doing the work rather than the numbers.
+    const genuine = loadStandings(t, {
+        surveyTotal: 12,
+        associateOverallSource: 'cxRepOverall',
+        values: { aht: 422, adherence: 93.9, sentiment: 90.1, associateOverall: 88 }
+    }).buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a real rep sat figure is placed', genuine.indexOf('Rep Satisfaction: 15th of 30') > -1);
+
+    // An older row that predates the flag carries no source at all, and must
+    // not be read as a substitution and silently dropped.
+    const unmarked = loadStandings(t, {
+        surveyTotal: 12,
+        values: { aht: 422, adherence: 93.9, sentiment: 90.1, associateOverall: 88 }
+    }).buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('an unmarked row is placed as before', unmarked.indexOf('Rep Satisfaction') > -1);
+});

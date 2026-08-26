@@ -2453,6 +2453,29 @@
             // right call for a call volume and the wrong one for a survey.
             if (SURVEY_METRIC_KEYS.has(registryKey) && !(parseFloat(row.surveyTotal) > 0)) return;
 
+            /* The number under this label is not always this metric.
+             *
+             * When rep sat comes back blank or zero the scorer substitutes
+             * Overall Experience and marks the row, and every surface
+             * downstream prints the result under the rep-sat label. Center
+             * ranking flags it for the manager with an orange OE beside the
+             * cell, because a manager is comparing it against a rep-sat figure
+             * they have open in another window and silence costs them the
+             * comparison. The same silence costs an associate more.
+             *
+             * A placing off a substituted row is wrong twice. It answers a
+             * different question from the one the label asks, and it answers it
+             * against a column where some rows are rep sat and some are Overall
+             * Experience, which is not a field anybody actually finished in.
+             * Relabelling the bullet would fix the first and leave the second.
+             *
+             * So it is dropped rather than dressed up, and the pinned slot goes
+             * back to a metric that was measured. That is Scott's call, and it
+             * is the one consistent with the rest of this block: every gate here
+             * ends in saying nothing rather than in saying something smaller.
+             */
+            if (rankKey === 'associateOverall' && row.associateOverallSource === 'overallExperience') return;
+
             // Number(null) is 0 and Number('') is 0, and a zero is a perfect
             // score on a reverse metric. Every value on every row enters through
             // here so a blank can never be counted as one of the places.
