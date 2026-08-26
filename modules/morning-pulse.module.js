@@ -145,14 +145,14 @@
     }
 
     const PERFECT_SURVEYS_SOLO = [
-        (surveys) => `${surveys} perfect this week — can't do better than that.`,
-        (surveys) => `${surveys} — every single one a perfect score. That's special.`,
+        (surveys) => `${surveys} perfect this week. Can't do better than that.`,
+        (surveys) => `${surveys}. Every single one a perfect score. That's special.`,
         (surveys) => `Flawless on all ${surveys}. Huge.`,
         (surveys) => `${surveys} and not one off the mark. Beautiful.`,
         (surveys) => `All ${surveys} perfect. That doesn't happen by accident.`,
     ];
     const PERFECT_SURVEYS_PLUS = [
-        (surveys, label, val) => `${surveys} — every one perfect. And ${label} at ${val} on top of it? Unreal week.`,
+        (surveys, label, val) => `${surveys}. Every one perfect. And ${label} at ${val} on top of it? Unreal week.`,
         (surveys, label, val) => `Flawless on ${surveys} plus ${label} at ${val}. That's a statement week.`,
         (surveys, label, val) => `All ${surveys} perfect, and ${label} sitting at ${val}. Wow.`,
         (surveys, label, val) => `${surveys} without a single miss, and ${label} at ${val} to go with it. Love it.`,
@@ -192,20 +192,20 @@
     // "week_only"   — last week dipped but YTD is solid (one-week blip)
     // "fallback"    — no YTD context available at all
     const FOCUS_PERSISTENT = [
-        (label, weekVal, ytdVal, target) => `One thing to zero in on: ${label}. Last week was ${weekVal} and YTD is sitting at ${ytdVal} (target ${target}) — this one needs real attention.`,
+        (label, weekVal, ytdVal, target) => `One thing to zero in on: ${label}. Last week was ${weekVal} and YTD is sitting at ${ytdVal} (target ${target}). This one needs real attention.`,
         (label, weekVal, ytdVal, target) => `Let's work on ${label} together. Last week at ${weekVal}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
         (label, weekVal, ytdVal, target) => `The one I really want us to tackle: ${label}. ${weekVal} last week, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
-        (label, weekVal, ytdVal, target) => `${label} is the focus. Week landed at ${weekVal}, YTD at ${ytdVal}, target ${target} — it keeps missing and I want us to change that.`,
+        (label, weekVal, ytdVal, target) => `${label} is the focus. Week landed at ${weekVal}, YTD at ${ytdVal}, target ${target}. It keeps missing and I want us to change that.`,
     ];
     const FOCUS_YTD_ONLY = [
-        (label, weekVal, ytdVal, target) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. Last week was better at ${weekVal} — let's stack more weeks like that and pull the YTD back up.`,
+        (label, weekVal, ytdVal, target) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. Last week was better at ${weekVal}. Let's stack more weeks like that and pull the YTD back up.`,
         (label, weekVal, ytdVal, target) => `Last week you had ${label} at ${weekVal}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so we need to keep that momentum going.`,
-        (label, weekVal, ytdVal, target) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but last week's ${weekVal} shows you can do it — let's repeat.`,
+        (label, weekVal, ytdVal, target) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but last week's ${weekVal} shows you can do it. Let's repeat.`,
     ];
     const FOCUS_WEEK_DIP = [
         (label, weekVal, ytdVal, target) => `Quick note on ${label}: last week dipped to ${weekVal} but your YTD is solid at ${ytdVal} (target ${target}). Not worried, just want to shake off the blip.`,
         (label, weekVal, ytdVal, target) => `${label} had an off week at ${weekVal}, but your YTD at ${ytdVal} is still above target (${target}). Let's get back to normal this week.`,
-        (label, weekVal, ytdVal, target) => `Only watch-out: ${label} landed at ${weekVal} last week. YTD ${ytdVal} vs target ${target} says you're fine — just don't let two in a row slip.`,
+        (label, weekVal, ytdVal, target) => `Only watch-out: ${label} landed at ${weekVal} last week. YTD ${ytdVal} vs target ${target} says you're fine. Just don't let two in a row slip.`,
     ];
     const FOCUS_FALLBACK = [
         (label, val, target) => `One thing to zero in on: ${label}. Last week at ${val}, target is ${target}.`,
@@ -233,7 +233,7 @@
     const MK_OPENERS = [
         name => `Happy Monday ${name}! 🌟 New week, let's talk about where you stand and where we're headed.`,
         name => `Hey ${name}! ☀️ Kicking off the week with your numbers and a game plan.`,
-        name => `Morning ${name}! 🚀 Start of a new week — here's your snapshot and what to focus on.`,
+        name => `Morning ${name}! 🚀 Start of a new week. Here's your snapshot and what to focus on.`,
         name => `${name}! Monday check-in time. 📊 Let's celebrate what's working and lock in a plan.`,
         name => `Good morning ${name}! 💪 Quick Monday rundown on your wins and where we can push.`,
         name => `Hey ${name}, let's get this week started right. Here's where things landed. ☕`,
@@ -251,38 +251,38 @@
         'Love the wins. Now here\'s the game plan for this week.',
         'Let\'s build on that momentum with a focus area.',
         'Now let\'s zero in on where we can improve.',
-        'Great foundation — here\'s where I want us to focus.',
+        'Great foundation. Here\'s where I want us to focus.',
         'With those wins in mind, let\'s talk opportunity.',
         'Alright, here\'s the play for this week.',
         'Here\'s the one thing I want us to be intentional about.',
     ];
     // --- Monday kickoff focus pools, keyed by week vs YTD combo ---
     const MK_FOCUS_PERSISTENT = [
-        (label, weekVal, ytdVal, target) => `This week, let's zero in on ${label}. Last week was ${weekVal} and YTD is at ${ytdVal} vs target ${target} — it's been a pattern and I want us to break it.`,
+        (label, weekVal, ytdVal, target) => `This week, let's zero in on ${label}. Last week was ${weekVal} and YTD is at ${ytdVal} vs target ${target}. It's been a pattern and I want us to break it.`,
         (label, weekVal, ytdVal, target) => `The one to attack: ${label}. Week at ${weekVal}, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
         (label, weekVal, ytdVal, target) => `Game plan: get ${label} moving. Last week ${weekVal}, YTD ${ytdVal}, we need ${target}. I'll help however you need.`,
-        (label, weekVal, ytdVal, target) => `This week's mission: ${label}. Last week ${weekVal}, YTD ${ytdVal} vs target ${target}. I think you can get there — let's lock in.`,
+        (label, weekVal, ytdVal, target) => `This week's mission: ${label}. Last week ${weekVal}, YTD ${ytdVal} vs target ${target}. I think you can get there. Let's lock in.`,
         (label, weekVal, ytdVal, target) => `My ask for you this week: be intentional about ${label}. ${weekVal} last week, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
     ];
     const MK_FOCUS_YTD_ONLY = [
-        (label, weekVal, ytdVal, target) => `Love that last week's ${label} was ${weekVal} — now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is pulling that number up.`,
+        (label, weekVal, ytdVal, target) => `Love that last week's ${label} was ${weekVal}. Now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is pulling that number up.`,
         (label, weekVal, ytdVal, target) => `Your focus: stack another week like last week's ${label} (${weekVal}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
-        (label, weekVal, ytdVal, target) => `${label} is the one to keep pushing. Last week at ${weekVal} was the right direction — YTD is at ${ytdVal}, target ${target}, so let's keep stringing good weeks together.`,
+        (label, weekVal, ytdVal, target) => `${label} is the one to keep pushing. Last week at ${weekVal} was the right direction. YTD is at ${ytdVal}, target ${target}, so let's keep stringing good weeks together.`,
         (label, weekVal, ytdVal, target) => `Here's the one to own: ${label}. Last week's ${weekVal} shows you can hit it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
     ];
     const MK_FOCUS_WEEK_DIP = [
-        (label, weekVal, ytdVal, target) => `Only thing on my radar: ${label} dipped to ${weekVal} last week. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-week thing — just don't let it become two.`,
+        (label, weekVal, ytdVal, target) => `Only thing on my radar: ${label} dipped to ${weekVal} last week. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-week thing. Just don't let it become two.`,
         (label, weekVal, ytdVal, target) => `Watch-out for this week: ${label}. Last week was ${weekVal}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
-        (label, weekVal, ytdVal, target) => `One thing to keep in mind: ${label} had an off week at ${weekVal}. YTD at ${ytdVal}, target ${target} — you're fine, just shake off the dip.`,
+        (label, weekVal, ytdVal, target) => `One thing to keep in mind: ${label} had an off week at ${weekVal}. YTD at ${ytdVal}, target ${target}. You're fine, just shake off the dip.`,
     ];
     const MK_FOCUS_FALLBACK = [
         (label, val, target) => `This week, let's zero in on ${label}. Last week was ${val}, target is ${target}.`,
-        (label, val, target) => `The one to attack: ${label}. Last week ${val} vs target ${target} — let's close that gap.`,
+        (label, val, target) => `The one to attack: ${label}. Last week ${val} vs target ${target}. Let's close that gap.`,
         (label, val, target) => `This week's mission: ${label}. Last week ${val}, target ${target}. I think you can get there.`,
         (label, val, target) => `My ask for you this week: be intentional about ${label}. Last week ${val}, aiming for ${target}.`,
     ];
     const MK_ALL_GOOD = [
-        'You\'re hitting target across the board — incredible work. Let\'s keep that going this week!',
+        'You\'re hitting target across the board. Incredible work. Let\'s keep that going this week!',
         'All metrics on target. That\'s rare and it\'s impressive. Keep doing what you\'re doing.',
         'Everything is clicking right now. The goal this week is simple: maintain.',
         'You\'re on target everywhere. That level of consistency is hard to achieve. Nice work.',
@@ -303,35 +303,35 @@
     // --- Midweek Check-In phrase pools ---
     const MW_OPENERS = [
         name => `Hey ${name}! Celebratory midweek check-in. 📊`,
-        name => `${name}! Halfway through the week and you're doing great — quick pulse check.`,
+        name => `${name}! Halfway through the week and you're doing great. Quick pulse check.`,
         name => `Midweek pulse check, ${name}. Love the momentum so far.`,
         name => `Hey ${name}, quick midweek update with some wins to celebrate.`,
         name => `${name}! We're halfway there and building strong. Quick look at the numbers. ⏱️`,
-        name => `Checking in ${name} — the week is taking shape and you're in it.`,
+        name => `Checking in ${name}, the week is taking shape and you're in it.`,
         name => `Hey ${name}, quick ${getCurrentWeekdayName()} update. Plenty to be proud of already. 📈`,
-        name => `${name}, midweek check — you're giving yourself a real shot this week.`,
+        name => `${name}, midweek check. You're giving yourself a real shot this week.`,
         name => `Halfway through the week ${name}! Quick status update and some encouragement.`,
         name => `${name}! Real quick midweek look at the progress you've made.`,
         name => `Quick midweek nudge, ${name}. You're moving in the right direction.`,
         name => `Hey ${name}, touching base midweek with a little extra encouragement.`,
         name => `${name}, taking a quick pulse on the week.`,
-        name => `Hey ${name} — wanted to check in real quick. 📊`,
+        name => `Hey ${name}, wanted to check in real quick. 📊`,
         name => `${name}! Pulled up the numbers midweek and wanted to share what I'm seeing.`,
         name => `${getCurrentWeekdayName()} check-in, ${name}. You've been putting in work.`,
         name => `${name}, dropping in midweek with a quick look at where you stand.`,
-        name => `Had to reach out, ${name} — this week is shaping up.`,
+        name => `Had to reach out, ${name}. This week is shaping up.`,
         name => `${name}, wanted to pop in with a midweek update.`,
         name => `Quick check-in, ${name}. Let's see how the week is landing.`,
         name => `${name}! Midweek and I'm liking what I see. 👀`,
         name => `Hey ${name}, pausing to give you some midweek feedback.`,
         name => `${name}, just ran the midweek numbers and wanted to share.`,
         name => `Been watching your week, ${name}. Quick note midweek.`,
-        name => `${name}, real quick — wanted you to see where you're tracking.`,
+        name => `${name}, real quick. Wanted you to see where you're tracking.`,
         name => `${name}! Stealing a minute of your ${getCurrentWeekdayName()} to talk numbers.`,
         name => `Hey ${name}, sliding in with a midweek read.`,
-        name => `${name} — three days in and I've got thoughts. 📊`,
+        name => `${name}, three days in and I've got thoughts. 📊`,
         name => `Appreciate you, ${name}. Quick midweek note.`,
-        name => `${name}, don't want to interrupt — just a quick midweek status.`,
+        name => `${name}, don't want to interrupt. Just a quick midweek status.`,
         name => `Before you get deep into the afternoon, ${name}, a quick check-in.`,
         name => `${name}, stepped away from the dashboard to send you this midweek note.`,
     ];
@@ -358,61 +358,61 @@
         (label) => `${label} is the one we put on the board Monday.`,
     ];
     const MW_ON_TRACK = [
-        (label, val, target) => `You're crushing it — ${label} at ${val} is already above the ${target} target! 🔥`,
+        (label, val, target) => `You're crushing it. ${label} at ${val} is already above the ${target} target! 🔥`,
         (label, val, target) => `Great news: ${label} is at ${val}, beating the ${target} target. Proud of this.`,
         (label, val, target) => `${label} at ${val} is on target (${target}) and that's a real midweek win. 💪`,
-        (label, val, target) => `Look at that — ${label} at ${val} is hitting the mark (${target}). Love it.`,
+        (label, val, target) => `Look at that. ${label} at ${val} is hitting the mark (${target}). Love it.`,
         (label, val, target) => `You did it! ${label} at ${val} is right where we want it (${target}). Strong work. ✅`,
         (label, val, target) => `${label} at ${val} is at or above ${target}. The focus is clearly paying off!`,
         (label, val, target) => `${label} at ${val} vs ${target} target? That's a win worth celebrating.`,
         (label, val, target) => `The work on ${label} is showing. ${val} against a ${target} target is legit progress.`,
         (label, val, target) => `${label} at ${val} is through the ${target} bar. That's what showing up looks like. 🎯`,
-        (label, val, target) => `Already hitting it on ${label} — ${val} vs ${target} target. Fantastic.`,
+        (label, val, target) => `Already hitting it on ${label}. ${val} vs ${target} target. Fantastic.`,
         (label, val, target) => `This is the stuff. ${label} at ${val}, target was ${target}. Nailed it.`,
         (label, val, target) => `Goal met. ${label} sitting at ${val} (target ${target}). Keep it rolling.`,
         (label, val, target) => `You're there. ${label} at ${val} cleared ${target}. That's the formula.`,
         (label, val, target) => `${label}: ${val}. Target: ${target}. Verdict: done deal. 🔥`,
         (label, val, target) => `The ${label} number (${val}) is past ${target}. Don't let up, but take a second to feel good about that.`,
-        (label, val, target) => `Over the line already — ${label} at ${val}, target ${target}. Big deal.`,
+        (label, val, target) => `Over the line already. ${label} at ${val}, target ${target}. Big deal.`,
         (label, val, target) => `${label} at ${val} is a real midweek statement. ${target} was the ask and you're past it.`,
     ];
     const MW_CLOSE = [
-        (label, val, target, gap) => `You're close — ${label} at ${val}, just ${gap} from ${target}. That's exciting momentum.`,
+        (label, val, target, gap) => `You're close. ${label} at ${val}, just ${gap} from ${target}. That's exciting momentum.`,
         (label, val, target, gap) => `${label} is at ${val}, only ${gap} from ${target}. You are right there. 💪`,
         (label, val, target, gap) => `Almost there on ${label}! At ${val}, you're ${gap} from ${target}. Great position midweek.`,
         (label, val, target, gap) => `${label} at ${val} is so close to ${target} (just ${gap} away). This is very doable.`,
         (label, val, target, gap) => `Getting there! ${label} at ${val}, ${gap} to go before ${target}. Love the progress.`,
-        (label, val, target, gap) => `The gap on ${label} is shrinking — ${val} vs ${target}, just ${gap} to go. Keep building.`,
+        (label, val, target, gap) => `The gap on ${label} is shrinking. ${val} vs ${target}, just ${gap} to go. Keep building.`,
         (label, val, target, gap) => `${label}: ${val}. Target: ${target}. Gap: ${gap}. That's absolutely closeable this week.`,
         (label, val, target, gap) => `You're in striking distance on ${label}. ${val} now, ${target} goal, ${gap} to go. 🎯`,
-        (label, val, target, gap) => `${label} is within reach — ${val} now, ${target} target, only ${gap} between. 💪`,
+        (label, val, target, gap) => `${label} is within reach. ${val} now, ${target} target, only ${gap} between. 💪`,
         (label, val, target, gap) => `You can see the finish line on ${label}. ${val} today, ${gap} from ${target}.`,
-        (label, val, target, gap) => `${label} is knocking on the door — ${val} vs ${target}, just ${gap}. One good stretch closes it.`,
+        (label, val, target, gap) => `${label} is knocking on the door. ${val} vs ${target}, just ${gap}. One good stretch closes it.`,
         (label, val, target, gap) => `Super close on ${label}. ${val} vs ${target}, ${gap} gap. A couple intentional calls gets you there.`,
         (label, val, target, gap) => `${label} at ${val} is a whisper away from ${target}. Only ${gap} separates you.`,
         (label, val, target, gap) => `You're on the doorstep of ${label}. ${val}, need ${target}, gap of ${gap}. 🎯`,
-        (label, val, target, gap) => `Almost — ${label} at ${val}, ${gap} shy of ${target}. That's a finish-the-week problem, nothing bigger.`,
+        (label, val, target, gap) => `Almost. ${label} at ${val}, ${gap} shy of ${target}. That's a finish-the-week problem, nothing bigger.`,
         (label, val, target, gap) => `${label} is trending right where we want it. ${val} now, ${gap} from ${target}. Stay on it.`,
         (label, val, target, gap) => `You're setting up ${label} to land. ${val} vs ${target}, ${gap} left on the table.`,
     ];
     const MW_BEHIND = [
-        (label, val, target, gap) => `${label} is at ${val}, still ${gap} from the ${target} target. But we've got time — let's be intentional about it.`,
-        (label, val, target, gap) => `We've got some ground to cover on ${label} — ${val} vs ${target} (${gap} gap). Here's what can help:`,
+        (label, val, target, gap) => `${label} is at ${val}, still ${gap} from the ${target} target. But we've got time. Let's be intentional about it.`,
+        (label, val, target, gap) => `We've got some ground to cover on ${label}. ${val} vs ${target} (${gap} gap). Here's what can help:`,
         (label, val, target, gap) => `${label} at ${val} is a stretch from ${target} (${gap} gap), but every call is a chance to move it.`,
         (label, val, target, gap) => `Real talk: ${label} at ${val} needs work to reach ${target} (${gap} away). Let's make these last days count.`,
         (label, val, target, gap) => `${label} is sitting at ${val} with a ${gap} gap to ${target}. Not where we want it, but the week isn't over.`,
         (label, val, target, gap) => `The ${label} number at ${val} is behind target (${target}, ${gap} gap). Let's focus on what we can control.`,
         (label, val, target, gap) => `${label}: ${val}. We need ${target}. That's a ${gap} gap, but I've seen you close bigger ones.`,
-        (label, val, target, gap) => `Not gonna sugarcoat it — ${label} at ${val} vs ${target} (${gap}) needs attention. But there's still time.`,
-        (label, val, target, gap) => `Want to be straight with you on ${label} — ${val} with ${gap} to go to ${target}. Let's tighten up.`,
+        (label, val, target, gap) => `Not gonna sugarcoat it. ${label} at ${val} vs ${target} (${gap}) needs attention. But there's still time.`,
+        (label, val, target, gap) => `Want to be straight with you on ${label}. ${val} with ${gap} to go to ${target}. Let's tighten up.`,
         (label, val, target, gap) => `${label} at ${val} is off the pace (${target}, ${gap} gap). Here's where we pivot:`,
         (label, val, target, gap) => `${label} needs a push. ${val} today, ${target} goal, ${gap} between. Two days can still move it.`,
-        (label, val, target, gap) => `The ${label} number (${val}) isn't where we want it yet — ${gap} shy of ${target}. Let's get intentional.`,
+        (label, val, target, gap) => `The ${label} number (${val}) isn't where we want it yet. ${gap} shy of ${target}. Let's get intentional.`,
         (label, val, target, gap) => `${label} is trailing at ${val} vs ${target}, and that's ${gap} of daylight. Time to refocus.`,
         (label, val, target, gap) => `On ${label}, we're at ${val} with a ${gap} climb to ${target}. Not ideal, but fixable with focus.`,
-        (label, val, target, gap) => `I won't dress it up — ${label} at ${val} needs real attention to hit ${target} (${gap} to go). Let's go work.`,
+        (label, val, target, gap) => `I won't dress it up. ${label} at ${val} needs real attention to hit ${target} (${gap} to go). Let's go work.`,
         (label, val, target, gap) => `${label} is the one that needs love right now. ${val} against ${target}, ${gap} gap. Doable with intention.`,
-        (label, val, target, gap) => `Gonna call it — ${label} at ${val} is behind (${gap} from ${target}). Let's finish the week pushing on this.`,
+        (label, val, target, gap) => `Gonna call it. ${label} at ${val} is behind (${gap} from ${target}). Let's finish the week pushing on this.`,
     ];
     const MW_NO_FOCUS_SET = [
         'Here\'s a quick look at how the week is going so far.',
@@ -430,11 +430,11 @@
     ];
     const MW_NO_DATA_YET = [
         (label) => ` No updated data for ${label} yet, but keep being intentional about it.`,
-        (label) => ` No fresh numbers on ${label} yet — stay locked in on it.`,
+        (label) => ` No fresh numbers on ${label} yet. Stay locked in on it.`,
         (label) => ` ${label} hasn't refreshed yet, but keep treating it like it's the one.`,
         (label) => ` Haven't seen the ${label} numbers update, but don't take your foot off it.`,
         (label) => ` We don't have new ${label} data yet, but the work still matters.`,
-        (label) => ` ${label} isn't showing fresh yet — keep pushing like it is.`,
+        (label) => ` ${label} isn't showing fresh yet. Keep pushing like it is.`,
     ];
     const MW_FALLBACK_FOCUS = [
         (label, cur, tgt) => `\n\n🎯 The metric I'd focus on for the rest of the week: ${label} at ${cur} (target ${tgt}).`,
@@ -442,15 +442,15 @@
         (label, cur, tgt) => `\n\n🎯 Here's the one I'd chase down: ${label} at ${cur}, target ${tgt}.`,
         (label, cur, tgt) => `\n\n🎯 The lever worth pulling the rest of this week: ${label} (${cur}, target ${tgt}).`,
         (label, cur, tgt) => `\n\n🎯 My suggested focus the next couple days: ${label}, sitting at ${cur} against a ${tgt} target.`,
-        (label, cur, tgt) => `\n\n🎯 Where I'd spend the attention: ${label} — ${cur} right now, ${tgt} is the goal.`,
+        (label, cur, tgt) => `\n\n🎯 Where I'd spend the attention: ${label}. ${cur} right now, ${tgt} is the goal.`,
     ];
     const MW_BRIGHT_SIDE = [
         (label, val) => ` On the bright side, ${label} at ${val} is looking good.`,
         (label, val) => ` The good news: ${label} at ${val} is right where we want it.`,
-        (label, val) => ` Want to point out — ${label} at ${val} is a bright spot.`,
+        (label, val) => ` Want to point out that ${label} at ${val} is a bright spot.`,
         (label, val) => ` One thing to feel good about: ${label} at ${val}.`,
-        (label, val) => ` Worth mentioning — ${label} at ${val} is holding strong.`,
-        (label, val) => ` And don't miss it — ${label} at ${val} is a win.`,
+        (label, val) => ` Worth mentioning that ${label} at ${val} is holding strong.`,
+        (label, val) => ` And don't miss it. ${label} at ${val} is a win.`,
     ];
     const MW_TIP_PREFIXES = ['💡', '🛠️', '👉', '🎯', '📌'];
     const MW_CLOSERS = [
@@ -458,12 +458,12 @@
         'Proud of you. Let me know how I can help as you finish the week.',
         'Proud of you. Let me know how I can help keep this momentum going.',
         'Proud of you. Let me know how I can help you close strong.',
-        'Proud of the work you\'re putting in — holler if I can do anything to support.',
+        'Proud of the work you\'re putting in. Holler if I can do anything to support.',
         'You know where to find me if anything comes up. Finish strong.',
-        'Keep at it — I\'m in your corner if you need something.',
+        'Keep at it. I\'m in your corner if you need something.',
         'You\'re doing the work. Let me know what would help from my end.',
         'Hit me up if anything gets in the way. Love what you\'re doing.',
-        'Backing you the rest of the week — shout if you need something.',
+        'Backing you the rest of the week. Shout if you need something.',
         'If there\'s anything I can take off your plate, say the word.',
         'Grateful to have you on the team. Reach out if you need a hand.',
         'Whatever you need from me, just ask. Close it out strong.',
@@ -2390,8 +2390,18 @@
             const gain = options.baseRank - newRank;
             if (gain < STANDINGS_MIN_GAIN) continue;
 
+            // Both numbers, not just the step. "Take 15 seconds off" is an
+            // instruction with no destination in it, and the reader has to do
+            // the subtraction themselves to find out what they are being asked
+            // for. Naming the number they would land on turns it into a target
+            // they can hold in their head on a call.
             const verb = options.reverse ? 'Take ' + stepText + ' off' : 'Add ' + stepText;
-            return { step, gain, text: verb + ' and you would have finished about ' + gain + ' places higher.' };
+            return {
+                step,
+                gain,
+                text: verb + '. At ' + fmtVal(registryKey, improved)
+                    + ' you would have finished about ' + gain + ' places higher.'
+            };
         }
         return null;
     }
@@ -2526,6 +2536,8 @@
 
             candidates.push({
                 rankKey,
+                registryKey,
+                current,
                 label: window.METRICS_REGISTRY?.[registryKey]?.label || registryKey,
                 centerRank,
                 centerField: measured.length,
@@ -2560,13 +2572,27 @@
             if (chosen.length < STANDINGS_LIMIT && chosen.indexOf(c) === -1) chosen.push(c);
         });
 
+        /* One bullet per metric, over three lines rather than one and a half.
+         *
+         * The old shape ran the label and both placings into a single line and
+         * hung the milestone off it, which read as a wall in the preview pane
+         * and worse in a chat client that wraps at an unknown width. Split by
+         * what each line answers, it survives any wrap: what the number was,
+         * where it finished, what one step would have been worth.
+         *
+         * Their own value leads, because a placing without the number behind it
+         * is a position in a league table they cannot check. It is also the
+         * number the milestone line then asks them to move, so the two sit
+         * together instead of a paragraph apart.
+         */
         const lines = chosen.map(c => {
             const where = c.teamRank
                 ? standingsOrdinal(c.centerRank) + ' of ' + c.centerField + ' in the call center, '
                     + standingsOrdinal(c.teamRank) + ' of ' + c.teamField + ' on our team'
                 : standingsOrdinal(c.centerRank) + ' of ' + c.centerField + ' in the call center';
-            const bullet = '  • ' + c.label + ': ' + where + '.';
-            return c.milestone ? bullet + '\n    ' + c.milestone.text : bullet;
+            const bullet = '  • ' + c.label + ': ' + fmtVal(c.registryKey, c.current)
+                + '\n      ' + where + '.';
+            return c.milestone ? bullet + '\n      ' + c.milestone.text : bullet;
         });
 
         // Said once, at the bottom, in the plainest words available. Once,
@@ -2574,7 +2600,7 @@
         // second one; at the bottom, because it is about the milestones rather
         // than the placings, and the placings are simply what happened.
         const caveat = chosen.some(c => c.milestone)
-            ? '\n  Those position gains assume everybody else stays exactly where they finished.'
+            ? '\n\n  Those position gains assume everybody else stays exactly where they finished.'
             : '';
 
         // Which metrics this block spoke for, so the near-miss tail after it can
@@ -2585,8 +2611,8 @@
         // a wrapper to get at it.
         if (spokenFor instanceof Set) chosen.forEach(c => spokenFor.add(c.rankKey));
 
-        return '📊 Where you stood for ' + standingsPeriodName(periodKey) + '\n'
-            + lines.join('\n') + caveat;
+        return '📊 Where you stood for ' + standingsPeriodName(periodKey) + '\n\n'
+            + lines.join('\n\n') + caveat;
     }
 
     // Appended to a one-to-one message and nowhere else. The seam is here on
@@ -2895,10 +2921,10 @@
     };
 
     const GROWTH_GREETINGS = [
-        (name, longLabel) => `Hey ${name}! 📈 Pulled your ${longLabel} growth — wanted to share what stood out.`,
+        (name, longLabel) => `Hey ${name}! 📈 Pulled your ${longLabel} growth. Wanted to share what stood out.`,
         (name, longLabel) => `${name}! Got your ${longLabel} numbers in front of me, here's how you're trending.`,
         (name, longLabel) => `Morning ${name}! Quick ${longLabel} growth check for you.`,
-        (name, longLabel) => `${name}, taking a look at ${longLabel} for you — here's the rundown.`,
+        (name, longLabel) => `${name}, taking a look at ${longLabel} for you. Here's the rundown.`,
         (name, longLabel) => `Hey ${name}! Wanted to share your ${longLabel} trajectory.`,
         (name, longLabel) => `${name}! Sat down with your ${longLabel} numbers, here's what I saw.`
     ];
@@ -2910,14 +2936,14 @@
     ];
 
     const GROWTH_NO_MOVE = [
-        `Your numbers held pretty steady — no big swings either direction.`,
-        `Things have been holding flat — nothing major moved.`,
-        `Numbers stayed mostly level — no big movement to call out.`
+        `Your numbers held pretty steady. No big swings either direction.`,
+        `Things have been holding flat. Nothing major moved.`,
+        `Numbers stayed mostly level. No big movement to call out.`
     ];
 
     const GROWTH_CLOSERS = [
         `Keep climbing! 🚀`,
-        `Proud of the trajectory — let's keep it going.`,
+        `Proud of the trajectory. Let's keep it going.`,
         `Great direction. Keep stacking the wins.`,
         `Solid effort showing up in the numbers.`,
         `Excited to see where you take it next.`
@@ -2926,9 +2952,9 @@
     // Used when nothing improved. "Keep climbing!" under a wall of red reads
     // like nobody actually looked at the numbers.
     const GROWTH_REGROUP_CLOSERS = [
-        `One stretch doesn't define you — let's pick one thing and go after it together.`,
+        `One stretch doesn't define you. Let's pick one thing and go after it together.`,
         `Everybody has a period like this. Let's talk through what got in the way.`,
-        `I'm not worried — let's focus on one metric and build from there.`,
+        `I'm not worried. Let's focus on one metric and build from there.`,
         `Let's regroup on this one. Pick the focus area above and we'll work it together.`
     ];
 
@@ -3243,7 +3269,7 @@
                     textarea.value = 'Not enough data for that comparison yet.';
                 }
             } catch (e) {
-                textarea.value = 'Could not build a growth message — check console for details.';
+                textarea.value = 'Could not build a growth message. Check console for details.';
                 console.error('growth message error', e);
             }
         }
@@ -3294,7 +3320,7 @@
     //
     // Metrics are scoped to what's meaningful at single-day granularity:
     // volume, AHT, adherence, and the three sentiment scores. Survey-based
-    // metrics (RepSat/FCR/OE) are intentionally left out — they need days
+    // metrics (RepSat/FCR/OE) are intentionally left out. They need days
     // of surveys to stabilize.
     const DAILY_CHECKIN_METRICS = [
         { key: 'totalCalls',        label: 'Volume',     reverse: false, weight: null },
@@ -3306,7 +3332,7 @@
     ];
 
     function formatDailyCell(metricKey, value) {
-        if (value === null || value === undefined || Number.isNaN(value)) return '<span style="color:#bdbdbd;">—</span>';
+        if (value === null || value === undefined || Number.isNaN(value)) return '<span style="color:#bdbdbd;">-</span>';
         if (metricKey === 'totalCalls') return Math.round(value).toString();
         return fmtVal(metricKey, value);
     }
@@ -3539,7 +3565,7 @@
 
     // --- Run My Day (the whole-team sweep, any weekday) ---
 
-    // Plain-text twin of formatDailyCell — the sweep puts these numbers in a
+    // Plain-text twin of formatDailyCell. The sweep puts these numbers in a
     // message, not a table cell, so the em-dash placeholder and markup are out.
     function formatDailyPlain(metricKey, value) {
         if (!Number.isFinite(value)) return '';
@@ -3569,7 +3595,7 @@
         return { byName, mondayIso, dayCount: dailyKeysThisWeek.length };
     }
 
-    // The base message for the day, plus — when the plan calls for it — the
+    // The base message for the day, plus. When the plan calls for it. The
     // daily numbers slotted in after the opening.
     function latestKeyCoversThisWeek(outreach, latestKey) {
         if (!outreach || !latestKey) return false;
@@ -3772,7 +3798,7 @@
                 ? isAssociateIncludedByTeamFilter(name, teamCtx)
                 : true;
             if (!included) return;
-            blocked.push({ name, reason: 'Daily uploads only — no weekly numbers to coach against.' });
+            blocked.push({ name, reason: 'Daily uploads only. No weekly numbers to coach against.' });
         });
 
         cardData.sort((a, b) => b.priority - a.priority || a.emp.name.localeCompare(b.emp.name));
@@ -3801,7 +3827,7 @@
         overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
             `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
-                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Day — ${escapeHtml(plan.label)}</h2>` +
+                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Day. ${escapeHtml(plan.label)}</h2>` +
                     `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
                         `${escapeHtml(weekdayName)} • covers ${escapeHtml(plan.coverageLabel)} • ${coversText}` +
                     `</div>` +
@@ -3819,7 +3845,7 @@
                     `<strong>${escapeHtml(periodCheck.reason)}</strong> ${escapeHtml(periodCheck.detail)}` +
                   `</div>`) +
             `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
-                `Sorted by priority. Copy each message and send it, then click <strong>Sent</strong> — that flag sticks, so re-running skips them.` +
+                `Sorted by priority. Copy each message and send it, then click <strong>Sent</strong>. That flag sticks, so re-running skips them.` +
             `</div>` +
             `<div id="runMyDayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
                 `<div style="text-align:center; color:var(--text-tertiary); padding:30px;">⏳ Generating messages…</div>` +
@@ -3892,7 +3918,7 @@
             `</div>`;
 
         // Already-sent reps come out of the working list rather than being
-        // deleted — the flag is what stops a double-send, so it has to be
+        // deleted. The flag is what stops a double-send, so it has to be
         // visible and undoable.
         const sentHtml = alreadySent.length
             ? `<details style="margin-top:8px; border:1px solid var(--border); border-radius:10px; padding:10px 14px; background:var(--bg-surface-raised);">` +
@@ -4079,7 +4105,7 @@
             : 'Your team\'s quarterly snapshot. Use each card to generate an individual quarterly review.';
         const dayPlan = window.DevCoachModules?.dailyOutreach?.planForDate?.(new Date());
         const runMyDayBtnHtml = periodType === 'week'
-            ? `<button type="button" id="runMyDayBtn" title="${dayPlan ? 'Covers ' + dayPlan.coverageLabel : ''}" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Day${dayPlan ? ' — ' + dayPlan.label : ''}</button>`
+            ? `<button type="button" id="runMyDayBtn" title="${dayPlan ? 'Covers ' + dayPlan.coverageLabel : ''}" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Day${dayPlan ? ': ' + dayPlan.label : ''}</button>`
             : '';
         const patternMemoryBtnHtml = periodType === 'week'
             ? `<button type="button" id="patternMemoryBtn" style="background:var(--bg-surface); color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:bold; font-size:0.9em;">🧠 Patterns</button>`

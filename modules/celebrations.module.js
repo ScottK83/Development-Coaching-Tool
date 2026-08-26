@@ -315,7 +315,7 @@
      * A placing is only true of the window it was measured over. "6th best in
      * the call center" off a year-to-date file and off three days of this week
      * are two different sentences, and until now the post always used whichever
-     * upload happened to be newest — so the window was whatever file you
+     * upload happened to be newest. So the window was whatever file you
      * dragged in last.
      *
      * These are the windows worth posting about, each resolved to whatever
@@ -360,7 +360,7 @@
     /**
      * The week so far, and only if something week-shaped says so.
      *
-     * A day file is canonical for its day and nothing else — that is the whole
+     * A day file is canonical for its day and nothing else. That is the whole
      * reason dailies never roll up. Letting one stand in here is how "this
      * week" came to read Aug 17 to Aug 17, with eighteen people tied at 100%
      * on a metric that needs a week of calls to separate anybody. Five day
@@ -380,7 +380,7 @@
         try { dailies = pi.dailiesThisWeek(index, todayIso) || []; } catch (e) { dailies = []; }
         if (!dailies.length) return NO_UPLOAD_REASON.thisWeek;
         return 'Only day files for this week (' + dailies.length + ' so far). ' +
-            'A single day cannot rank a week — upload week to date on the Upload tab.';
+            'A single day cannot rank a week. Upload week to date on the Upload tab.';
     }
 
     // A month-to-date upload is the month so far straight from the source. An
@@ -408,7 +408,7 @@
 
     /**
      * Every window, whether it can be used, and why not when it cannot.
-     * "Latest upload" is the old behaviour kept under a name — it resolves to
+     * "Latest upload" is the old behaviour kept under a name. It resolves to
      * no key at all, which is what tells detection to pick for itself.
      */
     function listShoutOutWindows(todayIso) {
@@ -455,7 +455,7 @@
     /**
      * The window to actually build from. An unusable pick falls back to the
      * latest upload rather than to nothing, because a saved choice goes stale
-     * on its own — last week's file is next week's old news.
+     * on its own. Last week's file is next week's old news.
      */
     function resolveShoutOutWindow(windowId, todayIso) {
         var windows = listShoutOutWindows(todayIso);
@@ -1205,7 +1205,7 @@
                 + ' this period, too few for the numbers to mean much.';
         }
         if (info.reason === 'notRanked') {
-            return who + " isn't in this period's rankings at all — nothing scoreable on that upload.";
+            return who + " isn't in this period's rankings at all. Nothing scoreable on that upload.";
         }
         if (info.reason === 'noMetricRanks') {
             return who + ' is ranked this period but holds no metric rank yet.';
@@ -1217,7 +1217,7 @@
         }
         if (info.reason === 'unexplained') {
             return who + ' is #' + info.best.rank + ' in ' + info.best.label
-                + ', which clears the bar — worth a look, because nothing in the numbers says why that is not a shout-out.';
+                + ', which clears the bar. Worth a look, because nothing in the numbers says why that is not a shout-out.';
         }
         if (info.reason === 'belowTarget') {
             return who + ' ranks #' + info.best.rank + ' in ' + info.best.label
@@ -1225,7 +1225,7 @@
         }
         if (info.reason === 'valueWithheld') {
             return who + ' ranks #' + info.best.rank + ' in ' + info.best.label
-                + ", but the number is withheld — too few surveys behind it to count.";
+                + ", but the number is withheld. Too few surveys behind it to count.";
         }
         return who + "'s best is #" + info.best.rank + ' in ' + info.best.label
             + ', ' + info.shortBy + ' off the top ' + info.maxTier + ' bar.';
@@ -1375,13 +1375,13 @@
     // itself is stated every time — that is the fact — and only the way it is
     // said out loud changes.
     var SOLO_TOP_TAILS = [
-        '#1 in the Call Center — nobody else got there!',
+        '#1 in the Call Center. Nobody else got there!',
         '#1 in the Call Center, and not one other person matched it!',
         '#1 in the Call Center. Untouched by anybody else!',
-        '#1 in the Call Center — that number belongs to them alone!',
+        '#1 in the Call Center. That number belongs to them alone!',
         '#1 in the Call Center, and nobody else came close!',
         '#1 in the Call Center. One name on that number, and it is theirs!',
-        '#1 in the Call Center — they set the bar and stood there alone!',
+        '#1 in the Call Center. They set the bar and stood there alone!',
         '#1 in the Call Center, matched by nobody on the floor!'
     ];
 
@@ -1655,7 +1655,7 @@
 
         var placing = place + field;
         if (!placing) return value;
-        return value ? value + ' — ' + placing : placing;
+        return value ? value + ', ' + placing : placing;
     }
 
     /**
@@ -1769,8 +1769,8 @@
         // Carried on the object rather than passed in, because this line is
         // rendered from four places and only detection knows the period.
         var when = (perfect && perfect.periodNoun) || 'this period';
-        if (n === 1) return 'PERFECT survey — the one that came in ' + when + ' was flawless!';
-        return 'PERFECT surveys — all ' + n + ' of them ' + when + ', not one off the mark!';
+        if (n === 1) return 'PERFECT survey. The one that came in ' + when + ' was flawless!';
+        return 'PERFECT surveys. All ' + n + ' of them ' + when + ', not one off the mark!';
     }
 
     // The same fact as its own sentence, for lines that already close with
@@ -2085,7 +2085,7 @@
 
         var open = list.length <= 3 ? ' open' : '';
         var html = '<details' + open + ' style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);">';
-        html += '<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Not this time (' + list.length + ') — how close they were</summary>';
+        html += '<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Not this time (' + list.length + '). How close they were</summary>';
         html += '<div style="margin-top:10px;">';
         list.forEach(function(info) {
             html += '<div style="padding:6px 0; border-bottom:1px solid var(--border); font-size:0.9em; color:var(--text-primary);">'
@@ -2138,7 +2138,7 @@
                     // "Only one" is about the number, not the metric — other
                     // cards can show the same metric at a different value.
                     html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>' + (valStr ? ': ' + valStr : '') +
-                        ' <span style="color:var(--text-secondary);">— #1 in the Call Center, nobody else got there</span>';
+                        ' <span style="color:var(--text-secondary);">(#1 in the Call Center, nobody else got there)</span>';
                 } else {
                     if (valStr) {
                         html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';

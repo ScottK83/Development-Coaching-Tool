@@ -128,7 +128,7 @@
         const lines = list.slice(0, opts.limit || 3).map(e => {
             const value = e.valueText ? `${e.label} ${e.valueText}` : e.label;
             const against = e.targetText ? ` against a ${e.targetText} target` : '';
-            const bullet = `  • ${value}${against} — ${phraseFor(e.movement, opts.pick)}.`;
+            const bullet = `  • ${value}${against}: ${phraseFor(e.movement, opts.pick)}.`;
             const pace = safePaceText(e.paceText);
             return pace ? `${bullet}\n    ${pace}` : bullet;
         });

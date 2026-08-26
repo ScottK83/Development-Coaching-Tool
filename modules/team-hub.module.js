@@ -77,7 +77,7 @@
         const summary = scope.describeScope();
 
         if (!roster.length) {
-            container.innerHTML = `<div style="font-size:0.88em; color:var(--text-secondary);">No team members yet — pick yours under Settings › Team Members and they'll show up here.</div>`;
+            container.innerHTML = `<div style="font-size:0.88em; color:var(--text-secondary);">No team members yet. Pick yours under Settings › Team Members and they'll show up here.</div>`;
             return;
         }
 
@@ -233,7 +233,7 @@
         const resolved = resolveWindow(windowId);
         if (!engine || !resolved) return { resolved, groups: [], scanned: 0 };
 
-        // Highlights are a My Team view, so they never reach past my roster —
+        // Highlights are a My Team view, so they never reach past my roster. 
         // "all" here means my whole team, not the whole floor.
         const roster = scope?.getMyTeamRoster?.() || [];
         const scoped = scope?.getScopeMembers?.() || null;
@@ -297,7 +297,7 @@
                 ? window.formatDateMMDDYYYY(resolved.label) || resolved.label
                 : resolved.label;
             post = engine.buildHighlightPost(groups, {
-                title: `✨ ${resolved.title}’s Highlights — ${dateLabel}`,
+                title: `✨ ${resolved.title}’s Highlights, ${dateLabel}`,
                 formatValue,
                 preferredName
             });

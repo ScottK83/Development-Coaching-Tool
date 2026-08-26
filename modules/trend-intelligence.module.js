@@ -168,7 +168,7 @@ TONE & STYLE:
 - Frame opportunities positively
 - Keep it concise (under 200 words)
 - Use bullet points for wins
-- Do NOT use em dashes (—) anywhere in the email
+- Do NOT use em dashes anywhere in the email; use commas or full stops
 - Use proper bullet points (•) not hyphens
 
 SUBJECT LINE:
@@ -190,7 +190,7 @@ Requirements:
 - Keep it concise and Teams/Outlook-ready
 - Use friendly, motivating language
 - Include a subject line
-- Do NOT use em dashes (—)
+- Do NOT use em dashes; use commas or full stops
 - Add a few emojis for warmth (not excessive)
 
 Write the complete email.`;
@@ -301,7 +301,7 @@ Write the complete email.`;
         const weakest = deltas.slice().sort((a, b) => a.delta - b.delta)[0] || null;
         // metricDelta is normalized to performance, so a positive delta on
         // Handle Time means the number came DOWN. Saying "trending up" here
-        // would report that win as its opposite — same trap as Q1 Review's
+        // would report that win as its opposite. Same trap as Q1 Review's
         // arrows. Word it by verdict and let metric-movement say which way
         // the figure actually moved.
         const movement = window.DevCoachModules?.metricMovement;

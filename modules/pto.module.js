@@ -43,7 +43,7 @@ function showToast(msg, ms) {
     if (typeof window.showToast === 'function') { window.showToast(msg, ms); return; }
     // window.showToast is defined in script.js which loads after this module.
     // If we hit the fallback, something loaded out of order — make it loud.
-    console.warn('[PTO] window.showToast unavailable — user-facing message dropped:', msg);
+    console.warn('[PTO] window.showToast unavailable. User-facing message dropped:', msg);
 }
 
 function escapeHtml(str) {

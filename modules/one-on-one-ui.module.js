@@ -61,7 +61,7 @@
         const weekly = store('weeklyData');
         const ytd = store('ytdData');
 
-        // Year so far — the YTD upload is the honest source; it is already the
+        // Year so far. The YTD upload is the honest source; it is already the
         // aggregate, so nothing here re-averages weekly numbers.
         const ytdKeys = sortedKeysByEnd(ytd);
         const ytdRow = ytdKeys.length ? rowFor(ytd[ytdKeys[ytdKeys.length - 1]], employeeName) : null;
@@ -268,7 +268,7 @@
                 savedAt: new Date().toISOString()
             });
             const status = document.getElementById('oneOnOneStatus');
-            if (status) status.textContent = ok ? 'Saved.' : 'Could not save — storage may be full.';
+            if (status) status.textContent = ok ? 'Saved.' : 'Could not save, storage may be full.';
             if (ok) renderBody();
         });
 

@@ -502,7 +502,7 @@
 
     function copyYearEndPromptWithFallbacks(prompt, copilotWindow) {
         copyToClipboard(prompt, {
-            message: '📋 Year-end prompt copied — paste into Copilot with Ctrl+V'
+            message: '📋 Year-end prompt copied. Paste into Copilot with Ctrl+V'
         }).then((ok) => {
             // The copy already reported itself. All that's left is getting the
             // user to Copilot when the caller didn't already open a window.

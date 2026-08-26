@@ -105,7 +105,12 @@ suite('metricMovement — missing and malformed input', (t) => {
     t.equal('unknown metric does not throw', mm.describe('somethingNew', 'improving', 5).direction, 'improving');
     t.equal('  and defaults to higher-is-better', mm.describe('somethingNew', 'improving', 5).polarity, 'higher is better');
     t.equal('stable renders no phrase', mm.phrase('aht', 'stable'), '');
-    t.equal('stable arrow is neutral', mm.arrowHtml('aht', 'stable').includes('―'), true);
+    t.equal('stable arrow is neutral', mm.arrowHtml('aht', 'stable').includes('>=<'), true);
+    // A horizontal bar is an em dash wearing a different code point, and the
+    // no-em-dash rule covers the lookalikes too. An equals sign says "no change"
+    // without one.
+    t.check('and carries no dash of any kind',
+        !/[–—―]/.test(mm.arrowHtml('aht', 'stable')));
 });
 
 suite('metricMovement — prompt sentences', (t) => {

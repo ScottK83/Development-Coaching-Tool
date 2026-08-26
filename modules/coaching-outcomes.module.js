@@ -321,7 +321,7 @@
         var moved = settled.filter(function (o) { return o.verdict === 'moved'; }).length;
         var headline = settled.length
             ? moved + ' of ' + settled.length + ' coached metrics moved the right way the following week'
-            : 'Coaching logged — waiting on the next weekly upload';
+            : 'Coaching logged. Waiting on the next weekly upload';
 
         container.style.display = '';
         container.innerHTML =

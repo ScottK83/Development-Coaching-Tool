@@ -338,7 +338,7 @@ suite('rankings view: a one-team upload filed as a month is labelled', (t) => {
     const shell = dom.shell();
 
     t.check('the thin month is still offered', /July 2026 \(6 employees/.test(shell));
-    t.check('but it says what it is', /July 2026 \(6 employees &mdash; partial upload\)/.test(shell));
+    t.check('but it says what it is', /July 2026 \(6 employees, partial upload\)/.test(shell));
     t.check('a full month carries no such mark', /June 2026 \(40 employees\)/.test(shell));
 });
 
@@ -442,7 +442,7 @@ suite('rankings view: the card percentile points the way it reads', (t) => {
     // read "top 94%" and the worst performer on the panel read "top 9%".
     t.check('nothing claims to be top anything', !/\(top \d+%\)/.test(team));
 
-    const cards = [...team.matchAll(/#(\d+)<\/span><span[^>]*>[^<]*<\/span><span[^>]*>of (\d+) &mdash; better than (\d+)%/g)]
+    const cards = [...team.matchAll(/#(\d+)<\/span><span[^>]*>[^<]*<\/span><span[^>]*>of (\d+), better than (\d+)%/g)]
         .map((m) => ({ rank: +m[1], total: +m[2], ahead: +m[3] }));
     t.equal('every card carries the figure', cards.length, 3);
     t.check('it is the share of the centre they finished ahead of',
@@ -718,7 +718,7 @@ suite('rankings view: the card carries the year, not just the last step', (t) =>
     t.check('the first chip has no arrow, having nothing behind it',
         /Jun <strong>\d+<\/strong><\/span>/.test(team));
     t.check('the chips explain themselves on hover',
-        /title="June 2026 &mdash; #\d+ of 40/.test(team) || /title="June 2026 — #\d+ of 40/.test(team));
+        /title="June 2026: #\d+ of 40/.test(team));
 });
 
 suite('rankings view: a name opens the year behind the number', (t) => {

@@ -55,7 +55,7 @@
     }
 
     // Is there a team selection to filter by? (controls whether the checkbox
-    // can do anything — if no team is selected, "my team only" would be empty.)
+    // can do anything. If no team is selected, "my team only" would be empty.)
     function _teamFilterContext() {
         var tf = window.DevCoachModules && window.DevCoachModules.teamFilter;
         if (!tf || !tf.getTeamSelectionContext) return null;
@@ -207,7 +207,7 @@
 
         // Header
         html += '<div style="margin-bottom: 16px; padding: 15px; background: #ede7f6; border-radius: 8px; border-left: 4px solid #5e35b1;">';
-        html += '<strong>📊 Year-over-Year</strong> &mdash; compare 2025 vs ' + new Date().getFullYear() + ' per rep.';
+        html += '<strong>📊 Year-over-Year</strong> , compare 2025 vs ' + new Date().getFullYear() + ' per rep.';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Plug in your 2025 full-year numbers below, then pick a metric to see who climbed and who slipped.</span>';
         html += '</div>';
 
@@ -225,7 +225,7 @@
             html += '<div style="font-weight:600; margin-bottom:8px;">Plug in 2025 stats</div>';
             html += '<div id="yoyInputArea">';
         }
-        html += '<p style="margin:0 0 8px 0; color:var(--text-secondary); font-size:0.85em;">Paste your 2025 full-year data (include the header row with <strong>Name</strong>) — same format as a YTD upload.</p>';
+        html += '<p style="margin:0 0 8px 0; color:var(--text-secondary); font-size:0.85em;">Paste your 2025 full-year data (include the header row with <strong>Name</strong>). Same format as a YTD upload.</p>';
         html += '<textarea id="yoyPasteBox" rows="6" style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.82em; padding:8px; border:1px solid var(--border); border-radius:6px;" placeholder="Name&#9;Total Calls&#9;..."></textarea>';
         html += '<div style="margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">';
         html += '<button type="button" id="yoySaveBaseline" class="btn-primary" style="padding:6px 16px;">Save 2025 Baseline</button>';
@@ -279,7 +279,7 @@
         }
         var parser = window.DevCoachModules && window.DevCoachModules.dataParsing;
         if (!parser || !parser.parsePastedData) {
-            if (status) { status.style.color = '#c62828'; status.textContent = 'Parser unavailable — reload the page and try again.'; }
+            if (status) { status.style.color = '#c62828'; status.textContent = 'Parser unavailable. Reload the page and try again.'; }
             return;
         }
         var employees;
@@ -393,7 +393,7 @@
 
         var html = '';
         html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.9em;">';
-        html += '<strong>' + _escapeHtml(metric.label) + '</strong> &mdash; ';
+        html += '<strong>' + _escapeHtml(metric.label) + '</strong> , ';
         html += '<span style="color:var(--green-text); font-weight:600;">▲ ' + improved + ' improved</span> · ';
         html += '<span style="color:var(--red-text); font-weight:600;">▼ ' + declined + ' declined</span> · ';
         html += '<span style="color:#777;">' + flat + ' flat</span>';
@@ -401,10 +401,10 @@
         if (_myTeamOnly) {
             var ctx = _teamFilterContext();
             if (!ctx || !ctx.isFiltering) {
-                html += '<br><span style="color:#e65100; font-size:0.8em;">⚠ "My team only" is on, but no team is selected — showing everyone. Pick your team via the team filter to narrow this.</span>';
+                html += '<br><span style="color:#e65100; font-size:0.8em;">⚠ "My team only" is on, but no team is selected. Showing everyone. Pick your team via the team filter to narrow this.</span>';
             }
         }
-        html += reverse ? '<br><span style="color:var(--text-tertiary); font-size:0.8em;">Lower is better for this metric — a drop counts as an improvement.</span>' : '';
+        html += reverse ? '<br><span style="color:var(--text-tertiary); font-size:0.8em;">Lower is better for this metric. A drop counts as an improvement.</span>' : '';
         html += '</div>';
 
         // Sort
@@ -433,7 +433,7 @@
             if (_show2025) html += '<td style="padding:6px; text-align:right; color:#777;">' + _formatMetricDisplay(_selectedMetric, r.prior) + '</td>';
             html += '<td style="padding:6px; text-align:right; font-weight:600;">' + _formatMetricDisplay(_selectedMetric, r.current) + '</td>';
 
-            // Change cell — colored by improvement direction
+            // Change cell. Colored by improvement direction
             var changeCell = '--', pctCell = '--';
             if (r.delta !== null) {
                 var good = r.improvement > 1e-9, bad = r.improvement < -1e-9;
@@ -543,7 +543,7 @@
 
         var html = '';
         html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.85em; color:var(--text-secondary);">';
-        html += '<strong>2025 → ' + curYear + ' side-by-side</strong> &mdash; ' + data.matched + ' reps · click a KPI header to sort by who moved most. Click a value to see 2025 vs ' + curYear + '.';
+        html += '<strong>2025 → ' + curYear + ' side-by-side</strong> , ' + data.matched + ' reps · click a KPI header to sort by who moved most. Click a value to see 2025 vs ' + curYear + '.';
         html += '</div>';
 
         html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
@@ -567,7 +567,7 @@
                 if (c.delta !== null) {
                     var good = c.improvement > 1e-9, bad = c.improvement < -1e-9;
                     var color = good ? '#2e7d32' : bad ? '#c62828' : '#777';
-                    var icon = good ? '▲' : bad ? '▼' : '–';
+                    var icon = good ? '▲' : bad ? '▼' : ', ';
                     var sign = c.delta > 0 ? '+' : '';
                     var deltaDisp = _formatDelta(k, c.delta);
                     var priorPart = _show2025 ? ('<span style="color:var(--text-tertiary);">' + _formatMetricDisplay(k, c.prior) + '</span> ') : '';
@@ -642,7 +642,7 @@
         }
 
         var lines = [];
-        lines.push('Year-over-Year Performance Summary — 2025 vs ' + curYear);
+        lines.push('Year-over-Year Performance Summary, 2025 vs ' + curYear);
         lines.push('Scope: ' + (_myTeamOnly ? 'My team' : 'All reps') + ' (' + data.matched + ' reps matched) | Current data: ' + data.currentLabel);
         lines.push('Note: "improved/declined" already accounts for lower-is-better metrics (AHT, ACW, Hold Time, Reliability, Transfers).');
         lines.push('');
@@ -661,11 +661,11 @@
         var downs = entries.filter(function (e) { return e.sip < -0.0001; }).sort(function (a, b) { return a.sip - b.sip; });
 
         lines.push('TOP IMPROVEMENTS:');
-        if (ups.length) ups.slice(0, 5).forEach(function (e) { lines.push('  • ' + e.name + ' — ' + _changePhrase(e.key, e.c, true)); });
+        if (ups.length) ups.slice(0, 5).forEach(function (e) { lines.push('  • ' + e.name + ', ' + _changePhrase(e.key, e.c, true)); });
         else lines.push('  (none)');
         lines.push('');
         lines.push('TOP DECLINES:');
-        if (downs.length) downs.slice(0, 5).forEach(function (e) { lines.push('  • ' + e.name + ' — ' + _changePhrase(e.key, e.c, false)); });
+        if (downs.length) downs.slice(0, 5).forEach(function (e) { lines.push('  • ' + e.name + ', ' + _changePhrase(e.key, e.c, false)); });
         else lines.push('  (none)');
         lines.push('');
         lines.push('BY REP:');
@@ -679,7 +679,7 @@
                 if (c.improvement > 1e-9) up.push(_changePhrase(k, c, true));
                 else if (c.improvement < -1e-9) down.push(_changePhrase(k, c, false));
             });
-            lines.push(r.name + ' — ' + up.length + ' up / ' + down.length + ' down');
+            lines.push(r.name + ', ' + up.length + ' up / ' + down.length + ' down');
             if (up.length) lines.push('  Improved: ' + up.join('; '));
             if (down.length) lines.push('  Declined: ' + down.join('; '));
             lines.push('');

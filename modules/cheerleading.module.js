@@ -227,7 +227,7 @@
     }
 
     // Weighted value for one employee across a set of weekly periods.
-    // Rate metrics weight by call volume, survey metrics by survey count —
+    // Rate metrics weight by call volume, survey metrics by survey count. 
     // the same rule as buildYtdAggregateForYear / computeTeamMetricValue.
     function _empValue(empName, weekKeys, metricKey) {
         var wData = _weeklyData();

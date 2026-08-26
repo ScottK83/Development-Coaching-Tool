@@ -128,7 +128,7 @@
             periods.push({ key: key, label: label, type: pType, source: 'ytd' });
         });
 
-        // Sort newest first, using the end date (parts[1]) — parts[0] is
+        // Sort newest first, using the end date (parts[1]). Parts[0] is
         // the start date and would invert ordering for month/quarter
         // entries whose correct start is far before their end.
         periods.sort(function(a, b) {
@@ -464,9 +464,9 @@
             if (hasNonZero) {
                 metricsWithData.push(key);
             } else if (hasAnyValue) {
-                metricsAllZero.push(key);  // all zeros — push to end
+                metricsAllZero.push(key);  // all zeros, push to end
             }
-            // no data at all — excluded entirely
+            // no data at all, excluded entirely
         });
         var visibleMetrics = metricsWithData.concat(metricsAllZero);
 

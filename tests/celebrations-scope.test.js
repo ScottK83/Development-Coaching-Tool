@@ -128,7 +128,7 @@ suite('celebrations: a shared top spot says how many share it', (t) => {
 
     // The clause has to disappear cleanly, punctuation and all, when there is
     // no tie — otherwise every solo win trails a stray dash.
-    t.equal('no tie leaves no punctuation behind', celebrations.tieClause('', ' — ', '.'), '');
+    t.equal('no tie leaves no punctuation behind', celebrations.tieClause('', ', ', '.'), '');
     t.equal('a tie is wrapped for its sentence', celebrations.tieClause('one of 15 associates at 100%', ' (', ')'), ' (one of 15 associates at 100%)');
 });
 
@@ -412,18 +412,18 @@ suite('celebrations: a shared top spot says so instead of contradicting itself',
     // missing half of the sentence.
     t.equal('a sixteen-way tie is named, not hidden behind the rank',
         celebrations.describePlacement({ key: 'associateOverall', rank: 1, tiedCount: 16, rankedCount: 19, value: 100 }),
-        '100 — one of 16 tied for first in call center');
+        '100, one of 16 tied for first in call center');
 
     t.equal('holding the top alone still reads as winning it',
         celebrations.describePlacement({ key: 'associateOverall', rank: 1, tiedCount: 1, rankedCount: 19, value: 100 }),
-        '100 — best in call center');
+        '100, best in call center');
 
     t.equal('and a placing further down keeps its ordinal',
         celebrations.describePlacement({ key: 'fcr', rank: 4, tiedCount: 1, rankedCount: 111, value: 92 }),
-        '92 — 4th in call center');
+        '92, 4th in call center');
     t.equal('shared, further down, too',
         celebrations.describePlacement({ key: 'fcr', rank: 3, tiedCount: 5, rankedCount: 111, value: 92 }),
-        '92 — tied for 3rd in call center');
+        '92, tied for 3rd in call center');
     t.equal('the eleventh is not the eleven-st',
         celebrations.describePlacement({ rank: 11, tiedCount: 1, rankedCount: 60 }),
         '11th in call center');
@@ -433,7 +433,7 @@ suite('celebrations: a shared top spot says so instead of contradicting itself',
     t.check('the placing names the center rather than counting the pool',
         celebrations.describePlacement({ rank: 1, tiedCount: 1, rankedCount: 19 }).indexOf('in call center') > -1);
     t.equal('a field of one is not a center to be best in',
-        celebrations.describePlacement({ key: 'fcr', rank: 1, tiedCount: 1, rankedCount: 1, value: 92 }), '92 — best');
+        celebrations.describePlacement({ key: 'fcr', rank: 1, tiedCount: 1, rankedCount: 1, value: 92 }), '92, best');
     t.equal('and nothing at all stays silent', celebrations.describePlacement(null), '');
 });
 
@@ -669,9 +669,9 @@ suite('celebrations: a flawless survey week is called out on its own', (t) => {
 
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post says it plainly', post.indexOf('PERFECT surveys') > -1);
-    t.check('and shows what it was measured on', post.indexOf('all 6 of them this week') > -1);
-    t.check('a single survey does not read as "all 1 of them"', post.indexOf('all 1 of them') === -1);
-    t.check('it is named as the one it was', post.indexOf('the one that came in this week') > -1);
+    t.check('and shows what it was measured on', post.indexOf('All 6 of them this week') > -1);
+    t.check('a single survey does not read as "all 1 of them"', post.indexOf('All 1 of them') === -1);
+    t.check('it is named as the one it was', post.indexOf('The one that came in this week') > -1);
 
     // Across the board, on whatever came back.
     t.check('one metric at 100 is not a set',
@@ -766,7 +766,7 @@ suite('celebrations: best on a floor that misses the goal is still best', (t) =>
     t.check('and the placing survives the target gate', !!esther);
     t.equal('the better placing leads', esther.achievements[0].key, 'transfers');
     t.equal('which is what the panel shows',
-        celebrations.describePlacement(esther.achievements[0]), '8.1% — 4th in call center');
+        celebrations.describePlacement(esther.achievements[0]), '8.1%, 4th in call center');
     t.check('nobody is told they were held back by a gate that no longer fires',
         !result.missed.some(m => m.reason === 'belowTarget'));
 });
@@ -841,7 +841,7 @@ suite('celebrations: a rank inside the bar is never called a near miss', (t) => 
     const info = celebrations.explainNoCelebration(data, 'Puzzling', tiers);
 
     t.equal('it is flagged as unexplained, not as a miss', info.reason, 'unexplained');
-    t.check('and the wording admits it', celebrations.describeNoCelebration(info).indexOf('worth a look') > -1);
+    t.check('and the wording admits it', celebrations.describeNoCelebration(info).indexOf('Worth a look') > -1);
     t.check('without inventing a shortfall', celebrations.describeNoCelebration(info).indexOf('off the top') === -1);
 });
 
@@ -915,7 +915,7 @@ suite('celebrations: a rewording never drops a fact', (t) => {
 /**
  * Naming the stretch of time the reader chose.
  *
- * "PERFECT survey — the one that came in this week was flawless!" printed under
+ * "PERFECT survey. The one that came in this week was flawless!" printed under
  * a Month to date window covering Aug 1 to Aug 17. The window is picked on the
  * page now, so any line that names a period has to read it rather than assume.
  */
@@ -943,13 +943,13 @@ suite('celebrations: the perfect-survey line follows the window', (t) => {
 
     t.equal('a month-to-date window says month',
         celebrations.perfectSurveyLine({ count: 6, periodNoun: 'this month' }),
-        'PERFECT surveys — all 6 of them this month, not one off the mark!');
+        'PERFECT surveys. All 6 of them this month, not one off the mark!');
     t.equal('and a single survey too',
         celebrations.perfectSurveyLine({ count: 1, periodNoun: 'this month' }),
-        'PERFECT survey — the one that came in this month was flawless!');
+        'PERFECT survey. The one that came in this month was flawless!');
     t.equal('a week window still says week',
         celebrations.perfectSurveyLine({ count: 3, periodNoun: 'this week' }),
-        'PERFECT surveys — all 3 of them this week, not one off the mark!');
+        'PERFECT surveys. All 3 of them this week, not one off the mark!');
 
     // An entry from before this was stamped on has to read as something true.
     t.check('an unstamped one falls back to a period, not a week',

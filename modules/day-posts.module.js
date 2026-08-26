@@ -160,8 +160,8 @@
             const color = active ? '#fff' : (blocked ? 'var(--text-tertiary)' : (sent ? '#2e7d32' : 'var(--text-secondary)'));
             const mark = blocked ? '⚠️ ' : (sent ? '✓ ' : '');
             const tip = blocked
-                ? `${plan.label} — ${dayStatus[plan.id].reason} ${dayStatus[plan.id].detail}`
-                : `${plan.label} — covers ${plan.coverageLabel}`;
+                ? `${plan.label}, ${dayStatus[plan.id].reason} ${dayStatus[plan.id].detail}`
+                : `${plan.label}, covers ${plan.coverageLabel}`;
 
             return `<button type="button" class="day-post-btn" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
                 `style="padding:9px 16px; border:${blocked ? '1px dashed var(--border-strong)' : 'none'}; border-radius:8px; font-weight:700; font-size:0.9em; cursor:pointer; background:${bg}; color:${color};">` +
@@ -171,7 +171,7 @@
         const sentBanner = ctx.sentEntry
             ? `<div style="margin-bottom:12px; padding:10px 14px; background:#e8f5e9; border-left:4px solid #2e7d32; border-radius:6px; color:#2e7d32; font-size:0.9em;">` +
                 `You already sent ${escapeHtml(who)} a ${escapeHtml(ctx.plan.label)} this week` +
-                (ctx.sentEntry.at ? ` — ${escapeHtml(new Date(ctx.sentEntry.at).toLocaleString())}` : '') +
+                (ctx.sentEntry.at ? `, ${escapeHtml(new Date(ctx.sentEntry.at).toLocaleString())}` : '') +
                 `. <button type="button" id="dayPostUnsend" style="background:none; border:1px solid #2e7d32; border-radius:6px; padding:2px 10px; margin-left:6px; cursor:pointer; color:#2e7d32;">Undo</button>` +
             `</div>`
             : '';
@@ -183,7 +183,7 @@
         let bodyHtml;
         if (!ctx.periodCheck.ok) {
             // The period itself is missing, which is not the same as this
-            // associate having no numbers — say which one it is.
+            // associate having no numbers. Say which one it is.
             bodyHtml = `<div style="padding:28px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid #ef6c00; border-radius:10px;">` +
                 `<div style="font-size:2.2em; margin-bottom:8px;">📭</div>` +
                 `<div style="font-weight:700; color:#ef6c00; font-size:1.05em;">${escapeHtml(ctx.periodCheck.reason)}</div>` +
@@ -216,7 +216,7 @@
         container.innerHTML = `<div style="margin-bottom:14px;">` +
                 `<h3 style="color:#4527a0; margin:0 0 6px 0;">📮 Posts for ${escapeHtml(employeeName)}</h3>` +
                 `<p style="color:var(--text-secondary); margin:0; font-size:0.9em;">` +
-                    `<strong>${escapeHtml(ctx.plan.label)}</strong> — covers ${escapeHtml(ctx.plan.coverageLabel)}. ` +
+                    `<strong>${escapeHtml(ctx.plan.label)}</strong>. Covers ${escapeHtml(ctx.plan.coverageLabel)}. ` +
                     `Pick any day; you don't have to wait for it.` +
                 `</p>` +
             `</div>` +

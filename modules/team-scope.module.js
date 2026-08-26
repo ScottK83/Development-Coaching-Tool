@@ -226,8 +226,8 @@
             source: 'saved-list',
             label: label || null,
             note: label
-                ? `from your saved list — no one is assigned to ${label} yet`
-                : 'from your saved list — no supervisor roster matched'
+                ? `from your saved list. No one is assigned to ${label} yet`
+                : 'from your saved list. No supervisor roster matched'
         };
     }
 

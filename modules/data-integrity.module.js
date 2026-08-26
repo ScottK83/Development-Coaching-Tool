@@ -358,7 +358,7 @@
         function issueListHtml(list) {
             const groupedByWeek = new Map();
             list.forEach(issue => {
-                const key = issue.weekKey || '—';
+                const key = issue.weekKey || 'no-period';
                 if (!groupedByWeek.has(key)) groupedByWeek.set(key, []);
                 groupedByWeek.get(key).push(issue);
             });
@@ -366,7 +366,7 @@
 
             return sortedWeekKeys.map(weekKey => {
                 const group = groupedByWeek.get(weekKey);
-                const label = weekKey === '—' ? 'No period' : formatWeekLabel(weekKey, weeklyData);
+                const label = weekKey === 'no-period' ? 'No period' : formatWeekLabel(weekKey, weeklyData);
                 return `<div style="margin-bottom:18px;">` +
                     `<div style="font-weight:700; color:#1a237e; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);">${escapeHtml(label)} <span style="color:var(--text-tertiary); font-weight:400; font-size:0.85em;">(${group.length} issue${group.length === 1 ? '' : 's'})</span></div>` +
                     group.map(issue => `<div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; font-size:0.9em;">` +
@@ -427,7 +427,7 @@
                 `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">` +
                     `<div style="display:flex; gap:8px; flex-wrap:wrap;">` +
                         (issues.length
-                            ? `<button id="dataIntegrityWipe" style="background:#7b1fa2; color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🧹 Clear these — seen them</button>`
+                            ? `<button id="dataIntegrityWipe" style="background:#7b1fa2; color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🧹 Clear these. Seen them</button>`
                             : '') +
                         (hiddenCount
                             ? `<button id="dataIntegrityToggle" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">${showAll ? 'Hide cleared' : `Show cleared (${hiddenCount})`}</button>`

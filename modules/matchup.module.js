@@ -22,7 +22,7 @@
      */
     function resolveMyTeamLabel(rankings, supervisors, myTeamSet) {
         // team-scope owns "which supervisor label is me". Asking it keeps the
-        // head-to-head and the My Team picker on the same answer — they used to
+        // head-to-head and the My Team picker on the same answer. They used to
         // disagree, which is how my own team appeared twice in one table.
         var scope = window.DevCoachModules?.teamScope;
         if (scope?.resolveMyLabel) {
@@ -202,7 +202,7 @@
 
     // Metric definitions for matchup comparison
     // Each has: key (values obj key), label, lowerIsBetter flag, formatKey (for formatMetricDisplay).
-    // weightBy controls team aggregation — 'calls' weights by call volume, 'survey' by survey
+    // weightBy controls team aggregation. 'calls' weights by call volume, 'survey' by survey
     // count, 'sum' totals the values. Never simple-average rate metrics across agents.
     var MATCHUP_METRICS = [
         { key: 'aht',              label: 'AHT',             lowerIsBetter: true,  formatKey: 'aht',               weightBy: 'calls' },
@@ -293,7 +293,7 @@
                 }
 
                 // Rate metrics use a volume-weighted average so high-volume agents
-                // pull the team number — matching Team Snapshot's computeTeamMetricValue.
+                // pull the team number, matching Team Snapshot's computeTeamMetricValue.
                 var wSum = 0, wTotal = 0;
                 members.forEach(function (r) {
                     var v = _val(r);
@@ -376,7 +376,7 @@
      * How each supervisor's team moved between the last two comparable months.
      *
      * Placed on average KPI score rather than average rank. Average rank depends on
-     * who else is in the pool — a team can lose a weak performer and every remaining
+     * who else is in the pool. A team can lose a weak performer and every remaining
      * member's rank improves with nobody doing anything differently. KPI score is a
      * fixed 1-3 scale, so a move in it is a real move.
      *
@@ -388,7 +388,7 @@
         if (!pc || !pc.buildMonthOverMonthTeams) return '';
 
         // Follows the selected scope. Showing month-over-month while someone has
-        // Weekly selected reads as a broken panel — the header and period change,
+        // Weekly selected reads as a broken panel. The header and period change,
         // the movement does not, so it looks stuck rather than deliberate.
         var scope = _scopeOfPeriod(_selectedPeriodKey) || 'month';
         var mv, fellBack = false;
@@ -409,14 +409,14 @@
         var SCOPE_NOUN = { ytd: 'year-to-date file', month: 'month', week: 'week' };
 
         var html = '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement &mdash; ' +
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement , ' +
             _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) + '</h4>';
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
             'Placed on average KPI score across the ' + mv.total + ' associates scored in both. ' +
             'Teams on the same average share a place.' +
             (fellBack
                 ? ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[scope] || scope) +
-                  ' is available, so there is nothing to compare it against — showing months instead.</span>'
+                  ' is available, so there is nothing to compare it against. Showing months instead.</span>'
                 : '') +
             '</p>';
 
@@ -433,7 +433,7 @@
 
             var moveHtml;
             if (t.placeDelta === 0) {
-                moveHtml = '<span style="color: var(--text-tertiary);">&#8213;</span>';
+                moveHtml = '<span style="color: var(--text-tertiary);">-</span>';
             } else {
                 var up = t.placeDelta > 0;
                 moveHtml = '<span style="color: ' + (up ? '#2e7d32' : '#c62828') + '; font-weight: bold;">' +
@@ -616,7 +616,7 @@
 
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #e65100;">';
-        html += '<strong>🥊 Team Matchup</strong> &mdash; ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
+        html += '<strong>🥊 Team Matchup</strong> , ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + '</span>';
         html += '</div>';
 

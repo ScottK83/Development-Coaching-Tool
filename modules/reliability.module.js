@@ -1274,7 +1274,7 @@
 
     function summarizeDateList(list) {
         var dates = Array.isArray(list) ? list : [];
-        if (!dates.length) return '—';
+        if (!dates.length) return '-';
         if (dates.length <= 3) return dates.join(', ');
         return dates.slice(0, 3).join(', ') + ' (+' + (dates.length - 3) + ')';
     }
@@ -1324,7 +1324,7 @@
             timeline.forEach(function(t) {
                 var verintText = (t.verint || []).map(function(v) {
                     return v.activity + ' (' + v.hours + 'h)';
-                }).join('; ') || '—';
+                }).join('; ') || '-';
 
                 var payrollText = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; }).map(function(p) {
                     var label = p.trc;
@@ -1332,7 +1332,7 @@
                     if (taskCode) label += ' / ' + taskCode;
                     return label + ' (' + p.quantity + 'h)';
                 }).join('; ');
-                if (!payrollText) payrollText = '—';
+                if (!payrollText) payrollText = '-';
 
                 var totalHours = 0;
                 (t.verint || []).forEach(function(v) { totalHours += Number(v.hours || 0); });
@@ -1403,14 +1403,14 @@
             html += '<tr class="rel-ledger-row" data-date-key="' + escapeHtml(row.dateKey) + '" style="border-bottom:1px solid #eef2f2;">';
             html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(row.date) + '</td>';
             html += '<td style="padding:6px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.employee) + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDay ? '✓' : '—') + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDayPtost ? '✓' : '—') + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.bereavement ? '✓' : '—') + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.fmla ? '✓' : '—') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDay ? '✓' : '-') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDayPtost ? '✓' : '-') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.bereavement ? '✓' : '-') + '</td>';
+            html += '<td style="padding:6px 8px; text-align:center;">' + (row.fmla ? '✓' : '-') + '</td>';
             html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.verint) + '</td>';
             html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.payroll) + '</td>';
             html += '<td style="padding:6px 8px; text-align:center;">' + row.hours + '</td>';
-            html += '<td style="padding:6px 8px; min-width:180px; color:var(--text-secondary);">' + escapeHtml(row.flags || '—') + '</td>';
+            html += '<td style="padding:6px 8px; min-width:180px; color:var(--text-secondary);">' + escapeHtml(row.flags || '-') + '</td>';
             html += '</tr>';
         });
 
@@ -1548,7 +1548,7 @@
         'same-day': { label: 'Same Day/Partial', bg: '#ffebee', color: '#b71c1c', icon: '⚠' },
         'tardy':    { label: 'Tardy',       bg: '#fff3e0', color: '#e65100', icon: '⏰' },
         'planned':  { label: 'Planned',     bg: '#e3f2fd', color: '#0d47a1', icon: '📅' },
-        'other':    { label: 'Other',       bg: '#f5f5f5', color: '#666',    icon: '—' }
+        'other':    { label: 'Other',       bg: '#f5f5f5', color: '#666',    icon: '-' }
     };
 
     // ============================================
@@ -1583,7 +1583,7 @@
 
             var verintDesc = (t.verint || []).map(function(v) {
                 return (v.activity || v.type || '') + (v.hours ? ' (' + round2(v.hours) + 'h)' : '');
-            }).filter(Boolean).join(', ') || '—';
+            }).filter(Boolean).join(', ') || '-';
 
             var nonRegPayroll = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; });
             var payrollDesc = nonRegPayroll.map(function(p) {
@@ -1597,7 +1597,7 @@
                 var regHrs = round2(payrollReg.reduce(function(s, p) { return s + Number(p.quantity || 0); }, 0));
                 payrollDesc = (payrollDesc ? payrollDesc + ' + ' : '') + 'REG ' + regHrs + 'h @ ' + (payrollReg[0].clockIn || '');
             }
-            if (!payrollDesc) payrollDesc = '—';
+            if (!payrollDesc) payrollDesc = '-';
 
             var hrs = exposure > 0 ? exposure
                 : overage > 0 ? overage
@@ -1606,12 +1606,12 @@
             var problem, color, action;
             if (hasDiscrepancy) {
                 problem = '⚠ Verint absent, Payroll REG'; color = '#b71c1c';
-                action = 'Payroll wrong — send correction';
+                action = 'Payroll wrong. Send correction';
             } else if (hasReview) {
                 problem = '⚠ Verint Same Day vs Payroll PTO'; color = '#e65100';
                 action = 'Re-code to PTOST (if buffer remains)';
             } else if (hasPcIssue) {
-                problem = 'PC issue — Verint tardy, clocked in'; color = '#1565c0';
+                problem = 'PC issue. Verint tardy, clocked in'; color = '#1565c0';
                 action = 'Document as system issue';
             } else if (overage > 0) {
                 problem = 'PTOST over 40h cap'; color = '#e65100';
@@ -1620,10 +1620,10 @@
                 problem = 'Same Day without PTOST'; color = '#b71c1c';
                 action = 'Counts against reliability';
             } else if (hasPartial) {
-                problem = 'Partial day — review'; color = '#78909c';
+                problem = 'Partial day. Review'; color = '#78909c';
                 action = 'Confirm payroll matches';
             } else {
-                problem = '—'; color = '#78909c'; action = '—';
+                problem = '-'; color = '#78909c'; action = '-';
             }
 
             rows.push({
@@ -1709,7 +1709,7 @@
         // PTOST ledger
         if (ptostLedger.length > 0) {
             html += '<div style="margin-bottom:14px; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; overflow:hidden;">';
-            html += '<div style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700; color:#37474f;">PTOST ledger — running total vs 40h cap</div>';
+            html += '<div style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700; color:#37474f;">PTOST ledger. Running total vs 40h cap</div>';
             html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
             html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
             html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--border);">Date</th>';
@@ -1844,12 +1844,12 @@
         var ptoIsNegative = ptoRemainingValue != null && ptoRemainingValue < 0;
         var ptoRemainingText = ptoBalance
             ? (ptoIsNegative ? ('Overused by ' + round2(Math.abs(ptoRemainingValue)) + 'h') : (round2(ptoRemainingValue) + 'h'))
-            : '—';
+            : '-';
 
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
-        html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Carryover</div></div>';
-        html += '<div style="padding:10px; background:var(--green-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--green-text);">' + (ptoBalance ? ptoBalance.earned : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Earned</div></div>';
-        html += '<div style="padding:10px; background:var(--red-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--red-text);">' + (ptoBalance ? ptoBalance.used : '—') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Used</div></div>';
+        html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '-') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Carryover</div></div>';
+        html += '<div style="padding:10px; background:var(--green-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--green-text);">' + (ptoBalance ? ptoBalance.earned : '-') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Earned</div></div>';
+        html += '<div style="padding:10px; background:var(--red-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--red-text);">' + (ptoBalance ? ptoBalance.used : '-') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Used</div></div>';
         html += '<div style="padding:10px; background:' + (ptoIsNegative ? 'var(--red-soft)' : '#e3f2fd') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (ptoIsNegative ? 'var(--red-text)' : '#1565c0') + ';">' + ptoRemainingText + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Remaining</div></div>';
         html += '</div>';
         if (ptoIsNegative) {
@@ -1937,7 +1937,7 @@
                     html += '<div style="font-size:0.82em; color:var(--green-text); padding:1px 0;">' + escapeHtml(row) + '</div>';
                 });
             } else {
-                html += '<div style="font-size:0.82em; color:#90a4ae;">—</div>';
+                html += '<div style="font-size:0.82em; color:#90a4ae;">-</div>';
             }
             html += '</div>';
 
@@ -1949,7 +1949,7 @@
                     html += '<div style="font-size:0.82em; color:#6d4200; padding:1px 0;">' + escapeHtml(row) + '</div>';
                 });
             } else {
-                html += '<div style="font-size:0.82em; color:#90a4ae;">—</div>';
+                html += '<div style="font-size:0.82em; color:#90a4ae;">-</div>';
             }
             html += '</div>';
 
@@ -1978,7 +1978,7 @@
         html += '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:12px; font-size:0.8em; color:#607d8b; border-top:1px solid #e0f2f1; padding-top:7px;">';
         html += '<span>Can still convert: <strong style="color:#00695c;">' + (r.correctableSameDayHours || 0) + 'h</strong> across ' + correctionCandidates.length + ' day(s)</span>';
         html += '<span>Still exposed: <strong style="color:' + (Number(r.remainingSameDayExposureHours || 0) > 0 ? 'var(--red-text)' : 'var(--green-text)') + ';">' + (r.remainingSameDayExposureHours || 0) + 'h</strong></span>';
-        html += '<span>YTD delta: <strong style="color:' + deltaColor + ';">' + (unexplainedDelta == null ? '—' : (unexplainedDelta + 'h')) + '</strong> (' + reconStatus + ')</span>';
+        html += '<span>YTD delta: <strong style="color:' + deltaColor + ';">' + (unexplainedDelta == null ? '-' : (unexplainedDelta + 'h')) + '</strong> (' + reconStatus + ')</span>';
         html += '<span>PTOST threshold: <strong>' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? '<span style="color:var(--red-text);">Reached</span>' : 'Not reached') + '</strong></span>';
         html += '</div>';
 
@@ -2009,14 +2009,14 @@
             missedRows.forEach(function(t) {
                 var verintDesc = (t.verint || []).map(function(v) {
                     return escapeHtml(v.activity || v.type || '');
-                }).filter(Boolean).join(', ') || '—';
+                }).filter(Boolean).join(', ') || '-';
 
                 var nonRegPayroll = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; });
                 var payrollDesc = nonRegPayroll.map(function(p) {
                     var s = p.trc;
                     if (p.taskCode) s += '/' + p.taskCode;
                     return s;
-                }).join(', ') || '—';
+                }).join(', ') || '-';
 
                 var totalHrs = round2(
                     (t.verint || []).filter(function(v) { return v.type !== 'planned'; })
@@ -2050,7 +2050,7 @@
                     vsText = 'Protected';
                     vsColor = '#2e7d32';
                 } else {
-                    vsText = '—';
+                    vsText = '-';
                     vsColor = '#78909c';
                 }
 
@@ -2059,7 +2059,7 @@
                 html += '<td style="padding:5px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(t.dateStr) + '</td>';
                 html += '<td style="padding:5px 8px; color:#455a64;">' + verintDesc + '</td>';
                 html += '<td style="padding:5px 8px; color:#455a64;">' + escapeHtml(payrollDesc) + '</td>';
-                html += '<td style="padding:5px 8px; text-align:center;">' + (totalHrs || '—') + '</td>';
+                html += '<td style="padding:5px 8px; text-align:center;">' + (totalHrs || '-') + '</td>';
                 html += '<td style="padding:5px 8px; text-align:center; font-weight:700; color:' + vsColor + ';">' + vsText + '</td>';
                 html += '</tr>';
             });
@@ -2391,7 +2391,7 @@
 
             // Verint column
             var verintVisible = (t.verint || []).filter(showVerintItem);
-            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:var(--text-tertiary);">—</span>';
+            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:var(--text-tertiary);">-</span>';
 
             // Payroll column
             var payrollVisible = (t.payroll || []).filter(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
@@ -2407,7 +2407,7 @@
                 var regLabel = regEntries.map(function(p) { return 'REG ' + p.quantity + 'h (in: ' + p.clockIn + ')'; }).join('<br>');
                 payrollText = payrollText ? payrollText + '<br>' + regLabel : regLabel;
             }
-            if (!payrollText) payrollText = '<span style="color:var(--text-tertiary);">—</span>';
+            if (!payrollText) payrollText = '<span style="color:var(--text-tertiary);">-</span>';
 
             // Total hours for the day (non-REG)
             var totalHours = 0;
@@ -2430,7 +2430,7 @@
             } else if (t.unscheduledRunning !== undefined) {
                 html += '<span style="color:#e65100; font-weight:700;">Unsched ' + t.unscheduledRunning + 'h</span>';
             } else {
-                html += '<span style="color:#ccc;">—</span>';
+                html += '<span style="color:#ccc;">-</span>';
             }
             html += '</td>';
             html += '<td style="padding:6px 8px; font-size:0.9em;">';
@@ -2451,7 +2451,7 @@
             } else if (isDiscrepancy) {
                 html += '<div style="color:var(--red-text); font-weight:700;">⚠ Discrepancy</div>';
             } else {
-                html += '<span style="color:#ccc;">—</span>';
+                html += '<span style="color:#ccc;">-</span>';
             }
             html += '</td>';
             html += '</tr>';

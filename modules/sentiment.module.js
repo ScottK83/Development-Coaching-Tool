@@ -864,7 +864,7 @@
     }
 
     function parseSentimentFile(fileType, lines) {
-        // Parse the "English Speech – Charts Report" format
+        // Parse the "English Speech. Charts Report" format
         debugLog(`📊 PARSE START - fileType=${fileType}, total lines=${lines.length}`);
         debugLog(`📊 PARSE START - First 10 lines:`, lines.slice(0, 10));
 
@@ -1245,7 +1245,7 @@
         }
 
         // Calculate date range (14 days prior to pull date).
-        // Parse YYYY-MM-DD manually so we stay in local time — using
+        // Parse YYYY-MM-DD manually so we stay in local time. Using
         // new Date(string) + toISOString() converts to UTC and can
         // land a day early in non-UTC timezones.
         const endDate = pullDate;
@@ -1427,7 +1427,7 @@
             return;
         }
 
-        copyToClipboard(prompt, { message: '📋 CoPilot prompt copied — opening CoPilot' }).then((ok) => {
+        copyToClipboard(prompt, { message: '📋 CoPilot prompt copied. Opening CoPilot' }).then((ok) => {
             if (ok) setTimeout(() => window.open('https://copilot.microsoft.com', '_blank'), 500);
         });
     }

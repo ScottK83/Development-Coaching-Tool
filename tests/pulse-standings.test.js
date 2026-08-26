@@ -146,14 +146,25 @@ function load(t, options) {
 // The block as it lands, spelled out rather than regenerated. Every number in
 // it is checked separately below; this is here so a change to a single word of
 // copy has to be made on purpose.
+//
+// Three lines per metric rather than one and a half. The value leads, because a
+// placing with no number behind it is a position in a league table the reader
+// cannot check, and it is also the number the milestone then asks them to move.
 const EXPECTED =
     '📊 Where you stood for the week ending 08/21/2026\n'
-    + '  • Schedule Adherence: 10th of 30 in the call center, 3rd of 8 on our team.\n'
-    + '    Add 1 point and you would have finished about 4 places higher.\n'
-    + '  • Rep Satisfaction: 15th of 30 in the call center, 4th of 8 on our team.\n'
-    + '    Add 2 points and you would have finished about 7 places higher.\n'
-    + '  • Average Handle Time: 12th of 30 in the call center, 4th of 8 on our team.\n'
-    + '    Take 15 seconds off and you would have finished about 8 places higher.\n'
+    + '\n'
+    + '  • Schedule Adherence: 93.9%\n'
+    + '      10th of 30 in the call center, 3rd of 8 on our team.\n'
+    + '      Add 1 point. At 94.9% you would have finished about 4 places higher.\n'
+    + '\n'
+    + '  • Rep Satisfaction: 88.0%\n'
+    + '      15th of 30 in the call center, 4th of 8 on our team.\n'
+    + '      Add 2 points. At 90.0% you would have finished about 7 places higher.\n'
+    + '\n'
+    + '  • Average Handle Time: 422s\n'
+    + '      12th of 30 in the call center, 4th of 8 on our team.\n'
+    + '      Take 15 seconds off. At 407s you would have finished about 8 places higher.\n'
+    + '\n'
     + '  Those position gains assume everybody else stays exactly where they finished.';
 
 suite('pulse standings: both placings and a milestone, for a named period', (t) => {
@@ -174,11 +185,15 @@ suite('pulse standings: both placings and a milestone, for a named period', (t) 
     t.check('the milestone names a real step in the metric\'s own unit',
         block.indexOf('Take 15 seconds off') > -1);
     t.check('and the gain is the one a re-rank actually gives',
-        block.indexOf('Take 15 seconds off and you would have finished about 8 places higher.') > -1);
+        block.indexOf('Take 15 seconds off. At 407s you would have finished about 8 places higher.') > -1);
+
+    // The ask has a destination in it. "Take 15 seconds off" leaves the reader
+    // doing the subtraction to find out what they are being asked for.
+    t.check('and the number they would land on is named', block.indexOf('At 407s you would') > -1);
 
     // A percentage metric asks in points, not in seconds.
     t.check('a rate metric steps in points', block.indexOf('Add 2 points') > -1);
-    t.check('and one point stays singular', block.indexOf('Add 1 point ') > -1);
+    t.check('and one point stays singular', block.indexOf('Add 1 point.') > -1);
 
     t.equal('the block as it lands', block, EXPECTED);
 });
@@ -196,7 +211,9 @@ suite('pulse standings: the block is a block, not a spreadsheet', (t) => {
     // The bullet prefix is four characters, so the label starting at index 4
     // is the label leading the block.
     t.check('the best placing leads', bullets[0].indexOf('Schedule Adherence') === 4);
-    t.check('and it is the tenth place one', bullets[0].indexOf('10th of 30') > -1);
+    t.check('and the bullet carries their own number', bullets[0].indexOf('93.9%') > -1);
+    t.check('and it is the tenth place one',
+        block.indexOf('Schedule Adherence: 93.9%\n      10th of 30') > -1);
 
     // Sentiment is Dana's worst placing by a distance and is the line left out,
     // because the two slots after the lead go to the metrics a step moves most.
@@ -225,12 +242,15 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
     const block = load(t, { rows }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     const bullets = block.split('\n').filter(line => line.indexOf('  • ') === 0);
 
-    t.check('rep satisfaction is placed', block.indexOf('Rep Satisfaction: 30th of 30 in the call center') > -1);
+    t.check('rep satisfaction is placed',
+        block.indexOf('Rep Satisfaction: 70.0%\n      30th of 30 in the call center') > -1);
     t.check('and it takes the slot straight after the lead', bullets[1].indexOf('Rep Satisfaction') === 4);
 
     // Nothing was invented to justify the slot. Bottom of a field that tight
     // has no step worth naming, and the placing stands without one.
-    t.check('with no milestone attached to it', bullets[1].indexOf('places higher') === -1);
+    // Its group is the label line and the placing line, and nothing after.
+    t.check('with no milestone attached to it',
+        block.indexOf('30th of 30 in the call center, 8th of 8 on our team.\n\n') > -1);
     t.check('the metric it displaced is gone', block.indexOf('Overall Sentiment') === -1);
     t.equal('and the block is still three metrics', bullets.length, 3);
 
@@ -244,8 +264,8 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
         })])
     }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('it really did have a milestone to lose',
-        withoutSurveys.indexOf('Overall Sentiment: 26th of 30') > -1
-        && withoutSurveys.indexOf('Add 1 point and you would have finished about 5 places higher.') > -1);
+        withoutSurveys.indexOf('Overall Sentiment: 90.1%\n      26th of 30') > -1
+        && withoutSurveys.indexOf('Add 1 point. At 91.1% you would have finished about 5 places higher.') > -1);
 
     // The pin is a slot, not a lower bar. Three surveys is still the floor, and
     // a week under it hands the slot back to the metric that earned it.

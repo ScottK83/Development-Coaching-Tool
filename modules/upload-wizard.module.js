@@ -113,7 +113,7 @@
         //    the same week lands.
         options.push({
             id: 'daily',
-            label: 'Daily data (pick a day — defaults to yesterday)',
+            label: 'Daily data (pick a day, defaults to yesterday)',
             periodType: 'daily',
             startDate: null,
             endDate: null,
@@ -129,7 +129,7 @@
         if (yesterday >= thisWeekMon) {
             options.push({
                 id: 'week-in-progress',
-                label: `This week in progress (${fmtShort(thisWeekMon)} – ${fmtShort(yesterday)})`,
+                label: `This week in progress (${fmtShort(thisWeekMon)}, ${fmtShort(yesterday)})`,
                 periodType: 'week-in-progress',
                 startDate: isoDate(thisWeekMon),
                 endDate: isoDate(yesterday),
@@ -140,7 +140,7 @@
         // 2. Last completed week
         options.push({
             id: `week-${isoDate(lastWeekMon)}`,
-            label: `Last week (${fmtShort(lastWeekMon)} – ${fmtShort(lastWeekSun)})`,
+            label: `Last week (${fmtShort(lastWeekMon)}, ${fmtShort(lastWeekSun)})`,
             periodType: 'week',
             startDate: isoDate(lastWeekMon),
             endDate: isoDate(lastWeekSun),
@@ -154,7 +154,7 @@
         if (yesterday >= thisMonthFirstForMtd) {
             options.push({
                 id: 'month-to-date',
-                label: `${mtdMonthName} to date (${fmtShort(thisMonthFirstForMtd)} – ${fmtShort(yesterday)})`,
+                label: `${mtdMonthName} to date (${fmtShort(thisMonthFirstForMtd)}, ${fmtShort(yesterday)})`,
                 periodType: 'month-to-date',
                 startDate: isoDate(thisMonthFirstForMtd),
                 endDate: isoDate(yesterday),
@@ -376,7 +376,7 @@
                 return {
                     id: `month-${isoDate(start)}`,
                     label: `${mo.name} ${year} (never uploaded)` +
-                        (mo.weeks ? ` — ${mo.weeks} week${mo.weeks === 1 ? '' : 's'} on file` : ''),
+                        (mo.weeks ? ` to ${mo.weeks} week${mo.weeks === 1 ? '' : 's'} on file` : ''),
                     periodType: 'month',
                     startDate: isoDate(start),
                     endDate: isoDate(end),
@@ -473,7 +473,7 @@
                     id: `quarter-${year}-q${q.quarter}`,
                     label: `${q.name} ${year} (never uploaded)` +
                         (short && short < 3
-                            ? ` — ${short} of its 3 months ${short === 1 ? 'is' : 'are'} blank too`
+                            ? ` to ${short} of its 3 months ${short === 1 ? 'is' : 'are'} blank too`
                             : ''),
                     periodType: 'quarter',
                     quarter: q.quarter,
@@ -592,7 +592,7 @@
                 if (uploaded.has(iso)) continue;
                 weeks.push({
                     id: `week-${iso}`,
-                    label: `${fmtShort(mon)} – ${fmtLong(sun)} (before your first upload)`,
+                    label: `${fmtShort(mon)}. ${fmtLong(sun)} (before your first upload)`,
                     periodType: 'week',
                     startDate: iso,
                     endDate: isoDate(sun),
@@ -648,7 +648,7 @@
             const weeksAgo = Math.round((lastWeekMon - mon) / (7 * MS_PER_DAY)) + 1;
             missing.push({
                 id: `week-${iso}`,
-                label: `${fmtShort(mon)} – ${fmtLong(sun)} (${weeksAgo} week${weeksAgo === 1 ? '' : 's'} ago)`,
+                label: `${fmtShort(mon)}. ${fmtLong(sun)} (${weeksAgo} week${weeksAgo === 1 ? '' : 's'} ago)`,
                 periodType: 'week',
                 startDate: iso,
                 endDate: isoDate(sun),
@@ -752,8 +752,8 @@
             ? new Date(opt.priorUpload.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             : '';
         return when
-            ? ` — ✓ uploaded ${when}, re-upload replaces it`
-            : ' — re-upload replaces what is on file';
+            ? ` to ✓ uploaded ${when}, re-upload replaces it`
+            : ' to re-upload replaces what is on file';
     }
 
     // Render the dropdown options into the select element. Pending
@@ -882,7 +882,7 @@
             }
             const d = parseLocalDate(day);
             summaryEl.style.display = 'block';
-            summaryEl.textContent = `Will save as daily — ${fmtLong(d)}. (Ephemeral; cleared when a weekly upload covers this date.)`;
+            summaryEl.textContent = `Will save as daily. ${fmtLong(d)}. (Ephemeral; cleared when a weekly upload covers this date.)`;
             return;
         }
         const endDate = dateOverride || option.endDate;
@@ -901,7 +901,7 @@
         const startD = parseLocalDate(start);
         const endD = parseLocalDate(endDate);
         summaryEl.style.display = 'block';
-        let text = `Will save as ${option.periodType} — ${fmtLong(startD)} through ${fmtLong(endD)}.`;
+        let text = `Will save as ${option.periodType}. ${fmtLong(startD)} through ${fmtLong(endD)}.`;
         if (option.priorUpload) {
             const priorEnd = parseLocalDate(option.priorUpload.endDate);
             const through = isNaN(priorEnd) ? '' : ` through ${fmtLong(priorEnd)}`;
@@ -919,7 +919,7 @@
             if (gaps.length) {
                 const shown = gaps.slice(0, MAX_RANGE_GAPS_SHOWN);
                 const chips = shown.map(g =>
-                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))} – ${fmtShort(parseLocalDate(g.endDate))}</span>`
+                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))}. ${fmtShort(parseLocalDate(g.endDate))}</span>`
                 ).join('');
                 const more = gaps.length > shown.length
                     ? `<div style="margin-top:4px;">+ ${gaps.length - shown.length} more.</div>`
@@ -950,7 +950,7 @@
             const d = addDays(weekMon, i);
             if (d > now) break; // Don't show future days
             const iso = isoDate(d);
-            const mark = uploadedSet.has(iso) ? '✓' : '—';
+            const mark = uploadedSet.has(iso) ? '✓' : '-';
             parts.push(`${dayNames[i]} ${mark}`);
         }
         if (!parts.length) {
@@ -992,7 +992,7 @@
        these.
 
        They carry !important because the chips also hold their resting look in
-       an inline style attribute, which beats a class selector every time — the
+       an inline style attribute, which beats a class selector every time. The
        hover and focus colours would otherwise lose to the chip's own
        background. The inline base stays regardless, so a chip is still a
        readable chip on a page where this injection found no <head> to write to. */
@@ -1021,7 +1021,7 @@
     }
 
     function weekChipText(opt) {
-        return `${fmtShort(parseLocalDate(opt.startDate))} – ${fmtShort(parseLocalDate(opt.endDate))}`;
+        return `${fmtShort(parseLocalDate(opt.startDate))}. ${fmtShort(parseLocalDate(opt.endDate))}`;
     }
 
     function monthChipText(opt) {
@@ -1077,7 +1077,7 @@
        date picker and the daily date picker both open off it, and the summary
        line under the dropdown is written by it. Assigning .value fires nothing,
        so without the dispatch the picker would show the right period while the
-       hidden inputs the save path reads still held the last one — the worst
+       hidden inputs the save path reads still held the last one. The worst
        possible version of this feature, since the upload would look correct and
        land on the wrong dates.
 
@@ -1156,7 +1156,7 @@
        The blocks stay separate and the separations are not cosmetic. A hole
        between uploads is probably an oversight. A blank start to the year is a
        decision about how far back to go. A missing quarter is neither, and a
-       missing YTD is not a gap in a trend line at all — it is a feature switch
+       missing YTD is not a gap in a trend line at all. It is a feature switch
        nobody knows is off. Rolling them into one number is exactly what made
        four blank months read as "1 week never uploaded".
 
@@ -1184,7 +1184,7 @@
 
         const { weeks, totalMissing, shownCount } = gaps;
         // Colors come from the theme variables so the banner stays legible in
-        // both light and dark mode — hardcoded hex reads as invisible text
+        // both light and dark mode. Hardcoded hex reads as invisible text
         // once the dark theme swaps the surface underneath it.
         const HEAD = 'font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);';
         const BODY = 'font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));';
@@ -1252,7 +1252,7 @@
                 ? `<div style="${BODY}">${andList(months)} ${months.length === 1 ? 'has' : 'have'} no data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>`
                 : '') +
             (monthOptions.length
-                ? `<div style="${BODY}"><strong>You do not need the weeks.</strong> Upload each one as a Monthly period — one file per month, ranked exactly like a month rebuilt from weeklies.</div>` +
+                ? `<div style="${BODY}"><strong>You do not need the weeks.</strong> Upload each one as a Monthly period. One file per month, ranked exactly like a month rebuilt from weeklies.</div>` +
                   `<div style="margin-bottom:6px;">${monthChips}</div>`
                 : '') +
             (gaps.priorCount
@@ -1331,7 +1331,7 @@
         // and its absence is invisible everywhere else.
         const gaps = computeMissingWeeks(weekly, today, 12, ytd);
         const knownIds = new Set(options.map(o => o.id));
-        // Weeks before the first upload are offered too — telling someone four
+        // Weeks before the first upload are offered too. Telling someone four
         // months are blank and giving them no way to fill them is half a feature.
         // Quarters ride the same path; the last completed one is already in the
         // standard list, so the filter below keeps it from appearing twice.

@@ -37,7 +37,7 @@
             if (!metricValue) return;
             
             const prevValue = prevEmployee?.[metricConfig.key];
-            const delta = prevValue ? (metricValue - prevValue).toFixed(2) : '—';
+            const delta = prevValue ? (metricValue - prevValue).toFixed(2) : '-';
             const arrow = delta > 0 ? '📈' : delta < 0 ? '📉' : '➡️';
             
             const bgColor = i % 2 === 0 ? '#f5f5f5' : '#ffffff';

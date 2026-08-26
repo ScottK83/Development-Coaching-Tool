@@ -497,9 +497,9 @@
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #ede7f6; border-radius: 8px; border-left: 4px solid #7c4dff;">';
         if (data.dataSource === 'ytd') {
-            html += '<strong>' + data.year + ' Review Prep</strong> &mdash; YTD data (' + data.periodLabel + ')';
+            html += '<strong>' + data.year + ' Review Prep</strong> , YTD data (' + data.periodLabel + ')';
         } else {
-            html += '<strong>Q1 ' + data.year + ' Review Prep</strong> &mdash; ' + data.weeksInQ1 + ' weeks of data (Jan - Mar)';
+            html += '<strong>Q1 ' + data.year + ' Review Prep</strong> , ' + data.weeksInQ1 + ' weeks of data (Jan - Mar)';
         }
         html += '</div>';
 
@@ -576,7 +576,7 @@
         }
 
         html += '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h3 style="margin-top: 0; color: var(--text-primary);">' + _escapeHtml(emp.name) + ' &mdash; ' + (q1Data.dataSource === 'ytd' ? 'YTD' : 'Q1') + ' Overview</h3>';
+        html += '<h3 style="margin-top: 0; color: var(--text-primary);">' + _escapeHtml(emp.name) + ', ' + (q1Data.dataSource === 'ytd' ? 'YTD' : 'Q1') + ' Overview</h3>';
 
         // Summary badges
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">';
@@ -675,7 +675,7 @@
             // Trend
             var trendText, trendColor;
             if (md.trend.direction === 'insufficient') {
-                trendText = '&mdash;';
+                trendText = ',';
                 trendColor = '#aaa';
             } else if (md.trend.direction === 'improving') {
                 trendText = '&#9650; Improving';

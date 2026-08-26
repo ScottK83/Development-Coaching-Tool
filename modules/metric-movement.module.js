@@ -97,7 +97,7 @@
                 movementWord: 'held steady',
                 word: 'holding steady',
                 verdict: 'unchanged',
-                arrow: '―',
+                arrow: '=',
                 arrowIsGood: null
             };
         }
@@ -161,14 +161,14 @@
         var opts = options || {};
         var d = describe(metricKey, direction, null);
         if (d.direction === 'stable') {
-            return '<span style="color:var(--text-tertiary);" title="Holding steady">―</span>';
+            return '<span style="color:var(--text-tertiary);" title="Holding steady">=</span>';
         }
         var color = d.arrowIsGood
             ? (opts.goodColor || 'var(--green-text)')
             : (opts.badColor || '#e53935');
         var title = d.arrowIsGood
-            ? 'Improving — ' + d.movementWord
-            : 'Getting worse — ' + d.movementWord;
+            ? 'Improving. ' + d.movementWord
+            : 'Getting worse. ' + d.movementWord;
         if (!d.arrowIsGood && opts.stillOnTarget) title += ' (still on target)';
         return '<span style="color:' + color + ';" title="' + title + '">' + d.arrow + '</span>';
     }

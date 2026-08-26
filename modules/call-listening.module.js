@@ -78,7 +78,7 @@ Requirements:
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
-- Do NOT use em dashes (—)${transcriptRules}
+- Do NOT use em dashes (, )${transcriptRules}
 - The QA read is background for you, not content for the associate. Do not paste the checklist or the words "opportunity" and "cannot tell" into the email; turn what matters into normal coaching language
 - Return ONLY the final email body text.`;
     }
@@ -106,7 +106,7 @@ Requirements:
         const copilotWindow = openWindow(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
 
         copyToClipboard(prompt, {
-            message: '📋 Call listening prompt copied — paste into Copilot with Ctrl+V'
+            message: '📋 Call listening prompt copied. Paste into Copilot with Ctrl+V'
         });
 
         return { ok: true, copilotWindow };

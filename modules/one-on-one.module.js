@@ -218,7 +218,7 @@
         const blocks = [];
         const name = d.preferredName || d.employeeName || 'them';
 
-        blocks.push(`One-to-one — ${d.employeeName || name}${d.date ? ` · ${d.date}` : ''}`);
+        blocks.push(`One-to-one. ${d.employeeName || name}${d.date ? ` · ${d.date}` : ''}`);
 
         if (d.yearToDate?.length) {
             blocks.push('THE YEAR SO FAR\n' + d.yearToDate.map(e => `  • ${describeStanding(e)}`).join('\n'));

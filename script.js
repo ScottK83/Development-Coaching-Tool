@@ -173,7 +173,7 @@ var _lastStorageFailAlert = 0;
 function notifyStorageSaveFailed(label) {
     try {
         var toast = window.DevCoachModules?.uiUtils?.showToast;
-        if (toast) toast('⚠️ Could not save ' + label + ' — browser storage is full. Archive old weeks in Settings.', 6000);
+        if (toast) toast('⚠️ Could not save ' + label + ' to browser storage is full. Archive old weeks in Settings.', 6000);
     } catch (_e) { /* toast unavailable */ }
     var now = Date.now();
     if (now - _lastStorageFailAlert > 30000) {
@@ -1844,7 +1844,7 @@ function bindUploadAndPasteHandlers() {
         }
         if (typeof showToast === 'function') {
             if (failedFiles.length) {
-                const lines = failedFiles.map(f => `• ${f.name} — ${f.reason}`).join('\n');
+                const lines = failedFiles.map(f => `• ${f.name}. ${f.reason}`).join('\n');
                 showToast(`${loaded} loaded, ${failedFiles.length} failed:\n${lines}`, 8000);
             } else {
                 showToast(loaded + ' Verint file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
@@ -1882,7 +1882,7 @@ function bindUploadAndPasteHandlers() {
             }
             if (typeof showToast === 'function') {
                 if (failedFiles.length) {
-                    const lines = failedFiles.map(f => `• ${f.name} — ${f.reason}`).join('\n');
+                    const lines = failedFiles.map(f => `• ${f.name}. ${f.reason}`).join('\n');
                     showToast(`${loaded} loaded, ${failedFiles.length} failed:\n${lines}`, 8000);
                 } else {
                     showToast(loaded + ' payroll file' + (loaded !== 1 ? 's' : '') + ' loaded. View in My Team > Attendance.', 4000);
@@ -2386,7 +2386,7 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
     } else if (periodType === 'week') {
         label = `Week ending ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
     } else if (periodType === 'week-in-progress') {
-        label = `Week in progress: ${startDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        label = `Week in progress: ${startDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}. ${normalizedEndDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
     } else if (periodType === 'month') {
         label = `${startDateObj.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`;
     } else if (periodType === 'month-to-date') {
@@ -2541,7 +2541,7 @@ function archiveOldWeeks(monthsToKeep = 6) {
         a.remove();
         URL.revokeObjectURL(url);
     } catch (e) {
-        alert('Could not generate the archive download. Aborting — no data was removed.');
+        alert('Could not generate the archive download. Aborting. No data was removed.');
         return;
     }
 
@@ -2630,22 +2630,22 @@ function renderUploadColumnInspector(employees, periodType) {
         const hasData = count > 0;
         let statusIcon, statusText, statusColor;
         if (!hasData) {
-            statusIcon = '—';
+            statusIcon = '-';
             statusText = 'no data in this upload';
             statusColor = '#9e9e9e';
         } else if (!wtdWeight) {
             statusIcon = '✓';
-            statusText = `${count}/${rows.length} rows — cumulative, no weighting needed`;
+            statusText = `${count}/${rows.length} rows. Cumulative, no weighting needed`;
             statusColor = '#2e7d32';
         } else {
             const weightCount = wtdWeight === 'surveyTotal' ? surveyTotalCoverage : totalCallsCoverage;
             if (weightCount > 0) {
                 statusIcon = '✓';
-                statusText = `${count}/${rows.length} rows — weighted by ${wtdWeight} (WTD math will be accurate)`;
+                statusText = `${count}/${rows.length} rows. Weighted by ${wtdWeight} (WTD math will be accurate)`;
                 statusColor = '#2e7d32';
             } else {
                 statusIcon = '⚠';
-                statusText = `${count}/${rows.length} rows — but ${wtdWeight} missing; partial-week rollup will be display-only`;
+                statusText = `${count}/${rows.length} rows. But ${wtdWeight} missing; partial-week rollup will be display-only`;
                 statusColor = '#ef6c00';
                 missingWeightCount += 1;
             }
@@ -2783,7 +2783,7 @@ function saveUploadMetricCoverage(employees, periodType) {
 
 function clearUploadDriftBaseline() {
     try { localStorage.removeItem(UPLOAD_METRIC_COVERAGE_KEY); } catch (e) { /* noop */ }
-    showToast('🧹 Drift baseline cleared — the next upload of each kind sets a new one.', 4000);
+    showToast('🧹 Drift baseline cleared. The next upload of each kind sets a new one.', 4000);
 }
 
 function buildMetricsUploadQualityWarnings(employees) {
@@ -2883,7 +2883,7 @@ function handleLoadPastedDataClick() {
 
         const drift = buildUploadDriftErrors(employees, periodType);
         if (drift.errors.length) {
-            alert(`🛑 Upload blocked — possible column drift:\n\n${drift.errors.join('\n\n')}\n\nFix the paste and try again. If this is intentional, use "Clear drift baseline" under Settings → Delete Data.`);
+            alert(`🛑 Upload blocked. Possible column drift:\n\n${drift.errors.join('\n\n')}\n\nFix the paste and try again. If this is intentional, use "Clear drift baseline" under Settings → Delete Data.`);
             return;
         }
 
@@ -2916,7 +2916,7 @@ function handleLoadPastedDataClick() {
             let overwriteMsg = `⚠️ Data already exists for this period (${existingCount} employees).\n\nNew upload: ${newCount} employees.\n`;
             if (newlyAdded.length) overwriteMsg += `\n✅ New metrics being added: ${newlyAdded.join(', ')}`;
             if (willLose.length) overwriteMsg += `\n❌ Metrics that will be LOST (not in new data): ${willLose.join(', ')}`;
-            if (!newlyAdded.length && !willLose.length) overwriteMsg += `\nMetrics are the same — data values will be updated.`;
+            if (!newlyAdded.length && !willLose.length) overwriteMsg += `\nMetrics are the same. Data values will be updated.`;
             overwriteMsg += `\n\nOverwrite existing data?`;
 
             if (!confirm(overwriteMsg)) return;
@@ -3209,7 +3209,7 @@ function handleBackupMetricDataClick() {
     const weeklyCount = Object.keys(weeklyData || {}).length;
     const ytdCount = Object.keys(ytdData || {}).length;
     if (weeklyCount === 0 && ytdCount === 0) {
-        alert('Nothing to back up — no weekly or YTD data has been uploaded yet.');
+        alert('Nothing to back up. No weekly or YTD data has been uploaded yet.');
         return;
     }
 
@@ -4573,7 +4573,7 @@ function updateTeamSelection() {
 // ============================================
 
 // The shortcuts the app actually honours. Kept in one list so the help
-// overlay below can't drift out of sync with the handler — an undocumented
+// overlay below can't drift out of sync with the handler. An undocumented
 // shortcut may as well not exist.
 const KEYBOARD_SHORTCUTS = [
     { keys: 'Ctrl + S', label: 'Back up / export data' },
@@ -4618,7 +4618,7 @@ function initializeKeyboardShortcuts() {
     document.getElementById('shortcutHelpBtn')?.addEventListener('click', toggleShortcutHelp);
 
     document.addEventListener('keydown', (e) => {
-        // Escape closes dialogs even from inside a field — that's the one
+        // Escape closes dialogs even from inside a field, that's the one
         // shortcut you reach for while typing.
         if (e.key === 'Escape' && closeTopmostModal()) {
             e.preventDefault();
@@ -7257,7 +7257,7 @@ async function initApp() {
             const repoSync = window.DevCoachModules?.repoSync;
             const config = repoSync?.loadCallListeningSyncConfig?.();
             if (!config?.isWorkPc) {
-                showToast('Sync is disabled — not marked as Work PC.', 3500);
+                showToast('Sync is disabled. Not marked as Work PC.', 3500);
                 return;
             }
             footerSyncBtn.disabled = true;
@@ -7290,7 +7290,7 @@ async function initApp() {
     restoreSmartDefaults();
     
     // Ensure data is saved before page unload (survives Ctrl+Shift+R).
-    // Skip when a repo restore just wrote fresh data straight to localStorage —
+    // Skip when a repo restore just wrote fresh data straight to localStorage. 
     // otherwise these saves would overwrite it with stale in-memory globals.
     window.addEventListener('beforeunload', () => {
         if (window.__skipBeforeunloadSave) return;
@@ -7386,7 +7386,7 @@ function initializeCoachingEmail() {
 // ============================================
 
 // This used to be a 214-line generator with its own greeting, intro, win,
-// focus and closer pools — a second, weaker implementation of the check-in
+// focus and closer pools. A second, weaker implementation of the check-in
 // the Weekly Pulse tab already produced. Two pools meant the same associate
 // could get two different voices from the same app depending on which tab
 // you happened to be standing in, and only one of them was being improved.
@@ -8089,7 +8089,7 @@ function getLatestYearPeriodForEmployee(employeeName, reviewYear) {
     // Sort: Real YTD (100+) > Auto YTD (50+) > weekly/daily (1+)
     // Within same tier, newest date first
     candidates.sort((a, b) => {
-        // Real YTD uploads are the source of truth — always preferred
+        // Real YTD uploads are the source of truth, always preferred
         const aTier = a.priority >= 100 ? 2 : a.priority >= 50 ? 1 : 0;
         const bTier = b.priority >= 100 ? 2 : b.priority >= 50 ? 1 : 0;
         if (aTier !== bTier) return bTier - aTier;

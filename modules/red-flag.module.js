@@ -530,8 +530,8 @@ function renderFollowUpHistory() {
 
         return `<div style="padding: 10px 12px; border-bottom: 1px solid var(--border); opacity: ${rowOpacity}; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
             <div>
-                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95em;">${escapeHtml(entry.associateName)} — ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
-                <div style="font-size: 0.82em; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}) — ${date}</div>
+                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95em;">${escapeHtml(entry.associateName)}. ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
+                <div style="font-size: 0.82em; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}). ${date}</div>
                 <div style="font-size: 0.8em; color: #888; margin-top: 2px; font-style: italic;">${escapeHtml(reasonPreview)}</div>
             </div>
             <button onclick="toggleFollowUpStatus('${entry.id}')" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusColor}; border-radius: 999px; padding: 4px 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; white-space: nowrap;">${statusLabel}</button>
@@ -687,7 +687,7 @@ function copyRedFlagEmail() {
     }
 
     const button = document.getElementById('copyRedFlagEmailBtn');
-    copyToClipboard(emailText, { button, message: '📋 Copied — opening Outlook' }).then((ok) => {
+    copyToClipboard(emailText, { button, message: '📋 Copied, opening Outlook' }).then((ok) => {
         // Only hand off to the mail client once the text is actually on the
         // clipboard; otherwise the draft opens with nothing to paste.
         if (ok) setTimeout(() => window.open('mailto:', '_blank'), 500);
@@ -723,7 +723,7 @@ function parseSurveyData() {
 function extractSurveyFields(raw) {
     const lines = raw.split('\n').map(l => l.trim());
 
-    // Find a field value — handles both "Label\tValue" (same line)
+    // Find a field value. Handles both "Label\tValue" (same line)
     // and "Label\n\nValue" (label alone, value on next non-empty line)
     function findField(patterns) {
         for (const pattern of patterns) {
@@ -753,7 +753,7 @@ function extractSurveyFields(raw) {
     function findCustomerWords() {
         const sections = [];
 
-        // Q33 — "Please tell me why it was [rating]?"
+        // Q33. "Please tell me why it was [rating]?"
         for (let i = 0; i < lines.length; i++) {
             if (/Q33[.\s]|please tell me why/i.test(lines[i])) {
                 const collected = [];
@@ -766,7 +766,7 @@ function extractSurveyFields(raw) {
             }
         }
 
-        // Q35 — "What is the primary reason why you feel the issue was not resolved?"
+        // Q35. "What is the primary reason why you feel the issue was not resolved?"
         for (let i = 0; i < lines.length; i++) {
             if (/Q35[.\s]|primary reason.*not resolved/i.test(lines[i])) {
                 for (let j = i + 1; j < lines.length; j++) {
@@ -873,7 +873,7 @@ function displayExtractedSurveyData(data) {
     ];
 
     fieldsEl.innerHTML = fields.map(f => {
-        const val = f.value || '<span style="color: #e65100; font-style: italic;">Not found — edit below if needed</span>';
+        const val = f.value || '<span style="color: #e65100; font-style: italic;">Not found, edit below if needed</span>';
         const isPresent = Boolean(f.value);
         return `<div style="margin-bottom: 6px;"><strong style="color: #37474f;">${escapeHtml(f.label)}:</strong> ${isPresent ? escapeHtml(val) : val}</div>`;
     }).join('');
@@ -894,7 +894,7 @@ function generateSurveyPrompt(data) {
 
     const resolvedText = resolved.toLowerCase().includes('yes') ? 'The issue was resolved.' : 'The issue was not resolved.';
 
-    const prompt = `Write a professional coaching email from supervisor ${supervisor} to advisor ${associate} regarding a customer survey received on ${contactDate}. The customer rated their experience ${rating}. The customer contacted APS regarding ${mainReason} - ${specificReason}. ${resolvedText} The customer stated: "${customerWords}". The coaching focus should be on ${failures}. For each failure observed, include specific, actionable steps the advisor should take in future calls to prevent this from happening again. For example, if the advisor did not recap the call, instruct them to always summarize the interaction and next steps before ending the call. If the customer felt unheard, instruct the advisor to use active listening techniques such as repeating the customer's concern back to them before offering a solution. The tone should be supportive, direct, and professional — focused on growth and improvement, not punishment.`;
+    const prompt = `Write a professional coaching email from supervisor ${supervisor} to advisor ${associate} regarding a customer survey received on ${contactDate}. The customer rated their experience ${rating}. The customer contacted APS regarding ${mainReason} - ${specificReason}. ${resolvedText} The customer stated: "${customerWords}". The coaching focus should be on ${failures}. For each failure observed, include specific, actionable steps the advisor should take in future calls to prevent this from happening again. For example, if the advisor did not recap the call, instruct them to always summarize the interaction and next steps before ending the call. If the customer felt unheard, instruct the advisor to use active listening techniques such as repeating the customer's concern back to them before offering a solution. The tone should be supportive, direct, and professional. Focused on growth and improvement, not punishment.`;
 
     const promptDisplay = document.getElementById('surveyPromptDisplay');
     const promptSection = document.getElementById('surveyPromptSection');

@@ -62,7 +62,7 @@
 
     // Where the page starts before anybody picks. The header announces what
     // the day covers, so opening on a different stretch of time makes the two
-    // halves of one screen disagree — Friday saying "the week you just worked"
+    // halves of one screen disagree. Friday saying "the week you just worked"
     // over a month-to-date field is the version of that which got noticed. An
     // unavailable default falls back to the latest upload the same as a stale
     // saved pick does, so this only ever moves the starting point.
@@ -137,15 +137,15 @@
         const tabs = outreach.weekdayPlans().map(plan => {
             const active = plan.id === dayId;
             const blocked = status[plan.id] && !status[plan.id].ok;
-            // Only meaningful for one person — a team sweep tracks sends per rep.
+            // Only meaningful for one person, a team sweep tracks sends per rep.
             const sent = person && Boolean(outreach.getSentEntry(sentLog, plan.id, stamp, person));
 
             const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (blocked ? '#f5f5f5' : (sent ? '#e8f5e9' : '#eef1f6'));
             const color = active ? '#fff' : (blocked ? 'var(--text-tertiary)' : (sent ? '#2e7d32' : 'var(--text-secondary)'));
             const mark = blocked ? '⚠️ ' : (sent ? '✓ ' : '');
             const tip = blocked
-                ? `${plan.label} — ${status[plan.id].reason} ${status[plan.id].detail}`
-                : `${plan.label} — covers ${plan.coverageLabel}`;
+                ? `${plan.label}, ${status[plan.id].reason} ${status[plan.id].detail}`
+                : `${plan.label}, covers ${plan.coverageLabel}`;
             const dayName = plan.id.charAt(0).toUpperCase() + plan.id.slice(1);
 
             return `<button type="button" class="mt-day-tab" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
@@ -153,7 +153,7 @@
                 `${mark}${dayName}</button>`;
         }).join('');
 
-        // The rest of My Team is a quieter second group — still one click away,
+        // The rest of My Team is a quieter second group. Still one click away,
         // but visibly not the main thing you came here to do.
         const others = [
             { id: 'subSectionCoachingEmail', btn: 'subNavCoachingEmail', label: 'Coaching' },
@@ -178,7 +178,7 @@
      * silent rather than apologetic when there is nothing to show.
      */
     // How many celebrated people the panel lists before it starts summarising.
-    // Whatever is cut gets counted out loud — a list that silently stops at
+    // Whatever is cut gets counted out loud. A list that silently stops at
     // four reads as "these four are all there were".
     const CONTEXT_ROW_LIMIT = 6;
 
@@ -213,7 +213,7 @@
                     // placing at all, and that is still worth a line.
                     if (!best) {
                         if (entry.perfectSurveys && celebrations.perfectSurveyLine) {
-                            rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ` +
+                            rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong>, ` +
                                 `<span style="color:var(--text-tertiary);">${escapeHtml(celebrations.perfectSurveyLine(entry.perfectSurveys))}</span>`);
                         }
                         return;
@@ -225,25 +225,25 @@
                     const tail = placing
                         ? ` <span style="color:var(--text-tertiary);">· ${escapeHtml(placing)}</span>`
                         : '';
-                    rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong> — ${escapeHtml(best.label)}${tail}`);
+                    rows.push(`🎉 <strong>${escapeHtml(entry.firstName)}</strong>, ${escapeHtml(best.label)}${tail}`);
                 });
 
                 const hidden = all.length - Math.min(all.length, CONTEXT_ROW_LIMIT);
                 if (hidden > 0) {
                     footer += `<div style="padding:6px 0 0; font-size:0.85em; color:var(--text-tertiary);">` +
-                        `+ ${hidden} more not shown — the shout-out post has all ${all.length}.</div>`;
+                        `+ ${hidden} more not shown. The shout-out post has all ${all.length}.</div>`;
                 }
 
                 // Near misses are deliberately NOT listed inline. This panel sits
                 // directly under the shout-outs, so whoever came closest would end
-                // up the lone name under a list of winners — it reads as calling
+                // up the lone name under a list of winners. It reads as calling
                 // them out for not making it, which is the opposite of the intent.
                 //
                 // Folded away is a different thing. "Why isn't she in here?" was
                 // otherwise unanswerable without reading the source, and the
                 // sentences already exist; they just had nowhere to be shown.
                 footer += buildMissedHtml(celebrations, result);
-            } catch (e) { /* context is optional — never block the message on it */ }
+            } catch (e) { /* context is optional. Never block the message on it */ }
         }
 
         // The header survives an empty result on purpose. "Nothing standing
@@ -555,7 +555,7 @@
             return;
         }
         if (!round.ready.length) {
-            slot.innerHTML = highFiveNotice(`Nothing in the latest week backs a high five for anyone on the roster yet — all ${round.skipped.length} came back empty.`);
+            slot.innerHTML = highFiveNotice(`Nothing in the latest week backs a high five for anyone on the roster yet. All ${round.skipped.length} came back empty.`);
             return;
         }
 
@@ -575,7 +575,7 @@
 
         const skippedHtml = round.skipped.length
             ? `<div style="margin-top:4px; padding:10px 14px; border:1px dashed var(--border-strong); border-radius:8px; color:var(--text-secondary); font-size:0.88em;">` +
-                `<strong>${round.skipped.length} skipped</strong> — not enough in the latest week to praise honestly: ` +
+                `<strong>${round.skipped.length} skipped</strong>. Not enough in the latest week to praise honestly: ` +
                 escapeHtml(round.skipped.map(s => s.name).join(', ')) +
             `</div>`
             : '';
@@ -585,7 +585,7 @@
 
         slot.innerHTML = `<div style="padding:14px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface);">` +
             `<div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap;">` +
-                `<div style="font-weight:700; color:#2e7d32;">🎉 High five round — ${round.ready.length} ready</div>` +
+                `<div style="font-weight:700; color:#2e7d32;">🎉 High five round. ${round.ready.length} ready</div>` +
                 `<div id="myTeamHighFiveProgress" style="font-size:0.85em; color:var(--text-tertiary);">${doneCount()} of ${round.ready.length} sent this week</div>` +
                 `<span style="margin-left:auto; display:flex; gap:8px;">` +
                     `<button type="button" id="myTeamHighFiveClear" style="background:var(--bg-surface-raised); color:var(--text-secondary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">↩ Clear ticks</button>` +
@@ -762,7 +762,7 @@
 
         slot.innerHTML = `<div style="padding:14px; border:1px solid #ffcc80; border-radius:10px; background:var(--bg-surface);">` +
             `<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">` +
-                `<div style="font-weight:700; color:#e65100;">📣 Team shout-out — ${count} ${count === 1 ? 'person' : 'people'}</div>` +
+                `<div style="font-weight:700; color:#e65100;">📣 Team shout-out. ${count} ${count === 1 ? 'person' : 'people'}</div>` +
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
             `</div>` +
             `<textarea id="myTeamShoutOutText" style="width:100%; min-height:240px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +

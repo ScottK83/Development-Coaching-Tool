@@ -44,7 +44,7 @@
     /**
      * Format a Date as YYYY-MM-DD in the local timezone.
      * Using `.toISOString().slice(0, 10)` returns the UTC date, which
-     * drifts into tomorrow for any local time past UTC-midnight —
+     * drifts into tomorrow for any local time past UTC-midnight. 
      * so "today" can appear as tomorrow's date. This helper always
      * returns the calendar date the user is actually in.
      * @param {Date} [date]

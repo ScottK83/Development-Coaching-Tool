@@ -28,27 +28,27 @@
     function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
     var OPENERS = [
-        'Good morning team! 🌟 Happy Monday — here\'s where we stand heading into this week.',
+        'Good morning team! 🌟 Happy Monday. Here\'s where we stand heading into this week.',
         'Good morning everyone! ☀️ Let\'s kick off the week with a look at our numbers.',
         'Happy Monday team! 🚀 Here\'s your weekly team performance update.',
-        'Morning team! 🌅 New week, new opportunities — let\'s see where we\'re at.',
+        'Morning team! 🌅 New week, new opportunities. Let\'s see where we\'re at.',
         'Good morning! 💪 Quick Monday check-in on where we stand as a team.',
-        'Hey team — Monday is here. ☕ Let\'s take a look at last week\'s results.',
+        'Hey team, Monday is here. ☕ Let\'s take a look at last week\'s results.',
         'Top of the week, everyone! 🎯 Here\'s our latest performance snapshot.',
         'Monday morning, let\'s do this. Here\'s where we landed last week. 📊',
         'Hope everyone had a solid weekend! Here\'s the team scorecard. 🏆',
         'Alright team, new week on deck. 🗓️ Quick look at the numbers before we dive in.',
         'Rise and grind! ☀️ Wanted to share our weekly numbers with everyone.',
-        'Happy Monday! Grabbed the latest data — here\'s how we did. 📈',
+        'Happy Monday! Grabbed the latest data. Here\'s how we did. 📈',
         'Good morning squad! Fresh week, fresh update. Let\'s see where things stand. 🌟',
     ];
 
     var NO_WINS_LINES = [
-        'Numbers were tough this period — I see the effort and I appreciate it.',
+        'Numbers were tough this period. I see the effort and I appreciate it.',
         'It was a challenging stretch, but the effort doesn\'t go unnoticed.',
         'Not where we want to be yet, but every week is a fresh start.',
         'Rough week on the scoreboard, but I know this team has more in the tank.',
-        'We didn\'t hit our marks last week. That\'s okay — what matters is what we do next.',
+        'We didn\'t hit our marks last week. That\'s okay. What matters is what we do next.',
         'No sugarcoating it, the numbers weren\'t there. But I believe in this group.',
         'Tough period across the board. Let\'s regroup and attack this week with a plan.',
         'Sometimes the data doesn\'t reflect the work being put in. Stay the course.',
@@ -56,23 +56,23 @@
         'The metrics came up short. Let\'s talk about what we can control this week.',
         'We\'ve been better and we know it. Clean slate starts today.',
         'Hard week behind us. The good news? We get another shot starting right now.',
-        'Below target this round — but I\'ve seen what this team can do when we lock in.',
+        'Below target this round. But I\'ve seen what this team can do when we lock in.',
     ];
 
     var CLOSERS = [
         'Let\'s make it a great week. I\'m here if anyone needs anything! 💪',
-        'Appreciate each of you — let\'s build on our wins and chip away at those opportunities. 🙌',
+        'Appreciate each of you. Let\'s build on our wins and chip away at those opportunities. 🙌',
         'Let\'s go get it this week. Reach out anytime if you need support.',
         'Keep doing your thing. I\'m proud of this team and I\'m here for you. ✅',
-        'One day at a time — let\'s make this week count. You got this! 🔥',
-        'That\'s the update — now let\'s go make this week better than the last. 🚀',
+        'One day at a time. Let\'s make this week count. You got this! 🔥',
+        'That\'s the update. Now let\'s go make this week better than the last. 🚀',
         'As always, my door is open. Let\'s have a strong week together.',
         'Stay focused, stay positive. We control the effort. 💯',
-        'Proud of the work being put in. Keep pushing — results will follow. 📈',
+        'Proud of the work being put in. Keep pushing. Results will follow. 📈',
         'Enjoy your Monday, and let\'s finish the week stronger than we started. ☀️',
         'Small wins add up. Let\'s stack some this week. 🧱',
         'Thanks for everything you do. Seriously. Now let\'s get after it. 🙏',
-        'Remember — progress over perfection. Have a great week team! 🎯',
+        'Remember. Progress over perfection. Have a great week team! 🎯',
     ];
 
     // ============================================
@@ -383,7 +383,7 @@
             });
         } else {
             lines.push('🎯 FOCUS AREAS');
-            lines.push('  • We\'re hitting target across the board — incredible team effort! 🏆');
+            lines.push('  • We\'re hitting target across the board. Incredible team effort! 🏆');
         }
 
         return { lines: lines, topOpp: opps.length ? opps[0] : null };
@@ -468,7 +468,7 @@
                 ? filtered.map(function (p) {
                     return '<option value="' + escHtml(p.key) + '">' + escHtml(p.label) + '</option>';
                 }).join('')
-                : '<option value="">— no ' + type + ' data —</option>';
+                : '<option value="">No ' + type + ' data</option>';
         }
 
         populateSelect(weekSelect, 'week');

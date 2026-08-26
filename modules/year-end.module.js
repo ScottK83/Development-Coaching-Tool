@@ -41,7 +41,7 @@ Requirements:
 - Box 1 should emphasize meaningful accomplishments and impact
 - Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
 - Keep each box concise (about 3-6 sentences each)
-- Do NOT use em dashes (—)
+- Do NOT use em dashes; use commas or full stops
 - Return in this exact format only:
 Box 1 - Significant Accomplishments:
 [text]

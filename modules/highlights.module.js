@@ -175,7 +175,7 @@
             ? opts.preferredName(entry.name)
             : entry.name;
 
-        return `${firstName} — ${joinPhrases(phrases)}`;
+        return `${firstName}, ${joinPhrases(phrases)}`;
     }
 
     function groupByTeam(entries, byEmployee, options) {

@@ -141,7 +141,7 @@
 
         const populatedCount = Object.values(coverage).filter(c => c >= 0.5).length;
         if (populatedCount < MIN_POPULATED_COLUMNS) {
-            errors.push(`Only ${populatedCount} metric column(s) detected with meaningful data. Check that you pasted the full table with headers — column mapping may have drifted.`);
+            errors.push(`Only ${populatedCount} metric column(s) detected with meaningful data. Check that you pasted the full table with headers. Column mapping may have drifted.`);
         }
 
         const prev = baselines[periodType];
@@ -152,7 +152,7 @@
             if (dropped.length >= MIN_DROPPED_TO_ACT) {
                 const named = dropped.map(labelFor).join(', ');
                 if (dropped.every(k => SURVEY_DRIFT_KEYS.indexOf(k) > -1)) {
-                    warnings.push(`${named} are empty in this file. Survey scores land days after the calls, so that is normal for a stretch that just happened — every other column came through.`);
+                    warnings.push(`${named} are empty in this file. Survey scores land days after the calls, so that is normal for a stretch that just happened. Every other column came through.`);
                 } else {
                     errors.push(`These metrics had data in your last ${describeUploadKind(periodType)} upload but are empty now: ${named}. That usually means a header changed or the wrong columns are selected.`);
                 }

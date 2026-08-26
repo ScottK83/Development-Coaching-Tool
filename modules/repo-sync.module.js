@@ -378,7 +378,7 @@
             syncNowBtn.addEventListener('click', async () => {
                 const currentConfig = loadCallListeningSyncConfig();
                 if (!currentConfig.isWorkPc) {
-                    showToast('Sync is disabled — this is not marked as your Work PC.', 3500);
+                    showToast('Sync is disabled. This is not marked as your Work PC.', 3500);
                     return;
                 }
                 await runWithButtonBusyState(syncNowBtn, 'Syncing...', async () => {
@@ -507,7 +507,7 @@
                         `• PTO records: ${countEntries(payload.ptoTracker)}`,
                         `• Center averages: ${countEntries(payload.callCenterAverages)}`,
                         '',
-                        'Look at the weekly breakdown above — is "week-in-progress" present if you just uploaded a WIP? If not, the WIP was never saved to local storage on this device.',
+                        'Look at the weekly breakdown above. Is "week-in-progress" present if you just uploaded a WIP? If not, the WIP was never saved to local storage on this device.',
                         '',
                         'Push this to the Worker?'
                     ].join('\n');
@@ -543,7 +543,7 @@
             uploadExcelBtn.addEventListener('click', async () => {
                 const currentConfig = loadCallListeningSyncConfig();
                 if (!currentConfig.isWorkPc) {
-                    showToast('Upload is disabled — this is not marked as your Work PC.', 3500);
+                    showToast('Upload is disabled. This is not marked as your Work PC.', 3500);
                     return;
                 }
                 await runWithButtonBusyState(uploadExcelBtn, 'Uploading...', async () => {
@@ -1271,7 +1271,7 @@
         console.log(`[Repo Restore] Saved ${savedCount} data keys to localStorage`);
         if (writeFailures.length) {
             console.error('[Repo Restore] Write failures:', writeFailures);
-            alert(`Repo restore had write failures — data may be incomplete:\n\n${writeFailures.join('\n')}`);
+            alert(`Repo restore had write failures. Data may be incomplete:\n\n${writeFailures.join('\n')}`);
         }
     }
 
@@ -1425,7 +1425,7 @@
         console.error('Repo sync failed:', error);
         repoSyncErrorCooldownUntil = Date.now() + SYNC_ERROR_COOLDOWN_MS;
         const cooldownSec = Math.round(SYNC_ERROR_COOLDOWN_MS / 1000);
-        setCallListeningSyncStatus(`Sync failed: ${error.message} — pausing auto-sync for ${cooldownSec}s`, 'error');
+        setCallListeningSyncStatus(`Sync failed: ${error.message}. Pausing auto-sync for ${cooldownSec}s`, 'error');
     }
 
     function formatSummaryLabel(summary) {

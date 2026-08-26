@@ -24,7 +24,7 @@ const REGISTRY = {
 // regenerated, so a change to the bullet has to be made here on purpose.
 const PLAIN =
     '📅 Where the year stands\n'
-    + '  • Schedule Adherence 91.2% against a 93% target — the floor has been passing you here.';
+    + '  • Schedule Adherence 91.2% against a 93% target: the floor has been passing you here.';
 
 function load(t, withProjection) {
     t.installFakeBrowser();

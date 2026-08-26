@@ -118,7 +118,7 @@ suite('highlights: the wording names the number, never a rank', (t) => {
     const entry = engine.findHighlights([rep('Alyssa Dimes', { scheduleAdherence: 98, aht: 380 })], { metrics: METRICS })[0];
     const line = engine.buildHighlightLine(entry, { formatValue: format, preferredName: (n) => n.split(' ')[0] });
 
-    t.equal('the line leads with the person', line.indexOf('Alyssa —'), 0);
+    t.equal('the line leads with the person', line.indexOf('Alyssa,'), 0);
     t.check('and lists both wins', line.indexOf('AHT 380s') > -1 && line.indexOf('Adherence 98%') > -1);
     t.check('with no rank or tier language', !/\b(#\d|rank|tier|top \d|best|1st|2nd|3rd)\b/i.test(line));
 
@@ -143,7 +143,7 @@ suite('highlights: grouped by team for the post', (t) => {
     t.equal('with unassigned last', groups[groups.length - 1].team, 'Unassigned');
 
     const post = engine.buildHighlightPost(groups, {
-        title: '✨ Yesterday’s Highlights — 08/04/2026',
+        title: '✨ Yesterday’s Highlights, 08/04/2026',
         formatValue: (key, value) => `${value}%`
     });
     t.check('the post keeps its title', post.indexOf('✨ Yesterday’s Highlights') === 0);

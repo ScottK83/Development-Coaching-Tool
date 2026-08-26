@@ -262,16 +262,16 @@
     function describePattern(p) {
         const label = metricLabel(p.metricKey);
         if (p.type === 'declining') {
-            return `📉 <strong>${label}</strong> has been declining ${p.weeks} weeks running — ${formatMetricValue(p.metricKey, p.startValue)} → ${formatMetricValue(p.metricKey, p.endValue)}`;
+            return `📉 <strong>${label}</strong> has been declining ${p.weeks} weeks running. ${formatMetricValue(p.metricKey, p.startValue)} → ${formatMetricValue(p.metricKey, p.endValue)}`;
         }
         if (p.type === 'improving') {
-            return `📈 <strong>${label}</strong> improving ${p.weeks} weeks in a row — ${formatMetricValue(p.metricKey, p.startValue)} → ${formatMetricValue(p.metricKey, p.endValue)}`;
+            return `📈 <strong>${label}</strong> improving ${p.weeks} weeks in a row. ${formatMetricValue(p.metricKey, p.startValue)} → ${formatMetricValue(p.metricKey, p.endValue)}`;
         }
         if (p.type === 'cliff-drop') {
-            return `⚡ <strong>${label}</strong> dropped to ${formatMetricValue(p.metricKey, p.latestValue)} — well below their normal ${formatMetricValue(p.metricKey, p.personalAverage)} (${p.stddevDistance.toFixed(1)}σ below personal norm)`;
+            return `⚡ <strong>${label}</strong> dropped to ${formatMetricValue(p.metricKey, p.latestValue)}. Well below their normal ${formatMetricValue(p.metricKey, p.personalAverage)} (${p.stddevDistance.toFixed(1)}σ below personal norm)`;
         }
         if (p.type === 'volatile') {
-            return `🎢 <strong>${label}</strong> is swinging week to week without a clear direction — averaging ${formatMetricValue(p.metricKey, p.mean)} ± ${formatMetricValue(p.metricKey, p.stddev)}`;
+            return `🎢 <strong>${label}</strong> is swinging week to week without a clear direction. Averaging ${formatMetricValue(p.metricKey, p.mean)} ± ${formatMetricValue(p.metricKey, p.stddev)}`;
         }
         return '';
     }

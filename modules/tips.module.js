@@ -1095,7 +1095,7 @@ function initializeDefaultTips() {
             localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(serverTips));
             return;
         }
-        // CSV returned nothing — only seed defaults if nothing is stored yet.
+        // CSV returned nothing, only seed defaults if nothing is stored yet.
         const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
         if (!stored) {
             localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));

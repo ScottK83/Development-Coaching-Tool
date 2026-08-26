@@ -151,7 +151,7 @@
                 return {
                     ok: false,
                     reason: 'Missing data from this period.',
-                    detail: 'Nothing uploaded for this week yet — no week-in-progress file and no daily files.'
+                    detail: 'Nothing uploaded for this week yet. No week-in-progress file and no daily files.'
                 };
             }
 
@@ -170,7 +170,7 @@
             return {
                 ok: false,
                 reason: 'Missing data from this period.',
-                detail: `Last week hasn't been uploaded — the newest weekly file ends ${end}.`
+                detail: `Last week hasn't been uploaded. The newest weekly file ends ${end}.`
             };
         }
         return { ok: true, reason: '', detail: `Weekly file ends ${end}.` };

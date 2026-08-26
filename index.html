@@ -90,7 +90,7 @@
                             <div id="uploadWizardDailyDatePicker" style="display: none; margin-top: 10px;">
                                 <label for="uploadWizardDailyDate" style="font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9em;">Day:</label>
                                 <input type="date" id="uploadWizardDailyDate" style="width: 100%; max-width: 260px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em;">
-                                <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8em;">Defaults to yesterday. Daily rows are ephemeral — they're purged when the weekly upload for that week arrives.</div>
+                                <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.8em;">Defaults to yesterday. Daily rows are ephemeral. They're purged when the weekly upload for that week arrives.</div>
                                 <div id="uploadWizardDailyWeekSummary" style="display: none; margin-top: 8px; padding: 6px 10px; background: #fff3e0; border-left: 3px solid #ff9800; border-radius: 4px; font-size: 0.82em; color: #5d4037;"></div>
                             </div>
                             <div id="uploadWizardSummary" style="display: none; margin-top: 10px; padding: 8px 12px; background: var(--brand-soft, #e3f2fd); border-left: 3px solid var(--brand, #0d6efd); border-radius: 4px; font-size: 0.88em; color: var(--brand-text, #0d47a1);"></div>
@@ -145,14 +145,14 @@
                             <div style="height: 10px; background: #c5cae9; border-radius: 5px; overflow: hidden;">
                                 <div id="storageQuotaBar" style="height: 100%; width: 0%; background: #66bb6a; transition: width 0.3s, background 0.3s;"></div>
                             </div>
-                            <div id="storageQuotaLabel" style="font-size: 0.82em; color: #546e7a; margin-top: 4px;">—</div>
+                            <div id="storageQuotaLabel" style="font-size: 0.82em; color: #546e7a; margin-top: 4px;">-</div>
                         </div>
                         <button type="button" id="archiveOldWeeksBtn" style="background: #3949ab; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer;">Archive 6+ month old weeks</button>
                     </div>
                     <!-- Undo last upload banner -->
                     <div id="uploadUndoBanner" style="display: none; margin-top: 16px; padding: 12px 16px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px; align-items: center; justify-content: space-between; gap: 12px;">
                         <div style="color: #5d4037; font-size: 0.95em;">
-                            ↩️ Last upload: <strong id="uploadUndoTarget">—</strong> at <span id="uploadUndoWhen">—</span>
+                            ↩️ Last upload: <strong id="uploadUndoTarget">-</strong> at <span id="uploadUndoWhen">-</span>
                         </div>
                         <div style="display: flex; gap: 8px;">
                             <button type="button" id="uploadUndoBtn" style="background: #f57c00; color: #fff; border: none; border-radius: 4px; padding: 8px 14px; font-weight: bold; cursor: pointer;">Undo</button>
@@ -590,7 +590,7 @@ Box 2 - Future Improvement Areas:
                         <div style="margin-bottom: 14px;">
                             <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.92em; color: var(--text-primary, var(--text-primary)); cursor: pointer;">
                                 <input type="checkbox" id="mondayPostIncludeShoutOuts" checked style="width: 16px; height: 16px; cursor: pointer;">
-                                <span>Include <strong>@name shout-outs</strong> — names each person who beat target and the team on a metric</span>
+                                <span>Include <strong>@name shout-outs</strong>, names each person who beat target and the team on a metric</span>
                             </label>
                         </div>
 
@@ -1246,7 +1246,7 @@ Box 2 - Future Improvement Areas:
 
                     <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #0d6efd;">
                         <h3 style="color: #0d6efd; margin-top: 0;">💾 Backup Metric Data</h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 15px;">Download a JSON file of every uploaded period (weekly + YTD) so you can restore it later if needed. Does <strong>not</strong> include coaching history, team selections, or tips — only the raw metric uploads.</p>
+                        <p style="color: var(--text-secondary); margin-bottom: 15px;">Download a JSON file of every uploaded period (weekly + YTD) so you can restore it later if needed. Does <strong>not</strong> include coaching history, team selections, or tips. Only the raw metric uploads.</p>
                         <button type="button" id="backupMetricDataBtn" class="btn-secondary" style="background: #0d6efd; color: white; font-size: 1em; padding: 12px 24px;">📥 Download Backup</button>
                     </div>
 

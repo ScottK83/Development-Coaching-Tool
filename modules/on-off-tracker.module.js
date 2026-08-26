@@ -945,7 +945,7 @@
         prompt += '- The Areas of Focus section must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
         prompt += '- Keep each box concise, about 3 to 6 sentences each\n';
         prompt += '- Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)\n';
-        prompt += '- Do NOT use em dashes (—). Use commas or periods instead.\n';
+        prompt += '- Do NOT use em dashes (, ). Use commas or periods instead.\n';
         prompt += '- Return in this exact format only, using these two headings and nothing else. Do NOT label the sections "Box 1" or "Box 2":\n';
         prompt += 'Progress & Strengths:\n[text]\n\nAreas of Focus:\n[text]';
 
@@ -1057,7 +1057,7 @@
                 var avgText = r.result.ratingAverage !== null ? ' (avg: ' + r.result.ratingAverage.toFixed(2) + ')' : '';
                 html += '<div style="padding: 6px 0; border-bottom: 1px solid #ffcdd2; font-size: 0.9em;">' +
                     '<span style="font-weight: 600; color: var(--red-text);">' + r.firstName + '</span>' + avgText +
-                    (r.offMetrics.length ? ' — <span style="color: #e53935;">' + r.offMetrics.join(', ') + '</span>' : '') +
+                    (r.offMetrics.length ? ' to <span style="color: #e53935;">' + r.offMetrics.join(', ') + '</span>' : '') +
                     '</div>';
             });
             html += '</div>';

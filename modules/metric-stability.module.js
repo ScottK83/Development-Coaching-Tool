@@ -421,7 +421,7 @@
             html += '<td style="padding:8px;">' + escapeHtml(metricLabel(r.metricKey)) + '</td>';
             html += '<td style="padding:8px;text-align:right;">' + escapeHtml(fmt(r.metricKey, r.mean)) + '</td>';
             html += '<td style="padding:8px;text-align:right;font-weight:600;">' + escapeHtml(fmt(r.metricKey, r.sd)) + '</td>';
-            html += '<td style="padding:8px;text-align:right;color:var(--text-secondary);">' + escapeHtml(fmt(r.metricKey, r.min)) + ' – ' + escapeHtml(fmt(r.metricKey, r.max)) + '</td>';
+            html += '<td style="padding:8px;text-align:right;color:var(--text-secondary);">' + escapeHtml(fmt(r.metricKey, r.min)) + ' to ' + escapeHtml(fmt(r.metricKey, r.max)) + '</td>';
             html += '<td style="padding:8px;text-align:right;color:var(--text-secondary);">' + r.samples + '</td>';
             html += '</tr>';
         });
@@ -433,7 +433,7 @@
 
     function renderStreaksTable(streakRows, teamFilter) {
         if (!streakRows.length) {
-            return '<p style="color:var(--text-secondary);font-style:italic;">No streak data yet — need weekly uploads with target-comparable metrics.</p>';
+            return '<p style="color:var(--text-secondary);font-style:italic;">No streak data yet. Need weekly uploads with target-comparable metrics.</p>';
         }
         const filtered = teamFilter
             ? streakRows.filter(function (r) { return teamFilter.indexOf(r.name) !== -1; })

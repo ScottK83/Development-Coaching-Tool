@@ -25,7 +25,7 @@
                 const dateLabel = entry?.weekEnding ? (formatDate(entry.weekEnding) || entry.weekEnding) : 'Unknown date';
                 const metricsLabel = formatHistoryMetricLabels(entry?.metricsCoached, metricsRegistry);
                 const aiLabel = entry?.aiAssisted ? ' · AI-assisted' : '';
-                return `<li>${_esc(dateLabel)} — ${_esc(metricsLabel)}${aiLabel}</li>`;
+                return `<li>${_esc(dateLabel)}. ${_esc(metricsLabel)}${aiLabel}</li>`;
             })
             .join('');
     }

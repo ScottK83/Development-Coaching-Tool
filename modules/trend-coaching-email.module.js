@@ -93,7 +93,7 @@
                 if (opp.trend !== 0) {
                     const better = opp.trend > 0;
                     const numberRose = opp.isReverse ? !better : better;
-                    text += ` — ${numberRose ? 'rose' : 'fell'} vs last period, which is ${better ? 'better' : 'worse'}`;
+                    text += ` to ${numberRose ? 'rose' : 'fell'} vs last period, which is ${better ? 'better' : 'worse'}`;
                 }
                 return text;
             }).join('\n');
@@ -114,7 +114,7 @@
 ${winsText}
 ${opportunitiesText}
 ${improvementTipsText}
-Each metric states its own direction. On a "lower is better" metric such as Average Handle Time or Transfers, a number that fell is an improvement and a number that rose is a setback — never describe a rise on one of those as progress.
+Each metric states its own direction. On a "lower is better" metric such as Average Handle Time or Transfers, a number that fell is an improvement and a number that rose is a setback. Never describe a rise on one of those as progress.
 
 Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`;
 
@@ -333,7 +333,7 @@ TONE & STYLE:
 - Make top performers feel like ROCKSTARS
 - Professional but exciting and engaging
 - Use bullet points and emojis (🔥⭐🏆💪🎯) for impact
-- Do NOT use em dashes (—) anywhere in the email
+- Do NOT use em dashes (, ) anywhere in the email
 - Keep it concise but impactful (under 350 words)
 
 SUBJECT LINE:
@@ -347,7 +347,7 @@ Please generate the coaching email now with HIGH ENERGY celebrating our top perf
         }
 
         copyToClipboard(copilotPrompt, {
-            message: '📋 Group email prompt copied — paste into CoPilot with Ctrl+V'
+            message: '📋 Group email prompt copied. Paste into CoPilot with Ctrl+V'
         }).then((ok) => {
             if (ok) window.open('https://copilot.microsoft.com', '_blank');
         });

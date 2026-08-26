@@ -1121,7 +1121,7 @@
         if (greatMetrics.length > 0) {
             lines.push('DOING GREAT:');
             greatMetrics.forEach(function (gm) {
-                lines.push('  ' + gm.label + ': ' + _formatMetricDisplay(gm.metricKey, gm.currentAvg) + ' — Top level! Keep it up.');
+                lines.push('  ' + gm.label + ': ' + _formatMetricDisplay(gm.metricKey, gm.currentAvg) + ' to Top level! Keep it up.');
             });
             lines.push('');
         }
@@ -1136,25 +1136,25 @@
                         var perDay = workingDaysLeft > 0 ? im.budgetRemaining / workingDaysLeft : 0;
                         lines.push('  ' + im.label + ': Currently at ' + current + '. You have ' + _formatMetricDisplay(im.metricKey, im.budgetRemaining) + ' remaining to stay within budget.');
                     } else {
-                        lines.push('  ' + im.label + ': Currently at ' + current + '. Over budget — minimize further usage.');
+                        lines.push('  ' + im.label + ': Currently at ' + current + '. Over budget. Minimize further usage.');
                     }
                 } else if (im.dailyTarget !== null) {
                     var targetDisplay = _formatMetricDisplay(im.metricKey, im.dailyTarget);
                     var direction = im.isReverse ? 'at or below' : 'at or above';
                     lines.push('  ' + im.label + ': Currently at ' + current + '. To reach the ' + im.levelLabel + ', aim for ' + direction + ' ' + targetDisplay + ' each day.');
                 } else {
-                    lines.push('  ' + im.label + ': Currently at ' + current + '. This one will be tough to move — stay consistent and do your best.');
+                    lines.push('  ' + im.label + ': Currently at ' + current + '. This one will be tough to move. Stay consistent and do your best.');
                 }
             });
             lines.push('');
         }
 
         if (improvementMetrics.length === 0 && greatMetrics.length > 0) {
-            lines.push('All metrics are at the top level — outstanding work!');
+            lines.push('All metrics are at the top level. Outstanding work!');
             lines.push('');
         }
 
-        lines.push('Keep pushing — every day counts!');
+        lines.push('Keep pushing. Every day counts!');
 
         return lines.join('\n');
     }

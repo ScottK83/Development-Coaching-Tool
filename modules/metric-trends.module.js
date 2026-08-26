@@ -1667,7 +1667,7 @@ function attachTrendTipsModalHandlers(options) {
     document.getElementById('copyPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('copilotPromptDisplay');
         if (!textarea) return;
-        copyToClipboard(textarea.value, { message: '📋 Prompt copied — opening Copilot' }).then((ok) => {
+        copyToClipboard(textarea.value, { message: '📋 Prompt copied. Opening Copilot' }).then((ok) => {
             if (ok) window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
             else textarea.select();
         });
@@ -2645,7 +2645,7 @@ function drawTrendMetricsTableBody(ctx, y, options) {
     if (!ytdAvailable) {
         ctx.fillStyle = '#666666';
         ctx.font = '12px Arial';
-        ctx.fillText('YTD not available – source data not provided.', 50, y + 18);
+        ctx.fillText('YTD not available. Source data not provided.', 50, y + 18);
         y += 28;
     }
 
@@ -3862,7 +3862,7 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period
 
     document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('teamTrendPromptDisplay');
-        copyToClipboard(textarea.value, { message: '📋 Team prompt copied — opening Copilot' }).then((ok) => {
+        copyToClipboard(textarea.value, { message: '📋 Team prompt copied. Opening Copilot' }).then((ok) => {
             if (ok) window.open('https://copilot.microsoft.com', '_blank');
             else textarea.select();
         });
