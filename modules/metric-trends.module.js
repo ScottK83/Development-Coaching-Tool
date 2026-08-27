@@ -273,7 +273,7 @@ function populateTrendPeriodDropdown() {
     }
 
 
-    const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
+    const sourceData = trendSourceForPeriodType(selectedPeriodType);
     const allWeeks = Object.keys(sourceData).sort().reverse(); // Most recent first
 
     if (allWeeks.length === 0) {
@@ -326,6 +326,25 @@ function populateTrendPeriodDropdown() {
         });
         trendPeriodSelect.dataset.bound = 'true';
     }
+}
+
+
+/**
+ * The store a period type actually lives in.
+ *
+ * Daily uploads go to their own store (script.js getPeriodDataStore, and the
+ * save path at script.js:2901). This module only ever chose between ytdData
+ * and weeklyData, so picking "Daily" filtered weeklyData for a period type
+ * the write path never puts there and always came back empty. The radio has
+ * been on the page the whole time.
+ */
+function trendSourceForPeriodType(periodType) {
+    if (periodType === 'ytd') return ytdData;
+    if (periodType === 'daily') {
+        if (typeof dailyData !== 'undefined' && dailyData) return dailyData;
+        return window.DevCoachModules?.storage?.loadDailyData?.() || {};
+    }
+    return weeklyData;
 }
 
 function initializeEmployeeDropdown() {
@@ -397,7 +416,7 @@ function populateTrendSentimentDropdown(employeeName) {
     // Get the currently selected period/week so we can pull percentages from that week
     const selectedWeekKey = document.getElementById('trendPeriodSelect')?.value;
     const selectedPeriodType = document.querySelector('input[name="trendPeriodType"]:checked')?.value || 'week';
-    const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
+    const sourceData = trendSourceForPeriodType(selectedPeriodType);
     const selectedWeek = selectedWeekKey ? (sourceData[selectedWeekKey] || {}) : {};
 
     // Get the employee's data from the selected week
@@ -502,7 +521,7 @@ function populateUploadedDataDropdown() {
     if (!avgUploadedDataSelect) return;
 
 
-    const sourceData = selectedPeriodType === 'ytd' ? ytdData : weeklyData;
+    const sourceData = trendSourceForPeriodType(selectedPeriodType);
     const allWeeks = Object.keys(sourceData).sort().reverse(); // Most recent first
 
     if (allWeeks.length === 0) {

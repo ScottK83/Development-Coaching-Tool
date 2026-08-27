@@ -8,17 +8,16 @@
         const toNonEmptyString = window.DevCoachModules?.sharedUtils?.toNonEmptyString || ((value) => (typeof value === 'string' ? value.trim() : ''));
         const joinWithConjunction = window.DevCoachModules?.sharedUtils?.joinWithConjunction || ((items) => (Array.isArray(items) ? items.filter(Boolean).join(', ') : ''));
 
-        const employeeSelect = doc.getElementById('employeeSelect');
-        const selectedEmployeeId = employeeSelect?.value;
-        const employeeName = toNonEmptyString(doc.getElementById('employeeName')?.value);
+        // #employeeSelect and #employeeName have not existed in index.html for a
+        // long time, so this read always came back empty and the button did
+        // nothing at all. The picker on the Coaching tab, where the button
+        // lives, is #coachingEmployeeSelect.
+        const employeeSelect = doc.getElementById('coachingEmployeeSelect');
+        const selectedEmployeeId = toNonEmptyString(employeeSelect?.value);
 
         if (!selectedEmployeeId) {
-            context.alert?.('⚠️ Please select an employee first');
+            showToast('Choose an associate first.', 3000);
             return;
-        }
-
-        if (employeeName) {
-            context.saveNickname?.(selectedEmployeeId, employeeName);
         }
 
         const history = context.getCoachingHistoryForEmployee?.(selectedEmployeeId) || [];
@@ -73,12 +72,16 @@
             const summarySection = doc.getElementById('verintSummarySection');
             if (summarySection) summarySection.style.display = 'block';
 
-            nav.clipboard.writeText(verintText).then(() => {
-                showToast('✅ Verint coaching notes copied to clipboard!', 3000);
-            }).catch(err => {
-                context.console?.error?.('Failed to copy:', err);
-                showToast('⚠️ Failed to copy. Text is displayed above.', 3000);
-            });
+            // Through the shared helper, which has a fallback for when the async
+            // clipboard is unavailable. This used to call writeText directly with
+            // no fallback at all, so a non-secure context failed outright.
+            if (typeof window.copyToClipboard === 'function') {
+                window.copyToClipboard(verintText, { message: '✅ Verint coaching notes copied to clipboard!' });
+            } else {
+                nav.clipboard.writeText(verintText).then(() => {
+                    showToast('✅ Verint coaching notes copied to clipboard!', 3000);
+                }).catch(() => showToast('⚠️ Could not copy. The text is displayed above.', 3000));
+            }
         } else {
             const outputElement = doc.getElementById('verintSummaryOutput');
             if (outputElement) outputElement.value = `No coaching history found for ${selectedEmployeeId}. Generate a coaching email first.`;

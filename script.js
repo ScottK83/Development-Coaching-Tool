@@ -413,6 +413,7 @@ function initializeSection(sectionId) {
             populateDeleteWeekDropdown();
             populateDeleteSentimentDropdown();
             renderEmployeesList();
+            window.DevCoachModules?.sharedUtils?.bindCoachingCcEmailSetting?.(document);
             break;
         case 'executiveSummarySection':
             renderExecutiveSummary();
@@ -1336,11 +1337,22 @@ function purgeNonRosteredEmployees() {
         } catch (_e) { console.warn('[purgeNonRostered] Could not clean ' + mapKey + ':', _e.message); }
     });
 
+    // myTeamMembers is { weekKey: [names] }, not a flat array. This read it as
+    // an array and gated on Array.isArray, which is never true for the real
+    // value, so this branch has never cleaned anything. Worse, had it ever
+    // matched it would have written a flat array back over the object store.
     try {
-        const members = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers') || '[]');
-        if (Array.isArray(members)) {
-            const kept = members.filter(isRosteredAssociate);
-            if (kept.length !== members.length) localStorage.setItem(STORAGE_PREFIX + 'myTeamMembers', JSON.stringify(kept));
+        const raw = localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers');
+        const byWeek = raw ? JSON.parse(raw) : {};
+        if (byWeek && typeof byWeek === 'object' && !Array.isArray(byWeek)) {
+            let touched = false;
+            Object.keys(byWeek).forEach(function(weekKey) {
+                const names = byWeek[weekKey];
+                if (!Array.isArray(names)) return;
+                const kept = names.filter(isRosteredAssociate);
+                if (kept.length !== names.length) { byWeek[weekKey] = kept; touched = true; }
+            });
+            if (touched) localStorage.setItem(STORAGE_PREFIX + 'myTeamMembers', JSON.stringify(byWeek));
         }
     } catch (_e) { console.warn('[purgeNonRostered] Could not clean myTeamMembers:', _e.message); }
 
@@ -2205,7 +2217,14 @@ function bindCoachingFormHandlers() {
     document.querySelectorAll('.period-type-btn').forEach(btn => {
         btn.addEventListener('click', () => handlePeriodTypeButtonClick(btn));
     });
-    document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', generateVerintSummary);
+    // Passed a real context. Bound directly, the first argument was the click
+    // Event, so every injected dependency below was undefined and the function
+    // could not read history, toast, or even warn.
+    document.getElementById('generateVerintSummaryBtn')?.addEventListener('click', () => generateVerintSummary({
+        showToast,
+        getCoachingHistoryForEmployee,
+        getEmployeeNickname
+    }));
     Object.keys(METRICS_REGISTRY).forEach(metricKey => {
         document.getElementById(metricKey)?.addEventListener('input', applyMetricHighlights);
     });

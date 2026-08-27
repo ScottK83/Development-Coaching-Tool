@@ -927,7 +927,7 @@ window.updateServerTip = async function(metricKey, index) {
         return;
     }
 
-    let modifiedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'modifiedServerTips') || '{}');
+    let modifiedServerTips = readJsonSetting('modifiedServerTips');
 
     if (!modifiedServerTips[metricKey]) {
         modifiedServerTips[metricKey] = {};
@@ -946,7 +946,7 @@ window.deleteServerTip = async function(metricKey, index) {
         return;
     }
 
-    let deletedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'deletedServerTips') || '{}');
+    let deletedServerTips = readJsonSetting('deletedServerTips');
 
     if (!deletedServerTips[metricKey]) {
         deletedServerTips[metricKey] = [];
@@ -1131,11 +1131,34 @@ function resolveMetricTipKey(metricName) {
     return match || name;
 }
 
+/**
+ * Read a JSON-shaped setting, and survive it being unreadable.
+ *
+ * These stores are written by the tips manager and can be edited or corrupted
+ * outside it. An unguarded JSON.parse threw out of a click handler and took the
+ * whole action with it, which looks to the user like a button that does nothing.
+ */
+function readJsonSetting(key) {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + key) || '{}') || {};
+    } catch (e) {
+        console.warn('[tips] ' + key + ' is unreadable, treating it as empty:', e.message);
+        return {};
+    }
+}
+
 function getMetricTips(metricNameOrKey) {
     const metricName = resolveMetricTipKey(metricNameOrKey);
     // Load base tips (server/default)
     const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
-    const allBaseTips = stored ? JSON.parse(stored) : DEFAULT_METRIC_TIPS;
+    // Outside the try below, so a corrupt value used to throw straight out of
+    // getMetricTips and take the caller with it. Falling back to the built-in
+    // pool is the same thing an absent value does.
+    let allBaseTips = DEFAULT_METRIC_TIPS;
+    if (stored) {
+        try { allBaseTips = JSON.parse(stored) || DEFAULT_METRIC_TIPS; }
+        catch (e) { console.warn('[tips] metricCoachingTips is unreadable, using defaults:', e.message); }
+    }
     var baseTips = (allBaseTips[metricName] || []).slice();
 
     // Apply server tip modifications (edits and deletions)

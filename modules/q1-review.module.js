@@ -331,7 +331,17 @@
 
                 var isCumulative = CUMULATIVE_METRICS.has(metricKey);
                 var metricValue = isCumulative ? aggEmp.reliability : aggEmp[metricKey];
-                if (metricValue === undefined || metricValue === null) return;
+                // The parser writes '' for a metric the export did not carry
+                // (data-parsing parseSeconds and parseSurveyPercentage). This
+                // guard rejected undefined and null but let '' through, and
+                // '' <= 426 is true in JavaScript, so an associate with no
+                // handle time, ACW or hold time was counted as MEETING those
+                // targets and listed as a Strength. Blank min-type metrics
+                // failed correctly, so the error only ran one way. Numeric now,
+                // which rejects '' and any other unusable value.
+                var numericValue = parseFloat(metricValue);
+                if (!isFinite(numericValue)) return;
+                metricValue = numericValue;
 
                 var isReverse = targetConfig.type === 'max';
                 var meetsTarget = isReverse ? (metricValue <= targetConfig.value) : (metricValue >= targetConfig.value);

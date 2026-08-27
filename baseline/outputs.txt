@@ -8,7 +8,7 @@ This file is a contract, not documentation. After a refactoring pass, an
 empty `git diff` here means the pass changed no behaviour. A non-empty diff
 is either an intended change that needs explaining line by line, or a bug.
 
-Entries: 79   Not covered: 5
+Entries: 80   Not covered: 5
 
 ------------------------------------------------------------------------------
 metric-profiles / getYearTarget, every metric, both years
@@ -6884,65 +6884,7 @@ q1-review / buildQ1ReviewData
       ]
     },
     {
-      "improvements": [
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": -73,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 73,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "fcr"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": -75,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 75,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "overallExperience"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": 84,
-            "gap": -82,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 82,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "cxRepOverall"
-        }
-      ],
+      "improvements": [],
       "lastCoached": null,
       "metrics": {
         "acw": {
@@ -6985,38 +6927,6 @@ q1-review / buildQ1ReviewData
               "weekKey": "2026-01-01|2026-03-31"
             }
           ],
-          "weeksOfData": 1
-        },
-        "cxRepOverall": {
-          "average": "",
-          "exceedTarget": 84,
-          "gap": -82,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 82,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
-        "fcr": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": -73,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 73,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
           "weeksOfData": 1
         },
         "holdTime": {
@@ -7080,22 +6990,6 @@ q1-review / buildQ1ReviewData
               "weekKey": "2026-01-01|2026-03-31"
             }
           ],
-          "weeksOfData": 1
-        },
-        "overallExperience": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": -75,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 75,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
           "weeksOfData": 1
         },
         "overallSentiment": {
@@ -7442,118 +7336,9 @@ q1-review / buildQ1ReviewData
       ]
     },
     {
-      "improvements": [
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": -83,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 83,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "negativeWord"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": -86,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 86,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "positiveWord"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": 90,
-            "gap": -88,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 88,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "overallSentiment"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": -95,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 95,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "managingEmotions"
-        }
-      ],
+      "improvements": [],
       "lastCoached": null,
       "metrics": {
-        "acw": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": 60,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": true,
-          "meetsTarget": true,
-          "target": 60,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
-        "aht": {
-          "average": "",
-          "exceedTarget": 414,
-          "gap": 426,
-          "isCumulative": false,
-          "isExceeding": true,
-          "isReverse": true,
-          "meetsTarget": true,
-          "target": 426,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
         "cxRepOverall": {
           "average": 83,
           "exceedTarget": 84,
@@ -7596,54 +7381,6 @@ q1-review / buildQ1ReviewData
           ],
           "weeksOfData": 1
         },
-        "holdTime": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": 30,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": true,
-          "meetsTarget": true,
-          "target": 30,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
-        "managingEmotions": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": -95,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 95,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
-        "negativeWord": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": -83,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 83,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
         "overallExperience": {
           "average": 76,
           "exceedTarget": null,
@@ -7663,38 +7400,6 @@ q1-review / buildQ1ReviewData
               "weekKey": "2026-01-01|2026-03-31"
             }
           ],
-          "weeksOfData": 1
-        },
-        "overallSentiment": {
-          "average": "",
-          "exceedTarget": 90,
-          "gap": -88,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 88,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
-          "weeksOfData": 1
-        },
-        "positiveWord": {
-          "average": "",
-          "exceedTarget": null,
-          "gap": -86,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 86,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
           "weeksOfData": 1
         },
         "reliability": {
@@ -7786,63 +7491,6 @@ q1-review / buildQ1ReviewData
       },
       "q1CoachingCount": 0,
       "strengths": [
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": 414,
-            "gap": 426,
-            "isCumulative": false,
-            "isExceeding": true,
-            "isReverse": true,
-            "meetsTarget": true,
-            "target": 426,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "aht"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": 60,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": true,
-            "meetsTarget": true,
-            "target": 60,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "acw"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": null,
-            "gap": 30,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": true,
-            "meetsTarget": true,
-            "target": 30,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "holdTime"
-        },
         {
           "data": {
             "average": 12,
@@ -7972,46 +7620,7 @@ q1-review / buildQ1ReviewData
       ]
     },
     {
-      "improvements": [
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": 84,
-            "gap": -82,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 82,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "cxRepOverall"
-        },
-        {
-          "data": {
-            "average": "",
-            "exceedTarget": 90,
-            "gap": -88,
-            "isCumulative": false,
-            "isExceeding": false,
-            "isReverse": false,
-            "meetsTarget": false,
-            "target": 88,
-            "trend": {
-              "delta": 0,
-              "direction": "insufficient"
-            },
-            "weeklyValues": [],
-            "weeksOfData": 1
-          },
-          "metricKey": "overallSentiment"
-        }
-      ],
+      "improvements": [],
       "lastCoached": null,
       "metrics": {
         "acw": {
@@ -8054,22 +7663,6 @@ q1-review / buildQ1ReviewData
               "weekKey": "2026-01-01|2026-03-31"
             }
           ],
-          "weeksOfData": 1
-        },
-        "cxRepOverall": {
-          "average": "",
-          "exceedTarget": 84,
-          "gap": -82,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 82,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
           "weeksOfData": 1
         },
         "fcr": {
@@ -8175,22 +7768,6 @@ q1-review / buildQ1ReviewData
               "weekKey": "2026-01-01|2026-03-31"
             }
           ],
-          "weeksOfData": 1
-        },
-        "overallSentiment": {
-          "average": "",
-          "exceedTarget": 90,
-          "gap": -88,
-          "isCumulative": false,
-          "isExceeding": false,
-          "isReverse": false,
-          "meetsTarget": false,
-          "target": 88,
-          "trend": {
-            "delta": 0,
-            "direction": "insufficient"
-          },
-          "weeklyValues": [],
           "weeksOfData": 1
         },
         "positiveWord": {
@@ -11963,6 +11540,42 @@ picker / reliability keeps review-priority order and its own labels
 ]
 
 ------------------------------------------------------------------------------
+daily / the two tabs that offer Daily can now find it
+------------------------------------------------------------------------------
+{
+  "teamSnapshot daily periods": [
+    "2026-06-23|2026-06-23 from daily"
+  ],
+  "teamSnapshot periods by type": {
+    "daily": 1,
+    "month": 1,
+    "quarter": 1,
+    "week": 3,
+    "week-in-progress": 1,
+    "ytd": 2
+  },
+  "trendPeriodSelect for daily": [
+    "\"\" => \"Select Period...\"",
+    "\"2026-06-23|2026-06-23\" => \"daily ending 2026-06-23\""
+  ],
+  "trendPeriodSelect for month": [
+    "\"\" => \"Select Period...\"",
+    "\"2026-05-01|2026-05-31\" => \"month ending 2026-05-31\""
+  ],
+  "trendPeriodSelect for week": [
+    "\"\" => \"Select Period...\"",
+    "\"2026-06-15|2026-06-21\" => \"week ending 2026-06-21\"",
+    "\"2026-06-08|2026-06-14\" => \"week ending 2026-06-14\"",
+    "\"2026-06-01|2026-06-07\" => \"week ending 2026-06-07\""
+  ],
+  "trendPeriodSelect for ytd": [
+    "\"\" => \"Select Period...\"",
+    "\"2026-01-01|2026-06-21\" => \"ytd ending 2026-06-21\"",
+    "\"2025-01-01|2025-12-31\" => \"ytd ending 2025-12-31\""
+  ]
+}
+
+------------------------------------------------------------------------------
 picker / the shared builder itself
 ------------------------------------------------------------------------------
 {
@@ -12812,7 +12425,7 @@ undefined
 copilot-prompt / generateVerintSummary (records the #employeeSelect defect)
 ------------------------------------------------------------------------------
 [
-  "alert: ⚠️ Please select an employee first"
+  "(returned without alerting)"
 ]
 
 ------------------------------------------------------------------------------

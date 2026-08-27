@@ -162,9 +162,72 @@
             return { ok: ok, copilotWindow: copilotWindow, popupBlocked: popupBlocked };
         });
     }
+    /**
+     * Read, write and wire the CC address used on every coaching draft.
+     *
+     * getCoachingCcEmail has been reading devCoachingTool_ccEmail since it was
+     * written, and nothing in the app has ever written it, so openMailtoDraft
+     * has always built its drafts with no CC at all. The read was fine; the
+     * setting was simply missing.
+     */
+    function setCoachingCcEmail(value) {
+        var prefix = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
+        var clean = String(value == null ? '' : value).trim();
+        try {
+            if (clean) localStorage.setItem(prefix + 'ccEmail', clean);
+            else localStorage.removeItem(prefix + 'ccEmail');
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    // A light check only. The address goes into a mailto, where an unusable
+    // one costs a bounced draft rather than anything worse, and being strict
+    // about addresses is a good way to reject a valid one.
+    function looksLikeEmail(value) {
+        var v = String(value == null ? '' : value).trim();
+        return v.indexOf('@') > 0 && v.indexOf('@') < v.length - 1 && v.indexOf(' ') === -1;
+    }
+
+    function bindCoachingCcEmailSetting(doc) {
+        var d = doc || document;
+        var input = d.getElementById('coachingCcEmail');
+        var button = d.getElementById('saveCoachingCcEmail');
+        var status = d.getElementById('coachingCcEmailStatus');
+        if (!input || !button || input.dataset.ccBound) return;
+        input.dataset.ccBound = 'true';
+
+        input.value = getCoachingCcEmail();
+        if (status) {
+            status.textContent = input.value
+                ? 'Drafts are copied to ' + input.value
+                : 'No CC. Drafts open with the To field empty and nobody copied.';
+        }
+
+        button.addEventListener('click', function () {
+            var value = String(input.value || '').trim();
+            if (value && !looksLikeEmail(value)) {
+                if (status) status.textContent = 'That does not look like an email address.';
+                return;
+            }
+            var saved = setCoachingCcEmail(value);
+            if (status) {
+                status.textContent = !saved ? 'Could not save. Storage is unavailable.'
+                    : value ? 'Saved. Drafts are copied to ' + value
+                    : 'Saved. Drafts will have no CC.';
+            }
+            if (saved && typeof window.showToast === 'function') {
+                window.showToast(value ? 'CC saved' : 'CC cleared', 2500);
+            }
+        });
+    }
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.sharedUtils = {
         copilotUrl: copilotUrl,
+        setCoachingCcEmail: setCoachingCcEmail,
+        bindCoachingCcEmailSetting: bindCoachingCcEmailSetting,
+        looksLikeEmail: looksLikeEmail,
         copyPromptAndOpenCopilot: copyPromptAndOpenCopilot,
         toNonEmptyString,
         joinWithConjunction,

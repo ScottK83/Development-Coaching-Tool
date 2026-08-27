@@ -1337,6 +1337,36 @@ function recordPickers() {
         return readOptions(sel);
     });
 
+    record('daily / the two tabs that offer Daily can now find it', () => {
+        const out = {};
+        // Team Snapshot: its "Daily" pill filters this list.
+        const ts = M().teamSnapshot;
+        const periods = typeof ts.getAvailablePeriods === 'function' ? ts.getAvailablePeriods() : null;
+        out['teamSnapshot periods by type'] = periods
+            ? periods.reduce((acc, p) => { acc[p.type] = (acc[p.type] || 0) + 1; return acc; }, {})
+            : '(getAvailablePeriods not exported)';
+        out['teamSnapshot daily periods'] = periods
+            ? periods.filter((p) => p.type === 'daily').map((p) => p.key + ' from ' + p.source)
+            : 'n/a';
+
+        // Center Averages / Metric Charts reads the checked radio rather than
+        // taking an argument, so the radio is what has to be driven.
+        const sel = fakeSelect('trendPeriodSelect');
+        const realQuerySelector = global.document.querySelector;
+        ['daily', 'week', 'month', 'ytd'].forEach((type) => {
+            global.document.querySelector = (q) =>
+                q === 'input[name="trendPeriodType"]:checked' ? { value: type } : null;
+            try {
+                G('populateTrendPeriodDropdown')();
+                out['trendPeriodSelect for ' + type] = readOptions(sel);
+            } catch (err) {
+                out['trendPeriodSelect for ' + type] = '!! ' + err.message;
+            }
+        });
+        global.document.querySelector = realQuerySelector;
+        return out;
+    });
+
     record('picker / the shared builder itself', () => {
         const ap = M().associatePicker;
         const messy = ['  Cara Floor ', 'Ada Stretch', 'Cara Floor', '', null, 'Ben Ongoal', '   '];

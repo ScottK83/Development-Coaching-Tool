@@ -8,8 +8,15 @@
     /**
      * Show toast notification
      */
+    // Delegates to the real toast in script.js, but only once that exists and
+    // only if it is not this function. Line 295 assigns this to window.showToast
+    // when nothing else has, so before script.js loads the delegation used to
+    // call itself until the stack ran out. That only bit when script.js failed
+    // to load, which is exactly when a toast is worth having.
     function showToast(message, duration) {
-        if (typeof window.showToast === 'function') return window.showToast(message, duration);
+        var real = window.showToast;
+        if (typeof real === 'function' && real !== showToast) return real(message, duration);
+        if (typeof console !== 'undefined' && console.info) console.info('[toast] ' + message);
     }
 
     /**

@@ -107,6 +107,10 @@
     /**
      * Get all available period keys from weeklyData and ytdData
      */
+    function getDailyData() {
+        if (typeof dailyData !== 'undefined' && dailyData) return dailyData;
+        return window.DevCoachModules?.storage?.loadDailyData?.() || {};
+    }
     function getAvailablePeriods() {
         var periods = [];
         var weeklyData = getWeeklyData();
@@ -126,6 +130,19 @@
             var pType = meta.periodType || 'ytd';
             var label = meta.label || formatPeriodLabel(key, pType);
             periods.push({ key: key, label: label, type: pType, source: 'ytd' });
+        });
+
+        // Daily uploads live in their own store. This only read weekly and YTD,
+        // so the "Daily" pill above the table filtered a list that could never
+        // contain a daily period and came up empty every time. formatPeriodLabel
+        // has always had a 'daily' branch waiting for this.
+        var dailyData = getDailyData();
+        Object.keys(dailyData).forEach(function(key) {
+            var data = dailyData[key];
+            var meta = data?.metadata || {};
+            var pType = meta.periodType || 'daily';
+            var label = meta.label || formatPeriodLabel(key, pType);
+            periods.push({ key: key, label: label, type: pType, source: 'daily' });
         });
 
         // Sort newest first, using the end date (parts[1]). Parts[0] is
@@ -159,7 +176,9 @@
      * Get employees for a given period key
      */
     function getEmployeesForPeriod(periodKey, source) {
-        var dataSource = source === 'ytd' ? getYtdData() : getWeeklyData();
+        var dataSource = source === 'ytd' ? getYtdData()
+            : source === 'daily' ? getDailyData()
+            : getWeeklyData();
         var periodData = dataSource[periodKey];
         if (!periodData) return [];
         return periodData.employees || [];
@@ -1252,6 +1271,8 @@
         exportSnapshotAsImage: exportSnapshotAsImage,
         copySnapshotToClipboard: copySnapshotToClipboard,
         populatePeriodDropdown: populatePeriodDropdown,
+        // Exported so the periods it offers can be checked without a DOM.
+        getAvailablePeriods: getAvailablePeriods,
         loadSampleData: loadSampleData
     };
 

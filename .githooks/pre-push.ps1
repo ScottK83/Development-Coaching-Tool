@@ -73,7 +73,20 @@ if ($versionLineIndex -lt 0) {
 }
 
 # If this branch is behind upstream, skip bump to avoid repeated bumps on failed pushes.
-$upstream = git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null
+#
+# A branch with no upstream yet -- every new branch, on its first push -- makes
+# git write "fatal: no upstream configured" to stderr. With
+# $ErrorActionPreference = "Stop" set at the top of this file, PowerShell 7 turns
+# native stderr into a terminating error, so the hook died here and the push was
+# refused. 2>$null does not prevent that; only catching it does. The try/catch
+# below leaves $upstream empty, which is exactly the "no upstream" case the
+# following test already handles.
+$upstream = $null
+try {
+    $upstream = git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null
+} catch {
+    $upstream = $null
+}
 if ($LASTEXITCODE -eq 0 -and $upstream) {
     $counts = git rev-list --left-right --count "$upstream...HEAD" 2>$null
     if ($LASTEXITCODE -eq 0 -and $counts) {
