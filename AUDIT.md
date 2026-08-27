@@ -1213,6 +1213,46 @@ change. The check is that only the tier vocabulary moves and the tone escalation
 (which tier fires when, and the disciplinary paragraph at `:924`) is bit-for-bit unchanged.
 ---
 
+# 8. Decisions taken under "use your judgement" (2026-08-27)
+
+Four rulings were asked for and handed back. What was chosen, so any of it can be
+reversed knowing what it was.
+
+**Deleted, in full.** The `.period-type-btn` subsystem: 9 functions in `script.js`
+along with their call sites, the two dead binding blocks, and the `currentPeriodType`
+and `currentPeriod` state that only dead paths ever wrote. Plus 7 sentiment listeners
+bound to ids that went away when the upload became a modal, and the 3 handlers they
+fed, which the modal flow does not call. **558 lines, and the baseline diff was empty.**
+
+**Period labels unified to nouns.** `Week ending 2026-08-16`, not `Weekly ending`.
+A period is a week, not a weekly. One builder in `periodIndex.periodLabel`; Rankings,
+Matchup and Team Snapshot delegate to it. Matchup had no `month-to-date` branch, so
+those periods used to read as `Weekly`.
+
+**Monday Post keeps its own labels on purpose.** It writes `July 2026` and `Q3 2026`
+into a dropdown a person reads, which is better there than an end date. A deliberate
+difference, not drift.
+
+**The UTC date bug is fixed.** `parseWeekKeyDate` called `Date.parse` on a bare ISO
+date, which is defined as UTC midnight, so in Phoenix a period ending 1 January
+bucketed into the previous year. Now anchored at local noon, the way `period-index`
+already did it. Covered across four timezones by `tests/period-date-parsing.test.js`.
+
+**Q7a resolved as a label fix.** `Metrics Meeting Goal (score 2+)` became
+`Metrics Not Off Track (score 2+)`. Judged to sit outside the metrics descope: the
+count was always honest, only the word was wrong, and no band or target moved.
+
+## Still open, deliberately untouched
+
+- **Mid-Year asks for a format nothing parses** (`Progress and strengths` /
+  `Areas of focus`). Drop the instruction, or build the parser like Year-End's boxes.
+- **Follow-Up has no team filter.** Still the only picker without one.
+- **60 tips exist only in the fallback map**, never in `tips.csv`. Merge, or keep two pools.
+- **The shout-out badges stop at Top 10** while the colour now runs to Top 25.
+- **The metric and band layer** stays descoped in full.
+
+---
+
 # Appendix A — Reconciliation with the April 2026 audit
 
 `audit/session-1-findings.md` through `session-7-findings.md` covered some of this ground in

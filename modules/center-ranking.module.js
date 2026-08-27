@@ -276,18 +276,9 @@
         return periods;
     }
 
+    // One wording for every surface. See periodIndex.periodLabel.
     function _fmtPeriodLabel(key, type) {
-        var parts = key.split('|');
-        var endDate = parts[1] || parts[0] || '';
-        var prefix;
-        if (type === 'ytd') prefix = 'YTD';
-        else if (type === 'month-to-date') prefix = 'Month to date';
-        else if (type === 'month') prefix = 'Monthly';
-        else if (type === 'quarter') prefix = 'Quarterly';
-        else if (type === 'daily') prefix = 'Daily';
-        else if (type === 'week-in-progress') prefix = 'Week in progress';
-        else prefix = 'Weekly';
-        return prefix + ' ending ' + endDate;
+        return window.DevCoachModules.periodIndex.periodLabel(key, type);
     }
 
     // Whether the full list of every upload on file is showing. The chips

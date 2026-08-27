@@ -240,7 +240,6 @@
         if (teamFilterChangeHandlersBound) return;
 
         window.addEventListener('devcoach:teamFilterChanged', function() {
-            if (typeof window.updateEmployeeDropdown === 'function') window.updateEmployeeDropdown();
             if (typeof window.initializeTrendIntelligence === 'function') window.initializeTrendIntelligence();
             if (typeof window.renderTrendIntelligence === 'function') window.renderTrendIntelligence();
             if (typeof window.renderTrendVisualizations === 'function') window.renderTrendVisualizations();

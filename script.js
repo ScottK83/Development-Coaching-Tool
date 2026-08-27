@@ -87,8 +87,6 @@ let ytdData = {};
 // Ephemeral daily rows (purged when a weekly/larger upload covers the same date).
 // Kept in its own localStorage key so it has a separate 4MB budget.
 let dailyData = {};
-let currentPeriodType = 'week';
-let currentPeriod = null;
 
 // Smart defaults and state tracking
 let hasUnsavedChanges = false;
@@ -835,7 +833,6 @@ function bindTeamFilterChangeHandlers() {
     if (teamFilterChangeHandlersBound) return;
 
     window.addEventListener('devcoach:teamFilterChanged', () => {
-        updateEmployeeDropdown();
         initializeTrendIntelligence();
         renderTrendIntelligence();
         renderTrendVisualizations();
@@ -1534,32 +1531,6 @@ function formatWeekLabel(weekKey) {
     return weekKey;
 }
 
-function getActivePeriodContext() {
-    const metadataSource = getPeriodDataStore(currentPeriodType);
-    const metadata = currentPeriod && metadataSource[currentPeriod]?.metadata ? metadataSource[currentPeriod].metadata : null;
-    
-    // Determine friendly time reference based on period type
-    let timeReference = 'this period';
-    if (currentPeriodType === 'daily') {
-        timeReference = 'today';
-    } else if (currentPeriodType === 'week' || currentPeriodType === 'week-in-progress') {
-        timeReference = 'this week';
-    } else if (currentPeriodType === 'month') {
-        timeReference = 'this month';
-    } else if (currentPeriodType === 'quarter') {
-        timeReference = 'this quarter';
-    } else if (currentPeriodType === 'ytd') {
-        timeReference = 'this year';
-    }
-    
-    return {
-        periodLabel: metadata?.label || 'this period',
-        weekEnding: metadata?.endDate || metadata?.label || 'unspecified',
-        timeReference: timeReference,
-        periodType: currentPeriodType
-    };
-}
-
 function evaluateMetricsForCoaching(employeeData) {
     if (!employeeData) {
         return { celebrate: [], needsCoaching: [], coachedMetricKeys: [] };
@@ -1663,145 +1634,9 @@ function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssiste
 // PERIOD MANAGEMENT
 // ============================================
 
-function updateEmployeeDropdown() {
-    const dropdown = document.getElementById('employeeSelect');
-    if (!dropdown) return;
-    
-    dropdown.innerHTML = '<option value="">-- Choose an employee --</option>';
-    
-    const employees = new Set();
-    const teamFilterContext = getTeamSelectionContext();
-
-    const periodRecord = currentPeriod ? getPeriodDataStore(currentPeriodType)[currentPeriod] : null;
-    (periodRecord?.employees || []).forEach(emp => {
-        if (isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
-            employees.add(emp.name);
-        }
-    });
-    
-    Array.from(employees).sort().forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        dropdown.appendChild(option);
-    });
-}
-
-function getEmployeeDataForPeriod(employeeName) {
-    if (!currentPeriod) return null;
-    const record = getPeriodDataStore(currentPeriodType)[currentPeriod];
-    return record?.employees?.find(emp => emp.name === employeeName) || null;
-}
-
-function updatePeriodDropdown() {
-    const dropdown = document.getElementById('specificPeriod');
-    if (!dropdown) return;
-    
-    dropdown.innerHTML = '<option value="">-- Choose a date range --</option>';
-    
-    const periods = [];
-
-    const sourceData = getPeriodDataStore(currentPeriodType);
-    Object.keys(sourceData).forEach(weekKey => {
-        const metadata = sourceData[weekKey].metadata;
-        const storedPeriodType = metadata.periodType || 'week';
-        
-        // Only show periods that match the current view type
-        if (currentPeriodType !== storedPeriodType) {
-            return; // Skip this period if it doesn't match the current view
-        }
-        
-        // Use the stored label from upload
-        const label = metadata.label;
-        const startDate = new Date(metadata.startDate);
-        
-        periods.push({ 
-            value: weekKey, 
-            label: label, 
-            date: startDate 
-        });
-    });
-    
-    // Sort by date descending
-    periods.sort((a, b) => b.date - a.date);
-    
-    periods.forEach(period => {
-        const option = document.createElement('option');
-        option.value = period.value;
-        option.textContent = period.label;
-        dropdown.appendChild(option);
-    });
-}
-
 // ============================================
 // UI HELPER FUNCTIONS
 // ============================================
-
-function populateMetricInputs(employee) {
-    // Populate metrics from registry
-    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-        const input = document.getElementById(metricKey);
-        if (input) {
-            const value = employee[metricKey];
-            // Explicitly handle 0 as a valid value (for ACW, holdTime, reliability)
-            input.value = (value === 0 || (value !== '' && value !== null && value !== undefined)) ? value : '';
-        }
-    });
-    
-    const totalCallsInput = document.getElementById('totalCalls');
-    if (totalCallsInput) {
-        // FIX #4: UI safeguard - hide totalCalls if surveyTotal > totalCalls (data integrity issue)
-        if (employee.surveyTotal > employee.totalCalls && employee.totalCalls > 0) {
-            totalCallsInput.value = '';
-            totalCallsInput.style.display = 'none';
-            const label = document.querySelector('label[for="totalCalls"]');
-            if (label) label.style.display = 'none';
-        } else {
-            totalCallsInput.value = employee.totalCalls || 0;
-            totalCallsInput.style.display = '';
-            const label = document.querySelector('label[for="totalCalls"]');
-            if (label) label.style.display = '';
-        }
-    }
-    
-    const surveyInput = document.getElementById('surveyTotal');
-    if (surveyInput) {
-        surveyInput.value = employee.surveyTotal || 0;
-    }
-    
-    // Apply highlighting
-    applyMetricHighlights();
-}
-
-function applyMetricHighlights() {
-    const configs = Object.values(METRICS_REGISTRY).map(metric => ({
-        id: metric.key,
-        target: metric.target.value,
-        type: metric.target.type
-    }));
-
-    configs.forEach(cfg => {
-        const el = document.getElementById(cfg.id);
-        if (!el || el.value === '' || el.value === null || el.value === undefined) {
-            if (el) {
-                el.style.background = '';
-                el.style.borderColor = '';
-            }
-            return;
-        }
-
-        const val = parseFloat(el.value);
-        if (isNaN(val)) {
-            el.style.background = '';
-            el.style.borderColor = '';
-            return;
-        }
-
-        const meets = cfg.type === 'min' ? val >= cfg.target : val <= cfg.target;
-        el.style.background = meets ? '#d4edda' : '#fff3cd';
-        el.style.borderColor = meets ? '#28a745' : '#ffc107';
-    });
-}
 
 // ============================================
 // EVENT HANDLERS
@@ -2214,9 +2049,6 @@ function bindQuickActionHandlers() {
 }
 
 function bindCoachingFormHandlers() {
-    document.querySelectorAll('.period-type-btn').forEach(btn => {
-        btn.addEventListener('click', () => handlePeriodTypeButtonClick(btn));
-    });
     // Passed a real context. Bound directly, the first argument was the click
     // Event, so every injected dependency below was undefined and the function
     // could not read history, toast, or even warn.
@@ -2225,9 +2057,6 @@ function bindCoachingFormHandlers() {
         getCoachingHistoryForEmployee,
         getEmployeeNickname
     }));
-    Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-        document.getElementById(metricKey)?.addEventListener('input', applyMetricHighlights);
-    });
     document.getElementById('exportDataBtn')?.addEventListener('click', exportToExcel);
     document.getElementById('exportCoachingHistoryBtn')?.addEventListener('click', downloadCoachingHistoryCSV);
     document.getElementById('uploadMoreDataBtn')?.addEventListener('click', handleUploadMoreDataClick);
@@ -2352,14 +2181,7 @@ function handleSubNavSentimentClick(skipShowSubSection) {
         document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
         document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
         document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
-        document.getElementById('sentimentPositiveFile')?.addEventListener('change', () => handleSentimentFileChange('Positive'));
-        document.getElementById('sentimentNegativeFile')?.addEventListener('change', () => handleSentimentFileChange('Negative'));
-        document.getElementById('sentimentEmotionsFile')?.addEventListener('change', () => handleSentimentFileChange('Emotions'));
-        document.getElementById('sentimentPositivePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Positive'); });
-        document.getElementById('sentimentNegativePasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Negative'); });
-        document.getElementById('sentimentEmotionsPasteBtn')?.addEventListener('click', (e) => { e.preventDefault(); openSentimentPasteModal('Emotions'); });
         document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
-        document.getElementById('saveAssociateSentimentSnapshotBtn')?.addEventListener('click', saveAssociateSentimentSnapshotFromCurrentReports);
         sentimentListenersAttached = true;
     }
 
@@ -2432,36 +2254,6 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
             uploadedAt: new Date().toISOString()
         }
     };
-}
-
-function syncWeeklyViewAfterPastedUpload(weekKey) {
-    currentPeriodType = 'week';
-
-    document.querySelectorAll('.period-type-btn').forEach(b => {
-        b.style.background = 'white';
-        b.style.color = '#666';
-        b.style.borderColor = '#ddd';
-    });
-    const weekBtn = document.querySelector('.period-type-btn[data-period="week"]');
-    if (weekBtn) {
-        weekBtn.style.background = '#2196F3';
-        weekBtn.style.color = 'white';
-        weekBtn.style.borderColor = '#2196F3';
-    }
-
-    updatePeriodDropdown();
-
-    const periodDropdown = document.getElementById('specificPeriod');
-    if (periodDropdown) {
-        for (let index = 0; index < periodDropdown.options.length; index += 1) {
-            if (periodDropdown.options[index].value === weekKey) {
-                periodDropdown.selectedIndex = index;
-                currentPeriod = weekKey;
-                updateEmployeeDropdown();
-                break;
-            }
-        }
-    }
 }
 
 // ============================================
@@ -2738,7 +2530,6 @@ function undoLastUpload() {
     else { saveWeeklyData(); saveYtdData(); }
     populateDeleteWeekDropdown();
     populateUploadedDataDropdown();
-    populateTeamMemberSelector();
     clearUploadUndoSnapshot();
     showToast(`↩️ Undid upload for ${snap.label}`, 4000);
 }
@@ -3052,7 +2843,6 @@ function handleLoadPastedDataClick() {
 
         populateDeleteWeekDropdown();
         populateUploadedDataDropdown();
-        populateTeamMemberSelector();
         window.DevCoachModules?.uploadWizard?.refresh?.();
 
         document.getElementById('uploadSuccessMessage').style.display = 'block';
@@ -3067,7 +2857,6 @@ function handleLoadPastedDataClick() {
         showOnlySection('uploadSection');
 
         if (periodType !== 'ytd') {
-            syncWeeklyViewAfterPastedUpload(weekKey);
         }
 
         showToast(`✅ Loaded ${employees.length} employees for ${label}`, 4000);
@@ -3214,7 +3003,6 @@ function handleDataFileInputChange(event) {
             populateDeleteWeekDropdown();
             populateDeleteSentimentDropdown();
             populateDeleteEmployeeYearOptions();
-            populateTeamMemberSelector();
             renderEmployeesList();
         } catch (error) {
             console.error('Error importing data:', error);
@@ -3289,10 +3077,8 @@ async function handleResetMetricDataClick() {
     if (storage?.saveYtdData) storage.saveYtdData(ytdData);
     if (storage?.saveDailyData) storage.saveDailyData(dailyData);
 
-    currentPeriod = null;
     coachingLatestWeekKey = null;
 
-    try { if (typeof updatePeriodDropdown === 'function') updatePeriodDropdown(); } catch (e) { /* ok */ }
     try { if (typeof populateDeleteWeekDropdown === 'function') populateDeleteWeekDropdown(); } catch (e) { /* ok */ }
 
     alert(`✅ Metric data reset. ${weeklyCount + ytdCount} period${(weeklyCount + ytdCount) === 1 ? '' : 's'} cleared. The page will now reload.`);
@@ -3355,27 +3141,6 @@ async function handleDeleteAllDataClick() {
     location.reload();
 }
 
-function handlePeriodTypeButtonClick(button) {
-    document.querySelectorAll('.period-type-btn').forEach(btn => {
-        btn.style.background = 'white';
-        btn.style.color = '#666';
-        btn.style.borderColor = '#ddd';
-    });
-    button.style.background = '#2196F3';
-    button.style.color = 'white';
-    button.style.borderColor = '#2196F3';
-
-    currentPeriodType = button.dataset.period;
-    updatePeriodDropdown();
-
-    const periodDropdown = document.getElementById('specificPeriod');
-    if (periodDropdown && periodDropdown.options.length > 1) {
-        periodDropdown.selectedIndex = 1;
-        currentPeriod = periodDropdown.value;
-        updateEmployeeDropdown();
-    }
-}
-
 function handleDeleteSelectedWeekClick() {
     const weekSelect = document.getElementById('deleteWeekSelect');
     if (!weekSelect) return;
@@ -3411,7 +3176,6 @@ function handleDeleteSelectedWeekClick() {
     populateDeleteWeekDropdown();
     populateDeleteSentimentDropdown();
     populateDeleteEmployeeYearOptions();
-    populateTeamMemberSelector();
     renderEmployeesList();
     showToast('✅ Period deleted successfully');
 
@@ -3429,7 +3193,6 @@ function handleDeleteWeekSelectChange() {
     const isExpanded = panelToggleButton?.getAttribute('aria-expanded') === 'true';
     notifyTeamFilterChanged();
     if (isExpanded) {
-        populateTeamMemberSelector();
         renderEmployeesList();
     }
 }
@@ -3444,7 +3207,6 @@ function applyTeamMembersEmployeesPanelState(isExpanded) {
     panelBody.style.display = isExpanded ? 'block' : 'none';
 
     if (isExpanded) {
-        populateTeamMemberSelector();
         renderEmployeesList();
     }
 }
@@ -4510,59 +4272,9 @@ function deleteEmployeeDataByYear(employeeName, reviewYear) {
     populateDeleteWeekDropdown();
     populateDeleteSentimentDropdown();
     populateDeleteEmployeeYearOptions();
-    populateTeamMemberSelector();
     renderEmployeesList();
 
     showToast(`✅ Removed ${employeeName} ${reviewYear} data (weekly: ${weeklyPeriodsTouched}, ytd: ${ytdPeriodsTouched}, coaching entries: ${coachingEntriesRemoved}, call logs: ${callEntriesRemoved}).`, 4500);
-}
-
-function populateTeamMemberSelector() {
-    const selector = document.getElementById('teamMemberSelector');
-    const deleteWeekDropdown = document.getElementById('deleteWeekSelect');
-    
-    if (!selector) return;
-    
-    // Get currently selected week (from delete dropdown or most recent)
-    let selectedWeek = deleteWeekDropdown?.value;
-    
-    if (!selectedWeek) {
-        // Use the most recent week if none selected
-        const weeks = Object.keys(weeklyData).concat(Object.keys(ytdData || {})).sort().reverse();
-        selectedWeek = weeks[0];
-    }
-
-    if (!selectedWeek || !(weeklyData[selectedWeek] || (ytdData && ytdData[selectedWeek]))) {
-        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary);">No data available</div>';
-        return;
-    }
-
-    const employees = (weeklyData[selectedWeek] || ytdData[selectedWeek]).employees || [];
-    const selectedMembers = getTeamMembersForWeek(selectedWeek);
-    
-    if (employees.length === 0) {
-        selector.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary);">No employees in this week</div>';
-        return;
-    }
-    
-    // Create checkboxes for each employee
-    let html = '';
-    employees.forEach(emp => {
-        const isSelected = selectedMembers.length === 0 || selectedMembers.includes(emp.name);
-        const escapedName = escapeHtml(emp.name);
-        html += `
-            <label style="display: flex; align-items: center; gap: 10px; padding: 8px; cursor: pointer; hover: background: #f5f5f5;">
-                <input type="checkbox" class="team-member-checkbox" data-week="${selectedWeek}" data-name="${escapedName}" ${isSelected ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
-                <span>${escapedName}</span>
-            </label>
-        `;
-    });
-    
-    selector.innerHTML = html;
-    
-    // Add event listeners to checkboxes
-    document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateTeamSelection);
-    });
 }
 
 function updateTeamSelection() {
@@ -4894,11 +4606,33 @@ function getWeeklyKeysSorted() {
         .map(item => item.key);
 }
 
+/**
+ * When a period ended, as a local timestamp.
+ *
+ * Date.parse on a bare "YYYY-MM-DD" is defined as UTC midnight. Read back with
+ * getFullYear in a timezone west of Greenwich that is the previous local day,
+ * so in Phoenix Date.parse('2026-01-01') is 31 December 2025. Used only for
+ * sorting that would not matter, because every key shifts equally. It is used
+ * for year bucketing too, where a year-to-date period ending 1 January landed
+ * in the wrong year.
+ *
+ * Anchoring at local noon is what period-index already does, for the same
+ * reason: noon is far enough from both midnights that no offset moves the date.
+ */
 function parseWeekKeyDate(weekKey, week) {
+    const parseLocal = (value) => {
+        const text = String(value == null ? '' : value).trim();
+        if (!text) return NaN;
+        // Bare ISO dates get anchored at local noon. Anything else already
+        // carries its own time or is a written label, so it is left alone.
+        const iso = /^\d{4}-\d{2}-\d{2}$/.test(text) ? text + 'T12:00:00' : text;
+        return Date.parse(iso);
+    };
+
     // Try metadata endDate first (most reliable, ISO format)
     const endDate = week?.metadata?.endDate;
     if (endDate) {
-        const parsed = Date.parse(endDate);
+        const parsed = parseLocal(endDate);
         if (Number.isFinite(parsed)) return parsed;
     }
 
@@ -4906,7 +4640,7 @@ function parseWeekKeyDate(weekKey, week) {
     const parts = (weekKey || '').split('|');
     const keyEnd = parts[1] || parts[0] || '';
     if (keyEnd) {
-        const parsed = Date.parse(keyEnd);
+        const parsed = parseLocal(keyEnd);
         if (Number.isFinite(parsed)) return parsed;
     }
 
@@ -4915,7 +4649,7 @@ function parseWeekKeyDate(weekKey, week) {
     const match = label.match(/Week ending\s+(.+)$/i);
     const dateStr = match ? match[1] : label;
     if (dateStr) {
-        const parsed = Date.parse(dateStr);
+        const parsed = parseLocal(dateStr);
         if (Number.isFinite(parsed)) return parsed;
     }
 
@@ -7156,7 +6890,6 @@ function deleteEmployee(employeeName) {
         onAfterDelete: () => {
             renderEmployeesList();
             populateDeleteEmployeeYearOptions();
-            populateTeamMemberSelector();
         }
     });
 }
@@ -7283,9 +7016,7 @@ async function initApp() {
     
     // If we have data, update period/team controls from the final startup snapshot.
     if (Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0) {
-        updatePeriodDropdown();
         populateDeleteWeekDropdown();
-        populateTeamMemberSelector();
     }
     
     // Restore smart defaults

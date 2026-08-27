@@ -8,7 +8,7 @@ This file is a contract, not documentation. After a refactoring pass, an
 empty `git diff` here means the pass changed no behaviour. A non-empty diff
 is either an intended change that needs explaining line by line, or a bug.
 
-Entries: 80   Not covered: 5
+Entries: 81   Not covered: 5
 
 ------------------------------------------------------------------------------
 metric-profiles / getYearTarget, every metric, both years
@@ -10533,6 +10533,26 @@ period-index / shiftDays and isWeekLike and isCompleteWeek
     "1 -> 2026-06-22",
     "7 -> 2026-06-28"
   ]
+}
+
+------------------------------------------------------------------------------
+period-index / periodLabel, one wording for every surface
+------------------------------------------------------------------------------
+{
+  "byType": [
+    "week               -> Week ending 2026-06-21",
+    "week-in-progress   -> Week in progress through 2026-06-21",
+    "month              -> Month ending 2026-06-21",
+    "month-agg          -> Month ending 2026-06-21",
+    "month-to-date      -> Month to date ending 2026-06-21",
+    "quarter            -> Quarter ending 2026-06-21",
+    "ytd                -> YTD ending 2026-06-21",
+    "daily              -> Daily: 2026-06-21",
+    "custom             -> Period ending 2026-06-21",
+    "unknown-type       -> Week ending 2026-06-21"
+  ],
+  "missingEndDate": "Week",
+  "nullKey": "YTD"
 }
 
 ------------------------------------------------------------------------------

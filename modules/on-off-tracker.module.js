@@ -1071,7 +1071,12 @@
 
         // Meeting count breakdown
         html += '<div style="margin-bottom: 16px;">';
-        html += '<div style="font-weight: 700; color: #4a148c; margin-bottom: 10px; font-size: 0.95em;">Metrics Meeting Goal (score 2+)</div>';
+        // "Meeting Goal" was wrong here, and wrong in a way that flattered.
+        // Score 2 is the floor of the band, and for four of the five KPIs the
+        // goal sits above it: 92.5 adherence scores 2 against a goal of 93.
+        // Someone could score 2 on all five, have met no goals at all, and this
+        // panel would report five. The count is honest; only the word was not.
+        html += '<div style="font-weight: 700; color: #4a148c; margin-bottom: 10px; font-size: 0.95em;">Metrics Not Off Track (score 2+)</div>';
 
         [5, 4, 3, 2, 1, 0].forEach(function(count) {
             var group = groups[count] || [];

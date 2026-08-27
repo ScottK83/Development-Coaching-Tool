@@ -278,6 +278,39 @@
         return buildIndex(currentStores());
     }
 
+
+    /**
+     * What to call a period on screen.
+     *
+     * Rankings, Matchup and Team Snapshot each had their own copy of this,
+     * and they had drifted: the same week read "Weekly ending 2026-08-16" on
+     * two of them and "Week ending 2026-08-16" on the third, and a
+     * month-to-date period fell through to "Weekly" on Matchup because that
+     * copy had no branch for it. Nouns, not adjectives: a period is a week,
+     * not a weekly.
+     *
+     * Monday Post keeps its own labels on purpose. It writes "July 2026" and
+     * "Q3 2026" in a dropdown a person reads, which is better there than an
+     * end date, and that is a deliberate difference rather than drift.
+     */
+    var PERIOD_LABEL_NOUNS = {
+        'ytd': 'YTD ending',
+        'quarter': 'Quarter ending',
+        'month': 'Month ending',
+        'month-agg': 'Month ending',
+        'month-to-date': 'Month to date ending',
+        'week': 'Week ending',
+        'week-in-progress': 'Week in progress through',
+        'daily': 'Daily:',
+        'custom': 'Period ending'
+    };
+
+    function periodLabel(key, type) {
+        var parts = String(key == null ? '' : key).split('|');
+        var endDate = parts[1] || parts[0] || '';
+        var noun = PERIOD_LABEL_NOUNS[type] || PERIOD_LABEL_NOUNS.week;
+        return endDate ? noun + ' ' + endDate : noun.replace(/[: ]*(ending|through)?:?$/, '');
+    }
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.periodIndex = {
         DEFAULT_TYPE,
@@ -286,6 +319,8 @@
         PRECEDENCE,
         isoOf,
         mondayOf,
+        periodLabel,
+        PERIOD_LABEL_NOUNS,
         shiftDays,
         parsePeriod,
         buildIndex,

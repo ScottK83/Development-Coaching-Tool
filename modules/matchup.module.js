@@ -117,17 +117,9 @@
         return periods;
     }
 
+    // One wording for every surface. See periodIndex.periodLabel.
     function _formatPeriodLabel(key, type) {
-        var parts = key.split('|');
-        var endDate = parts[1] || parts[0] || '';
-        var prefix;
-        if (type === 'ytd') prefix = 'YTD';
-        else if (type === 'month' || type === 'month-agg') prefix = 'Monthly';
-        else if (type === 'quarter') prefix = 'Quarterly';
-        else if (type === 'daily') prefix = 'Daily';
-        else if (type === 'week-in-progress') prefix = 'Week in progress';
-        else prefix = 'Weekly';
-        return prefix + ' ending ' + endDate;
+        return window.DevCoachModules.periodIndex.periodLabel(key, type);
     }
 
     var _selectedPeriodKey = null;

@@ -690,6 +690,19 @@ function recordPeriodMath() {
         };
     });
 
+    record('period-index / periodLabel, one wording for every surface', () => {
+        const pi = M().periodIndex;
+        const types = ['week', 'week-in-progress', 'month', 'month-agg', 'month-to-date',
+            'quarter', 'ytd', 'daily', 'custom', 'unknown-type'];
+        const out = {
+            byType: types.map((t) => t.padEnd(18) + ' -> ' + pi.periodLabel('2026-06-15|2026-06-21', t)),
+
+            missingEndDate: pi.periodLabel('', 'week'),
+            nullKey: pi.periodLabel(null, 'ytd')
+        };
+        return out;
+    });
+
     record('celebrations / listShoutOutWindows', () => M().celebrations.listShoutOutWindows());
 
     record('period-picker / windows, and the id/key round trip', () => {
