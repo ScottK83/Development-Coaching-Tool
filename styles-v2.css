@@ -2050,14 +2050,21 @@ turning "background: #f0f9ff" into
 /* ==========================================================================
    Placement highlighting in the team shout-out
 
-   Colour follows the medal language the Celebrations tab already uses for the
-   same tiers: gold for first, silver for a top five, bronze for a top ten, and
-   a violet for the rest of the top twenty five.
+   Gold for #1, green for a top five, blue for a top ten, purple for the rest of
+   the top twenty five. Past twenty five, nothing.
 
-   Deliberately not green/blue/amber. In this app those already mean "meeting
-   goal", "score 2" and "watch area", and a placing is a different claim from a
-   goal: somebody can be third in the call center and still short of target.
-   Colouring a placing green would let the reader infer a verdict nobody made.
+   An earlier version of this used muted silver and bronze, on the reasoning
+   that green already means "meeting goal" elsewhere in the app and a placing is
+   a different claim from a goal. That reasoning does not survive contact with
+   what this post actually is. meetsCelebrationTarget (celebrations.module.js)
+   gates every celebration on the person having cleared their target for that
+   metric, so there is no placing in a shout-out belonging to somebody short of
+   goal. Green here is not a claim the data cannot support; it is the same claim
+   the post is already making in words.
+
+   So these are pitched as awards rather than as status tints. This is the one
+   screen in the app that carries only good news, and the colour is there to
+   make a top five jump off the page, not to grade anyone.
 
    Display only. The text copied to the channel stays plain.
    ========================================================================== */
@@ -2069,17 +2076,20 @@ turning "background: #f0f9ff" into
     white-space: nowrap;
 }
 
-.placement-tier-first  { background: #fff4c2; color: #7a5b00; box-shadow: inset 0 0 0 1px #e8c860; }
-.placement-tier-top5   { background: #eceff1; color: #37474f; box-shadow: inset 0 0 0 1px #b0bec5; }
-.placement-tier-top10  { background: #f8e5d2; color: #8a4b17; box-shadow: inset 0 0 0 1px #d9a273; }
-.placement-tier-top25  { background: #ede7f6; color: #4527a0; box-shadow: inset 0 0 0 1px #b39ddb; }
+/* #1 keeps gold. It is the one the post already marks with a medal, and it is
+   the only placing nobody else on the floor shares. */
+.placement-tier-first  { background: #fff3c4; color: #6d4c00; box-shadow: inset 0 0 0 1px #d4a92a; }
+.placement-tier-top5   { background: #d7f5dd; color: #14532d; box-shadow: inset 0 0 0 1px #4caf50; }
+.placement-tier-top10  { background: #d6ebfd; color: #0d3f6e; box-shadow: inset 0 0 0 1px #2196f3; }
+.placement-tier-top25  { background: #e9ddfb; color: #4a1d8f; box-shadow: inset 0 0 0 1px #9c5fd6; }
 
-/* The light tints go muddy on a dark ground, so dark mode keeps the same four
-   hues but carries them on the text and a low-alpha wash instead. */
-[data-theme="dark"] .placement-tier-first  { background: rgba(255, 213, 79, 0.16); color: #ffd54f; box-shadow: inset 0 0 0 1px rgba(255, 213, 79, 0.45); }
-[data-theme="dark"] .placement-tier-top5   { background: rgba(207, 216, 220, 0.16); color: #cfd8dc; box-shadow: inset 0 0 0 1px rgba(207, 216, 220, 0.4); }
-[data-theme="dark"] .placement-tier-top10  { background: rgba(255, 167, 106, 0.16); color: #ffa76a; box-shadow: inset 0 0 0 1px rgba(255, 167, 106, 0.4); }
-[data-theme="dark"] .placement-tier-top25  { background: rgba(179, 157, 219, 0.18); color: #d1c4e9; box-shadow: inset 0 0 0 1px rgba(179, 157, 219, 0.45); }
+/* Light tints go muddy on a dark ground, so dark mode keeps the four hues but
+   carries them on the text over a low-alpha wash. The border does the work of
+   separating the badge from the paragraph. */
+[data-theme="dark"] .placement-tier-first  { background: rgba(255, 205, 60, 0.18); color: #ffd970; box-shadow: inset 0 0 0 1px rgba(255, 205, 60, 0.55); }
+[data-theme="dark"] .placement-tier-top5   { background: rgba(76, 220, 120, 0.18); color: #8ff0ab; box-shadow: inset 0 0 0 1px rgba(76, 220, 120, 0.5); }
+[data-theme="dark"] .placement-tier-top10  { background: rgba(70, 165, 255, 0.18); color: #8ecbff; box-shadow: inset 0 0 0 1px rgba(70, 165, 255, 0.5); }
+[data-theme="dark"] .placement-tier-top25  { background: rgba(178, 130, 245, 0.20); color: #d3b4fb; box-shadow: inset 0 0 0 1px rgba(178, 130, 245, 0.55); }
 
 .shoutout-preview {
     white-space: pre-wrap;
