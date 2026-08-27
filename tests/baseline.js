@@ -809,11 +809,19 @@ function recordTips() {
     });
 
     record('tips / coachingEmail.chooseCoachingTip', () => {
+        // Signature is (metricConfig, usedTips): a registry entry and a Set of
+        // tips already spent on this email, so the same line is not handed out
+        // twice for two different metrics.
         const ce = M().coachingEmail;
+        const registry = global.window.METRICS_REGISTRY || {};
+        const used = new Set();
         const out = {};
-        KPI_KEYS.forEach((k) => {
-            try { out[k] = ce.chooseCoachingTip(k, fixture.EMPLOYEES_2026[3]); } catch (err) { out[k] = '!! ' + err.message; }
+        metricKeys().forEach((k) => {
+            if (!registry[k]) return;
+            try { out[k] = ce.chooseCoachingTip(registry[k], used); }
+            catch (err) { out[k] = '!! ' + err.message; }
         });
+        out['__tipsSpentOnThisEmail__'] = used.size;
         return out;
     });
 

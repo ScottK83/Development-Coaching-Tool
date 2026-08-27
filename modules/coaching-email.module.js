@@ -216,7 +216,11 @@
     // -- Coaching tip selection ------------------------------------------------
 
     function chooseCoachingTip(metricConfig, usedTips) {
-        const tips = getMetricTips(metricConfig.label);
+        // The tip pool is keyed by metric key, not by display label. Passing the
+        // label here meant every lookup missed and every coaching email fell
+        // through to the registry's single defaultTip, so the whole pool went
+        // unused. See AUDIT.md 2.11.
+        const tips = getMetricTips(metricConfig.key);
         let selectedTip = metricConfig.defaultTip;
         if (tips && tips.length > 0) {
             const available = tips.filter(t => !usedTips.has(t));

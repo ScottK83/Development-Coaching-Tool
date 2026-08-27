@@ -836,12 +836,27 @@ deliberate exceptions are now explicit at their call sites rather than merely ab
 Follow-Up passes `teamFilter: false`, and Reliability passes `sort: false` because its order
 is review priority, not the alphabet.
 
-### 2. Tip lookup keying — 2.11
+### 2. Tip lookup keying — 2.11  ✅ DONE (pass 2)
 Label-keyed and key-keyed copies of the same pool, plus `tips.csv` and `EMBEDDED_TIPS_CSV`
 as 505 duplicated rows needing a dual edit forever.
 **If this is wrong:** coaching emails ship with no tips and nobody notices, because an empty
 tip list renders as an absent section rather than an error. This is a live bug today.
 *Flag: this is about tip lookup, not metric values — tell me if you want it out too.*
+
+**Outcome.** `DEFAULT_METRIC_TIPS` re-keyed from display labels to metric keys;
+`chooseCoachingTip` now passes `metricConfig.key`; `getMetricTips` resolves a label to a key
+so the next caller to get it wrong is merely inefficient rather than silently wrong. Five
+`overallExperience` tips moved into the pool, which previously had none. **No storage
+migration was needed** — all four tip keys in localStorage were already metric-key shaped;
+the fallback map was the only label-shaped thing in the system.
+
+**The two pools are not duplicates.** 60 of the 65 tips in `DEFAULT_METRIC_TIPS` appear
+nowhere in the CSV, so it is a second body of content, not stale copy. Merging them is a
+content decision and is left open.
+
+**One tip removed.** Fixing the keying made 65 previously-unreachable tips live, and one of
+them offered a callback on Hold Time, against a standing rule. It is gone, and
+`tests/tips-pool.test.js` now fails if it comes back.
 
 ### 3. Copilot loop — 2.4
 Four prompt idioms, three paste-back contracts, five email builders, five copy/open orderings.
