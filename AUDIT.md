@@ -1184,7 +1184,7 @@ with it. But "Performance classification: Off Track." is the kind of line an AI 
 straight back into the opening sentence. **This is a live risk, and it is exactly the sort of
 thing that shows up in a performance review.**
 
-**Q16. — ANSWERED: replace the tier phrases with tone instructions.**
+**Q16. — ANSWERED and DONE: tier phrases replaced with tone instructions.**
 
 Good news on the shape of this: **Mid-Year already has exactly that mechanism.** A
 `TONE FOR THIS REVIEW (important):` block (`on-off-tracker.module.js:918-925`) already speaks

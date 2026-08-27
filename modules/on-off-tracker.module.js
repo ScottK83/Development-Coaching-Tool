@@ -711,7 +711,6 @@
                 var targets2 = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
                 var actualTarget2 = targets2[m.key];
                 var gapText2 = '';
-                var stretchText2 = '';
                 // Check if meeting actual target
                 if (actualTarget2 && m.val !== null) {
                     var meetsTarget = actualTarget2.type === 'min' ? (m.val >= actualTarget2.value) : (m.val <= actualTarget2.value);
@@ -720,12 +719,17 @@
                         gapText2 = 'just ' + gapT.toFixed(1) + ' ' + m.unit + ' from company target of ' + actualTarget2.value;
                     }
                 }
-                if (band2 && m.val !== null) {
-                    var target3b = band2.type === 'min' ? band2.score3.min : band2.score3.max;
-                    var gap3b = Math.abs(m.val - target3b);
-                    stretchText2 = 'only ' + gap3b.toFixed(1) + ' ' + m.unit + ' away from exceptional (' + target3b + ')';
-                }
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', gapText: gapText2, stretchText: stretchText2, tips: [], isClose: true });
+                // Deliberately no stretch phrasing for a near-target metric.
+                //
+                // This used to read "only 1.5 hrs away from exceptional", which
+                // names the internal rating tier in text an associate reads, and
+                // is phrasing that has been ruled out of review copy anyway. The
+                // Mid-Year prompt suppressed it; the quick check-in prompt did
+                // not, and printed it. Rather than add the same guard in a second
+                // place, the sentence is no longer built. The isClose flag below
+                // already tells both prompts the metric only needs a nudge, which
+                // is the useful half.
+                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', gapText: gapText2, stretchText: '', tips: [], isClose: true });
             } else {
                 strengths.push({ label: m.label, val: m.val, unit: m.unit });
             }
@@ -870,10 +874,10 @@
                 if (f.targetText) line += ', ' + f.targetText;
                 if (f.gapText) line += ' (' + f.gapText + ')';
                 prompt += line + '\n';
-                // Skip stretch text for near-target (score 2) items: it phrases the
-                // gap as "only X away from exceptional", which Scott does not want in
-                // review files. Keep the "first step" milestone for below-target items.
-                if (f.stretchText && !f.isClose) prompt += '  A realistic first milestone: ' + f.stretchText + '\n';
+                // Below-target items still get their "first step" milestone. The
+                // near-target phrasing that used to need skipping here is no
+                // longer built at all, so the isClose guard has gone with it.
+                if (f.stretchText) prompt += '  A realistic first milestone: ' + f.stretchText + '\n';
                 if (f.tips && f.tips.length) {
                     f.tips.forEach(function(tip) {
                         prompt += '  Coaching focus: ' + tip + '\n';
@@ -902,15 +906,23 @@
         else if (notMetCount === 2) tier = 'firm';
         else tier = 'positive';
 
+        // The manual override still sets the tone; it just no longer hands the
+        // model the words "OFF TRACK" and "ON TRACK".
+        //
+        // Those three labels are a manager-facing, year-end-internal scale, and
+        // this prompt writes a letter the associate reads. A model handed
+        // "I am marking them as OFF TRACK" will paraphrase it straight into the
+        // opening sentence. What the line exists to do is set severity, and
+        // severity can be said without naming the scale.
         if (statusOverride === 'off') {
-            prompt += 'Supervisor assessment: I am marking ' + firstName + ' as OFF TRACK for this review period. Treat this as needing a real improvement push regardless of the metric snapshot above.\n';
+            prompt += 'Supervisor assessment: regardless of the metric snapshot above, treat this review as needing a real improvement push.\n';
         } else if (statusOverride === 'on') {
-            prompt += 'Supervisor assessment: I consider ' + firstName + ' ON TRACK overall for this review period.\n';
+            prompt += 'Supervisor assessment: regardless of the metric snapshot above, treat this review as a positive one overall.\n';
         }
 
         if (tier === 'strong') {
             var strongIntro = statusOverride === 'off'
-                ? firstName + ' is off track for this review period, so this review needs to be direct and carry real urgency while staying professional and respectful.'
+                ? firstName + ' needs a real improvement push this period, so this review needs to be direct and carry real urgency while staying professional and respectful.'
                 : firstName + ' is meeting only ' + metCount + ' of ' + totalScored + ' key metrics, so this review needs to be direct and carry real urgency while staying professional and respectful.';
             prompt += '\nTONE FOR THIS REVIEW (important):\n';
             prompt += '- ' + strongIntro + '\n';

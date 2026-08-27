@@ -12293,7 +12293,7 @@ year-end / buildCopilotPrompt
 I'm a supervisor preparing year-end review responses for Dan (Dan Under) for 2026.
 
 Use this data source: uploaded metrics (2026 year-end period).
-Performance classification: Off Track.
+Tone for this review: this year fell short of what was expected. Be direct and specific about what needs to change, name the shortfalls plainly, and stay professional, respectful and supportive throughout. Do not soften it into a positive review.
 Metric targets to apply: 2026 year-end goals.
 
 Positives to highlight:
@@ -12320,7 +12320,7 @@ Write polished text that I can paste into these two manager review boxes:
 Requirements:
 - Professional, warm, and human - not robotic and not overly corporate
 - Align with goals in business, development, and APS principles
-- Mention whether performance is on track or off track naturally
+- Be clear about how the year went overall, in plain language, without grading it
 - Use the associate self-review/context above when relevant, but do not copy it verbatim
 - When referencing a metric, include the metric value and its goal
 - This is a completed 2026 year-end review, so write in past tense when describing performance (use "was/were" not "is/are")
@@ -12341,9 +12341,9 @@ Box 2 - Future Improvement Areas:
 year-end / buildCopilotPrompt at each track label
 ------------------------------------------------------------------------------
 [
-  "Off Track -> \"Performance classification: Off Track.\"",
-  "On Track/Successful -> \"Performance classification: On Track/Successful.\"",
-  "On Track/Exceptional -> \"Performance classification: On Track/Exceptional.\""
+  "Off Track -> \"Tone for this review: this year fell short of what was expected. Be direct and specific about what needs to change, name the shortfalls plainly, and stay professional, respectful and supportive throughout. Do not soften it into a positive review.\"",
+  "On Track/Successful -> \"Tone for this review: this was a solid year. Write it as genuine recognition of steady performance, and frame the improvement areas as the next step up rather than as failures.\"",
+  "On Track/Exceptional -> \"Tone for this review: this was a strong year. Write it as clear, specific recognition of sustained high performance, and frame the improvement areas as fine-tuning rather than gaps.\""
 ]
 
 ------------------------------------------------------------------------------

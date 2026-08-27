@@ -939,8 +939,10 @@ function recordReviewPrompts() {
                 { fallbackPositives: '', fallbackImprovements: '' },
                 { preferredName: subject.firstName, trackLabel: label, periodLabel: 'p', sourceLabel: 's', targetProfileLabel: 't' }
             );
-            const line = String(p).split('\n').find((l) => l.indexOf('classification') !== -1);
-            return label + ' -> ' + JSON.stringify(line || '(no classification line)');
+            // The standing reaches the prompt as tone now, not as a grade, so
+            // this reads back the tone line rather than a classification.
+            const line = String(p).split('\n').find((l) => l.indexOf('Tone for this review:') !== -1);
+            return label + ' -> ' + JSON.stringify(line || '(no tone line)');
         });
     });
 

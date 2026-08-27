@@ -1,11 +1,40 @@
 (function() {
     'use strict';
 
+    /**
+     * Turn the internal standing into a tone instruction.
+     *
+     * The three track labels are a manager-facing, year-end-internal scale, and
+     * associates are not meant to know it exists. This prompt writes the text
+     * that goes into their review boxes, so handing the model
+     * "Performance classification: Off Track." invites it to paraphrase the
+     * label straight into the first sentence. The prompt also used to ask, in
+     * so many words, that it "mention whether performance is on track or off
+     * track naturally", which is the same leak as an explicit instruction.
+     *
+     * The standing still decides how the review reads. It just arrives as tone
+     * rather than as a grade.
+     */
+    function toneFromStanding(trackLabel) {
+        var label = String(trackLabel == null ? '' : trackLabel);
+        if (label.indexOf('Exceptional') !== -1) {
+            return 'Tone for this review: this was a strong year. Write it as clear, specific recognition of'
+                + ' sustained high performance, and frame the improvement areas as fine-tuning rather than gaps.';
+        }
+        if (label.indexOf('Off Track') !== -1) {
+            return 'Tone for this review: this year fell short of what was expected. Be direct and specific about'
+                + ' what needs to change, name the shortfalls plainly, and stay professional, respectful and'
+                + ' supportive throughout. Do not soften it into a positive review.';
+        }
+        return 'Tone for this review: this was a solid year. Write it as genuine recognition of steady'
+            + ' performance, and frame the improvement areas as the next step up rather than as failures.';
+    }
+
     function buildCopilotPrompt(inputData, supportData, headerData) {
         return `I'm a supervisor preparing year-end review responses for ${headerData.preferredName} (${inputData.employeeName}) for ${inputData.reviewYear}.
 
 Use this data source: ${headerData.sourceLabel} (${headerData.periodLabel}).
-Performance classification: ${headerData.trackLabel}.
+${toneFromStanding(headerData.trackLabel)}
 Metric targets to apply: ${headerData.targetProfileLabel}.
 
 Positives to highlight:
@@ -32,7 +61,7 @@ Write polished text that I can paste into these two manager review boxes:
 Requirements:
 - Professional, warm, and human - not robotic and not overly corporate
 - Align with goals in business, development, and APS principles
-- Mention whether performance is on track or off track naturally
+- Be clear about how the year went overall, in plain language, without grading it
 - Use the associate self-review/context above when relevant, but do not copy it verbatim
 - When referencing a metric, include the metric value and its goal
 - This is a completed ${inputData.reviewYear} year-end review, so write in past tense when describing performance (use "was/were" not "is/are")
