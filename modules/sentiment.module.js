@@ -1170,6 +1170,291 @@
     }
 
     // Export all functions
+
+    /* ══════════════════════════════════════════════════════════════════════
+       KEPT ON PURPOSE. NOT WIRED UP.
+
+       The pre-modal sentiment upload flow: three file inputs, a paste modal,
+       and a snapshot save. The elements it reads (#sentimentPositiveFile,
+       #sentimentNegativePasteBtn, #saveAssociateSentimentSnapshotBtn and the
+       rest) were removed from index.html when the upload became a modal, so
+       nothing calls any of this and nothing can.
+
+       It is here because the sentiment work is coming back and this is the
+       shape it had. Kept, not deleted, at Scott's request.
+
+       If you are reviving it: the elements have to come back to index.html
+       first, and the listeners that used to bind these were in
+       bindSentimentHandlers in script.js. The current modal flow is separate
+       and lives in handleSentimentUploadSubmit, reading #sentimentUpload*.
+
+       Two things to know before trusting it:
+         - It has never run against the current data shapes. It predates the
+           modal rewrite and has not been exercised since.
+         - It is deliberately excluded from the app's dead-code sweeps, so no
+           orphan check will tell you when it rots.
+       ══════════════════════════════════════════════════════════════════════ */
+
+    function handleSentimentFileChange(fileType) {
+        const fileInput = document.getElementById(`sentiment${fileType}File`);
+        const statusDiv = document.getElementById(`sentiment${fileType}Status`);
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            statusDiv.textContent = 'No file selected';
+            statusDiv.style.color = '#666';
+            sentimentReports[fileType.toLowerCase()] = null;
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const fileName = file.name.toLowerCase();
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+        const isEmotions = fileType === 'Emotions';
+
+        statusDiv.textContent = `⏳ Processing ${file.name}...`;
+        statusDiv.style.color = '#ff9800';
+        showLoadingSpinner(`Processing ${escapeHtml(file.name)}...`);
+
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                let lines = [];
+
+                if (isExcel) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                    lines = csvContent.split('\n').filter(line => line.trim());
+                    if (isEmotions) {
+                        debugLog(`🎭 MANAGING EMOTIONS - Excel file converted to ${lines.length} lines`);
+                        debugLog('🎭 First 30 lines:', lines.slice(0, 30));
+                    }
+                } else {
+                    const content = e.target.result;
+                    lines = content.split('\n').filter(line => line.trim());
+                    if (isEmotions) {
+                        debugLog(`🎭 MANAGING EMOTIONS - Text file has ${lines.length} lines`);
+                    }
+                }
+
+                // Parse file
+                const report = parseSentimentFile(fileType, lines);
+                sentimentReports[fileType.toLowerCase()] = report;
+
+                if (isEmotions) {
+                    debugLog(`🎭 MANAGING EMOTIONS - Parsed result:`, {
+                        name: report.associateName,
+                        totalCalls: report.totalCalls,
+                        detected: report.callsDetected,
+                        percentage: report.percentage,
+                        phrasesCount: report.phrases.length,
+                        allPhrases: report.phrases
+                    });
+                } else {
+                    debugLog(`✅ Parsed ${fileType}:`, {
+                        name: report.associateName,
+                        totalCalls: report.totalCalls,
+                        detected: report.callsDetected,
+                        percentage: report.percentage,
+                        phrasesCount: report.phrases.length
+                    });
+                }
+
+                statusDiv.textContent = `✅ ${escapeHtml(report.associateName || 'Loaded')} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
+                statusDiv.style.color = '#4caf50';
+                syncSentimentSnapshotDateInputsFromReports();
+                hideLoadingSpinner();
+            } catch (error) {
+                statusDiv.textContent = `❌ Error parsing file`;
+                statusDiv.style.color = '#f44336';
+                console.error('File parsing error:', error);
+                hideLoadingSpinner();
+                showToast(`❌ Failed to parse ${fileType} file: ${error.message}`, 5000);
+            }
+        };
+
+        reader.onerror = () => {
+            statusDiv.textContent = '❌ Failed to read file';
+            statusDiv.style.color = '#f44336';
+            hideLoadingSpinner();
+            showToast('❌ Failed to read file', 5000);
+        };
+
+        if (isExcel) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file);
+        }
+    }
+
+    function openSentimentPasteModal(fileType) {
+        // Create modal backdrop
+        const backdrop = document.createElement('div');
+        backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+
+        // Create modal dialog
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background: var(--bg-surface); border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+
+        modal.innerHTML = `
+            <h2 style="margin-top: 0; color: var(--text-primary);">Paste ${fileType} Sentiment Data</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">Paste your CSV or Excel data below. Format: one entry per line, with columns for Speaker (A/C) and Phrase.</p>
+            <textarea id="pasteArea" style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 12px; resize: vertical;" placeholder="Paste data here..."></textarea>
+            <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="pasteCancelBtn" style="padding: 10px 20px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
+                <button id="pasteSubmitBtn" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Parse & Import</button>
+            </div>
+        `;
+
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+
+        // Get button references from the modal
+        const textarea = modal.querySelector('#pasteArea');
+        const cancelBtn = modal.querySelector('#pasteCancelBtn');
+        const submitBtn = modal.querySelector('#pasteSubmitBtn');
+
+        // Focus textarea
+        textarea.focus();
+
+        // Cancel button
+        cancelBtn.addEventListener('click', () => {
+            backdrop.remove();
+        });
+
+        // Submit button
+        submitBtn.addEventListener('click', () => {
+            const pastedText = textarea.value.trim();
+            if (!pastedText) {
+                alert('Please paste some data');
+                return;
+            }
+
+            const lines = pastedText.split('\n').filter(line => line.trim());
+            const statusDiv = document.getElementById(`sentiment${fileType}Status`);
+
+            statusDiv.textContent = `⏳ Processing pasted ${fileType.toLowerCase()} data...`;
+            statusDiv.style.color = '#ff9800';
+
+            try {
+                // Parse pasted data using existing parser
+                const report = parseSentimentFile(fileType, lines);
+                sentimentReports[fileType.toLowerCase()] = report;
+
+                // Update UI
+                syncSentimentSnapshotDateInputsFromReports();
+
+                // Show success status
+                const speakerCount = report.speakers ? (report.speakers.size ?? report.speakers.length ?? 0) : 0;
+                statusDiv.textContent = `✅ Parsed ${report.phrases.length} sentiment phrase(s) from ${speakerCount} speaker(s)`;
+                statusDiv.style.color = '#4CAF50';
+
+                // Close modal
+                backdrop.remove();
+            } catch (error) {
+                console.error('Error parsing pasted data:', error);
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+                statusDiv.style.color = '#f44336';
+            }
+        });
+
+        // Close on backdrop click
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                backdrop.remove();
+            }
+        });
+    }
+
+    function saveAssociateSentimentSnapshotFromCurrentReports() {
+        const { positive, negative, emotions } = sentimentReports;
+        if (!positive || !negative || !emotions) {
+            showToast('⚠️ Upload all 3 sentiment reports before saving a snapshot', 4000);
+            return;
+        }
+
+        ensureSentimentPhraseDatabaseDefaults();
+
+        const associateName = (positive.associateName || negative.associateName || emotions.associateName || '').trim();
+        if (!associateName) {
+            showToast('⚠️ Associate name not found in uploaded reports', 4000);
+            return;
+        }
+
+        const startInput = document.getElementById('sentimentSnapshotStart');
+        const endInput = document.getElementById('sentimentSnapshotEnd');
+        const startDate = normalizeDateStringForStorage(startInput?.value || positive.startDate || negative.startDate || emotions.startDate);
+        const endDate = normalizeDateStringForStorage(endInput?.value || positive.endDate || negative.endDate || emotions.endDate);
+
+        if (!startDate || !endDate) {
+            showToast('⚠️ Timeframe start and end are required', 4000);
+            return;
+        }
+
+        const sortByValue = (a, b) => b.value - a.value;
+        const toTopRows = (items) => items.slice(0, 5).map(item => ({
+            phrase: item.phrase,
+            value: item.value,
+            speaker: item.speaker || 'A'
+        }));
+
+        const positiveUsed = positive.phrases.filter(p => p.value > 0 && (p.speaker || 'A') === 'A').sort(sortByValue);
+        const negativeUsedA = negative.phrases.filter(p => p.value > 0 && p.speaker === 'A').sort(sortByValue);
+        const negativeUsedC = negative.phrases.filter(p => p.value > 0 && p.speaker === 'C').sort(sortByValue);
+        const emotionsUsed = emotions.phrases.filter(p => p.value > 0).sort(sortByValue);
+
+        const usedPositiveSet = new Set(positiveUsed.map(p => normalizePhraseForMatch(p.phrase)));
+        const positiveUnusedFromDb = (sentimentPhraseDatabase.positive?.A || [])
+            .filter(phrase => !usedPositiveSet.has(normalizePhraseForMatch(phrase)))
+            .slice(0, 8);
+
+        const snapshot = {
+            associateName,
+            timeframeStart: startDate,
+            timeframeEnd: endDate,
+            savedAt: new Date().toISOString(),
+            topPhrases: {
+                positiveA: toTopRows(positiveUsed),
+                negativeA: toTopRows(negativeUsedA),
+                negativeC: toTopRows(negativeUsedC),
+                emotions: toTopRows(emotionsUsed)
+            },
+            suggestions: {
+                positiveAdditions: positiveUnusedFromDb,
+                negativeAlternatives: (sentimentPhraseDatabase.positive?.A || []).slice(0, 8),
+                emotionCustomerCues: (sentimentPhraseDatabase.emotions?.C || []).slice(0, 8)
+            }
+        };
+
+        if (!associateSentimentSnapshots[associateName]) {
+            associateSentimentSnapshots[associateName] = [];
+        }
+
+        const existingIndex = associateSentimentSnapshots[associateName].findIndex(entry =>
+            entry.timeframeStart === startDate && entry.timeframeEnd === endDate
+        );
+
+        if (existingIndex >= 0) {
+            associateSentimentSnapshots[associateName][existingIndex] = snapshot;
+        } else {
+            associateSentimentSnapshots[associateName].push(snapshot);
+        }
+
+        associateSentimentSnapshots[associateName] = associateSentimentSnapshots[associateName]
+            .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
+            .slice(0, 200);
+
+        debugLog('💾 Saving sentiment snapshot:', { associateName, startDate, endDate, snapshot });
+        debugLog('📦 All snapshots after save:', associateSentimentSnapshots);
+
+        saveAssociateSentimentSnapshots();
+        populateDeleteSentimentDropdown();
+        renderSentimentDatabasePanel();
+        showToast(`✅ Saved sentiment snapshot for ${associateName} (${startDate} to ${endDate})`, 3000);
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.sentiment = {
         normalizePhraseList,
