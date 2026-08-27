@@ -527,16 +527,12 @@ function recordMetricLayer() {
         return out;
     });
 
-    record('metrics.module / the orphan second implementation, for comparison', () => {
-        const m = M().metrics;
-        const probes = [0, 18, 18.04, 92.46, 93, 426, 434.4, '', null];
-        const out = {};
-        metricKeys().forEach((k) => {
-            out[k] = probes.map((p) => JSON.stringify(p) + ' -> ' + String(m.formatMetricDisplay(k, p)));
-        });
-        out['__severity__'] = metricKeys().map((k) => k + ': ' + m.getMetricSeverity(k, 30));
-        return out;
-    });
+    cannotCover('metrics.module / the orphan second implementation',
+        'Deleted. metrics.module.js was never loaded by the app -- its only reference '
+        + 'was its own export line -- and it carried a second formatMetricDisplay whose '
+        + 'seconds and hours formatting differed from the live one in metric-trends. Two '
+        + 'test suites had been quietly scoring and formatting through it rather than '
+        + 'through what the app uses; both now point at the real sources.');
 }
 /* --- KPI scoring (tripwire: out of scope for change) --- */
 

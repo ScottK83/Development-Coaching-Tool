@@ -33,14 +33,13 @@ function loadWithRanking(t, weekly, ytd) {
     global.ytdData = ytd || {};
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
-    t.loadModule('modules/metrics.module.js');
     t.loadModule('modules/on-off-tracker.module.js');
     t.loadModule('modules/center-ranking.module.js');
     t.loadModule('modules/period-compare.module.js');
-    // on-off-tracker reaches for the global that script.js defines as a thin
-    // bridge onto the metrics module. Same bridge here, so the test scores
-    // through the real rating bands rather than a stub.
-    global.window.getMetricRatingScore = global.window.DevCoachModules.metrics.getMetricRatingScore;
+    // on-off-tracker reaches for the global that script.js:228 defines as a thin
+    // bridge onto metric-profiles. Same bridge here, so the test scores through
+    // the real rating bands rather than a stub.
+    global.window.getMetricRatingScore = global.window.DevCoachModules.metricProfiles.getRatingScore;
     return global.window.DevCoachModules.periodCompare;
 }
 

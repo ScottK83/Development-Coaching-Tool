@@ -8387,14 +8387,6 @@ function buildYearEndCopilotPrompt(inputData, supportData, headerData) {
     return delegated || '';
 }
 
-function setYearEndPromptButtonFeedback(button) {
-    return window.DevCoachModules?.yearEndComments?.setYearEndPromptButtonFeedback?.(button);
-}
-
-function copyYearEndPromptWithFallbacks(prompt, copilotWindow) {
-    return window.DevCoachModules?.yearEndComments?.copyYearEndPromptWithFallbacks?.(prompt, copilotWindow);
-}
-
 function generateYearEndPromptAndCopy() {
     return window.DevCoachModules?.yearEndComments?.generateYearEndPromptAndCopy?.();
 }
@@ -8578,16 +8570,8 @@ function recordAndRenderCoachingEvent(employeeName, weekEnding, coachedMetricKey
     return window.DevCoachModules?.coachingEmail?.recordAndRenderCoachingEvent?.(employeeName, weekEnding, coachedMetricKeys);
 }
 
-function showCoachingPromptCopiedState(button) {
-    return window.DevCoachModules?.coachingEmail?.showCoachingPromptCopiedState?.(button);
-}
-
 function revealCoachingOutlookSection() {
     return window.DevCoachModules?.coachingEmail?.revealCoachingOutlookSection?.();
-}
-
-function openCopilotForCoachingPrompt() {
-    return window.DevCoachModules?.coachingEmail?.openCopilotForCoachingPrompt?.();
 }
 
 function generateCoachingPromptAndCopy() {

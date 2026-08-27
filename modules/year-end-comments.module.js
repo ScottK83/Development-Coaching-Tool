@@ -488,31 +488,6 @@
         return delegated || '';
     }
 
-    function setYearEndPromptButtonFeedback(button) {
-        if (!button) return;
-        const originalText = button.textContent;
-        button.textContent = 'Copied + Opening Copilot';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1500);
-    }
-
-    function copyYearEndPromptWithFallbacks(prompt, copilotWindow) {
-        copyToClipboard(prompt, {
-            message: '📋 Year-end prompt copied. Paste into Copilot with Ctrl+V'
-        }).then((ok) => {
-            // The copy already reported itself. All that's left is getting the
-            // user to Copilot when the caller didn't already open a window.
-            if (copilotWindow) return;
-            if (ok) {
-                const url = _copilotUrl();
-                window.open(url, '_blank');
-            } else {
-                _openCopilotWithPrompt(prompt, 'Year-End Comments');
-            }
-        });
-    }
-
     function generateYearEndPromptAndCopy() {
         const inputData = getYearEndPromptInputs();
 
@@ -742,8 +717,6 @@
         buildYearEndPromptSupportData,
         resolveYearEndPromptHeaderData,
         buildYearEndCopilotPrompt,
-        setYearEndPromptButtonFeedback,
-        copyYearEndPromptWithFallbacks,
         generateYearEndPromptAndCopy,
         copyYearEndResponseToClipboard,
         focusYearEndResponseInput,

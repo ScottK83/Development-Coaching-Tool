@@ -482,26 +482,11 @@ Generate the coaching email for ${preferredName} now.`;
 
     // -- UI feedback helpers ---------------------------------------------------
 
-    function showCoachingPromptCopiedState(button) {
-        if (!button) return;
-        const originalText = button.textContent;
-        button.textContent = '\u2705 Copied to CoPilot';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1200);
-    }
-
     function revealCoachingOutlookSection() {
         const outlookSection = document.getElementById('coachingOutlookSection');
         if (!outlookSection) return;
         outlookSection.style.display = 'block';
         outlookSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    function openCopilotForCoachingPrompt() {
-        setTimeout(() => {
-            window.open(_copilotUrl(), '_blank');
-        }, 500);
     }
 
     // -- Main generate-and-copy flow -------------------------------------------
@@ -743,9 +728,7 @@ Generate the coaching email for ${preferredName} now.`;
         resolveCoachingPromptEmployeeRecord,
         buildLatestCoachingSummaryData,
         recordAndRenderCoachingEvent,
-        showCoachingPromptCopiedState,
         revealCoachingOutlookSection,
-        openCopilotForCoachingPrompt,
         generateCoachingPromptAndCopy,
         getCoachingOutlookGenerationInputs,
         generateOutlookEmailFromCoPilot,

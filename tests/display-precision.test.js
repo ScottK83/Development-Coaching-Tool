@@ -20,10 +20,24 @@ function loadProfiles(t) {
     t.installFakeBrowser();
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
-    t.loadModule('modules/metrics.module.js');
     global.METRICS_REGISTRY = global.window.METRICS_REGISTRY;
     const M = global.window.DevCoachModules;
-    return { mp: M.metricProfiles, metrics: M.metrics };
+    // The formatter the app actually uses is metric-trends.module.js:3263,
+    // mirrored here. This suite used to reach for metrics.module.js, an orphan
+    // the app never loaded whose seconds and hours formatting differed, which
+    // meant the one suite whose whole job is "judged as it is printed" was
+    // checking against something nobody prints. See AUDIT.md 2.10.
+    const metrics = {
+        formatMetricDisplay: function (key, value) {
+            const metric = global.window.METRICS_REGISTRY[key];
+            if (!metric) return String(value);
+            if (metric.unit === 'sec') return Math.round(value) + 's';
+            if (metric.unit === '%') return Number(value).toFixed(1) + '%';
+            if (metric.unit === 'hrs') return Number(value).toFixed(1) + ' hrs';
+            return String(Math.round(value));
+        }
+    };
+    return { mp: M.metricProfiles, metrics: metrics };
 }
 
 suite('display precision: a percentage is judged as it is printed', (t) => {
@@ -90,9 +104,9 @@ suite('display precision: the rating bands round the same way', (t) => {
     t.equal('and scores the 1 that is', mp.getRatingScore('scheduleAdherence', 92.44, 2026), 1);
 
     // AHT is whole seconds, so the boundary is a whole second.
-    t.equal('414.4 prints as 414 sec', metrics.formatMetricDisplay('aht', 414.4), '414 sec');
+    t.equal('414.4 prints as 414s', metrics.formatMetricDisplay('aht', 414.4), '414s');
     t.equal('and earns the 3', mp.getRatingScore('aht', 414.4, 2026), 3);
-    t.equal('414.6 rounds to 415', metrics.formatMetricDisplay('aht', 414.6), '415 sec');
+    t.equal('414.6 rounds to 415s', metrics.formatMetricDisplay('aht', 414.6), '415s');
     t.equal('and does not', mp.getRatingScore('aht', 414.6, 2026), 2);
 });
 

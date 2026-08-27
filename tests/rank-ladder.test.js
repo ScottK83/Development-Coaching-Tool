@@ -67,14 +67,23 @@ function loadRankings(t, weekly, ytd) {
     global.ytdData = ytd || {};
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
-    t.loadModule('modules/metrics.module.js');
     t.loadModule('modules/on-off-tracker.module.js');
     t.loadModule('modules/rank-projection.module.js');
     t.loadModule('modules/center-ranking.module.js');
     t.loadModule('modules/period-compare.module.js');
     const M = global.window.DevCoachModules;
-    global.window.getMetricRatingScore = M.metrics.getMetricRatingScore;
-    global.window.formatMetricDisplay = M.metrics.formatMetricDisplay;
+    global.window.getMetricRatingScore = M.metricProfiles.getRatingScore;
+    // The live formatter is metric-trends.module.js:3263. This mirrors its
+    // rules rather than borrowing the orphan metrics.module, which formatted
+    // seconds and hours differently. See AUDIT.md 2.10.
+    global.window.formatMetricDisplay = function (key, value) {
+        const metric = global.window.METRICS_REGISTRY[key];
+        if (!metric) return String(value);
+        if (metric.unit === 'sec') return Math.round(value) + 's';
+        if (metric.unit === '%') return Number(value).toFixed(1) + '%';
+        if (metric.unit === 'hrs') return Number(value).toFixed(1) + ' hrs';
+        return String(Math.round(value));
+    };
     global.METRICS_REGISTRY = global.window.METRICS_REGISTRY;
     global.window.getTeamMembersForWeek = () => [];
     global.window.getLatestWeeklyKey = () => null;
