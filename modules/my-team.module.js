@@ -765,12 +765,35 @@
                 `<div style="font-weight:700; color:#e65100;">📣 Team shout-out. ${count} ${count === 1 ? 'person' : 'people'}</div>` +
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
             `</div>` +
-            `<textarea id="myTeamShoutOutText" style="width:100%; min-height:240px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
+            // The preview carries the colour; the textarea carries the text.
+            // A textarea cannot hold markup, and the post is pasted into a
+            // channel that would show any markup literally, so the two are kept
+            // apart rather than one being made to do both jobs. Copy reads the
+            // textarea, so what lands in the channel is exactly what is typed
+            // here, colour or no colour.
+            `<div class="shoutout-legend">` +
+                `<span>Placing:</span>` +
+                `<span class="placement-tier placement-tier-first">#1</span>` +
+                `<span class="placement-tier placement-tier-top5">Top 5</span>` +
+                `<span class="placement-tier placement-tier-top10">Top 10</span>` +
+                `<span class="placement-tier placement-tier-top25">Top 25</span>` +
+                `<span style="margin-left:auto;">Colour is on screen only. The copied post is plain text.</span>` +
+            `</div>` +
+            `<div id="myTeamShoutOutPreview" class="shoutout-preview">${highlightShoutOut(text)}</div>` +
+            `<label for="myTeamShoutOutText" style="display:block; font-size:0.78em; color:var(--text-tertiary); margin:10px 0 4px;">Edit before copying</label>` +
+            `<textarea id="myTeamShoutOutText" style="width:100%; min-height:160px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
             `<div style="display:flex; gap:8px; margin-top:10px;">` +
                 `<button type="button" id="myTeamShoutOutCopy" style="background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
                 `<button type="button" id="myTeamShoutOutRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Reword</button>` +
             `</div>` +
         `</div>`;
+
+        // Edits have to show up in the preview, or the colour is describing a
+        // post that no longer exists.
+        const preview = slot.querySelector('#myTeamShoutOutPreview');
+        slot.querySelector('#myTeamShoutOutText')?.addEventListener('input', function () {
+            if (preview) preview.innerHTML = highlightShoutOut(this.value);
+        });
 
         slot.querySelector('#myTeamShoutOutCopy')?.addEventListener('click', () => {
             const value = slot.querySelector('#myTeamShoutOutText')?.value || '';
@@ -783,6 +806,13 @@
         // from pools, so this is just asking for another draw — worth having a
         // button for, since the alternative was leaving the page and coming back.
         slot.querySelector('#myTeamShoutOutRegen')?.addEventListener('click', () => renderShoutOut());
+    }
+
+    // Placement colouring lives in celebrations, which owns the placement
+    // wording. If it is missing, the preview simply shows plain escaped text.
+    function highlightShoutOut(text) {
+        const fn = mods().celebrations?.highlightPlacements;
+        return typeof fn === 'function' ? fn(text) : escapeHtml(String(text || ''));
     }
 
     function initializeMyTeam() {

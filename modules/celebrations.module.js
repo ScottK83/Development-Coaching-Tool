@@ -1972,11 +1972,53 @@
     // UI - Badge helpers
     // =====================
 
+    /**
+     * Where a placing sits, as one word. The boundaries live here and nowhere
+     * else, so the badge on the Celebrations tab and the highlighting in the
+     * shout-out cannot come to different conclusions about the same rank.
+     */
+    function placementTier(rank) {
+        var n = parseInt(rank, 10);
+        if (!isFinite(n) || n < 1) return null;
+        if (n === 1) return 'first';
+        if (n <= 5) return 'top5';
+        if (n <= 10) return 'top10';
+        if (n <= 25) return 'top25';
+        return null;
+    }
+
     function getTierBadge(tier) {
-        if (tier === 1) return { bg: '#ffd700', color: '#7c5c00', text: '#1', glow: '0 0 8px rgba(255,215,0,0.6)' };
-        if (tier <= 5) return { bg: '#c0c0c0', color: '#444', text: 'Top 5', glow: '0 0 6px rgba(192,192,192,0.5)' };
-        if (tier <= 10) return { bg: '#cd7f32', color: '#fff', text: 'Top 10', glow: '0 0 6px rgba(205,127,50,0.4)' };
+        var band = placementTier(tier);
+        if (band === 'first') return { bg: '#ffd700', color: '#7c5c00', text: '#1', glow: '0 0 8px rgba(255,215,0,0.6)' };
+        if (band === 'top5') return { bg: '#c0c0c0', color: '#444', text: 'Top 5', glow: '0 0 6px rgba(192,192,192,0.5)' };
+        if (band === 'top10') return { bg: '#cd7f32', color: '#fff', text: 'Top 10', glow: '0 0 6px rgba(205,127,50,0.4)' };
         return { bg: '#667eea', color: '#fff', text: 'Top ' + tier, glow: 'none' };
+    }
+
+    // The placings the post actually writes: "#1 in the Call Center",
+    // "2nd best in the Call Center", either of those behind "Tied for".
+    var PLACEMENT_RE = /(Tied for )?(?:#(\d+)|(\d+)(?:st|nd|rd|th) best) in the Call Center/g;
+
+    /**
+     * The shout-out text with its placings wrapped for colour.
+     *
+     * This is display only. The post itself stays plain text, because it is
+     * pasted into a channel where markup would either be stripped or shown
+     * literally, and because the thing the reader copies should be the thing
+     * they saw. So the caller renders this beside the textarea rather than
+     * inside it.
+     *
+     * Escaping happens first and the pattern is matched against the escaped
+     * text, which is safe because a placing contains nothing that escaping
+     * rewrites.
+     */
+    function highlightPlacements(text) {
+        var escaped = _escapeHtml(String(text == null ? '' : text));
+        return escaped.replace(PLACEMENT_RE, function (match, tied, hashRank, ordinalRank) {
+            var band = placementTier(hashRank || ordinalRank);
+            if (!band) return match;
+            return '<span class="placement-tier placement-tier-' + band + '">' + match + '</span>';
+        });
     }
 
     // =====================
@@ -2521,6 +2563,8 @@
         describePlacement: describePlacement,
         centerPlacement: centerPlacement,
         tierBadge: tierBadge,
+        placementTier: placementTier,
+        highlightPlacements: highlightPlacements,
         rotator: rotator,
         perfectSurveyWeek: perfectSurveyWeek,
         perfectSurveyLine: perfectSurveyLine,

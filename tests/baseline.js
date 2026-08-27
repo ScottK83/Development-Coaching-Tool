@@ -1040,6 +1040,34 @@ function recordTextGenerators() {
         return out;
     });
 
+    record('celebrations / placement highlighting (display only)', () => {
+        const c = M().celebrations;
+        // Pick the first window that actually produces placings, so this entry
+        // records real highlighting rather than an empty post.
+        let post = '';
+        c.listShoutOutWindows().forEach((w) => {
+            if (post) return;
+            try {
+                const resolved = c.resolveShoutOutWindow(w.id);
+                const k = (resolved && resolved.key) || w.key;
+                const detected = c.detectCelebrations(k);
+                const text = c.generateAllShoutOuts(detected.celebrations || [], detected.dateRange || '', k);
+                if (String(text).indexOf('in the Call Center') !== -1) post = text;
+            } catch (err) { /* try the next window */ }
+        });
+        const highlighted = c.highlightPlacements(post);
+        return {
+            tiers: [1, 2, 5, 6, 10, 11, 25, 26, null].map((r) => String(r) + ' -> ' + String(c.placementTier(r))),
+            // The post itself must be untouched by any of this.
+            postIsUnchangedByHighlighting: highlighted.replace(/<\/?span[^>]*>/g, '')
+                === post.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;'),
+            spansOpened: (highlighted.match(/<span/g) || []).length,
+            spansClosed: (highlighted.match(/<\/span>/g) || []).length,
+            sample: highlighted.split('\n').filter((l) => l.indexOf('placement-tier') !== -1).slice(0, 3)
+        };
+    });
+
     record('celebrations / placement and tie wording', () => {
         const c = M().celebrations;
         return {

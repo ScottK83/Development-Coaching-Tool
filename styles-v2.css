@@ -2046,3 +2046,60 @@ turning "background: #f0f9ff" into
 [data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-surface-sunken); }
 [data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #4b5e7a; }
+
+/* ==========================================================================
+   Placement highlighting in the team shout-out
+
+   Colour follows the medal language the Celebrations tab already uses for the
+   same tiers: gold for first, silver for a top five, bronze for a top ten, and
+   a violet for the rest of the top twenty five.
+
+   Deliberately not green/blue/amber. In this app those already mean "meeting
+   goal", "score 2" and "watch area", and a placing is a different claim from a
+   goal: somebody can be third in the call center and still short of target.
+   Colouring a placing green would let the reader infer a verdict nobody made.
+
+   Display only. The text copied to the channel stays plain.
+   ========================================================================== */
+
+.placement-tier {
+    border-radius: 4px;
+    padding: 0 4px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.placement-tier-first  { background: #fff4c2; color: #7a5b00; box-shadow: inset 0 0 0 1px #e8c860; }
+.placement-tier-top5   { background: #eceff1; color: #37474f; box-shadow: inset 0 0 0 1px #b0bec5; }
+.placement-tier-top10  { background: #f8e5d2; color: #8a4b17; box-shadow: inset 0 0 0 1px #d9a273; }
+.placement-tier-top25  { background: #ede7f6; color: #4527a0; box-shadow: inset 0 0 0 1px #b39ddb; }
+
+/* The light tints go muddy on a dark ground, so dark mode keeps the same four
+   hues but carries them on the text and a low-alpha wash instead. */
+[data-theme="dark"] .placement-tier-first  { background: rgba(255, 213, 79, 0.16); color: #ffd54f; box-shadow: inset 0 0 0 1px rgba(255, 213, 79, 0.45); }
+[data-theme="dark"] .placement-tier-top5   { background: rgba(207, 216, 220, 0.16); color: #cfd8dc; box-shadow: inset 0 0 0 1px rgba(207, 216, 220, 0.4); }
+[data-theme="dark"] .placement-tier-top10  { background: rgba(255, 167, 106, 0.16); color: #ffa76a; box-shadow: inset 0 0 0 1px rgba(255, 167, 106, 0.4); }
+[data-theme="dark"] .placement-tier-top25  { background: rgba(179, 157, 219, 0.18); color: #d1c4e9; box-shadow: inset 0 0 0 1px rgba(179, 157, 219, 0.45); }
+
+.shoutout-preview {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    font-size: 0.9em;
+    color: var(--text-primary);
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.shoutout-legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 0.78em;
+    color: var(--text-tertiary);
+    margin: 8px 0 4px;
+}
