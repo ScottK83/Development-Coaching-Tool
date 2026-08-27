@@ -64,7 +64,11 @@
         }
 
         if (ok) {
-            flashButton(opts.button, '✓ Copied');
+            // successLabel lets a caller keep its own wording on the button while
+            // still flashing it only once the copy has actually resolved. Three
+            // call sites used to flash their own label before the copy ran, so a
+            // failed copy still read as a success.
+            flashButton(opts.button, opts.successLabel || '✓ Copied');
             if (!opts.silent) showToast(opts.message || '📋 Copied to clipboard', 2500);
         } else {
             flashButton(opts.button, 'Copy failed');

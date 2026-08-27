@@ -527,13 +527,20 @@ Generate the coaching email for ${preferredName} now.`;
         window.latestCoachingSummaryData = summaryData;
 
         recordAndRenderCoachingEvent(employeeName, weekEnding || summaryData.periodLabel, coachedMetricKeys);
-        copyToClipboard(promptArea.value, { silent: true }).then((ok) => {
-            if (!ok) promptArea.select();
-        });
-
-        showCoachingPromptCopiedState(button);
+        // The Outlook panel is revealed straight away: it is the next step
+        // whatever the clipboard does, and hiding it behind a copy would punish
+        // the user for a browser setting.
         revealCoachingOutlookSection();
-        openCopilotForCoachingPrompt();
+
+        // Copilot opens inside this click rather than 500ms later, so the popup
+        // keeps its user activation, and the button now flashes only once the
+        // copy has resolved. It used to say "Copied to CoPilot" regardless.
+        window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(promptArea.value, {
+            button,
+            successLabel: '✅ Copied to CoPilot',
+            silent: true,
+            onCopyFailed: () => promptArea.select()
+        });
     }
 
     // -- Outlook generation ----------------------------------------------------

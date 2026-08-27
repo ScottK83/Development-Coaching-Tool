@@ -130,12 +130,12 @@ function initializeRedFlag() {
 // ============================================
 
 
-    // One place the Copilot address is read from. It was hardcoded here and
-    // in three other modules; a prior cleanup was recorded as finished and
-    // was not (AUDIT.md, Appendix A, X-1).
-    function copilotUrl() {
-        return window.DevCoachModules.sharedUtils.copilotUrl();
+    // Opens the Copilot tab inside the click, then copies, then reports what
+    // actually happened. See sharedUtils.copyPromptAndOpenCopilot.
+    function handOffToCopilot(text, options) {
+        return window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(text, options);
     }
+
 function populateFollowUpTodoTypeDropdown() {
     const select = document.getElementById('followUpTodoType');
     if (!select) return;
@@ -909,9 +909,9 @@ function copySurveyPromptAndOpenCopilot() {
     const promptDisplay = document.getElementById('surveyPromptDisplay');
     if (!promptDisplay?.value) return;
 
-    copyToClipboard(promptDisplay.value, { message: '📋 Prompt copied — opening Copilot' }).then((ok) => {
-        if (ok) window.open(copilotUrl(), '_blank');
-        else promptDisplay.select();
+    handOffToCopilot(promptDisplay.value, {
+        message: '📋 Prompt copied, opening Copilot',
+        onCopyFailed: () => promptDisplay.select()
     });
 }
 

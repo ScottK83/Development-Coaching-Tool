@@ -876,12 +876,18 @@ function saveMetricsPreviewEdits() {
  * if (analysis.trendingDown) console.log(`Random focus: ${analysis.trendingDown.label}`);
  */
 
-    // One place the Copilot address is read from. It was hardcoded here and
-    // in three other modules; a prior cleanup was recorded as finished and
-    // was not (AUDIT.md, Appendix A, X-1).
+    // Opens the Copilot tab inside the click, then copies, then reports what
+    // actually happened. See sharedUtils.copyPromptAndOpenCopilot.
+    function handOffToCopilot(text, options) {
+        return window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(text, options);
+    }
+
+    // Still needed here for the prompt panel, which links to Copilot in text
+    // rather than opening it.
     function copilotUrl() {
         return window.DevCoachModules.sharedUtils.copilotUrl();
     }
+
 function getMetricBandByUnit(metricKey, bands = { percent: 2, sec: 15, hrs: 1, fallback: 2 }) {
     const unit = METRICS_REGISTRY[metricKey]?.unit;
     if (unit === 'sec') return bands.sec;
@@ -1673,9 +1679,9 @@ function attachTrendTipsModalHandlers(options) {
     document.getElementById('copyPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('copilotPromptDisplay');
         if (!textarea) return;
-        copyToClipboard(textarea.value, { message: '📋 Prompt copied. Opening Copilot' }).then((ok) => {
-            if (ok) window.open(copilotUrl(), '_blank');
-            else textarea.select();
+        handOffToCopilot(textarea.value, {
+            message: '📋 Prompt copied. Opening Copilot',
+            onCopyFailed: () => textarea.select()
         });
     });
 
@@ -2922,13 +2928,19 @@ function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboa
                     if (onClipboardReady) onClipboardReady();
                 }).catch(err2 => {
                     console.error('Image clipboard error:', err2);
+                    // Say what happened. Both success paths toast, and this one
+                    // used to drop a file into the downloads folder in silence,
+                    // which reads exactly like a copy that worked until you go
+                    // to paste it. Firefox and Safari take this path routinely.
                     downloadImageFallback(pngBlob, empName, period);
+                    showToast('Image saved to your downloads. Attach it to the email, the clipboard would not take it.', 4000);
                     if (onClipboardReady) onClipboardReady();
                 });
             });
         } else {
             if (window.DEBUG) console.log('Clipboard API not available, downloading instead');
             downloadImageFallback(pngBlob, empName, period);
+            showToast('Image saved to your downloads. Attach it to the email, the clipboard would not take it.', 4000);
             if (onClipboardReady) onClipboardReady();
         }
     };
@@ -3868,9 +3880,9 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period
 
     document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('teamTrendPromptDisplay');
-        copyToClipboard(textarea.value, { message: '📋 Team prompt copied. Opening Copilot' }).then((ok) => {
-            if (ok) window.open(copilotUrl(), '_blank');
-            else textarea.select();
+        handOffToCopilot(textarea.value, {
+            message: '📋 Team prompt copied. Opening Copilot',
+            onCopyFailed: () => textarea.select()
         });
     });
 

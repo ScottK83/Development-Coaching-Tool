@@ -15,10 +15,6 @@ ${transcript}
 `;
     }
 
-    function _copilotUrl() {
-        return window.DevCoachModules.sharedUtils.copilotUrl();
-    }
-
     function buildCallDetailLines(entry) {
         const context = window.DevCoachModules?.callTranscript?.buildCallContextLines;
         const extra = typeof context === 'function' ? context(entry.transcript) : [];
@@ -87,33 +83,34 @@ Requirements:
 - Return ONLY the final email body text.`;
     }
 
-    function setPromptButtonFeedback(button) {
-        if (!button) return;
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied + Opening Copilot';
-        setTimeout(() => {
-            button.textContent = originalText;
-        }, 1500);
-    }
-
+    /**
+     * Start the Copilot handoff for this call.
+     *
+     * The returned ok means "there was a prompt and the handoff began", which
+     * is what the caller uses it for: deciding whether to reveal the Outlook
+     * panel. It is deliberately synchronous, because that decision cannot wait
+     * on the clipboard.
+     *
+     * What is no longer synchronous is the claim of success. This used to flash
+     * "Copied + Opening Copilot" on the button before the copy ran and then
+     * discard the copy's result entirely, so a blocked clipboard looked exactly
+     * like a successful one. The label is the same; it now appears only once the
+     * copy has actually landed, and says "Copy failed" when it has not.
+     */
     function copyPromptAndOpenCopilot(options = {}) {
         const prompt = String(options.prompt || '');
         if (!prompt.trim()) {
             return { ok: false, reason: 'missing-prompt' };
         }
 
-        setPromptButtonFeedback(options.button);
-
-        const openWindow = typeof options.openWindow === 'function'
-            ? options.openWindow
-            : (url, target) => window.open(url, target);
-        const copilotWindow = openWindow(_copilotUrl(), '_blank');
-
-        copyToClipboard(prompt, {
-            message: '📋 Call listening prompt copied. Paste into Copilot with Ctrl+V'
+        const handoff = window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(prompt, {
+            button: options.button,
+            successLabel: '✅ Copied + Opening Copilot',
+            message: '📋 Call listening prompt copied. Paste into Copilot with Ctrl+V',
+            openWindow: options.openWindow
         });
 
-        return { ok: true, copilotWindow };
+        return { ok: true, handoff };
     }
 
     function buildOutlookSubject(employeeName, callDate, getEmployeeNickname) {

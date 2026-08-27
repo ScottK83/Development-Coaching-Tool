@@ -1187,12 +1187,12 @@
     }
 
 
-    // One place the Copilot address is read from. It was hardcoded here and
-    // in three other modules; a prior cleanup was recorded as finished and
-    // was not (AUDIT.md, Appendix A, X-1).
-    function copilotUrl() {
-        return window.DevCoachModules.sharedUtils.copilotUrl();
+    // Opens the Copilot tab inside the click, then copies, then reports what
+    // actually happened. See sharedUtils.copyPromptAndOpenCopilot.
+    function handOffToCopilot(text, options) {
+        return window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(text, options);
     }
+
     function populateSentimentAssociateDropdown() {
         const select = document.getElementById('sentimentUploadAssociate');
         if (!select) return;
@@ -1426,9 +1426,7 @@
             return;
         }
 
-        copyToClipboard(prompt, { message: '📋 CoPilot prompt copied. Opening CoPilot' }).then((ok) => {
-            if (ok) setTimeout(() => window.open(copilotUrl(), '_blank'), 500);
-        });
+        handOffToCopilot(prompt, { message: '📋 CoPilot prompt copied. Opening CoPilot' });
     }
 
     // Export all functions

@@ -102,9 +102,70 @@
     function copilotUrl() {
         return (window.DevCoachConstants && window.DevCoachConstants.COPILOT_URL) || 'https://copilot.microsoft.com';
     }
+    /**
+     * Hand a prompt over to Copilot: open the tab, put the text on the
+     * clipboard, and report what actually happened.
+     *
+     * The window opens FIRST, synchronously, inside the click that called
+     * this. That ordering is the whole point of the function. A popup opened
+     * after an awaited clipboard write has usually lost its user activation
+     * and gets blocked, which is what five of the previous call sites did:
+     * copyToClipboard(...).then(ok => window.open(...)). The same constraint
+     * is documented for the clipboard write itself in center-ranking.
+     *
+     * Nothing here reports success it has not seen. The button flashes after
+     * the copy resolves and says what the copy did, and if the popup was
+     * blocked the caller is told rather than left with text on the clipboard
+     * and no tab to paste it into.
+     *
+     * Resolves { ok, copilotWindow, popupBlocked }. Never rejects.
+     */
+    function copyPromptAndOpenCopilot(text, options) {
+        var opts = options || {};
+        var value = String(text == null ? '' : text);
+
+        if (!value.trim()) {
+            if (typeof window.showToast === 'function') window.showToast('Nothing to copy yet.', 2500);
+            return Promise.resolve({ ok: false, copilotWindow: null, popupBlocked: false });
+        }
+
+        var openWindow = typeof opts.openWindow === 'function'
+            ? opts.openWindow
+            : function (url, target) { return window.open(url, target); };
+
+        var copilotWindow = null;
+        try {
+            copilotWindow = openWindow(copilotUrl(), '_blank');
+        } catch (err) {
+            copilotWindow = null;
+        }
+        var popupBlocked = !copilotWindow;
+
+        var copy = typeof window.copyToClipboard === 'function'
+            ? window.copyToClipboard(value, {
+                message: opts.message,
+                button: opts.button,
+                successLabel: opts.successLabel,
+                silent: opts.silent
+            })
+            : Promise.resolve(false);
+
+        return Promise.resolve(copy).then(function (ok) {
+            if (!ok && typeof opts.onCopyFailed === 'function') {
+                try { opts.onCopyFailed(); } catch (err) { /* a recovery path may not apply */ }
+            }
+            // Only worth saying when the copy worked: if the copy failed the
+            // user already has a louder problem and a longer toast about it.
+            if (ok && popupBlocked && typeof window.showToast === 'function') {
+                window.showToast('Copied, but the Copilot tab was blocked. Open Copilot and press Ctrl+V.', 5000);
+            }
+            return { ok: ok, copilotWindow: copilotWindow, popupBlocked: popupBlocked };
+        });
+    }
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.sharedUtils = {
         copilotUrl: copilotUrl,
+        copyPromptAndOpenCopilot: copyPromptAndOpenCopilot,
         toNonEmptyString,
         joinWithConjunction,
         escapeHtml,

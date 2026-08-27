@@ -858,10 +858,28 @@ content decision and is left open.
 them offered a callback on Hold Time, against a standing rule. It is gone, and
 `tests/tips-pool.test.js` now fails if it comes back.
 
-### 3. Copilot loop — 2.4
+### 3. Copilot loop — 2.4  ◐ PARTLY DONE (pass 3)
 Four prompt idioms, three paste-back contracts, five email builders, five copy/open orderings.
 **If this is wrong:** a prompt loses a data block, or an email is built with the wrong CC.
 The CC is already silently empty everywhere (2.7).
+
+**Outcome so far.** The Copilot address went from twelve copies to two (constants plus one
+fallback in `sharedUtils`), guarded by `tests/copilot-url.test.js`. The five copy-then-open
+orderings became one `sharedUtils.copyPromptAndOpenCopilot`, which opens the tab inside the
+click to keep user activation, copies, and reports what actually happened. Three sites that
+flashed "Copied" before the copy resolved now flash after it, with their own wording kept.
+A blocked popup is now reported instead of leaving the user with a clipboard and no tab.
+
+**Still open in this area, deliberately:** the four prompt-construction idioms and the three
+paste-back contracts. Those are not drift. Year-End parses `Box 1 / Box 2`, Survey Feedback
+parses on the input side, and Mid-Year specifies a format nothing consumes; consolidating them
+would change what the AI is asked for and what is accepted back, which is a content decision.
+
+**Newly dead, created by this pass, not deleted:** `showCoachingPromptCopiedState` and
+`openCopilotForCoachingPrompt` (coaching-email, plus their `script.js` wrappers),
+`setYearEndPromptButtonFeedback` and `copyYearEndPromptWithFallbacks` (year-end-comments).
+Each existed only to serve the flow this pass replaced. Listed rather than removed, per the
+rule that nothing gets deleted without sign-off.
 
 ### 4. Copy to clipboard and button flash — 2.6
 Six bypasses of a well-tested shared helper, two degrading silently, three button flashes

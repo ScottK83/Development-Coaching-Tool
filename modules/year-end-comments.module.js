@@ -530,10 +530,21 @@
         }
 
         inputData.promptArea.value = prompt;
-        setYearEndPromptButtonFeedback(inputData.button);
 
-        const copilotWindow = window.open(_copilotUrl(), '_blank');
-        copyYearEndPromptWithFallbacks(prompt, copilotWindow);
+        // Same three outcomes as before, decided on facts rather than in
+        // advance: the button used to say "Copied + Opening Copilot" before the
+        // copy had run. The last-resort dialog still fires when neither the tab
+        // nor the clipboard worked, which is the only case where the user would
+        // otherwise be left with nothing.
+        window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(prompt, {
+            button: inputData.button,
+            successLabel: 'Copied + Opening Copilot',
+            message: '📋 Year-end prompt copied. Paste into Copilot with Ctrl+V'
+        }).then(function (result) {
+            if (!result.ok && result.popupBlocked) {
+                _openCopilotWithPrompt(prompt, 'Year-End Comments');
+            }
+        });
     }
 
     /* ──────────────────────────────────────────────
