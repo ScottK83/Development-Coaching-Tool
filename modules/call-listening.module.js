@@ -15,6 +15,10 @@ ${transcript}
 `;
     }
 
+    function _copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
+
     function buildCallDetailLines(entry) {
         const context = window.DevCoachModules?.callTranscript?.buildCallContextLines;
         const extra = typeof context === 'function' ? context(entry.transcript) : [];
@@ -103,7 +107,7 @@ Requirements:
         const openWindow = typeof options.openWindow === 'function'
             ? options.openWindow
             : (url, target) => window.open(url, target);
-        const copilotWindow = openWindow(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
+        const copilotWindow = openWindow(_copilotUrl(), '_blank');
 
         copyToClipboard(prompt, {
             message: '📋 Call listening prompt copied. Paste into Copilot with Ctrl+V'

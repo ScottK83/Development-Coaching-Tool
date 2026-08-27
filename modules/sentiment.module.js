@@ -1186,6 +1186,13 @@
         if (modal) modal.style.display = 'none';
     }
 
+
+    // One place the Copilot address is read from. It was hardcoded here and
+    // in three other modules; a prior cleanup was recorded as finished and
+    // was not (AUDIT.md, Appendix A, X-1).
+    function copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
     function populateSentimentAssociateDropdown() {
         const select = document.getElementById('sentimentUploadAssociate');
         if (!select) return;
@@ -1420,7 +1427,7 @@
         }
 
         copyToClipboard(prompt, { message: '📋 CoPilot prompt copied. Opening CoPilot' }).then((ok) => {
-            if (ok) setTimeout(() => window.open('https://copilot.microsoft.com', '_blank'), 500);
+            if (ok) setTimeout(() => window.open(copilotUrl(), '_blank'), 500);
         });
     }
 

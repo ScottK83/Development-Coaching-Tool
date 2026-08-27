@@ -875,6 +875,13 @@ function saveMetricsPreviewEdits() {
  * if (analysis.weakest) console.log(`Weakest: ${analysis.weakest.label}`);
  * if (analysis.trendingDown) console.log(`Random focus: ${analysis.trendingDown.label}`);
  */
+
+    // One place the Copilot address is read from. It was hardcoded here and
+    // in three other modules; a prior cleanup was recorded as finished and
+    // was not (AUDIT.md, Appendix A, X-1).
+    function copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
 function getMetricBandByUnit(metricKey, bands = { percent: 2, sec: 15, hrs: 1, fallback: 2 }) {
     const unit = METRICS_REGISTRY[metricKey]?.unit;
     if (unit === 'sec') return bands.sec;
@@ -1667,7 +1674,7 @@ function attachTrendTipsModalHandlers(options) {
         const textarea = document.getElementById('copilotPromptDisplay');
         if (!textarea) return;
         copyToClipboard(textarea.value, { message: '📋 Prompt copied. Opening Copilot' }).then((ok) => {
-            if (ok) window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
+            if (ok) window.open(copilotUrl(), '_blank');
             else textarea.select();
         });
     });
@@ -1744,7 +1751,7 @@ function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, foc
         <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
             <h4 style="color: var(--text-primary); margin-top: 0;">🤖 CoPilot Prompt</h4>
             <p style="color: var(--text-secondary); font-size: 0.9em; margin: 0 0 10px 0;">
-                Copy this prompt and paste it into <strong><a href="https://copilot.microsoft.com" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
+                Copy this prompt and paste it into <strong><a href="${copilotUrl()}" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
             </p>
             <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${copilotPrompt}</textarea>
             <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
@@ -3862,7 +3869,7 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period
     document.getElementById('copyTeamTrendPromptBtn')?.addEventListener('click', () => {
         const textarea = document.getElementById('teamTrendPromptDisplay');
         copyToClipboard(textarea.value, { message: '📋 Team prompt copied. Opening Copilot' }).then((ok) => {
-            if (ok) window.open('https://copilot.microsoft.com', '_blank');
+            if (ok) window.open(copilotUrl(), '_blank');
             else textarea.select();
         });
     });

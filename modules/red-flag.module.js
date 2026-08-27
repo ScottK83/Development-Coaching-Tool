@@ -129,6 +129,13 @@ function initializeRedFlag() {
 // TODO TYPE DROPDOWN (DATA-DRIVEN)
 // ============================================
 
+
+    // One place the Copilot address is read from. It was hardcoded here and
+    // in three other modules; a prior cleanup was recorded as finished and
+    // was not (AUDIT.md, Appendix A, X-1).
+    function copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
 function populateFollowUpTodoTypeDropdown() {
     const select = document.getElementById('followUpTodoType');
     if (!select) return;
@@ -903,7 +910,7 @@ function copySurveyPromptAndOpenCopilot() {
     if (!promptDisplay?.value) return;
 
     copyToClipboard(promptDisplay.value, { message: '📋 Prompt copied — opening Copilot' }).then((ok) => {
-        if (ok) window.open('https://copilot.microsoft.com', '_blank');
+        if (ok) window.open(copilotUrl(), '_blank');
         else promptDisplay.select();
     });
 }

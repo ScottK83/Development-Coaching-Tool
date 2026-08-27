@@ -349,10 +349,17 @@ Please generate the coaching email now with HIGH ENERGY celebrating our top perf
         copyToClipboard(copilotPrompt, {
             message: '📋 Group email prompt copied. Paste into CoPilot with Ctrl+V'
         }).then((ok) => {
-            if (ok) window.open('https://copilot.microsoft.com', '_blank');
+            if (ok) window.open(copilotUrl(), '_blank');
         });
     }
 
+
+    // One place the Copilot address is read from. It was hardcoded here and
+    // in three other modules; a prior cleanup was recorded as finished and
+    // was not (AUDIT.md, Appendix A, X-1).
+    function copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
     async function generateTrendCoachingEmail(context = {}) {
         const employeeName = context.selectedEmployeeName || '';
         if (employeeName) {

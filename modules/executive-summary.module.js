@@ -63,6 +63,10 @@
         return typeof window.formatWeekLabel === 'function' ? window.formatWeekLabel(weekKey) : weekKey;
     }
 
+    function _copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
+
     function formatMetricDisplay(key, value) {
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
     }
@@ -640,7 +644,7 @@
         // deep-link: auto-submitting a large pre-filled query on a fresh page
         // load is a strong bot signal and was triggering Cloudflare bot
         // challenges (error 600010) on copilot.microsoft.com.
-        var copilotUrl = (window.DevCoachConstants && window.DevCoachConstants.COPILOT_URL) || 'https://copilot.microsoft.com';
+        var copilotUrl = _copilotUrl();
 
         // Always copy prompt to clipboard first, then open Copilot
         copyToClipboard(prompt, { message: '\ud83d\udccb Prompt copied \u2014 paste it in CoPilot with Ctrl+V' });
@@ -651,7 +655,7 @@
         if (!windowRef) {
             var tempDiv = document.createElement('div');
             tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-surface); padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
-            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="https://copilot.microsoft.com" target="_blank">copilot.microsoft.com</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
+            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="' + copilotUrl + '" target="_blank">' + copilotUrl.split('//').pop() + '</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
             document.body.appendChild(tempDiv);
         }
     }

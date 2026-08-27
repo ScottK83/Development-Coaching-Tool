@@ -500,7 +500,7 @@ Generate the coaching email for ${preferredName} now.`;
 
     function openCopilotForCoachingPrompt() {
         setTimeout(() => {
-            window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
+            window.open(_copilotUrl(), '_blank');
         }, 500);
     }
 
@@ -611,6 +611,10 @@ Generate the coaching email for ${preferredName} now.`;
     // only appended names and relied on resetCoachingEmailUiState having written
     // the placeholder first; the visible result is the same either way, but this
     // no longer depends on a caller several steps earlier having done its part.
+    function _copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
+
     function populateCoachingEmployeeSelectOptions(select, employees) {
         window.DevCoachModules.associatePicker.populateSelect(select, employees);
     }

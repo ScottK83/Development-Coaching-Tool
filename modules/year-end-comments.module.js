@@ -6,6 +6,10 @@
      * ────────────────────────────────────────────── */
     function _showToast(msg, ms) { return window.showToast(msg, ms); }
     function _getYearEndEmployees() { return window.getYearEndEmployees(); }
+    function _copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
+
     function _picker() { return window.DevCoachModules.associatePicker; }
     function _getLatestYearPeriodForEmployee(name, year) { return window.getLatestYearPeriodForEmployee(name, year); }
     function _getYearEndDraftState(name, year) { return window.getYearEndDraftState(name, year); }
@@ -501,7 +505,7 @@
             // user to Copilot when the caller didn't already open a window.
             if (copilotWindow) return;
             if (ok) {
-                const url = window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com';
+                const url = _copilotUrl();
                 window.open(url, '_blank');
             } else {
                 _openCopilotWithPrompt(prompt, 'Year-End Comments');
@@ -528,7 +532,7 @@
         inputData.promptArea.value = prompt;
         setYearEndPromptButtonFeedback(inputData.button);
 
-        const copilotWindow = window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
+        const copilotWindow = window.open(_copilotUrl(), '_blank');
         copyYearEndPromptWithFallbacks(prompt, copilotWindow);
     }
 

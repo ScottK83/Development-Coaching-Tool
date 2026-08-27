@@ -89,8 +89,22 @@
         document.body.removeChild(mailtoLink);
     }
 
+    /**
+     * Where Copilot lives. One literal, one fallback, and every module that
+     * opens or links to Copilot goes through here.
+     *
+     * This expression was written out twelve times across eight modules. A
+     * cleanup in April replaced some of them and was recorded as finished;
+     * five sites had been missed and nobody noticed for four months, which is
+     * the whole argument for it living in one function rather than in an idiom
+     * everyone is trusted to repeat.
+     */
+    function copilotUrl() {
+        return (window.DevCoachConstants && window.DevCoachConstants.COPILOT_URL) || 'https://copilot.microsoft.com';
+    }
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.sharedUtils = {
+        copilotUrl: copilotUrl,
         toNonEmptyString,
         joinWithConjunction,
         escapeHtml,

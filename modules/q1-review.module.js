@@ -14,6 +14,10 @@
     function _formatMetricDisplay(key, value) {
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
     }
+    function _copilotUrl() {
+        return window.DevCoachModules.sharedUtils.copilotUrl();
+    }
+
     function _isReverseMetric(metricKey) {
         return typeof window.isReverseMetric === 'function' ? window.isReverseMetric(metricKey) : false;
     }
@@ -786,7 +790,7 @@
                 if (typeof window.openCopilotWithPrompt === 'function') {
                     window.openCopilotWithPrompt(textarea ? textarea.value : '');
                 } else {
-                    window.open(window.DevCoachConstants?.COPILOT_URL || 'https://copilot.microsoft.com', '_blank');
+                    window.open(_copilotUrl(), '_blank');
                 }
             });
         }
