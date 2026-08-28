@@ -1295,3 +1295,40 @@ counted down to zero in the commit message, so "done" is checkable rather than a
   denominator. I showed it is unreachable on the five-of-five path and reachable in principle
   on the partial path, but did not enumerate the actual denominators in your data.
 
+
+---
+
+# Appendix C — Deploying, and a trap in how these commits were pushed
+
+The live site is Cloudflare Pages, production branch `main`, auto-deploying on
+push. Every build has succeeded. Production still went stale, and the reason is
+worth writing down because it will happen again.
+
+**What happened.** Each change was pushed twice at the same commit: once to
+`refactor/consolidation`, then again to `main`. Cloudflare builds per commit, so
+by the time `main` was updated it had already built that exact SHA for the
+feature branch, as a **preview**. It did not rebuild for production. The check
+run on the commit says "Deploy successful", because it was: successful as a
+preview. Production kept serving the last commit that reached it first as `main`.
+
+The tell is in the check-run summary. A production deploy has no "Branch Preview
+URL" line; these had one.
+
+**How to see it.** Compare the two:
+
+    curl -s https://development-coaching-tool.pages.dev/script.js | grep APP_VERSION
+    git show origin/main:script.js | grep APP_VERSION
+
+If the live version trails `origin/main`, production is stale no matter what the
+build status says.
+
+**The fix, for next time: push `main` first.** A commit that reaches `main`
+before any other branch gets built as production. Pushing the feature branch
+afterwards at the same SHA is deduplicated and costs nothing.
+
+    git push origin HEAD:main     # production build
+    git push                      # branch ref, no rebuild
+
+**To unstick it by hand**, without a new commit: Cloudflare dashboard, the
+`supervisor-dashboard` Pages project, find the newest deployment and use
+**Manage deployment > Promote to production**.
