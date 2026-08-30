@@ -1228,3 +1228,65 @@ suite('rankings view: a cell never contradicts itself on rounding', (t) => {
     t.check('no cell disagrees with the number printed in it, ' + JSON.stringify(mismatches),
         mismatches.length === 0);
 });
+
+/* ── The monthly stats email ──
+   Sent to the associate, like the year picture, so it lives under the same
+   rules: targets only. No rank, no track label, no score digit, no tier
+   vocabulary, and no em dashes anywhere in generated copy. */
+suite('rankings view: the monthly email says targets and nothing else', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+
+    const mail = cr.buildMonthlyStatsEmail('P0');
+    t.check('there is a mail to send', !!mail);
+    if (!mail) return;
+
+    t.equal('addressed by the shared rule', mail.to, 'p0@aps.com');
+    t.check('the coaching CC rides along', mail.cc.indexOf('@aps.com') !== -1);
+    t.check('the subject names the month', mail.subject.indexOf(mail.monthLabel) !== -1);
+
+    const body = mail.body;
+    t.check('greets by first name', body.indexOf('Hi P0,') === 0);
+
+    // The words that must never reach an inbox.
+    ['off track', 'on track', 'exceptional', 'successful', 'score', 'rank', 'tier']
+        .forEach((word) => {
+            t.check('no "' + word + '" in the body', body.toLowerCase().indexOf(word) === -1);
+        });
+    t.check('no em dash', body.indexOf('—') === -1);
+
+    // One line per metric with data, each carrying a goal and a verdict.
+    const metricLines = body.split('\n').filter((l) => l.indexOf('- ') === 0);
+    t.check('there are metric lines', metricLines.length >= 1);
+    metricLines.forEach((l) => {
+        t.check('a metric line carries its goal: ' + l.slice(0, 30), l.indexOf('(goal:') !== -1);
+        t.check('and a verdict: ' + l.slice(0, 30),
+            l.indexOf('. Met.') !== -1 || l.indexOf('. Not there yet.') !== -1);
+    });
+
+    // The count line must agree with the lines above it.
+    const metCount = metricLines.filter((l) => l.indexOf('. Met.') !== -1).length;
+    t.check('the tally matches the lines',
+        body.indexOf('That is ' + metCount + ' of ' + metricLines.length + ' goals met') !== -1);
+
+    // The grid's abbreviations stay in the grid.
+    t.check('says Rep Satisfaction, not CX Adv', body.indexOf('CX Adv') === -1);
+});
+
+suite('rankings view: a month still running is never presented as finished', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+
+    const mail = cr.buildMonthlyStatsEmail('P0');
+    t.check('there is a mail', !!mail);
+    if (!mail) return;
+
+    if (mail.inProgress) {
+        t.check('an in-progress month says so far', mail.body.indexOf('so far') !== -1);
+        t.check('and stands, not landed', mail.body.indexOf('stands so far') !== -1);
+    } else {
+        t.check('a complete month reads as landed', mail.body.indexOf('landed against target') !== -1);
+    }
+
+    t.equal('nobody with no data gets a mail', cr.buildMonthlyStatsEmail('Nobody Here'), null);
+});

@@ -1895,6 +1895,82 @@
         };
     }
 
+    /* ── One month, as an email ──
+
+       The year email's body cannot carry its numbers: eight months of table
+       arrives in Outlook as a wall of words, which is why that one sends a
+       picture. One month is five lines, and five one-per-metric lines survive
+       plain text in every client. So this email needs no picture, no clipboard,
+       and nothing to paste.
+
+       Same rules as the year card, because the same person receives it:
+       targets, not rating bands. No rank, no track label, no score digit.
+       What they are given is the goal and where they landed against it. */
+
+    function buildMonthlyStatsEmail(name) {
+        var model = buildYearImageModel(name);
+        if (!model) return null;
+        var scored = model.columns.filter(function (c) { return c.present; });
+        if (!scored.length) return null;
+
+        // The most recent month with data. If it is still running it is
+        // written as "so far": a part-month is never presented as a finished
+        // one, same rule the celebrations copy follows.
+        var col = scored[scored.length - 1];
+        var withData = col.metrics.filter(function (m) { return m.display; });
+        if (!withData.length) return null;
+
+        var registry = window.METRICS_REGISTRY || {};
+        var firstName = String(name || '').trim().split(/\s+/)[0] || name;
+
+        var met = withData.filter(function (m) { return m.meets === true; }).length;
+        var judged = withData.filter(function (m) { return m.meets !== null; }).length;
+
+        var lines = [];
+        lines.push('Hi ' + firstName + ',');
+        lines.push('');
+        lines.push(col.inProgress
+            ? 'Here is where ' + col.fullLabel + ' stands so far against target:'
+            : 'Here is how ' + col.fullLabel + ' landed against target:');
+        lines.push('');
+
+        withData.forEach(function (m) {
+            // The registry's full names, not the grid's abbreviations. "CX Adv"
+            // is a column heading; "Rep Satisfaction" is what the metric is
+            // called everywhere the associate sees it.
+            var full = (registry[m.registry] && registry[m.registry].label) || m.label;
+            var phrase = _targetPhrase(m.registry, model.year);
+            var line = '- ' + full + ': ' + m.display;
+            if (phrase) line += ' (goal: ' + phrase + ')';
+            if (m.meets === true) line += '. Met.';
+            else if (m.meets === false) line += '. Not there yet.';
+            lines.push(line);
+        });
+
+        lines.push('');
+        if (judged) {
+            lines.push('That is ' + met + ' of ' + judged + ' goals met' +
+                (col.inProgress ? ' so far' : '') + '.');
+            lines.push('');
+        }
+        lines.push('Happy to walk through any of it.');
+
+        return {
+            to: _apsEmailFor(name),
+            cc: COACHING_CC,
+            // The coverage label may or may not carry the year already; June
+            // arrives as "June 2026" here. Appending blindly produced the
+            // subject "Your June 2026 2026 numbers", which the baseline caught
+            // before anybody's inbox did.
+            subject: 'Your ' + col.fullLabel +
+                (String(col.fullLabel).indexOf(String(model.year)) === -1 ? ' ' + model.year : '') +
+                ' numbers',
+            body: lines.join('\n'),
+            monthLabel: col.fullLabel,
+            inProgress: !!col.inProgress
+        };
+    }
+
     /* ── The year, as a picture ──
 
        A mail body is plain text, so the two-month table is all the text can
@@ -2281,11 +2357,38 @@
         });
     }
 
+    /* Opens the monthly draft. Nothing to copy first: one month's numbers fit
+       in the body, so unlike the year email there is no picture and no
+       clipboard step for the user to lose. */
+    function _emailMonthlySummary(name) {
+        var mail = buildMonthlyStatsEmail(name);
+        if (!mail) {
+            alert('No month with data to summarize yet.');
+            return;
+        }
+        var href = 'mailto:' + encodeURIComponent(mail.to) +
+            '?cc=' + encodeURIComponent(mail.cc) +
+            '&subject=' + encodeURIComponent(mail.subject) +
+            '&body=' + encodeURIComponent(mail.body);
+        var link = document.createElement('a');
+        link.href = href;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     // The canvas currently on screen, so the buttons copy the picture the viewer
     // is looking at rather than quietly drawing a second one.
     var _lastTrajectoryCanvas = null;
 
     function _openTrajectory(name) {
+        // Built up front so the button can carry the month's name, and so a
+        // roster with no month of data simply has no button rather than a
+        // button that apologises when clicked.
+        var monthlyMail = null;
+        try { monthlyMail = buildMonthlyStatsEmail(name); } catch (err) { monthlyMail = null; }
+
         var overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         overlay.style.display = 'flex';
@@ -2311,6 +2414,11 @@
                 '<button id="rankTrajectoryEmail" style="padding: 8px 16px; background: #2e7d32; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
                 'Email month over month summary</button>' +
+                (monthlyMail
+                    ? '<button id="rankTrajectoryMonthEmail" style="padding: 8px 16px; background: #00695c; color: white; ' +
+                      'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
+                      'Email ' + _escapeHtml(monthlyMail.monthLabel) + ' summary</button>'
+                    : '') +
                 '<button id="rankTrajectoryCopyImage" style="padding: 8px 16px; background: #5b3f8c; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Copy picture</button>' +
                 '<button id="rankTrajectorySaveImage" style="padding: 8px 16px; background: var(--bg-surface-raised); ' +
@@ -2355,6 +2463,9 @@
         });
         var emailBtn = document.getElementById('rankTrajectoryEmail');
         if (emailBtn) emailBtn.addEventListener('click', function () { _emailMonthOverMonth(name); });
+
+        var monthEmailBtn = document.getElementById('rankTrajectoryMonthEmail');
+        if (monthEmailBtn) monthEmailBtn.addEventListener('click', function () { _emailMonthlySummary(name); });
 
         var copyImgBtn = document.getElementById('rankTrajectoryCopyImage');
         if (copyImgBtn) copyImgBtn.addEventListener('click', function () {
@@ -2886,6 +2997,7 @@
         // The draft, built without touching the DOM or a mail client, so its
         // wording can be asserted rather than eyeballed.
         buildMonthOverMonthEmail: buildMonthOverMonthEmail,
+        buildMonthlyStatsEmail: buildMonthlyStatsEmail,
         // What goes into the year picture. The canvas itself can only be
         // eyeballed; this is the part that can be asserted.
         buildYearImageModel: buildYearImageModel,

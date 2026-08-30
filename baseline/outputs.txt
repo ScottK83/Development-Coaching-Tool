@@ -8,7 +8,7 @@ This file is a contract, not documentation. After a refactoring pass, an
 empty `git diff` here means the pass changed no behaviour. A non-empty diff
 is either an intended change that needs explaining line by line, or a bug.
 
-Entries: 81   Not covered: 5
+Entries: 82   Not covered: 5
 
 ------------------------------------------------------------------------------
 metric-profiles / getYearTarget, every metric, both years
@@ -3398,6 +3398,84 @@ center-ranking / buildRankingsForPeriod, latest week
   "source": "week ending 2026-06-21",
   "teamMembers": {},
   "totalEmployees": 9
+}
+
+------------------------------------------------------------------------------
+center-ranking / buildMonthlyStatsEmail per associate
+------------------------------------------------------------------------------
+{
+  "Ada Stretch": {
+    "body": "Hi Ada,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 405s (goal: 426s or lower). Met.\n- Schedule Adherence: 95.2% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 91.0% (goal: 88.0% or higher). Met.\n- Rep Satisfaction: 85.0% (goal: 82.0% or higher). Met.\n- Reliability: 4.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 5 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "ada.stretch@aps.com"
+  },
+  "Ben Ongoal": {
+    "body": "Hi Ben,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 426s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.0% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 88.0% (goal: 88.0% or higher). Met.\n- Rep Satisfaction: 82.0% (goal: 82.0% or higher). Met.\n- Reliability: 18.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 5 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "ben.ongoal@aps.com"
+  },
+  "Cara Floor": {
+    "body": "Hi Cara,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 434s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.5% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.5% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.5% (goal: 82.0% or higher). Not there yet.\n- Reliability: 24.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "cara.floor@aps.com"
+  },
+  "Dan Under": {
+    "body": "Hi Dan,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 435s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.4% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.4% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.4% (goal: 82.0% or higher). Not there yet.\n- Reliability: 24.1 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "dan.under@aps.com"
+  },
+  "Eve Rounding": {
+    "body": "Hi Eve,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 434s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.5% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.5% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.5% (goal: 82.0% or higher). Not there yet.\n- Reliability: 24.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "eve.rounding@aps.com"
+  },
+  "Fay Mixed": {
+    "body": "Hi Fay,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 450s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 96.0% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 87.0% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 85.5% (goal: 82.0% or higher). Met.\n- Reliability: 6.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "fay.mixed@aps.com"
+  },
+  "Gus Nocalls": {
+    "body": "Hi Gus,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 420s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.5% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 89.0% (goal: 88.0% or higher). Met.\n- Reliability: 12.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 4 of 4 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "gus.nocalls@aps.com"
+  },
+  "Hal Blanks": {
+    "body": "Hi Hal,\n\nHere is where June 2026 stands so far against target:\n\n- Schedule Adherence: 93.5% (goal: 93.0% or higher). Met.\n- Rep Satisfaction: 83.0% (goal: 82.0% or higher). Met.\n- Reliability: 12.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 3 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "hal.blanks@aps.com"
+  },
+  "Ida Partial": {
+    "body": "Hi Ida,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 418s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.8% (goal: 93.0% or higher). Met.\n- Rep Satisfaction: 76.0% (goal: 82.0% or higher). Not there yet.\n- Reliability: 9.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 4 goals met so far.\n\nHappy to walk through any of it.",
+    "cc": "Brandywine.Lockhart@aps.com",
+    "inProgress": true,
+    "monthLabel": "June 2026",
+    "subject": "Your June 2026 numbers",
+    "to": "ida.partial@aps.com"
+  }
 }
 
 ------------------------------------------------------------------------------

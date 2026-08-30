@@ -615,6 +615,16 @@ function recordKpiScoring() {
         return M().centerRanking.buildRankingsForPeriod(fixture.LATEST_WEEK_KEY);
     });
 
+    record('center-ranking / buildMonthlyStatsEmail per associate', () => {
+        const cr = M().centerRanking;
+        const out = {};
+        fixture.ALL_NAMES.forEach((n) => {
+            try { out[n] = cr.buildMonthlyStatsEmail(n); }
+            catch (err) { out[n] = '!! ' + err.message; }
+        });
+        return out;
+    });
+
     record('center-ranking / buildYearImageModel', () => {
         return M().centerRanking.buildYearImageModel(2026);
     });
