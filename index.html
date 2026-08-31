@@ -1162,6 +1162,20 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
 
+                    <!-- Point-in-time restore. Every sync writes a dated copy to
+                         cloud storage and they are never deleted, so this is the
+                         way back when the most recent copy is the bad one. -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #5c6bc0;">
+                        <h3 style="color: #5c6bc0; margin-top: 0;">🕐 Restore from an earlier day</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 15px;">Every sync saves a dated copy to cloud storage, and those are never deleted. Use this when the most recent copy is the one with the problem.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <button type="button" id="loadSnapshotListBtn" class="btn-secondary" style="background: #5c6bc0; color: white;">🔍 Show available days</button>
+                            <select id="snapshotDateSelect" style="display: none; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary); min-width: 220px;"></select>
+                            <button type="button" id="restoreSnapshotBtn" class="btn-secondary" style="display: none; background: #ef6c00; color: white;">Restore this day</button>
+                        </div>
+                        <div id="snapshotStatus" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
+                    </div>
+
                     </div>
                     <!-- End Sync & Backup Sub-section -->
 

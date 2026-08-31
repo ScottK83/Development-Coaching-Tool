@@ -2154,6 +2154,8 @@ function bindCoachingFormHandlers() {
     // pushed the shrunken store to the repo, degrading the remote copy too. It
     // was the remedy the storage-full message used to recommend.
     document.getElementById('reclaimStorageBtn')?.addEventListener('click', handleReclaimStorageClick);
+    document.getElementById('loadSnapshotListBtn')?.addEventListener('click', handleLoadSnapshotListClick);
+    document.getElementById('restoreSnapshotBtn')?.addEventListener('click', handleRestoreSnapshotClick);
     refreshUploadUndoBanner();
     refreshStorageQuotaWidget();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
@@ -2466,6 +2468,96 @@ async function handleReclaimStorageClick() {
         message += `\n\nLeft in place because they could not be verified:\n${report.skipped.join('\n')}`;
     }
     alert(message);
+}
+
+// ============================================
+// POINT-IN-TIME RESTORE
+// ============================================
+// Cloud storage has kept a dated copy on every sync all along, and nothing
+// deletes them. Until now the only recovery was "restore the latest", which is
+// no use when the latest is the bad one.
+
+function setSnapshotStatus(text, isError) {
+    const el = document.getElementById('snapshotStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = isError ? '#ef5350' : 'var(--text-secondary)';
+}
+
+async function handleLoadSnapshotListClick() {
+    const select = document.getElementById('snapshotDateSelect');
+    const restoreBtn = document.getElementById('restoreSnapshotBtn');
+    setSnapshotStatus('Looking for saved days...');
+
+    let snapshots;
+    try {
+        snapshots = await window.DevCoachModules?.repoSync?.listRepoSnapshots?.();
+    } catch (error) {
+        setSnapshotStatus('Could not reach cloud storage: ' + (error?.message || error), true);
+        return;
+    }
+
+    if (!snapshots || !snapshots.length) {
+        setSnapshotStatus('No saved days found yet. One is written every time your data syncs.', true);
+        return;
+    }
+
+    select.innerHTML = '';
+    snapshots.forEach((snap) => {
+        const option = document.createElement('option');
+        const mb = snap.size ? ` (${(snap.size / (1024 * 1024)).toFixed(1)} MB)` : '';
+        option.value = snap.date;
+        option.textContent = snap.date + mb;
+        select.appendChild(option);
+    });
+
+    select.style.display = '';
+    restoreBtn.style.display = '';
+    setSnapshotStatus(`${snapshots.length} saved day${snapshots.length === 1 ? '' : 's'} available. Newest first.`);
+}
+
+async function handleRestoreSnapshotClick() {
+    const date = document.getElementById('snapshotDateSelect')?.value;
+    if (!date) return;
+
+    const proceed = confirm(
+        `Restore the copy saved on ${date}?\n\n` +
+        `This replaces what is currently in the app with that day's data. ` +
+        `Anything added since then that has not been synced will be lost.\n\n` +
+        `A backup of the current state downloads first.`
+    );
+    if (!proceed) return;
+
+    // The current state may be the good one and the snapshot the mistake, so
+    // take a copy before overwriting it. The export is free.
+    try {
+        exportToExcel();
+    } catch (error) {
+        alert('⚠️ Could not download a backup of the current state, so nothing was restored.\n\n' + (error?.message || error));
+        return;
+    }
+
+    setSnapshotStatus(`Fetching the copy from ${date}...`);
+    let payload;
+    try {
+        payload = await window.DevCoachModules?.repoSync?.fetchRepoSnapshotPayload?.(date);
+    } catch (error) {
+        setSnapshotStatus('Could not restore: ' + (error?.message || error), true);
+        alert('⚠️ Could not restore that day.\n\n' + (error?.message || error) + '\n\nNothing was changed.');
+        return;
+    }
+
+    try {
+        window.DevCoachModules?.repoSync?.applyRepoBackupPayload?.(payload);
+    } catch (error) {
+        setSnapshotStatus('The restore failed partway: ' + (error?.message || error), true);
+        alert('⚠️ The restore failed partway through.\n\n' + (error?.message || error) + '\n\nKeep the backup that just downloaded.');
+        return;
+    }
+
+    setSnapshotStatus(`Restored the copy from ${date}. Reloading...`);
+    alert(`✅ Restored the copy saved on ${date}.\n\nThe page will reload.`);
+    location.reload();
 }
 
 function getArchivableWeekKeys(cutoffDate) {

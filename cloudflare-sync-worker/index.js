@@ -82,6 +82,50 @@ export default {
       }
 
       // ============================================
+      // LIST SNAPSHOTS: What point-in-time copies exist
+      // ============================================
+      // Every sync already writes state/snapshots/YYYY-MM-DD.json and deleteAll
+      // deliberately leaves them, so this history has existed all along with no
+      // way to see it. Without this, recovery means "restore the latest", which
+      // is no help at all when the latest is the thing that went wrong.
+      if (mode === 'listSnapshots') {
+        const listed = await env.COACHING_BUCKET.list({ prefix: 'state/snapshots/', limit: 1000 });
+        const snapshots = (listed.objects || [])
+          .map((obj) => ({
+            date: obj.key.replace('state/snapshots/', '').replace(/\.json$/, ''),
+            key: obj.key,
+            size: obj.size,
+            uploadedAt: obj.uploaded ? new Date(obj.uploaded).toISOString() : null
+          }))
+          .sort((a, b) => (a.date < b.date ? 1 : -1)); // newest first
+        return json({ ok: true, mode: 'listSnapshots', snapshots, truncated: !!listed.truncated }, 200, cors);
+      }
+
+      // ============================================
+      // RETRIEVE SNAPSHOT: Read one specific day's copy
+      // ============================================
+      if (mode === 'retrieveSnapshot') {
+        const date = String(body?.date || '').trim();
+        // Pinned to the exact key shape rather than interpolated, so a crafted
+        // date cannot reach anything else in the bucket.
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return json({ ok: false, error: 'A snapshot date must look like YYYY-MM-DD.' }, 400, cors);
+        }
+        const obj = await env.COACHING_BUCKET.get(`state/snapshots/${date}.json`);
+        if (!obj) {
+          return json({ ok: false, error: `No snapshot stored for ${date}.` }, 404, cors);
+        }
+        const stored = await obj.json();
+        return json({
+          ok: true,
+          mode: 'retrieveSnapshot',
+          date,
+          payload: stored,
+          generatedAt: stored?.generatedAt || null
+        }, 200, cors);
+      }
+
+      // ============================================
       // DELETE ALL: Wipe latest backup (snapshots stay as safety net)
       // ============================================
       if (mode === 'deleteAll') {

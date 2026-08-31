@@ -1324,6 +1324,48 @@
         return null;
     }
 
+    /** One POST to the worker, with whatever auth the config carries. */
+    async function postToWorker(body) {
+        const config = loadCallListeningSyncConfig();
+        const endpoint = config?.endpoint;
+        if (!endpoint) throw new Error('No sync endpoint is configured (Settings, Sync and Backup).');
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (config?.sharedSecret) headers['x-sync-secret'] = config.sharedSecret;
+
+        const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.ok) {
+            throw new Error(data?.error || `The sync service returned HTTP ${response.status}.`);
+        }
+        return data;
+    }
+
+    /**
+     * The dated copies R2 has been keeping all along. Every sync writes one and
+     * deleteAll leaves them alone, so this is the history that survives a bad
+     * sync. "Restore the latest" cannot help when the latest is the problem.
+     */
+    async function listRepoSnapshots() {
+        const data = await postToWorker({ mode: 'listSnapshots' });
+        return Array.isArray(data.snapshots) ? data.snapshots : [];
+    }
+
+    async function fetchRepoSnapshotPayload(date) {
+        const data = await postToWorker({ mode: 'retrieveSnapshot', date });
+        const payload = data?.payload;
+        if (!payload || typeof payload !== 'object') {
+            throw new Error(`The snapshot for ${date} is empty or unreadable.`);
+        }
+        if (!hasMeaningfulBackupData(payload)) {
+            // Refusing here rather than restoring is the point: applying an
+            // empty snapshot over live data would be the exact failure this
+            // feature exists to recover from.
+            throw new Error(`The snapshot for ${date} contains no data, so it was not applied.`);
+        }
+        return payload;
+    }
+
     function coerceObject(value, fallback = {}) {
         return value && typeof value === 'object' ? value : fallback;
     }
@@ -1792,6 +1834,8 @@
         summarizeStorageValue,
         getAllAppStorageSnapshot,
         notifyBulkStoreWrite,
+        listRepoSnapshots,
+        fetchRepoSnapshotPayload,
         collectVerbatimStores,
         applyVerbatimStores,
         hasNonEmptyEntries,
