@@ -31,9 +31,28 @@
             return true;
         } catch (error) {
             if (error?.name === 'QuotaExceededError') {
+                // Silence here is what turned a full disk into invisible data loss:
+                // callers that ignore the return value re-rendered as if the write
+                // landed. Always leave a trace, even for callers that discard it.
+                console.error(`[storage] QUOTA EXCEEDED saving ${key}. The write did NOT happen; the stored value is unchanged and the in-memory copy is now ahead of it.`);
                 return false;
             }
             console.error(`Error saving ${key}:`, error);
+            return false;
+        }
+    }
+
+    // A normalization pass must never be able to destroy the data it just read.
+    // These write-backs are opportunistic: the caller already holds the correct
+    // value in memory, so a failed write is a cache miss to retry next boot, not
+    // a reason to fall into a loader's catch and hand back {}, which beforeunload
+    // would then persist over the real store.
+    function persistNormalizedInPlace(namespacedKey, value, label) {
+        try {
+            localStorage.setItem(namespacedKey, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            console.warn(`[storage] Could not write back normalized ${label}: ${error?.name || error}. Keeping the in-memory copy; the stored value is still intact.`);
             return false;
         }
     }
@@ -140,7 +159,7 @@
                 const data = JSON.parse(saved);
                 const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
                 if (normalizedData !== data) {
-                    localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                    persistNormalizedInPlace(namespacedKey, normalizedData, 'weeklyData');
                 }
                 return normalizedData;
             }
@@ -149,7 +168,7 @@
             if (legacySaved) {
                 const legacyData = JSON.parse(legacySaved);
                 const normalizedData = normalizeStoredDataSet(legacyData && typeof legacyData === 'object' ? legacyData : {});
-                localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                persistNormalizedInPlace(namespacedKey, normalizedData, 'weeklyData (legacy migration)');
                 return normalizedData;
             }
 
@@ -191,7 +210,7 @@
                 const data = JSON.parse(saved);
                 const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
                 if (normalizedData !== data) {
-                    localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                    persistNormalizedInPlace(namespacedKey, normalizedData, 'dailyData');
                 }
                 return normalizedData;
             }
@@ -225,7 +244,7 @@
                 const data = JSON.parse(saved);
                 const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
                 if (normalizedData !== data) {
-                    localStorage.setItem(namespacedKey, JSON.stringify(normalizedData));
+                    persistNormalizedInPlace(namespacedKey, normalizedData, 'ytdData');
                 }
                 return normalizedData;
             }
@@ -377,8 +396,9 @@
 
             // Save migrated data back if migration occurred
             if (didMigrate) {
-                localStorage.setItem(namespacedKey, JSON.stringify(loaded));
-                console.log('💾 Saved migrated sentiment data to localStorage');
+                if (persistNormalizedInPlace(namespacedKey, loaded, 'associateSentimentSnapshots (migration)')) {
+                    console.log('💾 Saved migrated sentiment data to localStorage');
+                }
             }
 
             return loaded;

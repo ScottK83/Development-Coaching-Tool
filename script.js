@@ -136,7 +136,11 @@ function loadDailyData() {
 // Dailies are ephemeral (purged when a weekly upload lands), so syncing them
 // to the GitHub backup would create churn without value.
 function saveDailyData() {
-    return window.DevCoachModules?.storage?.saveDailyData?.(dailyData);
+    // Not repo-synced (see above), which makes a silent failure here worse than
+    // elsewhere, not better: there is no backup copy to fall back on. Surface it.
+    var ok = window.DevCoachModules?.storage?.saveDailyData?.(dailyData);
+    if (ok === false) notifyStorageSaveFailed('daily check-in data');
+    return ok;
 }
 function loadCoachingHistory() {
     return window.DevCoachModules?.storage?.loadCoachingHistory?.() || {};
@@ -171,13 +175,17 @@ var _lastStorageFailAlert = 0;
 function notifyStorageSaveFailed(label) {
     try {
         var toast = window.DevCoachModules?.uiUtils?.showToast;
-        if (toast) toast('⚠️ Could not save ' + label + ' to browser storage is full. Archive old weeks in Settings.', 6000);
+        if (toast) toast('⚠️ Could not save ' + label + '. Browser storage is full. Back up before making more changes.', 6000);
     } catch (_e) { /* toast unavailable */ }
     var now = Date.now();
     if (now - _lastStorageFailAlert > 30000) {
         _lastStorageFailAlert = now;
         try {
-            alert('⚠️ Storage is full.\n\nCould not save ' + label + '. Your most recent changes are NOT saved and will be lost on reload.\n\nFree up space by archiving old weeks (Settings → Sync & Backup / Delete Data), then redo the last action.');
+            // Deliberately does NOT point at archiveOldWeeks. That flow deletes the
+            // archived weeks, downloads a file no importer can read back, and pushes
+            // the shrunken store to the repo, degrading the remote copy too. Telling
+            // someone at quota to run it is telling them to destroy the last copy.
+            alert('⚠️ Storage is full.\n\nCould not save ' + label + '. Your most recent changes are NOT saved and will be lost on reload.\n\nBack up your data first (Settings → Sync & Backup). Do not archive or delete anything until you have confirmed that backup.');
         } catch (_e) { /* alert unavailable */ }
     }
 }
