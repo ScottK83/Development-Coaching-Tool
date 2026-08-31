@@ -233,3 +233,42 @@ suite('restore: a repo restore lands where the app actually reads', async (t) =>
     t.check('a non-bulk store still goes to localStorage',
         store[PREFIX + 'myTeamMembers'] !== undefined);
 });
+
+suite('backup: the export file covers stores that no longer live in localStorage', async (t) => {
+    const { storage, store } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {} }),
+        [PREFIX + 'coachingHistory']: JSON.stringify({ 'Alyssa Dimes': [{ note: 'kept' }] }),
+        [PREFIX + 'employeeSupervisors']: JSON.stringify({ 'Dana Roe': 'Scott' })
+    });
+    await storage.hydrate();
+
+    // The state the reclaim produces, and the state this file is the last copy
+    // of. A localStorage-only sweep sees nothing here.
+    await storage.reclaimLocalStorageCopies();
+    t.check('the localStorage copies really are gone',
+        store[PREFIX + 'coachingHistory'] === undefined);
+
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('function collectAllStoresVerbatim');
+    const body = src.slice(start, src.indexOf('\n}\n', start));
+
+    t.check('the collector falls back to the storage module for bulk stores',
+        body.indexOf('readStore') > -1);
+    t.check('and drives that from BULK_STORAGE_KEYS rather than a hand list',
+        body.indexOf('BULK_STORAGE_KEYS') > -1);
+
+    // Run the real thing against this exact post-reclaim state.
+    const collect = new Function('localStorage', 'window', `
+        const STORAGE_PREFIX = ${JSON.stringify(PREFIX)};
+        ${src.slice(start, src.indexOf('\n}\n', start) + 3)}
+        return collectAllStoresVerbatim();
+    `);
+    const captured = collect(global.localStorage, global.window);
+
+    t.check('coachingHistory is in the backup despite having no localStorage copy',
+        typeof captured[PREFIX + 'coachingHistory'] === 'string');
+    t.equal('and it is the real data, not an empty shell',
+        JSON.parse(captured[PREFIX + 'coachingHistory'])['Alyssa Dimes'][0].note, 'kept');
+    t.check('a non-bulk store is still swept from localStorage',
+        typeof captured[PREFIX + 'employeeSupervisors'] === 'string');
+});

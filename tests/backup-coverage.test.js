@@ -39,7 +39,10 @@ function loadBackupFunctions() {
         'return { collectAllStoresVerbatim, applyAllStoresVerbatim };'
     ].join('\n');
 
-    return new Function('localStorage', body);
+    // window is now referenced too: the collector falls back to the storage
+    // module for stores that no longer live in localStorage. Callers pass a
+    // window to control whether that fallback is active.
+    return (localStorage, win) => new Function('localStorage', 'window', body)(localStorage, win || { DevCoachModules: {}, DevCoachConstants: {} });
 }
 
 // The harness stub has no length or key(i), which is exactly what an
@@ -69,6 +72,7 @@ const SEED = {
 };
 
 suite('backup: the export covers every store, not a hand-picked five', (t) => {
+    // No storage module here: this suite covers the localStorage sweep alone.
     const { collectAllStoresVerbatim } = loadBackupFunctions()(fakeStorage(SEED));
     const out = collectAllStoresVerbatim();
 

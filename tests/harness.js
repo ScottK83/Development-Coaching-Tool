@@ -44,10 +44,17 @@ function installFakeBrowser(extra) {
 
     Object.assign(global, realTimers);
 
+    // length, key() and clear() are part of the real Storage interface and the
+    // app depends on them: every backup sweep, the quota meter and delete-all
+    // enumerate the store. Without them here, code that iterates localStorage
+    // silently sees an empty store and its test passes for the wrong reason.
     global.localStorage = {
+        get length() { return Object.keys(store).length; },
+        key: (i) => Object.keys(store)[i] ?? null,
         getItem: (k) => (k in store ? store[k] : null),
         setItem: (k, v) => { store[k] = String(v); },
         removeItem: (k) => { delete store[k]; },
+        clear: () => { Object.keys(store).forEach((k) => { delete store[k]; }); },
         _store: store
     };
 

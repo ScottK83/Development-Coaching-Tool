@@ -746,6 +746,30 @@ function collectAllStoresVerbatim() {
         const raw = localStorage.getItem(key);
         if (raw !== null) stores[key] = raw;
     }
+
+    // A bulk store lives in IndexedDB and is invisible to the sweep above. The
+    // localStorage copy is stale while it still exists and gone once reclaimed,
+    // so without this the backup silently loses coachingHistory,
+    // reliabilityTracker, ptoTracker, followUpHistory and the rest, while still
+    // reporting a store count that looks right.
+    //
+    // This is the file every recovery path falls back on. It must be read the
+    // same way the app reads, through the storage module, not from the layer the
+    // data used to live in.
+    const storage = window.DevCoachModules?.storage;
+    const bulkKeys = window.DevCoachConstants?.BULK_STORAGE_KEYS || [];
+    if (typeof storage?.readStore === 'function') {
+        bulkKeys.forEach((name) => {
+            const value = storage.readStore(name);
+            if (value === null || value === undefined) return;
+            try {
+                stores[STORAGE_PREFIX + name] = JSON.stringify(value);
+            } catch (error) {
+                console.error(`[backup] Could not serialize ${name}:`, error);
+            }
+        });
+    }
+
     return stores;
 }
 
@@ -777,12 +801,24 @@ function applyAllStoresVerbatim(stores) {
         if (typeof raw !== 'string') return;
 
         report.total += 1;
+        const name = key.slice(STORAGE_PREFIX.length);
         try {
+            // Restore a bulk store to whichever backend serves it. Writing it to
+            // localStorage puts it where nothing reads, so the restore reports
+            // success and the app still shows nothing. Same mistake the repo
+            // restore path made.
+            const storage = window.DevCoachModules?.storage;
+            const bulkKeys = window.DevCoachConstants?.BULK_STORAGE_KEYS || [];
+            if (typeof storage?.saveWithSizeCheck === 'function' && bulkKeys.indexOf(name) > -1) {
+                if (storage.saveWithSizeCheck(name, JSON.parse(raw))) report.restored += 1;
+                else report.failed.push(`${name}: the store refused the write`);
+                return;
+            }
             localStorage.setItem(key, raw);
             report.restored += 1;
         } catch (error) {
             const mb = ((key.length + raw.length) * 2 / (1024 * 1024)).toFixed(2);
-            report.failed.push(`${key.slice(STORAGE_PREFIX.length)} (${mb} MB): ${error?.name || 'write failed'}`);
+            report.failed.push(`${name} (${mb} MB): ${error?.name || 'write failed'}`);
         }
     });
 
