@@ -29,6 +29,11 @@
     // A year of weeklyData alone is roughly 7.2 MB as localStorage charges it
     // (UTF-16), against a 5 MB origin ceiling, so this list is the difference
     // between holding a year and not.
+    // INVARIANT: this list is exactly the set of stores the storage module
+    // reads and writes through readStore/writeStore. A key listed here that the
+    // module does not route would be copied to IndexedDB and then still read
+    // from localStorage, which is fine until the localStorage copy is deleted
+    // and then is not. Add a key here only in the same commit that routes it.
     const BULK_STORAGE_KEYS = [
         'weeklyData',
         'ytdData',
@@ -38,17 +43,15 @@
         'associateSentimentSnapshots',
         'sentimentPhraseDatabase',
         'reliabilityTracker',
-        'attendanceTracker',
         'ptoTracker',
-        'weeklyFocalPoints',
-        'celebrationsHistory',
         'tipUsageHistory',
-        'oneOnOneMeetings',
-        'midYearMeta',
         'followUpHistory',
-        'hotTipHistory',
-        'yearEndDraftEntries',
-        'complianceLog'
+        'hotTipHistory'
+        // Still to fold into the storage module, each worth 1.6MB or more a
+        // year, the way callListeningLogs was: weeklyFocalPoints
+        // (morning-pulse), celebrationsHistory (celebrations), oneOnOneMeetings
+        // (one-on-one), midYearMeta (on-off-tracker), yearEndDraftEntries,
+        // complianceLog, attendanceTracker.
     ];
 
     window.DevCoachConstants = {

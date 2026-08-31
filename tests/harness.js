@@ -26,9 +26,23 @@ function suite(name, fn) {
 // Enough DOM for modules that touch document/localStorage at load time.
 // Deliberately small: a test needing more should build what it needs rather
 // than growing a shared pseudo-browser nobody understands.
+// Real timers, captured before any suite runs. Suites are free to stub these
+// for their own purposes, but leaving a stub in place silently changes timing
+// for every suite loaded afterwards, and the symptom shows up somewhere else
+// entirely. Restoring on each installFakeBrowser keeps a stub scoped to the
+// suite that wanted it.
+const realTimers = {
+    setTimeout: global.setTimeout,
+    clearTimeout: global.clearTimeout,
+    setInterval: global.setInterval,
+    clearInterval: global.clearInterval
+};
+
 function installFakeBrowser(extra) {
     const store = {};
     const els = {};
+
+    Object.assign(global, realTimers);
 
     global.localStorage = {
         getItem: (k) => (k in store ? store[k] : null),

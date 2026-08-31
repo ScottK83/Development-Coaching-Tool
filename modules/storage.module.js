@@ -14,11 +14,191 @@
     const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = window.DevCoachConstants?.ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY || 'associateSentimentSnapshots';
     const LOCALSTORAGE_MAX_SIZE_MB = window.DevCoachConstants?.LOCALSTORAGE_MAX_SIZE_MB || 4;
 
+    const BULK_KEYS = new Set(window.DevCoachConstants?.BULK_STORAGE_KEYS || []);
+    const IDB_MIGRATED_MARKER = 'idbMigrated_v1';
+
+    // ============================================
+    // BACKEND
+    // ============================================
+    // Two backends behind one synchronous API.
+    //
+    // 'localStorage' is what shipped for years and is still the fallback for
+    // every browser or profile where IndexedDB will not open. 'idb' keeps the
+    // bulk stores in IndexedDB, which is quota-managed against disk instead of
+    // capped near 5MB, and holds them in bulkCache so reads stay synchronous.
+    //
+    // The synchronous read is the whole point. Roughly sixty call sites across
+    // twenty-one modules read these stores from inside render paths and event
+    // handlers that cannot await, and script.js reads three of them at parse
+    // time. Hydrating once at boot means none of them change.
+    let backendMode = 'localStorage';
+    let bulkCache = {};
+
+    function getBackendMode() {
+        return backendMode;
+    }
+
+    /**
+     * The parsed value of a store, or undefined when it has never been written.
+     *
+     * In idb mode this hands back the cached object BY REFERENCE rather than a
+     * fresh parse. That is deliberate: callers already treat the result as the
+     * live store (they mutate what load* returned and pass it back to save*),
+     * and copying a 127-row period on every read would undo the reason for
+     * caching at all. A caller that needs an independent copy must clone.
+     */
+    function readStore(key) {
+        if (backendMode === 'idb' && BULK_KEYS.has(key)) {
+            return bulkCache[key];
+        }
+        const raw = localStorage.getItem(STORAGE_PREFIX + key);
+        if (raw === null || raw === undefined) return undefined;
+        // A parse failure propagates to the caller's catch, which is where the
+        // decision about what an unreadable store means already lives.
+        return JSON.parse(raw);
+    }
+
+    /**
+     * True when this store's writes go to the backend rather than localStorage.
+     * Every bulk saver already funnels through saveWithSizeCheck, so routing
+     * there covers all of them without touching each one.
+     */
+    function isBackedByIdb(key) {
+        return backendMode === 'idb' && BULK_KEYS.has(key);
+    }
+
+    /**
+     * Updates the cache synchronously so the very next read sees the new value,
+     * then starts the durable write without awaiting it. A rejected write logs;
+     * it cannot be reported to a synchronous caller, which is the honest cost
+     * of keeping every existing call site unchanged.
+     */
+    function writeThroughToBackend(key, value) {
+        const backend = window.DevCoachModules?.idbBackend;
+        if (!backend) return false;
+        bulkCache[key] = value;
+        backend.put(key, value).catch((error) => {
+            console.error(`[storage] Durable write failed for ${key}; the value is in memory only:`, error);
+        });
+        return true;
+    }
+
+    /**
+     * Called once, before script.js runs. Resolves when the bulk stores are
+     * readable synchronously, whichever backend is serving them.
+     *
+     * Nothing is deleted here. Both copies exist after this runs, so rolling
+     * the deploy back costs nothing. Reclaiming the localStorage space is a
+     * separate, explicit step.
+     */
+    async function hydrate() {
+        const backend = window.DevCoachModules?.idbBackend;
+        if (!backend) {
+            console.warn('[storage] idb backend module is absent; staying on localStorage.');
+            return 'localStorage';
+        }
+
+        const opened = await backend.open();
+        if (!opened) {
+            // open() already said why. Every load*/save* behaves exactly as it
+            // did before, and the user notices nothing.
+            return 'localStorage';
+        }
+
+        try {
+            const marked = localStorage.getItem(STORAGE_PREFIX + IDB_MIGRATED_MARKER) === '1';
+
+            // The backend holding data is the authority, not the marker. The
+            // marker lives in localStorage and can be cleared on its own, by a
+            // browser wiping site data selectively or by a failed write, while
+            // IndexedDB survives. Trusting it alone would recopy stale
+            // localStorage over newer backend data and silently lose whatever
+            // was written since the move.
+            const existing = await backend.getAll();
+            const backendHasData = Object.keys(existing).length > 0;
+
+            if (!marked && !backendHasData) {
+                const copied = await copyBulkStoresIntoBackend(backend);
+                if (!copied) {
+                    console.warn('[storage] Copy into IndexedDB could not be verified; staying on localStorage.');
+                    return 'localStorage';
+                }
+                console.log('[storage] Bulk stores copied to IndexedDB and verified. localStorage copies left in place.');
+            } else if (!marked) {
+                console.warn('[storage] The migration marker is missing but the backend already holds data. Keeping the backend copy; localStorage is the stale one.');
+            }
+
+            try {
+                localStorage.setItem(STORAGE_PREFIX + IDB_MIGRATED_MARKER, '1');
+            } catch (error) {
+                // A full origin can refuse even this one byte. Harmless: the
+                // backendHasData check above is what actually prevents a recopy.
+                console.warn('[storage] Could not write the migration marker:', error?.name || error);
+            }
+
+            bulkCache = await backend.getAll();
+            backendMode = 'idb';
+            return 'idb';
+        } catch (error) {
+            console.error('[storage] Hydrate failed; staying on localStorage:', error);
+            backendMode = 'localStorage';
+            return 'localStorage';
+        }
+    }
+
+    /**
+     * Copies each bulk store from localStorage into the backend and reads every
+     * one back to confirm it landed. All or nothing: a partially populated
+     * backend is worse than none, because hasMeaningfulLocalData would then see
+     * a half-empty store and could trigger a repo restore over live data.
+     */
+    async function copyBulkStoresIntoBackend(backend) {
+        const expected = {};
+
+        for (const key of BULK_KEYS) {
+            const raw = localStorage.getItem(STORAGE_PREFIX + key);
+            if (raw === null) continue;
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch (error) {
+                console.error(`[storage] ${key} is not readable JSON; refusing to migrate.`, error);
+                return false;
+            }
+            expected[key] = countEntries(parsed);
+            await backend.put(key, parsed);
+        }
+
+        const readBack = await backend.getAll();
+        const mismatches = Object.keys(expected).filter(
+            (key) => countEntries(readBack[key]) !== expected[key]
+        );
+
+        if (mismatches.length) {
+            console.error('[storage] Verification failed for:', mismatches.join(', '));
+            return false;
+        }
+        return true;
+    }
+
+    function countEntries(value) {
+        if (value === null || value === undefined) return -1;
+        if (Array.isArray(value)) return value.length;
+        if (typeof value === 'object') return Object.keys(value).length;
+        return 0;
+    }
+
     // ============================================
     // STORAGE HELPERS
     // ============================================
 
     function saveWithSizeCheck(key, data) {
+        // A bulk store on the backend is not subject to the localStorage size
+        // cap at all. Escaping that cap is the entire point of moving it.
+        if (isBackedByIdb(key)) {
+            return writeThroughToBackend(key, data ?? {});
+        }
+
         try {
             const serialized = JSON.stringify(data ?? {});
             const sizeMB = new Blob([serialized]).size / (1024 * 1024);
@@ -47,10 +227,11 @@
     // value in memory, so a failed write is a cache miss to retry next boot, not
     // a reason to fall into a loader's catch and hand back {}, which beforeunload
     // would then persist over the real store.
-    function persistNormalizedInPlace(namespacedKey, value, label) {
+    function persistNormalizedInPlace(storeKey, value, label) {
         try {
-            localStorage.setItem(namespacedKey, JSON.stringify(value));
-            return true;
+            if (saveWithSizeCheck(storeKey, value)) return true;
+            console.warn(`[storage] Could not write back normalized ${label}. Keeping the in-memory copy; the stored value is still intact.`);
+            return false;
         } catch (error) {
             console.warn(`[storage] Could not write back normalized ${label}: ${error?.name || error}. Keeping the in-memory copy; the stored value is still intact.`);
             return false;
@@ -153,22 +334,22 @@
 
     function loadWeeklyData() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'weeklyData';
-            const saved = localStorage.getItem(namespacedKey);
+            const saved = readStore('weeklyData');
             if (saved) {
-                const data = JSON.parse(saved);
-                const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
-                if (normalizedData !== data) {
-                    persistNormalizedInPlace(namespacedKey, normalizedData, 'weeklyData');
+                const normalizedData = normalizeStoredDataSet(saved && typeof saved === 'object' ? saved : {});
+                if (normalizedData !== saved) {
+                    persistNormalizedInPlace('weeklyData', normalizedData, 'weeklyData');
                 }
                 return normalizedData;
             }
 
+            // Pre-namespace key from an old build. Always a localStorage read:
+            // it predates the prefix, so it can never live in the backend.
             const legacySaved = localStorage.getItem('weeklyData');
             if (legacySaved) {
                 const legacyData = JSON.parse(legacySaved);
                 const normalizedData = normalizeStoredDataSet(legacyData && typeof legacyData === 'object' ? legacyData : {});
-                persistNormalizedInPlace(namespacedKey, normalizedData, 'weeklyData (legacy migration)');
+                persistNormalizedInPlace('weeklyData', normalizedData, 'weeklyData (legacy migration)');
                 return normalizedData;
             }
 
@@ -204,13 +385,11 @@
 
     function loadDailyData() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'dailyData';
-            const saved = localStorage.getItem(namespacedKey);
+            const saved = readStore('dailyData');
             if (saved) {
-                const data = JSON.parse(saved);
-                const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
-                if (normalizedData !== data) {
-                    persistNormalizedInPlace(namespacedKey, normalizedData, 'dailyData');
+                const normalizedData = normalizeStoredDataSet(saved && typeof saved === 'object' ? saved : {});
+                if (normalizedData !== saved) {
+                    persistNormalizedInPlace('dailyData', normalizedData, 'dailyData');
                 }
                 return normalizedData;
             }
@@ -238,13 +417,11 @@
 
     function loadYtdData() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'ytdData';
-            const saved = localStorage.getItem(namespacedKey);
+            const saved = readStore('ytdData');
             if (saved) {
-                const data = JSON.parse(saved);
-                const normalizedData = normalizeStoredDataSet(data && typeof data === 'object' ? data : {});
-                if (normalizedData !== data) {
-                    persistNormalizedInPlace(namespacedKey, normalizedData, 'ytdData');
+                const normalizedData = normalizeStoredDataSet(saved && typeof saved === 'object' ? saved : {});
+                if (normalizedData !== saved) {
+                    persistNormalizedInPlace('ytdData', normalizedData, 'ytdData');
                 }
                 return normalizedData;
             }
@@ -272,9 +449,7 @@
 
     function loadCoachingHistory() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'coachingHistory';
-            const saved = localStorage.getItem(namespacedKey);
-            const data = saved ? JSON.parse(saved) : {};
+            const data = readStore('coachingHistory') ?? {};
             return data;
         } catch (error) {
             console.error('Error loading coaching history:', error);
@@ -316,9 +491,7 @@
 
     function loadSentimentPhraseDatabase() {
         try {
-            const namespacedKey = STORAGE_PREFIX + SENTIMENT_PHRASE_DB_STORAGE_KEY;
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : null;
+            return readStore(SENTIMENT_PHRASE_DB_STORAGE_KEY) ?? null;
         } catch (error) {
             console.error('Error loading sentiment phrase database:', error);
             return null;
@@ -338,9 +511,7 @@
 
     function loadAssociateSentimentSnapshots() {
         try {
-            const namespacedKey = STORAGE_PREFIX + ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY;
-            const saved = localStorage.getItem(namespacedKey);
-            let loaded = saved ? JSON.parse(saved) : {};
+            let loaded = readStore(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY) ?? {};
 
             // Migrate old format (object with timeframe keys) to new format (array)
             let didMigrate = false;
@@ -396,8 +567,8 @@
 
             // Save migrated data back if migration occurred
             if (didMigrate) {
-                if (persistNormalizedInPlace(namespacedKey, loaded, 'associateSentimentSnapshots (migration)')) {
-                    console.log('💾 Saved migrated sentiment data to localStorage');
+                if (persistNormalizedInPlace(ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY, loaded, 'associateSentimentSnapshots (migration)')) {
+                    console.log('💾 Saved migrated sentiment data');
                 }
             }
 
@@ -510,9 +681,7 @@
 
     function loadTipUsageHistory() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'tipUsageHistory';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : {};
+            return readStore('tipUsageHistory') ?? {};
         } catch (error) {
             return {};
         }
@@ -520,8 +689,7 @@
 
     function saveTipUsageHistory(history) {
         try {
-            localStorage.setItem(STORAGE_PREFIX + 'tipUsageHistory', JSON.stringify(history));
-            return true;
+            return saveWithSizeCheck('tipUsageHistory', history);
         } catch (error) {
             console.error('Error saving tip usage history:', error);
             return false;
@@ -534,9 +702,7 @@
 
     function loadFollowUpHistory() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'followUpHistory';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : { entries: [] };
+            return readStore('followUpHistory') ?? { entries: [] };
         } catch (error) {
             console.error('Error loading follow-up history:', error);
             return { entries: [] };
@@ -560,9 +726,7 @@
 
     function loadHotTipHistory() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'hotTipHistory';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : { entries: [] };
+            return readStore('hotTipHistory') ?? { entries: [] };
         } catch (error) {
             console.error('Error loading hot tip history:', error);
             return { entries: [] };
@@ -586,8 +750,7 @@
 
     function loadReliabilityTracker() {
         try {
-            const saved = localStorage.getItem(STORAGE_PREFIX + 'reliabilityTracker');
-            return saved ? JSON.parse(saved) : { employees: {} };
+            return readStore('reliabilityTracker') ?? { employees: {} };
         } catch (error) {
             console.error('Error loading reliability tracker:', error);
             return { employees: {} };
@@ -606,9 +769,7 @@
 
     function loadPtoTracker() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'ptoTracker';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : {};
+            return readStore('ptoTracker') ?? {};
         } catch (error) {
             console.error('Error loading PTO tracker:', error);
             return {};
@@ -634,8 +795,7 @@
 
     function loadCallListeningLogs() {
         try {
-            const raw = localStorage.getItem(STORAGE_PREFIX + 'callListeningLogs');
-            const parsed = raw ? JSON.parse(raw) : {};
+            const parsed = readStore('callListeningLogs') ?? {};
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (error) {
             console.error('Error loading call listening logs:', error);
@@ -660,6 +820,10 @@
 
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.storage = {
+        // Backend
+        hydrate,
+        getBackendMode,
+        readStore,
         // Storage helpers
         saveWithSizeCheck,
         // Weekly data
