@@ -1679,10 +1679,24 @@
     // --- Focal point persistence ---
     const FOCAL_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'weeklyFocalPoints';
 
+    // Reads through the storage module so this store follows its backend. A raw
+    // localStorage read goes permanently stale the moment the store moves.
+    function readViaStorage(name, fallbackKey, empty) {
+        var read = window.DevCoachModules?.storage?.readStore;
+        if (typeof read === 'function') {
+            var value = read(name);
+            if (value !== undefined && value !== null) return value;
+            return empty;
+        }
+        try {
+            var raw = localStorage.getItem(fallbackKey);
+            return raw ? JSON.parse(raw) : empty;
+        } catch (e) { return empty; }
+    }
+
     function saveFocalPoint(employeeName, weekKey, focalMetricKey, focalLabel, focalValue, focalTarget) {
         try {
-            const raw = localStorage.getItem(FOCAL_STORAGE_KEY);
-            const all = raw ? JSON.parse(raw) : {};
+            const all = readViaStorage('weeklyFocalPoints', FOCAL_STORAGE_KEY, {});
             if (!all[weekKey]) all[weekKey] = {};
             all[weekKey][employeeName] = {
                 metricKey: focalMetricKey,
@@ -1691,15 +1705,16 @@
                 target: focalTarget,
                 setDate: window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toISOString().slice(0, 10)
             };
-            localStorage.setItem(FOCAL_STORAGE_KEY, JSON.stringify(all));
+            const save = window.DevCoachModules?.storage?.saveWithSizeCheck;
+            if (save) save('weeklyFocalPoints', all);
+            else localStorage.setItem(FOCAL_STORAGE_KEY, JSON.stringify(all));
         } catch (e) { /* storage full or unavailable */ }
     }
 
     function loadFocalPoint(employeeName, weekKey) {
         try {
-            const raw = localStorage.getItem(FOCAL_STORAGE_KEY);
-            if (!raw) return null;
-            const all = JSON.parse(raw);
+            const all = readViaStorage('weeklyFocalPoints', FOCAL_STORAGE_KEY, null);
+            if (!all) return null;
             return all[weekKey]?.[employeeName] || null;
         } catch (e) { return null; }
     }

@@ -42,7 +42,9 @@
         // a drift test fails the build if these disagree.
         'weeklyData', 'ytdData', 'dailyData', 'coachingHistory', 'callListeningLogs',
         'associateSentimentSnapshots', 'sentimentPhraseDatabase', 'reliabilityTracker',
-        'ptoTracker', 'tipUsageHistory', 'followUpHistory', 'hotTipHistory'
+        'ptoTracker', 'tipUsageHistory', 'followUpHistory', 'hotTipHistory',
+        'callCenterAverages', 'weeklyFocalPoints', 'celebrationsHistory',
+        'oneOnOneMeetings', 'midYearMeta'
     ];
 
     window.DevCoachConstants = {

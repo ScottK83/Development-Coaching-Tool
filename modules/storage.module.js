@@ -158,6 +158,12 @@
                 console.warn('[storage] Could not write the migration marker:', error?.name || error);
             }
 
+            // A store promoted to the backend in a later release is absent from
+            // IndexedDB but present in localStorage, and the checks above have
+            // already decided the migration ran. Without this it would keep
+            // reading from a cache that has never held it, and look empty.
+            await backfillNewBulkStores(backend, existing);
+
             bulkCache = await backend.getAll();
             backendMode = 'idb';
             return 'idb';
@@ -174,6 +180,33 @@
      * backend is worse than none, because hasMeaningfulLocalData would then see
      * a half-empty store and could trigger a repo restore over live data.
      */
+    /**
+     * Copies across any bulk store the backend does not have yet.
+     *
+     * Per store rather than all-or-nothing, unlike the first migration: the
+     * backend already holds the rest, so refusing everything because one new
+     * store will not parse would be worse than moving the ones that will.
+     * Nothing is deleted, so a store that fails simply stays where it is.
+     */
+    async function backfillNewBulkStores(backend, existing) {
+        const missing = [];
+        for (const key of BULK_KEYS) {
+            if (key in existing) continue;
+            const raw = localStorage.getItem(STORAGE_PREFIX + key);
+            if (raw === null) continue;
+            try {
+                await backend.put(key, JSON.parse(raw));
+                missing.push(key);
+            } catch (error) {
+                console.error(`[storage] Could not move ${key} to the backend; it stays in localStorage.`, error);
+            }
+        }
+        if (missing.length) {
+            console.log(`[storage] Moved ${missing.length} newly promoted store(s) to IndexedDB: ${missing.join(', ')}`);
+        }
+        return missing;
+    }
+
     async function copyBulkStoresIntoBackend(backend) {
         const expected = {};
 
@@ -699,9 +732,7 @@
 
     function loadCallCenterAverages() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'callCenterAverages';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : {};
+            return readStore('callCenterAverages') ?? {};
         } catch (error) {
             console.error('Error loading call center averages:', error);
             return {};
@@ -710,8 +741,7 @@
 
     function saveCallCenterAverages(averages) {
         try {
-            localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(averages));
-            return true;
+            return saveWithSizeCheck('callCenterAverages', averages);
         } catch (error) {
             console.error('Error saving call center averages:', error);
             return false;

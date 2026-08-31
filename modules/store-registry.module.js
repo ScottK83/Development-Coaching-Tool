@@ -46,7 +46,7 @@
         // --- Data still in localStorage. Small, or read before hydrate. ---
         { name: 'attendanceTracker', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'myTeamMembers', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
-        { name: 'callCenterAverages', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
+        { name: 'callCenterAverages', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'yearEndAnnualGoals', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'yearEndDraftEntries', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'employeePreferredNames', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
@@ -61,10 +61,10 @@
         { name: 'metricCoachingTips', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'yoyBaseline2025', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'complianceLog', tier: 'data', backend: 'local', merge: 'unionByEntryHash' },
-        { name: 'weeklyFocalPoints', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
-        { name: 'celebrationsHistory', tier: 'data', backend: 'local', merge: 'unionByEntryHash' },
-        { name: 'oneOnOneMeetings', tier: 'data', backend: 'local', merge: 'unionByEntryHash' },
-        { name: 'midYearMeta', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
+        { name: 'weeklyFocalPoints', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        { name: 'celebrationsHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
+        { name: 'oneOnOneMeetings', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
+        { name: 'midYearMeta', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
 
         // --- This machine only. Never leaves it. ---
         // callListeningSyncConfig holds the shared secret. Syncing it would put

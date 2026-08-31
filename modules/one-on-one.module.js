@@ -135,12 +135,26 @@
 
     function loadAllMeetings() {
         try {
-            const raw = localStorage.getItem(MEETINGS_KEY);
-            const parsed = raw ? JSON.parse(raw) : null;
+            const parsed = readViaStorage('oneOnOneMeetings', MEETINGS_KEY, null);
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (e) {
             return {};
         }
+    }
+
+    // Reads through the storage module so this store follows its backend. A raw
+    // localStorage read goes permanently stale the moment the store moves.
+    function readViaStorage(name, fallbackKey, empty) {
+        var read = window.DevCoachModules?.storage?.readStore;
+        if (typeof read === 'function') {
+            var value = read(name);
+            if (value !== undefined && value !== null) return value;
+            return empty;
+        }
+        try {
+            var raw = localStorage.getItem(fallbackKey);
+            return raw ? JSON.parse(raw) : empty;
+        } catch (e) { return empty; }
     }
 
     function saveAllMeetings(all) {

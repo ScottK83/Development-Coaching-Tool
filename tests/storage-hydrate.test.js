@@ -175,3 +175,41 @@ suite('hydrate: a fresh profile with data only in localStorage still migrates', 
     t.equal('and the seeded week came across', Object.keys(storage.loadWeeklyData()).length, 1);
     t.check('with the marker written', store[PREFIX + 'idbMigrated_v1'] === '1');
 });
+
+suite('hydrate: a store promoted to the backend later still moves across', async (t) => {
+    const idb = createFakeIndexedDB();
+
+    // First boot: the original bulk set migrates and the marker is written.
+    const first = load(t, seeded(), idb);
+    await first.storage.hydrate();
+
+    // A later release promotes another store. It is in localStorage, absent
+    // from the backend, and the marker already says the migration ran, so the
+    // all-or-nothing copy will not fire for it.
+    const seed = seeded();
+    seed[PREFIX + 'idbMigrated_v1'] = '1';
+    seed[PREFIX + 'celebrationsHistory'] = JSON.stringify([{ periodKey: 'k', people: 3 }]);
+
+    const browser = t.installFakeBrowser();
+    Object.assign(browser.store, seed);
+    global.window.indexedDB = idb;
+    global.window.DevCoachConstants = Object.assign({}, global.window.DevCoachConstants, {
+        STORAGE_PREFIX: PREFIX,
+        SENTIMENT_PHRASE_DB_STORAGE_KEY: 'sentimentPhraseDatabase',
+        ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY: 'associateSentimentSnapshots',
+        LOCALSTORAGE_MAX_SIZE_MB: 4,
+        IDB_DB_NAME: 'devCoachingTool', IDB_VERSION: 1, IDB_BULK_STORE: 'bulk',
+        IDB_ARCHIVE_STORE: 'archive', IDB_OPEN_TIMEOUT_MS: 120,
+        BULK_STORAGE_KEYS: BULK.concat(['celebrationsHistory'])
+    });
+    t.loadModule('modules/idb-backend.module.js');
+    const storage = t.loadModule('modules/storage.module.js').storage;
+
+    t.equal('it still uses the backend', await storage.hydrate(), 'idb');
+    t.check('and the newly promoted store came across',
+        storage.readStore('celebrationsHistory') !== undefined);
+    t.equal('with its data intact',
+        storage.readStore('celebrationsHistory')[0].people, 3);
+    t.equal('while the stores already there are untouched',
+        Object.keys(storage.loadWeeklyData()).length, 1);
+});
