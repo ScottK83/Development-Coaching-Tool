@@ -2365,18 +2365,14 @@ function refreshStorageQuotaWidget() {
     const widget = document.getElementById('storageQuotaWidget');
     if (!widget) return;
 
-    // On the IndexedDB backend the bulk stores are no longer charged against
-    // the 5MB origin ceiling, so this meter would read near-zero and hide
-    // itself under the 70% gate below. That is the correct outcome, not a bug:
-    // the ceiling this meter tracks is no longer the binding constraint. It
-    // stays hidden rather than reporting a reassuring number about a limit
-    // that no longer governs the data the user cares about.
-    const backend = window.DevCoachModules?.storage?.getBackendMode?.() || 'localStorage';
-    if (backend === 'idb') {
-        widget.style.display = 'none';
-        return;
-    }
-
+    // Deliberately still measures localStorage, even on the IndexedDB backend.
+    // Moving the bulk stores does not empty localStorage: the original copies
+    // stay until they are explicitly reclaimed, and the thirty-odd config keys
+    // live there permanently. So the origin ceiling is still real and a
+    // non-bulk write can still fail against it. Hiding this meter the moment
+    // the backend switched would turn off the warning while the pressure was
+    // still there. It falls below the 70% gate on its own once the reclaim
+    // happens, which is the right way for it to go quiet.
     const { totalBytes } = measureLocalStorageUsage();
     const pct = Math.min(100, (totalBytes / STORAGE_TOTAL_BUDGET_BYTES) * 100);
     if (pct < 70) {
