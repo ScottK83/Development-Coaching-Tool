@@ -185,6 +185,64 @@
         return true;
     }
 
+    /**
+     * Deletes the localStorage copy of every bulk store that the backend is
+     * verifiably already holding, and reports what it freed.
+     *
+     * This is the step that actually gives the space back. It is separate from
+     * hydrate() on purpose: until it runs, both copies exist and rolling the
+     * deploy back costs nothing.
+     *
+     * A store is only deleted when the backend holds it with the SAME number of
+     * entries. Anything that does not match is left alone and named in the
+     * report. Deleting on a read that quietly returned empty is the one way
+     * this loses data, so an unverifiable store keeps its localStorage copy.
+     */
+    async function reclaimLocalStorageCopies() {
+        const report = { freedBytes: 0, reclaimed: [], skipped: [] };
+
+        if (backendMode !== 'idb') {
+            report.skipped.push('the backend is localStorage, so there is nothing to reclaim');
+            return report;
+        }
+
+        const backend = window.DevCoachModules?.idbBackend;
+        if (!backend?.isAvailable?.()) {
+            report.skipped.push('the backend is unavailable');
+            return report;
+        }
+
+        // Read straight from the backend rather than trusting the cache, so a
+        // stale or half-built cache cannot authorize a delete.
+        const stored = await backend.getAll();
+
+        for (const key of BULK_KEYS) {
+            const namespacedKey = STORAGE_PREFIX + key;
+            const raw = localStorage.getItem(namespacedKey);
+            if (raw === null) continue;
+
+            let localCount;
+            try {
+                localCount = countEntries(JSON.parse(raw));
+            } catch (error) {
+                report.skipped.push(`${key}: the localStorage copy is unreadable, keeping it`);
+                continue;
+            }
+
+            const backendCount = countEntries(stored[key]);
+            if (backendCount !== localCount) {
+                report.skipped.push(`${key}: backend has ${backendCount} entries, localStorage has ${localCount}`);
+                continue;
+            }
+
+            report.freedBytes += (namespacedKey.length + raw.length) * 2;
+            localStorage.removeItem(namespacedKey);
+            report.reclaimed.push(key);
+        }
+
+        return report;
+    }
+
     function countEntries(value) {
         if (value === null || value === undefined) return -1;
         if (Array.isArray(value)) return value.length;
@@ -828,6 +886,7 @@
         hydrate,
         getBackendMode,
         readStore,
+        reclaimLocalStorageCopies,
         // Storage helpers
         saveWithSizeCheck,
         // Weekly data

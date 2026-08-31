@@ -2149,7 +2149,11 @@ function bindCoachingFormHandlers() {
         const fn = window.DevCoachModules?.dataIntegrity?.showDataIntegrityModal;
         if (typeof fn === 'function') fn();
     });
-    document.getElementById('archiveOldWeeksBtn')?.addEventListener('click', () => archiveOldWeeks(6));
+    // Replaces the old "Archive 6+ month old weeks" button. That one deleted
+    // weeks after downloading a file no importer in this codebase can read, and
+    // pushed the shrunken store to the repo, degrading the remote copy too. It
+    // was the remedy the storage-full message used to recommend.
+    document.getElementById('reclaimStorageBtn')?.addEventListener('click', handleReclaimStorageClick);
     refreshUploadUndoBanner();
     refreshStorageQuotaWidget();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
@@ -2392,9 +2396,76 @@ function refreshStorageQuotaWidget() {
     }
     if (label) {
         label.textContent = `${mbUsed} MB / ${STORAGE_TOTAL_BUDGET_MB} MB (${pct.toFixed(0)}%)`;
-        label.style.color = pct >= 80 ? '#c62828' : '#546e7a';
+        // Both of the old values (#c62828, #546e7a) are dark, and the dark-theme
+        // rules at styles-v2.css:184-190 turn this widget's light inline
+        // background into a dark surface without touching child text colours.
+        // Dark text on the new dark background is why this line was unreadable.
+        // #ef5350 carries on both grounds; the rest defers to the theme.
+        label.style.color = pct >= 80 ? '#ef5350' : 'var(--text-secondary)';
     }
     widget.style.display = 'flex';
+}
+
+/**
+ * Gives back the localStorage space the bulk stores no longer need, now that
+ * IndexedDB holds them.
+ *
+ * Takes a full backup first, without asking, because the export is free and
+ * this is the only irreversible step in the whole move. Then deletes only the
+ * copies the backend verifiably already has, entry count matching.
+ */
+async function handleReclaimStorageClick() {
+    const storage = window.DevCoachModules?.storage;
+    const backend = storage?.getBackendMode?.() || 'localStorage';
+
+    if (backend !== 'idb') {
+        alert('Nothing to reclaim.\n\nThe data is still stored in browser local storage, so there is no second copy to remove. This becomes available once the data has moved.');
+        return;
+    }
+
+    const { totalBytes } = measureLocalStorageUsage();
+    const before = (totalBytes / (1024 * 1024)).toFixed(2);
+
+    const proceed = confirm(
+        `Free up space\n\n` +
+        `Your data has been copied to browser database storage, which is not limited to 5 MB. ` +
+        `The old copies are still sitting in local storage, using most of your ${before} MB.\n\n` +
+        `This removes only the copies that are verified present in the new location, and downloads a full backup first.\n\n` +
+        `Continue?`
+    );
+    if (!proceed) return;
+
+    try {
+        // Unconditional, and before the delete rather than after. If anything
+        // below goes wrong, there is a file on disk that covers every store.
+        exportToExcel();
+    } catch (error) {
+        console.error('[reclaim] Backup export failed:', error);
+        alert('⚠️ Could not download a backup, so nothing was deleted.\n\n' + (error?.message || error));
+        return;
+    }
+
+    let report;
+    try {
+        report = await storage.reclaimLocalStorageCopies();
+    } catch (error) {
+        console.error('[reclaim] Failed:', error);
+        alert('⚠️ Could not free up space: ' + (error?.message || error) + '\n\nNothing was deleted.');
+        return;
+    }
+
+    refreshStorageQuotaWidget();
+    const freedMb = (report.freedBytes / (1024 * 1024)).toFixed(2);
+    const after = (measureLocalStorageUsage().totalBytes / (1024 * 1024)).toFixed(2);
+
+    let message = `✅ Freed ${freedMb} MB.\n\nLocal storage went from ${before} MB to ${after} MB.\n\n` +
+        `Removed the spare copies of: ${report.reclaimed.join(', ') || 'nothing'}`;
+    if (report.skipped.length) {
+        // Anything unverifiable keeps its copy. Say which, so it is a known
+        // state rather than a silent partial result.
+        message += `\n\nLeft in place because they could not be verified:\n${report.skipped.join('\n')}`;
+    }
+    alert(message);
 }
 
 function getArchivableWeekKeys(cutoffDate) {

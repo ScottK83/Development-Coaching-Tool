@@ -147,3 +147,55 @@ suite('switch-on: the loader hydrates between the modules and the app', (t) => {
     t.check('and says it is continuing on localStorage',
         /continuing on localStorage/.test(tail));
 });
+
+suite('reclaim: only a verified copy is deleted', async (t) => {
+    const { storage, store } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {}, w2: {} }),
+        [PREFIX + 'ptoTracker']: JSON.stringify({ associates: {} })
+    });
+    await storage.hydrate();
+
+    const before = store[PREFIX + 'weeklyData'];
+    t.check('the localStorage copy exists before reclaiming', typeof before === 'string');
+
+    const report = await storage.reclaimLocalStorageCopies();
+
+    t.check('the spare copy is gone', store[PREFIX + 'weeklyData'] === undefined);
+    t.check('and the space is reported', report.freedBytes > 0);
+    t.check('weeklyData is named as reclaimed', report.reclaimed.indexOf('weeklyData') > -1);
+
+    // The data itself must be untouched. Deleting the copy is the whole point;
+    // deleting the data is the failure this guards.
+    t.equal('the data still reads back in full', Object.keys(storage.loadWeeklyData()).length, 2);
+});
+
+suite('reclaim: a copy the backend cannot confirm is kept', async (t) => {
+    const { storage, store } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {} })
+    });
+    await storage.hydrate();
+
+    // Someone wrote more weeks to localStorage than the backend ever saw. The
+    // counts disagree, so this copy is the one that might hold something the
+    // backend does not, and deleting it is exactly the wrong move.
+    store[PREFIX + 'weeklyData'] = JSON.stringify({ w1: {}, w2: {}, w3: {} });
+
+    const report = await storage.reclaimLocalStorageCopies();
+
+    t.check('the unverifiable copy is still there', typeof store[PREFIX + 'weeklyData'] === 'string');
+    t.check('it is not counted as reclaimed', report.reclaimed.indexOf('weeklyData') === -1);
+    t.check('and the mismatch is reported rather than swallowed',
+        report.skipped.some(s => s.indexOf('weeklyData') > -1));
+});
+
+suite('reclaim: it refuses to run while still on localStorage', async (t) => {
+    const { storage, store } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {} })
+    });
+    // No hydrate: there is no second copy, so deleting would destroy the only one.
+    const report = await storage.reclaimLocalStorageCopies();
+
+    t.equal('nothing is freed', report.freedBytes, 0);
+    t.equal('nothing is deleted', report.reclaimed.length, 0);
+    t.check('the only copy is untouched', typeof store[PREFIX + 'weeklyData'] === 'string');
+});
