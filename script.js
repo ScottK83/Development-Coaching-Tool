@@ -728,19 +728,83 @@ function downloadCoachingHistoryCSV() {
 }
 
 /**
+ * Every devCoachingTool_ key as its raw stored string. Enumerating the store
+ * rather than listing keys by hand is the point: this file is the only copy of
+ * ten stores that the repo sync has never carried, including the 1:1 notes and
+ * the mid-year review notes, and a hand-maintained list is exactly how they
+ * came to be missing in the first place. A new store is covered the day it is
+ * written, without anyone remembering to add it here.
+ */
+function collectAllStoresVerbatim() {
+    const stores = {};
+    for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
+        const raw = localStorage.getItem(key);
+        if (raw !== null) stores[key] = raw;
+    }
+    return stores;
+}
+
+// Bookkeeping and view state that belong to the machine and moment they were
+// written, not to the data. Backed up for completeness, skipped on restore so a
+// backup cannot drag another machine's sync timestamps or a stale "delete just
+// ran" flag onto this one.
+const NON_RESTORABLE_STORE_SUFFIXES = new Set([
+    'deleteAllJustRan', 'debugLog', 'errorLog', 'lastError',
+    'repoSyncLastSuccess', 'repoBackupAppliedAt',
+    'uiNavState', 'selectedAssociate', 'teamMemberSelectorExpanded',
+    'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection'
+]);
+
+/**
+ * Writes every backed-up store back verbatim. Reports what failed rather than
+ * returning a bare boolean, because a restore that silently drops a store is
+ * how someone ends up working on top of data they think they recovered.
+ */
+function applyAllStoresVerbatim(stores) {
+    const report = { total: 0, restored: 0, failed: [] };
+    if (!stores || typeof stores !== 'object') return report;
+
+    Object.keys(stores).forEach((key) => {
+        if (!key.startsWith(STORAGE_PREFIX)) return;
+        if (NON_RESTORABLE_STORE_SUFFIXES.has(key.slice(STORAGE_PREFIX.length))) return;
+
+        const raw = stores[key];
+        if (typeof raw !== 'string') return;
+
+        report.total += 1;
+        try {
+            localStorage.setItem(key, raw);
+            report.restored += 1;
+        } catch (error) {
+            const mb = ((key.length + raw.length) * 2 / (1024 * 1024)).toFixed(2);
+            report.failed.push(`${key.slice(STORAGE_PREFIX.length)} (${mb} MB): ${error?.name || 'write failed'}`);
+        }
+    });
+
+    return report;
+}
+
+/**
  * Exports all app data (including sentiment snapshots) to JSON file
  */
 function exportToExcel() {
+    const allStores = collectAllStoresVerbatim();
     const exportData = {
+        // Kept so a file written here still restores in older builds. The
+        // authoritative copy is allStores; these five are a subset of it.
         weeklyData: weeklyData || {},
         ytdData: ytdData || {},
         callListeningLogs: callListeningLogs || {},
         sentimentPhraseDatabase: sentimentPhraseDatabase || null,
         associateSentimentSnapshots: associateSentimentSnapshots || {},
+        allStores,
+        allStoresVersion: 1,
         exportDate: new Date().toISOString(),
         appVersion: APP_VERSION
     };
-    
+
     const dataStr = JSON.stringify(exportData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     
@@ -760,7 +824,8 @@ function exportToExcel() {
     const sentimentCount = Object.keys(associateSentimentSnapshots || {}).reduce((sum, emp) => sum + (associateSentimentSnapshots[emp]?.length || 0), 0);
     const callListeningCount = Object.values(callListeningLogs || {}).reduce((sum, entries) => sum + (Array.isArray(entries) ? entries.length : 0), 0);
 
-    showToast(`✅ Exported ${weekCount} weeks + ${sentimentCount} sentiment snapshots + ${callListeningCount} call logs to ${exportFileDefaultName}`, 5000);
+    const storeCount = Object.keys(exportData.allStores || {}).length;
+    showToast(`✅ Exported ${weekCount} weeks + ${sentimentCount} sentiment snapshots + ${callListeningCount} call logs, and all ${storeCount} stores, to ${exportFileDefaultName}`, 5000);
 }
 
 // ============================================
@@ -2992,6 +3057,12 @@ function handleDataFileInputChange(event) {
         try {
             const data = JSON.parse(loadEvent.target.result);
 
+            // A file carrying allStores restores every key, not just the five
+            // the named fields cover. Without this the 1:1 notes, mid-year
+            // review notes, PTO, reliability, coaching history and celebrations
+            // are silently absent from a restore the toast calls successful.
+            const restoreReport = data.allStores ? applyAllStoresVerbatim(data.allStores) : null;
+
             if (data.weeklyData) weeklyData = data.weeklyData;
             if (data.ytdData) ytdData = data.ytdData;
             if (data.callListeningLogs) callListeningLogs = data.callListeningLogs;
@@ -3006,7 +3077,19 @@ function handleDataFileInputChange(event) {
             normalizeTeamMembersForExistingWeeks();
             saveTeamMembers();
 
-            showToast('✅ Data imported successfully!');
+            if (restoreReport && restoreReport.failed.length) {
+                // Never let a partial restore pass as a success. The user needs
+                // to know which stores are missing before they carry on working
+                // on top of them.
+                alert('⚠️ Restored ' + restoreReport.restored + ' of ' + restoreReport.total + ' stores.\n\n' +
+                    'These could NOT be written, most likely because browser storage is full:\n\n' +
+                    restoreReport.failed.join('\n') +
+                    '\n\nKeep the backup file. Free up space and restore again.');
+            } else if (restoreReport) {
+                showToast(`✅ Restored all ${restoreReport.restored} stores.`, 5000);
+            } else {
+                showToast('✅ Data imported successfully!');
+            }
             document.getElementById('dataFileInput').value = '';
             populateDeleteWeekDropdown();
             populateDeleteSentimentDropdown();
