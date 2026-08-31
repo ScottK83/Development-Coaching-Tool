@@ -512,8 +512,12 @@
                         repoSyncConflictPromptMutedUntil = 0;
                         saveRepoSyncLastSuccess({ syncedAt: new Date().toISOString(), reason: 'retrieve from git', direction: 'retrieve' });
 
-                        const verifyWeekly = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
-                        const verifyKeys = verifyWeekly ? Object.keys(JSON.parse(verifyWeekly)).length : 0;
+                        // Reads through the storage module so the count reflects
+                        // where the restore actually wrote. A raw localStorage read
+                        // would report 0 periods after a successful restore and
+                        // tell the user their data did not come back.
+                        const verifyWeekly = safeLoadJson('weeklyData');
+                        const verifyKeys = verifyWeekly ? Object.keys(verifyWeekly).length : 0;
                         const verifyTeam = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers') || '{}');
                         const verifyTeamKeys = Object.keys(verifyTeam).length;
                         console.log(`[Repo Restore] Verification: weeklyData=${verifyKeys} periods, myTeamMembers=${verifyTeamKeys} entries`);

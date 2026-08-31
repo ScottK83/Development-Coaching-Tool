@@ -120,3 +120,30 @@ suite('switch-on: delete-all clears the backend before the localStorage sweep', 
     t.check('a failed clear aborts rather than continuing',
         body.slice(clearsIdb, sweepsLocalStorage).indexOf('return;') > -1);
 });
+
+suite('switch-on: the loader hydrates between the modules and the app', (t) => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+
+    const idbPos = html.indexOf("'modules/idb-backend.module.js'");
+    const storagePos = html.indexOf("'modules/storage.module.js'");
+    t.check('the backend module is in the manifest', idbPos > -1);
+    t.check('and loads before the storage module that hydrates from it',
+        idbPos < storagePos);
+
+    // script.js reads bulk stores at parse time, so hydrate has to finish
+    // before it loads. Loading everything and hydrating afterwards would leave
+    // those top-level reads seeing an unhydrated cache.
+    const splitPos = html.indexOf('var mainIndex = scripts.indexOf');
+    const hydratePos = html.indexOf('storage.hydrate()');
+    const appLoadPos = html.indexOf('loadInOrder(appScripts)');
+    t.check('the manifest is split at script.js', splitPos > -1);
+    t.check('hydrate runs after the modules load', hydratePos > splitPos);
+    t.check('and before script.js is loaded', hydratePos < appLoadPos);
+
+    // A backend failure must not cost the user their app.
+    const tail = html.slice(hydratePos, hydratePos + 900);
+    t.check('a hydrate failure is caught rather than breaking boot',
+        tail.indexOf('.catch(') > -1);
+    t.check('and says it is continuing on localStorage',
+        /continuing on localStorage/.test(tail));
+});

@@ -1518,8 +1518,8 @@ window.backfillBlankReliability = backfillBlankReliability;
 
     const allEmps = {};
     try {
-        const wd = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'weeklyData') || '{}');
-        const yd = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'ytdData') || '{}');
+        const wd = loadWeeklyData() || {};
+        const yd = loadYtdData() || {};
         [wd, yd].forEach(function(ds) {
             Object.values(ds || {}).forEach(function(period) {
                 (period?.employees || []).forEach(function(emp) {
@@ -2364,6 +2364,19 @@ function measureLocalStorageUsage() {
 function refreshStorageQuotaWidget() {
     const widget = document.getElementById('storageQuotaWidget');
     if (!widget) return;
+
+    // On the IndexedDB backend the bulk stores are no longer charged against
+    // the 5MB origin ceiling, so this meter would read near-zero and hide
+    // itself under the 70% gate below. That is the correct outcome, not a bug:
+    // the ceiling this meter tracks is no longer the binding constraint. It
+    // stays hidden rather than reporting a reassuring number about a limit
+    // that no longer governs the data the user cares about.
+    const backend = window.DevCoachModules?.storage?.getBackendMode?.() || 'localStorage';
+    if (backend === 'idb') {
+        widget.style.display = 'none';
+        return;
+    }
+
     const { totalBytes } = measureLocalStorageUsage();
     const pct = Math.min(100, (totalBytes / STORAGE_TOTAL_BUDGET_BYTES) * 100);
     if (pct < 70) {
@@ -5410,6 +5423,8 @@ function getMetricSeverity(metricKey, value) {
 
 function loadTipUsageHistory() {
     try {
+        const storage = window.DevCoachModules?.storage;
+        if (storage?.loadTipUsageHistory) return storage.loadTipUsageHistory() || {};
         return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'tipUsageHistory') || '{}');
     } catch {
         return {};
@@ -7129,7 +7144,7 @@ async function initApp() {
     // Ensure data is saved before page unload (survives Ctrl+Shift+R).
     // Skip when a repo restore just wrote fresh data straight to localStorage. 
     // otherwise these saves would overwrite it with stale in-memory globals.
-    window.addEventListener('beforeunload', () => {
+    function saveEverythingBeforeLeaving() {
         if (window.__skipBeforeunloadSave) return;
         saveWeeklyData();
         saveYtdData();
@@ -7138,7 +7153,22 @@ async function initApp() {
         saveCallListeningLogs();
         saveSentimentPhraseDatabase();
         saveAssociateSentimentSnapshots();
+    }
 
+    window.addEventListener('beforeunload', saveEverythingBeforeLeaving);
+
+    // beforeunload is the weakest point of the IndexedDB backend and no amount
+    // of engineering fixes it: a browser will not hold a page open for a
+    // pending transaction, so a write started here can be lost. Two things
+    // make that survivable. Writes already happen on mutation, so this handler
+    // is a backstop rather than the durability mechanism. And visibilitychange
+    // fires reliably where beforeunload does not (tab switches, mobile
+    // backgrounding, task-switcher kills), which gives the write a real chance
+    // to finish well before the page is actually torn down.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'hidden') return;
+        saveEverythingBeforeLeaving();
+        window.DevCoachModules?.idbBackend?.flush?.();
     });
     
     // Auto-sync remains event-driven via data saves/storage updates.

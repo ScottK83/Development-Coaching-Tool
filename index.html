@@ -1723,9 +1723,15 @@ Box 2 - Future Improvement Areas:
             var scripts = [
                 // Foundation Layer (No Dependencies)
                 'modules/constants.module.js',
+                'modules/action-registry.module.js',
+                'modules/asset-loader.module.js',
+                'modules/logger.module.js',
                 'modules/metrics-registry.module.js',
                 'modules/period-index.module.js',
                 'modules/period-picker.module.js',
+                // Must precede storage: it is the backing store storage
+                // hydrates from, before script.js parses.
+                'modules/idb-backend.module.js',
                 'modules/storage.module.js',
                 'modules/data-parsing.module.js',
                 'modules/metric-profiles.module.js',
@@ -1802,23 +1808,70 @@ Box 2 - Future Improvement Areas:
                 // Main Application
                 'script.js'
             ];
-            var lastScript = null;
-            scripts.forEach(function(src) {
-                var s = document.createElement('script');
-                s.src = src + '?v=' + bust;
-                s.async = false;
-                s.onerror = function() { console.error('Failed to load: ' + src); };
-                document.body.appendChild(s);
-                lastScript = s;
-            });
-            // Boot the app once all scripts have loaded
-            if (lastScript) {
-                lastScript.onload = function() {
-                    if (typeof bootAppSafely === 'function' && !window.__appBootOk) {
-                        bootAppSafely();
-                    }
-                };
+            function showLoadFailure(src, error) {
+                window.__appBootOk = false;
+                window.__appLoadFailure = { src: src, message: error && error.message ? error.message : String(error || '') };
+                var marker = document.getElementById('deployMarker');
+                if (marker) {
+                    marker.textContent = 'Startup failed: ' + src;
+                    marker.style.color = '#b91c1c';
+                }
+                var logger = window.DevCoachModules && window.DevCoachModules.logger;
+                if (logger) logger.error('loader', 'Required script failed to load: ' + src, error || '');
+                else console.error('Required script failed to load:', src, error || '');
             }
+
+            function loadRequiredScript(src) {
+                return new Promise(function(resolve, reject) {
+                    var s = document.createElement('script');
+                    s.src = src + '?v=' + bust;
+                    s.async = false;
+                    s.onload = resolve;
+                    s.onerror = function() { reject(new Error('Failed to load ' + src)); };
+                    document.body.appendChild(s);
+                });
+            }
+
+            function loadInOrder(list) {
+                return list.reduce(function(chain, src) {
+                    return chain.then(function() { return loadRequiredScript(src); });
+                }, Promise.resolve());
+            }
+
+            // script.js reads three bulk stores at parse time, and roughly sixty
+            // call sites across the modules read them from render paths that
+            // cannot await. So the backend is hydrated into a synchronous cache
+            // here, between the modules and the app, and nothing downstream ever
+            // sees a promise.
+            var mainIndex = scripts.indexOf('script.js');
+            var moduleScripts = scripts.slice(0, mainIndex);
+            var appScripts = scripts.slice(mainIndex);
+
+            // Load strictly in manifest order and never boot a partially loaded app.
+            loadInOrder(moduleScripts).then(function() {
+                var storage = window.DevCoachModules && window.DevCoachModules.storage;
+                if (!storage || typeof storage.hydrate !== 'function') return;
+                return storage.hydrate().then(function(mode) {
+                    if (mode !== 'idb') return;
+                    var marker = document.getElementById('deployMarker');
+                    if (marker) marker.setAttribute('data-storage-backend', 'idb');
+                }).catch(function(error) {
+                    // Boot must never depend on the backend. hydrate already
+                    // falls back to localStorage on every failure it knows
+                    // about; this is the net for the ones it does not.
+                    console.error('[boot] Storage hydrate failed; continuing on localStorage:', error);
+                });
+            }).then(function() {
+                return loadInOrder(appScripts);
+            }).then(function() {
+                if (typeof bootAppSafely !== 'function') {
+                    throw new Error('script.js loaded without exposing bootAppSafely');
+                }
+                if (!window.__appBootOk) return bootAppSafely();
+            }).catch(function(error) {
+                var match = String(error && error.message || '').match(/Failed to load (.+)$/);
+                showLoadFailure(match ? match[1] : 'application startup', error);
+            });
         })();
     </script>
 </body>

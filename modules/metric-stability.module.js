@@ -254,6 +254,8 @@
 
     function loadTipUsageHistory() {
         try {
+            const storage = window.DevCoachModules?.storage;
+            if (storage?.loadTipUsageHistory) return storage.loadTipUsageHistory() || {};
             return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'tipUsageHistory') || '{}');
         } catch (_e) {
             return {};

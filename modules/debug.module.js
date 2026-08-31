@@ -199,10 +199,19 @@
             employees: weeklyData[k]?.employees?.length || 0
         }));
 
+        // Deliberately reads the persisted copy rather than the in-memory
+        // global: the whole value of this number is that it can disagree with
+        // weeklyDataCount. It has to follow the store to whichever backend
+        // holds it, or it reports 0 during exactly the debugging it exists for.
         let rawWeeklyLocalStorageCount = 0;
+        let storageBackend = 'localStorage';
         try {
-            const raw = localStorage.getItem(STORAGE_PREFIX + 'weeklyData');
-            if (raw) rawWeeklyLocalStorageCount = Object.keys(JSON.parse(raw)).length;
+            const storage = window.DevCoachModules?.storage;
+            storageBackend = storage?.getBackendMode?.() || 'localStorage';
+            const persisted = storage?.readStore
+                ? storage.readStore('weeklyData')
+                : JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'weeklyData') || 'null');
+            if (persisted) rawWeeklyLocalStorageCount = Object.keys(persisted).length;
         } catch (_) { /* ignore */ }
 
         return {
@@ -213,6 +222,7 @@
             timestamp: new Date().toISOString(),
             weeklyDataCount: Object.keys(weeklyData || {}).length,
             rawWeeklyLocalStorageCount,
+            storageBackend,
             weeklyKeys,
             ytdDataCount: Object.keys(ytdData || {}).length,
             weeklyPeriodTypes: getPeriodTypeCounts(weeklyData),
