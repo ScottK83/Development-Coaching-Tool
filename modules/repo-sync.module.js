@@ -1334,6 +1334,17 @@
 
     function safeSaveToStorage(key, data) {
         try {
+            // A restored bulk store has to go to whichever backend actually
+            // serves it. Writing it to localStorage after the move puts it
+            // somewhere nothing reads, so the restore reports success and the
+            // app still shows nothing. The size cap below is a localStorage
+            // concern and does not apply to the backend.
+            const storage = window.DevCoachModules?.storage;
+            const bulkKeys = window.DevCoachConstants?.BULK_STORAGE_KEYS || [];
+            if (storage?.getBackendMode?.() === 'idb' && bulkKeys.indexOf(key) > -1) {
+                return storage.saveWithSizeCheck(key, data);
+            }
+
             const json = JSON.stringify(data);
             if (json.length > 4 * 1024 * 1024) {
                 console.warn(`Skipping save for ${key}: payload exceeds 4MB (${(json.length / 1024 / 1024).toFixed(1)}MB)`);
@@ -1386,12 +1397,16 @@
             const incomingCount = (data && typeof data === 'object' && !Array.isArray(data)) ? Object.keys(data).length : 0;
             const ok = safeSaveToStorage(key, data);
             if (ok) {
-                const stored = localStorage.getItem(STORAGE_PREFIX + key) || '';
-                const storedCount = (() => {
-                    try { const p = JSON.parse(stored); return (p && typeof p === 'object' && !Array.isArray(p)) ? Object.keys(p).length : 0; } catch (_) { return 0; }
-                })();
+                // Reads back through the storage module, so the check follows
+                // the write. A raw localStorage read here would report every
+                // bulk store as a mismatch once they live in the backend, and
+                // turn a successful restore into a scary failure alert.
+                const stored = safeLoadJson(key);
+                const storedCount = (stored && typeof stored === 'object' && !Array.isArray(stored))
+                    ? Object.keys(stored).length
+                    : 0;
                 if (incomingCount > 0 && storedCount !== incomingCount) {
-                    writeFailures.push(`${key}: wrote ${incomingCount} entries but localStorage has ${storedCount}`);
+                    writeFailures.push(`${key}: wrote ${incomingCount} entries but the store has ${storedCount}`);
                     console.warn(`[Repo Restore] Mismatch on ${key}: incoming=${incomingCount} stored=${storedCount}`);
                 }
                 savedCount++;

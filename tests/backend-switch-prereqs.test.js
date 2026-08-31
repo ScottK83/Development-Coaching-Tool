@@ -199,3 +199,37 @@ suite('reclaim: it refuses to run while still on localStorage', async (t) => {
     t.equal('nothing is deleted', report.reclaimed.length, 0);
     t.check('the only copy is untouched', typeof store[PREFIX + 'weeklyData'] === 'string');
 });
+
+suite('restore: a repo restore lands where the app actually reads', async (t) => {
+    const { storage, store } = load(t, {});
+    await storage.hydrate();
+
+    // applyRepoBackupPayload alerts on write failures. Stubbed so a regression
+    // here fails on the assertion below rather than crashing on a missing alert.
+    const alerts = [];
+    global.alert = (m) => alerts.push(String(m));
+
+    const modules = t.loadModule('modules/repo-sync.module.js');
+
+    // The exact shape of a repo restore: full payload, written through
+    // safeSaveToStorage. Before this was routed, it went to localStorage with a
+    // raw setItem while the app read IndexedDB, so a restore reported success
+    // and the app still showed nothing.
+    modules.repoSync.applyRepoBackupPayload({
+        weeklyData: { w1: { employees: [] }, w2: { employees: [] } },
+        ytdData: { '2026': { employees: [] } },
+        coachingHistory: { 'Alyssa Dimes': [] }
+    });
+
+    t.equal('the restored weeks read back through the module',
+        Object.keys(storage.loadWeeklyData()).length, 2);
+    t.equal('and so does YTD', Object.keys(storage.loadYtdData()).length, 1);
+    t.check('the bulk store did not land in localStorage where nothing reads it',
+        store[PREFIX + 'weeklyData'] === undefined);
+    t.equal('and the restore reported no write failures', alerts.length, 0);
+
+    // A non-bulk store still belongs in localStorage.
+    modules.repoSync.applyRepoBackupPayload({ myTeamMembers: { 'Chris Vale': true } });
+    t.check('a non-bulk store still goes to localStorage',
+        store[PREFIX + 'myTeamMembers'] !== undefined);
+});
