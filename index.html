@@ -1739,6 +1739,9 @@ Box 2 - Future Improvement Areas:
             var bust = Date.now();
             var scripts = [
                 // Foundation Layer (No Dependencies)
+                // Declares every storage key once. Must precede constants,
+                // which derives BULK_STORAGE_KEYS from it.
+                'modules/store-registry.module.js',
                 'modules/constants.module.js',
                 'modules/metrics-registry.module.js',
                 'modules/period-index.module.js',
@@ -1777,6 +1780,9 @@ Box 2 - Future Improvement Areas:
                 'modules/debug.module.js',
                 'modules/team-filter.module.js',
                 'modules/repo-sync.module.js',
+                // Reads its endpoint and secret from repo-sync's config, so it
+                // loads after it.
+                'modules/manifest-sync.module.js',
                 'modules/on-off-tracker.module.js',
                 'modules/coaching-email.module.js',
                 'modules/year-end-comments.module.js',

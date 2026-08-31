@@ -82,6 +82,160 @@ export default {
       }
 
       // ============================================
+      // V2: MANIFEST / BLOBS / COMMIT
+      // ============================================
+      // Store values are immutable blobs named by the sha256 of their bytes.
+      // The manifest is the only mutable object, and it is written under an
+      // If-Match compare-and-swap. So in steady state a write only ADDS bytes:
+      // the sole thing that can be overwritten is a small manifest, and only by
+      // a writer holding the current etag.
+      //
+      // That is what makes two machines safe. A client sends a DELTA of the
+      // shards it changed; the worker applies it onto the CURRENT manifest, so
+      // a shard the client did not name is carried forward from live state and
+      // never from the client's stale snapshot. Two machines editing different
+      // stores both survive with no prompt.
+
+      if (mode === 'v2.manifest') {
+        const head = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
+        if (!head) {
+          // Deliberately NOT an invitation to seed. A transient miss must never
+          // license a client to write its whole local view over production, so
+          // creating the first manifest is a separate, explicit operation.
+          return json({ ok: true, mode: 'v2.manifest', exists: false, manifest: null, etag: null }, 200, cors);
+        }
+        const obj = await env.COACHING_BUCKET.get(V2_MANIFEST_KEY);
+        if (!obj) {
+          return json({ ok: false, code: 'MANIFEST_VANISHED', error: 'The manifest existed a moment ago and does not now. Retry.' }, 409, cors);
+        }
+        // etag travels in the body: corsHeaders sets no Expose-Headers, so a
+        // response header would be unreadable from the page.
+        return json({ ok: true, mode: 'v2.manifest', exists: true, manifest: await obj.json(), etag: obj.etag }, 200, cors);
+      }
+
+      if (mode === 'v2.putBlob') {
+        const hash = String(body?.hash || '').trim().toLowerCase();
+        if (!/^[0-9a-f]{64}$/.test(hash)) {
+          return json({ ok: false, error: 'A blob hash must be 64 lowercase hex characters.' }, 400, cors);
+        }
+        if (typeof body?.bytes !== 'string') {
+          return json({ ok: false, error: 'A blob needs its bytes as a JSON string.' }, 400, cors);
+        }
+        // Content-addressed: verify the name matches the content. Without this
+        // a client bug could store bytes under a hash nothing resolves to, and
+        // the manifest would point at the wrong content forever.
+        const actual = await sha256Hex(body.bytes);
+        if (actual !== hash) {
+          return json({ ok: false, code: 'HASH_MISMATCH', error: `Bytes hash to ${actual}, not ${hash}.` }, 400, cors);
+        }
+        // Immutable: an existing blob with this hash already holds these exact
+        // bytes, so re-writing is pure cost.
+        const existing = await env.COACHING_BUCKET.head(`${V2_OBJECTS_PREFIX}${hash}.json`);
+        if (!existing) {
+          await env.COACHING_BUCKET.put(`${V2_OBJECTS_PREFIX}${hash}.json`, body.bytes, {
+            httpMetadata: { contentType: 'application/json' }
+          });
+        }
+        return json({ ok: true, mode: 'v2.putBlob', hash, alreadyPresent: !!existing }, 200, cors);
+      }
+
+      // One blob, streamed. The batch route below cannot serve a large shard,
+      // and a store must never be unreadable because of how it is packaged.
+      if (mode === 'v2.getBlob') {
+        const hash = String(body?.hash || '').trim().toLowerCase();
+        if (!/^[0-9a-f]{64}$/.test(hash)) {
+          return json({ ok: false, error: 'A blob hash must be 64 lowercase hex characters.' }, 400, cors);
+        }
+        const obj = await env.COACHING_BUCKET.get(`${V2_OBJECTS_PREFIX}${hash}.json`);
+        if (!obj) {
+          return json({ ok: false, code: 'BLOB_MISSING', error: `No blob stored for ${hash}.` }, 404, cors);
+        }
+        return new Response(obj.body, {
+          status: 200,
+          headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=31536000, immutable' }
+        });
+      }
+
+      if (mode === 'v2.commit') {
+        const changed = body?.changed;
+        if (!changed || typeof changed !== 'object' || Array.isArray(changed)) {
+          return json({ ok: false, error: 'A commit needs a changed map of shard name to hash.' }, 400, cors);
+        }
+
+        const head = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
+
+        if (!head) {
+          // Create-if-absent, and only when the client explicitly says so. A
+          // client that treats a missing manifest as permission to seed turns
+          // any transient 404 into an unguarded whole-state overwrite, via the
+          // least-tested path in the system.
+          if (body?.intent !== 'create') {
+            return json({
+              ok: false,
+              code: 'NO_MANIFEST',
+              error: 'No manifest exists. Creating the first one is a separate, explicit operation.'
+            }, 409, cors);
+          }
+          const created = buildManifest({ version: 1, shards: changed, device: body?.device, prev: null });
+          // etagMatches on a non-existent key never matches, so guard the
+          // create with a re-check instead of a conditional put.
+          const raced = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
+          if (raced) {
+            return json({ ok: false, code: 'CAS_CONFLICT', error: 'Another machine created the manifest first. Re-read and commit again.' }, 409, cors);
+          }
+          await env.COACHING_BUCKET.put(V2_MANIFEST_KEY, JSON.stringify(created), { httpMetadata: { contentType: 'application/json' } });
+          const after = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
+          await writeJournal(env, created, body);
+          return json({ ok: true, mode: 'v2.commit', created: true, manifest: created, etag: after?.etag || null }, 200, cors);
+        }
+
+        const baseEtag = String(body?.baseEtag || '').trim();
+        if (!baseEtag) {
+          return json({ ok: false, code: 'NO_BASE_ETAG', error: 'A commit against an existing manifest must carry the etag it was based on.' }, 400, cors);
+        }
+
+        const currentObj = await env.COACHING_BUCKET.get(V2_MANIFEST_KEY);
+        const current = await currentObj.json();
+
+        // The delta is applied onto CURRENT, not onto whatever the client last
+        // saw. A shard the client did not name keeps the live value.
+        const nextShards = { ...(current.shards || {}) };
+        for (const [shardName, hash] of Object.entries(changed)) {
+          if (hash === null) delete nextShards[shardName];
+          else if (/^[0-9a-f]{64}$/.test(String(hash))) nextShards[shardName] = String(hash);
+          else return json({ ok: false, error: `Shard ${shardName} has an invalid hash.` }, 400, cors);
+        }
+
+        const next = buildManifest({
+          version: (Number(current.version) || 0) + 1,
+          shards: nextShards,
+          device: body?.device,
+          prev: current
+        });
+
+        const put = await env.COACHING_BUCKET.put(V2_MANIFEST_KEY, JSON.stringify(next), {
+          httpMetadata: { contentType: 'application/json' },
+          onlyIf: { etagMatches: baseEtag }
+        });
+
+        // R2 resolves to null rather than throwing when the precondition fails.
+        if (put === null) {
+          const freshObj = await env.COACHING_BUCKET.get(V2_MANIFEST_KEY);
+          return json({
+            ok: false,
+            code: 'CAS_CONFLICT',
+            error: 'The manifest moved since you read it. Rebase your changes onto this one and commit again.',
+            manifest: await freshObj.json(),
+            etag: freshObj.etag
+          }, 409, cors);
+        }
+
+        const after = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
+        await writeJournal(env, next, body);
+        return json({ ok: true, mode: 'v2.commit', created: false, manifest: next, etag: after?.etag || null }, 200, cors);
+      }
+
+      // ============================================
       // LIST SNAPSHOTS: What point-in-time copies exist
       // ============================================
       // Every sync already writes state/snapshots/YYYY-MM-DD.json and deleteAll
@@ -131,7 +285,35 @@ export default {
       if (mode === 'deleteAll') {
         await env.COACHING_BUCKET.delete('state/latest.json');
         await env.COACHING_BUCKET.delete('state/coachingHistory.csv');
-        return json({ ok: true, mode: 'deleteAll', deletedAt: new Date().toISOString() }, 200, cors);
+
+        // Without this, delete-all silently stops working once v2 is live: it
+        // would leave the manifest intact and the next boot on any machine
+        // would resurrect everything the user just deleted.
+        //
+        // The manifest is replaced with an empty one rather than removed, so
+        // the other machine sees a real version bump and empties itself, rather
+        // than seeing no manifest and deciding it should seed one from its own
+        // stale local copy. Blobs are deliberately left: they are unreachable
+        // once unreferenced, and they are what a snapshot restore needs.
+        let v2Cleared = false;
+        const head = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
+        if (head) {
+          const currentObj = await env.COACHING_BUCKET.get(V2_MANIFEST_KEY);
+          const current = await currentObj.json();
+          const tombstone = buildManifest({
+            version: (Number(current.version) || 0) + 1,
+            shards: {},
+            device: body?.device || 'deleteAll',
+            prev: current
+          });
+          tombstone.deletedAll = true;
+          await env.COACHING_BUCKET.put(V2_MANIFEST_KEY, JSON.stringify(tombstone), {
+            httpMetadata: { contentType: 'application/json' }
+          });
+          v2Cleared = true;
+        }
+
+        return json({ ok: true, mode: 'deleteAll', deletedAt: new Date().toISOString(), v2Cleared }, 200, cors);
       }
 
       // ============================================
@@ -250,6 +432,55 @@ export default {
     }
   }
 };
+
+// ============================================
+// V2 HELPERS
+// ============================================
+
+const V2_MANIFEST_KEY = 'state/v2/manifest.json';
+const V2_OBJECTS_PREFIX = 'state/v2/objects/';
+const V2_JOURNAL_PREFIX = 'state/v2/journal/';
+
+async function sha256Hex(text) {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function buildManifest({ version, shards, device, prev }) {
+  return {
+    schema: 2,
+    version,
+    // The worker's clock, not the client's. Two machines with skewed clocks
+    // would otherwise produce a version history that does not order.
+    updatedAt: new Date().toISOString(),
+    updatedBy: String(device || 'unknown').slice(0, 64),
+    prevVersion: prev ? (Number(prev.version) || 0) : null,
+    shards: shards || {}
+  };
+}
+
+/**
+ * A small record of who changed what. Nothing reads it yet; it exists so that
+ * "which machine wrote this, and when" is answerable at all, which it is not
+ * today. Failure here must never fail the commit that already landed.
+ */
+async function writeJournal(env, manifest, body) {
+  try {
+    const key = `${V2_JOURNAL_PREFIX}${manifest.updatedAt}-${manifest.updatedBy}.json`;
+    await env.COACHING_BUCKET.put(key, JSON.stringify({
+      version: manifest.version,
+      prevVersion: manifest.prevVersion,
+      device: manifest.updatedBy,
+      at: manifest.updatedAt,
+      reason: String(body?.reason || '').slice(0, 200),
+      appVersion: body?.appVersion || null,
+      changed: body?.changed || {}
+    }), { httpMetadata: { contentType: 'application/json' } });
+  } catch (error) {
+    console.warn('[v2] journal write failed, commit stands:', error && error.message);
+  }
+}
 
 // ============================================
 // HELPERS
