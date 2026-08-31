@@ -624,6 +624,37 @@
     }
 
     // ============================================
+    // CALL LISTENING LOGS
+    // ============================================
+    // Lived in script.js and read localStorage directly, which left it outside
+    // the one place that knows where a store actually lives. It is one of the
+    // largest stores by growth (transcripts are clamped to 8000 chars each), so
+    // it has to sit on the same chokepoint as the rest before the backing store
+    // can move. Pure relocation: same key, same shape, same behavior.
+
+    function loadCallListeningLogs() {
+        try {
+            const raw = localStorage.getItem(STORAGE_PREFIX + 'callListeningLogs');
+            const parsed = raw ? JSON.parse(raw) : {};
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+            console.error('Error loading call listening logs:', error);
+            return {};
+        }
+    }
+
+    function saveCallListeningLogs(callListeningLogsRef) {
+        try {
+            const ok = saveWithSizeCheck('callListeningLogs', callListeningLogsRef || {});
+            if (!ok) console.error('Failed to save call listening logs due to size');
+            return ok;
+        } catch (error) {
+            console.error('Error saving call listening logs:', error);
+            return false;
+        }
+    }
+
+    // ============================================
     // MODULE EXPORT
     // ============================================
 
@@ -643,6 +674,9 @@
         // Coaching history
         loadCoachingHistory,
         saveCoachingHistory,
+        // Call listening logs
+        loadCallListeningLogs,
+        saveCallListeningLogs,
         appendCoachingLogEntry,
         getCoachingHistoryForEmployee,
         // Sentiment data

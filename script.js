@@ -215,7 +215,10 @@ const QUARTER_RANGE_DAYS = { min: 88, max: 95 };
 const YTD_MIN_DAYS = 180;
 const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
 const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
-const CALL_LISTENING_LOGS_STORAGE_KEY = STORAGE_PREFIX + 'callListeningLogs';
+// No CALL_LISTENING_LOGS_STORAGE_KEY here on purpose: the call listening store
+// is reached through the storage module now, so script.js has no business
+// knowing its localStorage key. Reintroducing the constant is how a direct read
+// creeps back in and quietly bypasses the backend.
 const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSyncConfig';
 const REPO_SYNC_LAST_SUCCESS_STORAGE_KEY = STORAGE_PREFIX + 'repoSyncLastSuccess';
 const REPO_BACKUP_APPLIED_AT_STORAGE_KEY = STORAGE_PREFIX + 'repoBackupAppliedAt';
@@ -3404,26 +3407,20 @@ function saveYearEndDraftStore(store) {
 }
 
 function loadCallListeningLogs() {
-    try {
-        const raw = localStorage.getItem(CALL_LISTENING_LOGS_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch (error) {
-        console.error('Error loading call listening logs:', error);
-        return {};
-    }
+    return window.DevCoachModules?.storage?.loadCallListeningLogs?.() || {};
 }
 
 function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
     try {
-        if (!saveWithSizeCheck('callListeningLogs', callListeningLogs || {})) {
-            console.error('Failed to save call listening logs due to size');
-        }
+        const ok = window.DevCoachModules?.storage?.saveCallListeningLogs?.(callListeningLogs || {});
+        if (ok === false) notifyStorageSaveFailed('call listening logs');
         if (triggerSync) {
             queueCallListeningRepoSync(reason);
         }
+        return ok;
     } catch (error) {
         console.error('Error saving call listening logs:', error);
+        return false;
     }
 }
 
