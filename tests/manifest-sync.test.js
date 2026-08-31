@@ -255,3 +255,79 @@ suite('cloud sync: setup refuses to overwrite an existing cloud copy', (t) => {
     t.check('the prompt says it uses THIS machine as the starting point',
         /THIS machine/.test(body));
 });
+
+suite('two machines: the same append-only store edited on both keeps every entry', async (t) => {
+    const bucket = createFakeR2();
+
+    const a = machine(t, bucket, 'a');
+    a.values.coachingHistory = { 'Alyssa Dimes': [{ note: 'shared baseline', at: '2026-08-01' }] };
+    await a.sync.createFirstManifest(['coachingHistory']);
+
+    const b = machine(t, bucket, 'b');
+    await b.sync.pull();
+
+    // Both log a coaching note for different people, neither pulls first.
+    // Under plain last-writer-wins one of these notes is simply gone, and it is
+    // hand-typed, so nothing can regenerate it.
+    a.values.coachingHistory = {
+        'Alyssa Dimes': [{ note: 'shared baseline', at: '2026-08-01' }, { note: 'work pc note', at: '2026-08-31' }]
+    };
+    b.values.coachingHistory = {
+        'Alyssa Dimes': [{ note: 'shared baseline', at: '2026-08-01' }],
+        'Chris Vale': [{ note: 'home pc note', at: '2026-08-31' }]
+    };
+
+    await a.sync.push(['coachingHistory']);
+    const second = await b.sync.push(['coachingHistory']);
+    t.equal('the second machine still commits', second.ok, true);
+
+    const check = machine(t, bucket, 'c');
+    await check.sync.pull();
+    const merged = check.values.coachingHistory;
+
+    t.equal('both people are present', Object.keys(merged).length, 2);
+    t.equal('the work PC note survived', merged['Alyssa Dimes'].length, 2);
+    t.check('and it is the right one',
+        merged['Alyssa Dimes'].some(e => e.note === 'work pc note'));
+    t.check('the home PC note survived too',
+        merged['Chris Vale'][0].note === 'home pc note');
+    t.equal('and the shared baseline is not duplicated',
+        merged['Alyssa Dimes'].filter(e => e.note === 'shared baseline').length, 1);
+});
+
+suite('two machines: a last-writer-wins clash keeps the loser rather than dropping it', async (t) => {
+    const bucket = createFakeR2();
+
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: { employees: [] } };
+    await a.sync.createFirstManifest(['weeklyData']);
+
+    const b = machine(t, bucket, 'b');
+    await b.sync.pull();
+
+    a.values.weeklyData = { w1: {}, 'work-pc-week': {} };
+    b.values.weeklyData = { w1: {}, 'home-pc-week': {} };
+
+    await a.sync.push(['weeklyData']);
+    const second = await b.sync.push(['weeklyData']);
+    t.equal('the second machine commits', second.ok, true);
+
+    const manifestRaw = JSON.parse(bucket._objects.get('state/v2/manifest.json').value);
+    const conflictKeys = Object.keys(manifestRaw.shards).filter(k => k.startsWith('conflicts/weeklyData/'));
+
+    // weeklyData is not mergeable entry by entry, so one version has to be
+    // live. The other must still be reachable: a blob the manifest references
+    // is a blob that exists, and nothing is destroyed.
+    t.equal('the overwritten version is kept under conflicts', conflictKeys.length, 1);
+
+    const check = machine(t, bucket, 'c');
+    await check.sync.pull();
+    t.check('the later writer is live', 'home-pc-week' in check.values.weeklyData);
+
+    // And the other machine's bytes are still fetchable from the conflict shard.
+    const conflictHash = manifestRaw.shards[conflictKeys[0]];
+    check.activate();
+    const response = await global.fetch('x', { body: JSON.stringify({ mode: 'v2.getBlob', hash: conflictHash }) });
+    const recovered = await response.json();
+    t.check('and the overwritten week is still recoverable', 'work-pc-week' in recovered);
+});

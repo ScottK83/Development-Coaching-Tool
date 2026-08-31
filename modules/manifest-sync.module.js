@@ -154,8 +154,111 @@
         return commitWithRebase(changed, reason);
     }
 
-    async function commitWithRebase(changed, reason) {
+    // ============================================
+    // MERGING A SHARD BOTH MACHINES CHANGED
+    // ============================================
+
+    /**
+     * A stable fingerprint for one entry, so the same entry written on two
+     * machines is recognised as one thing. Key order is normalized because
+     * JSON.stringify preserves insertion order and two machines can build the
+     * same record with its fields in a different order.
+     */
+    function canonicalize(value) {
+        if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+        if (Array.isArray(value)) return '[' + value.map(canonicalize).join(',') + ']';
+        return '{' + Object.keys(value).sort().map((k) => JSON.stringify(k) + ':' + canonicalize(value[k])).join(',') + '}';
+    }
+
+    /**
+     * Union two versions of an append-only store, keeping every entry either
+     * side has. Arrays are merged and deduped by entry fingerprint; objects are
+     * merged key by key and recursed into.
+     *
+     * Deliberately biased toward keeping too much. A duplicate is visible and
+     * fixable; a coaching note that silently vanished because the other machine
+     * did not have it is neither.
+     */
+    function unionValues(mine, theirs) {
+        if (Array.isArray(mine) && Array.isArray(theirs)) {
+            const seen = new Set();
+            const out = [];
+            theirs.concat(mine).forEach((entry) => {
+                const fingerprint = canonicalize(entry);
+                if (seen.has(fingerprint)) return;
+                seen.add(fingerprint);
+                out.push(entry);
+            });
+            return out;
+        }
+        if (mine && theirs && typeof mine === 'object' && typeof theirs === 'object'
+            && !Array.isArray(mine) && !Array.isArray(theirs)) {
+            const out = { ...theirs };
+            Object.keys(mine).forEach((key) => {
+                out[key] = (key in theirs) ? unionValues(mine[key], theirs[key]) : mine[key];
+            });
+            return out;
+        }
+        // Not mergeable at this level (a scalar, or shapes that disagree).
+        // Ours is the more recent intent.
+        return mine;
+    }
+
+    /**
+     * Reconciles the shards that moved remotely while we were preparing to
+     * write them. Returns a new changed map.
+     *
+     * For an append-only store both sides are kept. For last-writer-wins ours
+     * becomes live, but theirs is retained under a conflicts/ shard so the
+     * bytes are still referenced by the manifest and nothing is destroyed. The
+     * user can be shown them later; they can never be silently gone.
+     */
+    async function reconcile(changed, freshManifest) {
+        const registry = window.DevCoachModules?.storeRegistry;
+        const applied = loadSyncState().applied || {};
+        const freshShards = freshManifest?.shards || {};
+        const next = { ...changed };
+
+        for (const name of Object.keys(changed)) {
+            const theirHash = freshShards[name];
+            const baseHash = applied[name];
+            // Untouched by them, or they landed on exactly our bytes.
+            if (!theirHash || theirHash === baseHash || theirHash === changed[name]) continue;
+
+            const strategy = registry?.mergeStrategyOf?.(name) || 'lastWriterWins';
+
+            const got = await callWorker({ mode: 'v2.getBlob', hash: theirHash });
+            if (got.status !== 200) {
+                console.warn(`[v2] could not read the other version of ${name}; keeping ours.`);
+                continue;
+            }
+
+            if (strategy === 'unionByEntryHash') {
+                const merged = unionValues(readStoreValue(name), got.data);
+                const bytes = JSON.stringify(merged);
+                const hash = await sha256Hex(bytes);
+                const put = await callWorker({ mode: 'v2.putBlob', hash, bytes });
+                if (put.status === 200) {
+                    writeStoreValue(name, merged);
+                    next[name] = hash;
+                    console.log(`[v2] merged both machines' ${name}.`);
+                }
+                continue;
+            }
+
+            // Ours wins, but theirs is kept rather than dropped. A blob that
+            // stays referenced is a blob that still exists.
+            const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+            next[`conflicts/${name}/${stamp}`] = theirHash;
+            console.warn(`[v2] ${name} changed on both machines. Ours is live; theirs is kept as conflicts/${name}/${stamp}.`);
+        }
+
+        return next;
+    }
+
+    async function commitWithRebase(changedInput, reason) {
         const device = getDeviceId();
+        let changed = changedInput;
 
         for (let attempt = 1; attempt <= MAX_REBASE_ATTEMPTS; attempt += 1) {
             const state = loadSyncState();
@@ -197,6 +300,13 @@
                 // Someone else moved the manifest. Take theirs as the new base
                 // and re-apply ONLY our own changed set on top. Their shards
                 // survive because we never name them.
+                //
+                // Except where we both changed the SAME shard: re-applying ours
+                // blindly there would overwrite their version, which is the very
+                // loss this design exists to prevent. reconcile merges the
+                // append-only stores and preserves the other side for the rest.
+                changed = await reconcile(changed, commit.data.manifest);
+
                 saveSyncState({
                     version: commit.data.manifest?.version || 0,
                     etag: commit.data.etag,
