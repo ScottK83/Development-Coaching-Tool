@@ -3205,6 +3205,22 @@ async function handleDeleteAllDataClick() {
         if (!proceed) return;
     }
 
+    // The bulk stores live in IndexedDB once the backend has switched, and the
+    // prefix sweep below cannot see them. Clear that FIRST: if it fails, the
+    // localStorage copies are still here and the outcome is "nothing deleted",
+    // which is recoverable. The other order gives "half deleted", and worse,
+    // the next boot would re-hydrate the data the user just deleted.
+    const idb = window.DevCoachModules?.idbBackend;
+    if (idb?.isAvailable?.()) {
+        try {
+            await idb.clear();
+        } catch (error) {
+            console.error('[delete-all] Could not clear IndexedDB:', error);
+            alert('⚠️ Could not delete the stored data.\n\nNothing has been deleted. Your data is intact. Please try again, or reload and retry.');
+            return;
+        }
+    }
+
     // Clear ALL localStorage keys with the app prefix
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {

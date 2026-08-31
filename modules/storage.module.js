@@ -80,6 +80,10 @@
         backend.put(key, value).catch((error) => {
             console.error(`[storage] Durable write failed for ${key}; the value is in memory only:`, error);
         });
+        // Repo sync's only auto trigger is a patch on Storage.prototype.setItem,
+        // which this write deliberately never touches. Without this call the
+        // GitHub backup silently stops updating for the bulk stores.
+        window.DevCoachModules?.repoSync?.notifyBulkStoreWrite?.(key);
         return true;
     }
 

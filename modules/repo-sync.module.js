@@ -20,8 +20,21 @@
     const SYNC_DEBOUNCE_MS = 5000;
     const SYNC_ERROR_COOLDOWN_MS = 60000;
 
+    /**
+     * A store's current value, from whichever backend actually holds it.
+     *
+     * Reading localStorage directly here would quietly build the backup payload
+     * out of stale copies once the bulk stores move, and out of nothing at all
+     * once those copies are reclaimed. The storage module knows where a store
+     * lives; this defers to it and only falls back to a raw read when it is
+     * unavailable (it loads first, but a partial page is possible).
+     */
     function safeLoadJson(key) {
         try {
+            const readStore = window.DevCoachModules?.storage?.readStore;
+            if (typeof readStore === 'function') {
+                return readStore(key) ?? null;
+            }
             const raw = localStorage.getItem(STORAGE_PREFIX + key);
             return raw ? JSON.parse(raw) : null;
         } catch (e) { return null; }
@@ -212,6 +225,26 @@
 
     function shouldSyncForStorageKey(key) {
         return SYNCABLE_STORAGE_KEYS.has(String(key || ''));
+    }
+
+    /**
+     * Called by the storage module when a bulk store is written to a backend
+     * that is not localStorage.
+     *
+     * installRepoSyncStorageHooks below patches Storage.prototype.setItem and
+     * is the app's ONLY auto-sync trigger. Once a store moves to IndexedDB its
+     * writes never touch localStorage, so that hook stops seeing them and the
+     * backup silently stops updating for exactly the data that matters most.
+     *
+     * This is a real loss of a property the patch had for free: it caught every
+     * write, including from authors who never thought about sync. This has to
+     * be called explicitly, so a future store added to the bulk set needs to be
+     * routed through the storage module to be covered.
+     */
+    function notifyBulkStoreWrite(storeKey) {
+        if (repoSyncSuppressCounter !== 0) return;
+        if (!shouldSyncForStorageKey(STORAGE_PREFIX + String(storeKey || ''))) return;
+        queueRepoSync(`bulk store write: ${storeKey}`);
     }
 
     function installRepoSyncStorageHooks() {
@@ -817,6 +850,24 @@
             const raw = localStorage.getItem(key);
             if (typeof raw === 'string') stores[name] = raw;
         }
+
+        // A bulk store on the backend is invisible to the sweep above. Two of
+        // them (dailyData, tipUsageHistory) have no explicit payload field, so
+        // without this they would drop out of the backup entirely the moment
+        // the backend switched, and the stale localStorage copy read here would
+        // be worse than useless once that copy is reclaimed.
+        const bulkKeys = window.DevCoachConstants?.BULK_STORAGE_KEYS || [];
+        bulkKeys.forEach((name) => {
+            if (EXPLICITLY_SYNCED_STORES.has(name) || NON_SYNCED_STORES.has(name)) return;
+            const value = safeLoadJson(name);
+            if (value === null || value === undefined) return;
+            try {
+                stores[name] = JSON.stringify(value);
+            } catch (error) {
+                console.warn(`[repo-sync] Could not serialize ${name} for the backup:`, error);
+            }
+        });
+
         return stores;
     }
 
@@ -828,6 +879,15 @@
             if (typeof raw !== 'string') return;
             if (EXPLICITLY_SYNCED_STORES.has(name) || NON_SYNCED_STORES.has(name)) return;
             try {
+                // A bulk store has to be restored to whichever backend serves
+                // it, not to localStorage, or the restore lands somewhere
+                // nothing reads and the store looks empty afterwards.
+                const save = window.DevCoachModules?.storage?.saveWithSizeCheck;
+                const bulkKeys = window.DevCoachConstants?.BULK_STORAGE_KEYS || [];
+                if (typeof save === 'function' && bulkKeys.indexOf(name) > -1) {
+                    if (!save(name, JSON.parse(raw))) failures.push(`${name}: write refused`);
+                    return;
+                }
                 localStorage.setItem(STORAGE_PREFIX + name, raw);
             } catch (error) {
                 failures.push(`${name}: ${error?.name || 'write failed'}`);
@@ -1712,6 +1772,7 @@
         // Storage snapshot / data helpers
         summarizeStorageValue,
         getAllAppStorageSnapshot,
+        notifyBulkStoreWrite,
         collectVerbatimStores,
         applyVerbatimStores,
         hasNonEmptyEntries,
