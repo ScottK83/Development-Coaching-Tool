@@ -2192,6 +2192,9 @@ function bindCoachingFormHandlers() {
     document.getElementById('reclaimStorageBtn')?.addEventListener('click', handleReclaimStorageClick);
     document.getElementById('loadSnapshotListBtn')?.addEventListener('click', handleLoadSnapshotListClick);
     document.getElementById('restoreSnapshotBtn')?.addEventListener('click', handleRestoreSnapshotClick);
+    document.getElementById('cloudSyncPullBtn')?.addEventListener('click', handleCloudSyncPullClick);
+    document.getElementById('cloudSyncPushBtn')?.addEventListener('click', handleCloudSyncPushClick);
+    document.getElementById('cloudSyncSetupBtn')?.addEventListener('click', handleCloudSyncSetupClick);
     refreshUploadUndoBanner();
     refreshStorageQuotaWidget();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
@@ -2504,6 +2507,194 @@ async function handleReclaimStorageClick() {
         message += `\n\nLeft in place because they could not be verified:\n${report.skipped.join('\n')}`;
     }
     alert(message);
+}
+
+// ============================================
+// CLOUD SYNC (manifest CAS)
+// ============================================
+// The server is the shared copy; this machine keeps its own. Each store is sent
+// on its own, so two machines editing different things never overwrite each
+// other, which whole-state sync cannot avoid.
+
+var _cloudPushTimer = null;
+var _cloudSyncBackgroundStarted = false;
+
+/**
+ * Pulls once at startup, then pushes whatever changed, on a trailing debounce.
+ *
+ * Trailing rather than leading on purpose: a Verint upload writes the whole
+ * reliability store once per file, one file per associate, so a leading-edge
+ * push would fire 127 times for one action. Waiting for the burst to finish
+ * sends the end state once.
+ *
+ * Silent by design. A machine that cannot reach the network is not in an error
+ * state, it is working from its own copy, which is exactly what the local
+ * backend is for. Only a genuine conflict is worth interrupting anyone about,
+ * and the protocol resolves those without asking.
+ */
+function startCloudSyncBackground() {
+    if (_cloudSyncBackgroundStarted) return;
+    _cloudSyncBackgroundStarted = true;
+
+    const sync = window.DevCoachModules?.manifestSync;
+    const storage = window.DevCoachModules?.storage;
+    const registry = window.DevCoachModules?.storeRegistry;
+    if (!sync || !registry) return;
+
+    // Anything already marked dirty came from boot itself (a normalization
+    // write-back, a seeding migration), not from the user. Pushing it would
+    // send this machine's view of stores nobody touched.
+    storage?.clearDirtyStores?.();
+
+    sync.pull().then((result) => {
+        if (result?.updated?.length) {
+            console.log(`[cloud] Pulled ${result.updated.length} change(s) from another machine:`, result.updated.join(', '));
+            showToast(`☁️ Picked up ${result.updated.length} change(s) from your other machine. Reload to see them.`, 6000);
+        }
+    }).catch(() => { /* offline is not an error */ });
+
+    const scheduleCloudPush = () => {
+        clearTimeout(_cloudPushTimer);
+        _cloudPushTimer = setTimeout(() => {
+            const dirty = registry.syncedNames().filter((n) => storage?.isStoreDirty?.(n));
+            if (!dirty.length) return;
+            sync.push(dirty, 'auto').then((result) => {
+                if (result?.ok && !result.skipped) {
+                    storage?.clearDirtyStores?.();
+                    console.log(`[cloud] Pushed ${result.changed.join(', ')} as version ${result.version}.`);
+                } else if (result && !result.ok) {
+                    // Left dirty on purpose, so the next change retries it
+                    // rather than the work being quietly dropped.
+                    console.warn('[cloud] Push failed, will retry on the next change:', result.error || result.code);
+                }
+            }).catch((error) => {
+                console.warn('[cloud] Push failed, will retry on the next change:', error?.message || error);
+            });
+        }, 5000);
+    };
+
+    // Every write goes through saveWithSizeCheck, so one hook covers them all.
+    if (typeof storage?.saveWithSizeCheck === 'function' && !storage.__cloudPushHooked) {
+        const original = storage.saveWithSizeCheck;
+        storage.saveWithSizeCheck = function hookedSave(key, data) {
+            const ok = original.call(storage, key, data);
+            if (ok && registry.isSynced(key)) scheduleCloudPush();
+            return ok;
+        };
+        storage.__cloudPushHooked = true;
+    }
+}
+
+function setCloudSyncResult(text, isError) {
+    const el = document.getElementById('cloudSyncResult');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = isError ? '#ef5350' : 'var(--text-secondary)';
+}
+
+async function refreshCloudSyncStatus() {
+    const el = document.getElementById('cloudSyncStatus');
+    const setupBtn = document.getElementById('cloudSyncSetupBtn');
+    if (!el) return;
+
+    const sync = window.DevCoachModules?.manifestSync;
+    if (!sync) { el.textContent = 'Cloud sync is unavailable in this build.'; return; }
+
+    const state = sync.loadSyncState();
+    const device = sync.getDeviceId();
+
+    try {
+        const probe = await sync.pull();
+        if (probe.skipped) {
+            el.textContent = `No cloud copy yet. This machine is "${device}". Run the one-time setup to send your data up.`;
+            if (setupBtn) setupBtn.style.display = '';
+            return;
+        }
+        if (setupBtn) setupBtn.style.display = 'none';
+        const applied = Object.keys(sync.loadSyncState().applied || {}).length;
+        el.textContent = `In step at version ${probe.version}. ${applied} stores tracked. This machine is "${device}".`;
+        if (probe.updated.length) {
+            setCloudSyncResult(`Pulled ${probe.updated.length} change(s): ${probe.updated.join(', ')}`);
+        }
+    } catch (error) {
+        el.textContent = `Could not reach cloud storage. Working from this machine's copy. (was at version ${state.version || 0})`;
+    }
+}
+
+async function handleCloudSyncPullClick() {
+    setCloudSyncResult('Pulling...');
+    const sync = window.DevCoachModules?.manifestSync;
+    try {
+        const result = await sync.pull();
+        if (result.skipped) { setCloudSyncResult('There is no cloud copy yet.'); return; }
+        if (!result.ok) { setCloudSyncResult('Some stores could not be applied: ' + result.failed.join('; '), true); return; }
+        if (!result.updated.length && !result.removed.length) {
+            setCloudSyncResult(`Already up to date at version ${result.version}.`);
+            return;
+        }
+        setCloudSyncResult(`Pulled version ${result.version}: ${result.updated.join(', ') || 'nothing new'}. Reloading...`);
+        setTimeout(() => location.reload(), 900);
+    } catch (error) {
+        setCloudSyncResult('Could not pull: ' + (error?.message || error), true);
+    }
+}
+
+async function handleCloudSyncPushClick() {
+    const sync = window.DevCoachModules?.manifestSync;
+    const registry = window.DevCoachModules?.storeRegistry;
+    const storage = window.DevCoachModules?.storage;
+
+    // Only what changed on this machine. Pushing everything is how one machine
+    // overwrites another's work without either user doing anything wrong.
+    const candidates = (registry?.syncedNames?.() || [])
+        .filter((name) => (storage?.isStoreDirty ? storage.isStoreDirty(name) : true));
+
+    if (!candidates.length) { setCloudSyncResult('Nothing has changed on this machine since it loaded.'); return; }
+
+    setCloudSyncResult(`Pushing ${candidates.length} store(s)...`);
+    try {
+        const result = await sync.push(candidates, 'manual push');
+        if (!result.ok) {
+            setCloudSyncResult('Could not push: ' + (result.error || result.code), true);
+            return;
+        }
+        if (result.skipped) { setCloudSyncResult('Nothing to push.'); return; }
+        storage?.clearDirtyStores?.();
+        setCloudSyncResult(`Pushed ${result.changed.length} store(s) as version ${result.version}.`);
+        refreshCloudSyncStatus();
+    } catch (error) {
+        setCloudSyncResult('Could not push: ' + (error?.message || error), true);
+    }
+}
+
+async function handleCloudSyncSetupClick() {
+    const sync = window.DevCoachModules?.manifestSync;
+
+    const proceed = confirm(
+        'Set up cloud sync\n\n' +
+        'This sends the data on THIS machine up as the starting point.\n\n' +
+        'Run it on the machine with the most complete data. If your other machine ' +
+        'has work this one does not, push from that machine instead, then pull here.\n\n' +
+        'Continue?'
+    );
+    if (!proceed) return;
+
+    setCloudSyncResult('Sending your data up...');
+    try {
+        const result = await sync.createFirstManifest(null, 'initial setup');
+        if (!result.ok) {
+            if (result.code === 'ALREADY_EXISTS') {
+                setCloudSyncResult('A cloud copy already exists. Use Pull changes instead, so this machine does not overwrite it.', true);
+            } else {
+                setCloudSyncResult('Setup failed: ' + result.error, true);
+            }
+            return;
+        }
+        setCloudSyncResult(`Cloud sync is set up. ${result.shards} stores sent.`);
+        refreshCloudSyncStatus();
+    } catch (error) {
+        setCloudSyncResult('Setup failed: ' + (error?.message || error), true);
+    }
 }
 
 // ============================================
@@ -7365,6 +7556,8 @@ async function initApp() {
     }
 
     window.addEventListener('beforeunload', saveEverythingBeforeLeaving);
+
+    startCloudSyncBackground();
 
     // beforeunload is the weakest point of the IndexedDB backend and no amount
     // of engineering fixes it: a browser will not hold a page open for a

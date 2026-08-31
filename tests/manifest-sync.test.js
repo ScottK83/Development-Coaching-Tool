@@ -210,3 +210,48 @@ suite('two machines: a push with no manifest does not invent one', async (t) => 
     t.equal('and says setup has not run', pushed.code, 'NO_MANIFEST');
     t.check('nothing was committed', !bucket._objects.has('state/v2/manifest.json'));
 });
+
+suite('cloud sync: the app wires pull at boot and a trailing push', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('function startCloudSyncBackground');
+    const body = src.slice(start, src.indexOf('\nfunction setCloudSyncResult', start));
+
+    t.check('the background sync exists', start > -1);
+    t.check('it is started from the app', src.indexOf('startCloudSyncBackground();') > -1);
+
+    // Boot-time writes (a normalization write-back, a seeding migration) are not
+    // the user's edits. Pushing them would send this machine's view of stores
+    // nobody touched, which is how a machine overwrites another for free.
+    const clearPos = body.indexOf('clearDirtyStores');
+    const pullPos = body.indexOf('sync.pull()');
+    t.check('boot-time dirt is cleared before anything is pushed', clearPos > -1 && clearPos < pullPos);
+
+    // Trailing, not leading: a Verint upload writes the reliability store once
+    // per file, one file per associate. A leading edge fires 127 times.
+    t.check('the push debounce clears the previous timer', body.indexOf('clearTimeout(_cloudPushTimer)') > -1);
+    t.check('and only pushes stores that are dirty', /filter\(\(n\) => storage\?\.isStoreDirty/.test(body));
+
+    // A failed push must leave the work marked dirty, or it is silently dropped.
+    t.check('a failed push keeps the stores dirty for a retry',
+        /retry on the next change/.test(body));
+    t.check('and only clears dirt after a confirmed success',
+        body.indexOf('result?.ok && !result.skipped') > -1);
+
+    // Offline is not an error state; it is what the local backend is for.
+    t.check('a failed pull is swallowed rather than shown as a failure',
+        /catch\(\(\) => \{ \/\* offline is not an error \*\/ \}\)/.test(body));
+});
+
+suite('cloud sync: setup refuses to overwrite an existing cloud copy', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('async function handleCloudSyncSetupClick');
+    const body = src.slice(start, src.indexOf('\n// ====', start));
+
+    // The dangerous case is the second machine running setup with a stale copy.
+    t.check('it handles the already-exists case explicitly',
+        body.indexOf('ALREADY_EXISTS') > -1);
+    t.check('and tells the user to pull instead of overwriting',
+        /Pull changes instead/.test(body));
+    t.check('the prompt says it uses THIS machine as the starting point',
+        /THIS machine/.test(body));
+});

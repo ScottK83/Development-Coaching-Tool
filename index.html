@@ -1162,6 +1162,21 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
 
+                    <!-- Cloud sync. The server holds the data; this machine holds
+                         a copy. Two machines can both edit without either losing
+                         the other's work. -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
+                        <h3 style="color: #00897b; margin-top: 0;">☁️ Cloud sync</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 15px;">Keeps this machine and your other one in step. Each change is sent on its own, so two machines editing different things never overwrite each other.</p>
+                        <div id="cloudSyncStatus" style="margin-bottom: 12px; padding: 10px 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; color: var(--text-secondary);">Checking...</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <button type="button" id="cloudSyncPullBtn" class="btn-secondary" style="background: #00897b; color: white;">⬇️ Pull changes</button>
+                            <button type="button" id="cloudSyncPushBtn" class="btn-secondary" style="background: #00897b; color: white;">⬆️ Push my changes</button>
+                            <button type="button" id="cloudSyncSetupBtn" class="btn-secondary" style="display: none; background: #ef6c00; color: white;">Set up cloud sync (one time)</button>
+                        </div>
+                        <div id="cloudSyncResult" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
+                    </div>
+
                     <!-- Point-in-time restore. Every sync writes a dated copy to
                          cloud storage and they are never deleted, so this is the
                          way back when the most recent copy is the bad one. -->
