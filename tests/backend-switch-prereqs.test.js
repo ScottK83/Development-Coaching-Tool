@@ -272,3 +272,75 @@ suite('backup: the export file covers stores that no longer live in localStorage
     t.check('a non-bulk store is still swept from localStorage',
         typeof captured[PREFIX + 'employeeSupervisors'] === 'string');
 });
+
+suite('dirty: an unchanged store is not rewritten', async (t) => {
+    const { storage } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {} }),
+        [PREFIX + 'ytdData']: JSON.stringify({ '2026': {} })
+    });
+    await storage.hydrate();
+
+    t.check('nothing is dirty after a plain load', !storage.isStoreDirty('weeklyData'));
+    t.check('nor is ytdData', !storage.isStoreDirty('ytdData'));
+
+    storage.saveWeeklyData({ w1: {}, w2: {} });
+
+    t.check('the store that was written is dirty', storage.isStoreDirty('weeklyData'));
+    t.check('the one that was not is still clean', !storage.isStoreDirty('ytdData'));
+
+    storage.clearDirtyStores();
+    t.check('and the set can be reset', !storage.isStoreDirty('weeklyData'));
+});
+
+suite('dirty: the leave-page handler only saves what changed', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('function saveEverythingBeforeLeaving');
+    const body = src.slice(start, src.indexOf('\n    }\n', start));
+
+    // Wired to visibilitychange as well as beforeunload, so this runs on every
+    // alt-tab. Unconditional saves here are how one machine overwrites another.
+    t.check('it consults the dirty set', body.indexOf('isStoreDirty') > -1);
+
+    // Skip past the declaration, which otherwise matches the save-call pattern.
+    const calls = body.slice(body.indexOf('\n'));
+    const saves = (calls.match(/save[A-Z]\w+\(\)/g) || []);
+    const guarded = (calls.match(/if \(changed\('[a-zA-Z]+'\)\) save/g) || []);
+    t.equal('every save call is guarded', guarded.length, saves.length);
+    t.equal('and all seven are still there', saves.length, 7);
+
+    // Losing a save is worse than an extra one, so no dirty tracking must mean
+    // save everything, not save nothing.
+    t.check('it falls back to saving when dirty tracking is unavailable',
+        /typeof dirty === 'function' \? dirty\(key\) : true/.test(body));
+});
+
+suite('worker: the payload keeps what the client actually sends', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'cloudflare-sync-worker/index.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('const fullBackupPayload = {');
+    const literal = src.slice(start, src.indexOf('};', start));
+
+    // The client sends these on every push. The worker rebuilt the payload
+    // field by field and dropped them, so they had no remote copy at all.
+    ['verbatimStores', 'executiveSummaryNotes', 'userCustomTips', 'yoyBaseline2025'].forEach((field) => {
+        t.check(`${field} survives to storage`, literal.indexOf(field) > -1);
+    });
+
+    // The catch-all is what covers a store nobody remembered to add here, so it
+    // matters most that it is the one that cannot go missing again.
+    t.check('verbatimStores reads from the request body',
+        /verbatimStores: .*body\?\.verbatimStores/.test(literal));
+});
+
+suite('restore: a field the backup does not carry leaves local data alone', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/repo-sync.module.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('const keys = {');
+    const block = src.slice(start, src.indexOf('};', start));
+
+    // coerceObject turns an absent field into {} and the write loop then puts
+    // that empty object over live data. Nullable makes the loop skip it.
+    ['executiveSummaryNotes', 'userCustomTips', 'yoyBaseline2025'].forEach((field) => {
+        const line = block.split('\n').find(l => l.trim().startsWith(field + ':')) || '';
+        t.check(`${field} is skipped when absent rather than emptied`,
+            line.indexOf('coerceNullableObject') > -1);
+    });
+});

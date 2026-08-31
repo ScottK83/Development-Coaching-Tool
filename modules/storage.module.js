@@ -73,6 +73,24 @@
      * it cannot be reported to a synchronous caller, which is the honest cost
      * of keeping every existing call site unchanged.
      */
+    // Stores written since this page loaded. A flush-everything handler that
+    // cannot tell "changed" from "unchanged" re-pushes the whole local state on
+    // every alt-tab, so a machine that merely had the tab open overwrites what
+    // the other machine wrote. That is the widest lost-update path in the app.
+    const dirtyStores = new Set();
+
+    function markStoreDirty(key) {
+        dirtyStores.add(key);
+    }
+
+    function isStoreDirty(key) {
+        return dirtyStores.has(key);
+    }
+
+    function clearDirtyStores() {
+        dirtyStores.clear();
+    }
+
     function writeThroughToBackend(key, value) {
         const backend = window.DevCoachModules?.idbBackend;
         if (!backend) return false;
@@ -255,6 +273,8 @@
     // ============================================
 
     function saveWithSizeCheck(key, data) {
+        markStoreDirty(key);
+
         // A bulk store on the backend is not subject to the localStorage size
         // cap at all. Escaping that cap is the entire point of moving it.
         if (isBackedByIdb(key)) {
@@ -887,6 +907,9 @@
         getBackendMode,
         readStore,
         reclaimLocalStorageCopies,
+        isStoreDirty,
+        markStoreDirty,
+        clearDirtyStores,
         // Storage helpers
         saveWithSizeCheck,
         // Weekly data

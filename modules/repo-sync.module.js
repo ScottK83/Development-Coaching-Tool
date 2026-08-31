@@ -1421,9 +1421,15 @@
             yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
             employeePreferredNames: coerceObject(payload?.employeePreferredNames),
-            executiveSummaryNotes: coerceObject(payload?.executiveSummaryNotes),
-            userCustomTips: coerceObject(payload?.userCustomTips),
-            // null when the backup has no 2025 baseline — skipped by the loop
+            // Nullable, so the loop below skips them. coerceObject turns an
+            // absent field into {} and the loop then writes that empty object
+            // over live local data. These two were dropped by the worker until
+            // now, so every restore from an older backup carried them absent
+            // and quietly erased the notes and custom tips on this machine.
+            // Absent has to mean leave alone, never mean empty.
+            executiveSummaryNotes: coerceNullableObject(payload?.executiveSummaryNotes),
+            userCustomTips: coerceNullableObject(payload?.userCustomTips),
+            // null when the backup has no 2025 baseline, skipped by the loop
             // below so it never overwrites an existing local baseline.
             yoyBaseline2025: coerceNullableObject(payload?.yoyBaseline2025)
         };

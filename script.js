@@ -7339,15 +7339,29 @@ async function initApp() {
     // Ensure data is saved before page unload (survives Ctrl+Shift+R).
     // Skip when a repo restore just wrote fresh data straight to localStorage. 
     // otherwise these saves would overwrite it with stale in-memory globals.
+    // Only writes stores that actually changed this session.
+    //
+    // This used to save all seven unconditionally, and it is wired to
+    // visibilitychange as well as beforeunload, so alt-tab, minimize and every
+    // tab switch re-pushed the entire local state from memory. On a second
+    // machine that means a work PC which merely had the tab open overwrites
+    // everything the home PC wrote. Saving what did not change is not a
+    // harmless extra write; it is the widest way this app loses data.
     function saveEverythingBeforeLeaving() {
         if (window.__skipBeforeunloadSave) return;
-        saveWeeklyData();
-        saveYtdData();
-        saveDailyData();
-        saveCoachingHistory();
-        saveCallListeningLogs();
-        saveSentimentPhraseDatabase();
-        saveAssociateSentimentSnapshots();
+        const storage = window.DevCoachModules?.storage;
+        const dirty = storage?.isStoreDirty;
+        // With no dirty tracking available, fall back to the old behavior
+        // rather than silently skipping a save that was needed.
+        const changed = (key) => (typeof dirty === 'function' ? dirty(key) : true);
+
+        if (changed('weeklyData')) saveWeeklyData();
+        if (changed('ytdData')) saveYtdData();
+        if (changed('dailyData')) saveDailyData();
+        if (changed('coachingHistory')) saveCoachingHistory();
+        if (changed('callListeningLogs')) saveCallListeningLogs();
+        if (changed('sentimentPhraseDatabase')) saveSentimentPhraseDatabase();
+        if (changed('associateSentimentSnapshots')) saveAssociateSentimentSnapshots();
     }
 
     window.addEventListener('beforeunload', saveEverythingBeforeLeaving);

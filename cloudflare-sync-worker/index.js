@@ -174,6 +174,20 @@ export default {
         yearEndAnnualGoalsStore: sanitizeForRepo(coerce(body?.yearEndAnnualGoalsStore)),
         yearEndDraftStore: sanitizeForRepo(coerce(body?.yearEndDraftStore)),
         employeePreferredNames: sanitizeForRepo(coerce(body?.employeePreferredNames)),
+        // The client has been sending these on every push and this literal has
+        // been dropping them, so they had no remote copy at all. verbatimStores
+        // is the map of every store without a named field above: dailyData,
+        // tipUsageHistory, oneOnOneMeetings, midYearMeta, celebrationsHistory,
+        // weeklyFocalPoints, employeeSupervisors and the rest. It is the client's
+        // catch-all, and reconstructing this payload field by field is exactly
+        // what a catch-all exists to survive.
+        //
+        // Its values are already-serialized JSON strings, so sanitizeForRepo is
+        // applied to the map and rewrites the strings in place.
+        verbatimStores: sanitizeForRepo(coerce(body?.verbatimStores)),
+        executiveSummaryNotes: sanitizeForRepo(coerce(body?.executiveSummaryNotes)),
+        userCustomTips: sanitizeForRepo(coerce(body?.userCustomTips)),
+        yoyBaseline2025: sanitizeForRepo(body?.yoyBaseline2025 && typeof body.yoyBaseline2025 === 'object' ? body.yoyBaseline2025 : null),
         appStorageSnapshot: sanitizeForRepo(coerce(body?.appStorageSnapshot))
       };
 
