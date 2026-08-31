@@ -64,3 +64,36 @@ suite('app flow: every section can be opened', (t) => {
     t.equal('every section is reachable from the navigation or an init case',
         unknown.join(', ') || '(none)', '(none)');
 });
+
+suite('settings: the coaching tips panel actually shows its content', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+
+    const start = src.indexOf("getElementById('subNavCoachingTips')");
+    // Comment lines stripped: the comment explaining the old hasChildNodes bug
+    // otherwise matches the assertion that the code no longer uses it.
+    const handler = src.slice(start, start + 1200)
+        .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+
+    // The panel ships with a placeholder paragraph, so a hasChildNodes() guard
+    // is true on the very first click and the move never runs. The content then
+    // renders into #tipsContainer inside the hidden source section and the user
+    // sees the placeholder forever.
+    t.check('the panel does ship with a placeholder',
+        html.indexOf('Coaching tips content will appear here') > -1);
+    t.check('the move is not guarded on hasChildNodes',
+        handler.indexOf('hasChildNodes') === -1);
+    t.check('it is guarded on the content it actually moves',
+        handler.indexOf('#tipsContainer') > -1);
+    t.check('and the placeholder is cleared before the move',
+        /textContent = ''/.test(handler) || /innerHTML = ''/.test(handler));
+
+    // renderTipsManagement targets #tipsContainer, which must start out inside
+    // the hidden section that gets moved. If that ever changes, this move is
+    // pointless and the guard above would silently never match.
+    const tipsSrc = fs.readFileSync(path.join(ROOT, 'modules/tips.module.js'), 'utf8');
+    t.check('renderTipsManagement still writes into tipsContainer',
+        tipsSrc.indexOf("getElementById('tipsContainer')") > -1);
+    t.check('and tipsContainer starts inside the source section',
+        html.indexOf('id="tipsManagementSection"') < html.indexOf('id="tipsContainer"'));
+});

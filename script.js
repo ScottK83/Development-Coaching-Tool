@@ -2121,7 +2121,14 @@ function bindManageDataNavigationHandlers() {
         showManageDataSubSection('subSectionCoachingTips');
         const tipsManagementSection = document.getElementById('tipsManagementSection');
         const subSectionCoachingTips = document.getElementById('subSectionCoachingTips');
-        if (tipsManagementSection && subSectionCoachingTips && !subSectionCoachingTips.hasChildNodes()) {
+        // Guarded on the real content, not on hasChildNodes(). The panel ships
+        // with a placeholder paragraph, so hasChildNodes() was true on the very
+        // first click and the move never happened: renderTipsManagement wrote
+        // into #tipsContainer, which stayed inside the hidden source section,
+        // and the panel showed its placeholder forever.
+        const alreadyMoved = subSectionCoachingTips?.querySelector('#tipsContainer');
+        if (tipsManagementSection && subSectionCoachingTips && !alreadyMoved) {
+            subSectionCoachingTips.textContent = '';
             subSectionCoachingTips.append(...tipsManagementSection.childNodes);
         }
         renderTipsManagement();
