@@ -188,7 +188,26 @@
         STORAGE_PREFIX + 'executiveSummaryNotes',
         STORAGE_PREFIX + 'ptoTracker',
         STORAGE_PREFIX + 'reliabilityTracker',
-        STORAGE_PREFIX + 'yoyBaseline2025'
+        STORAGE_PREFIX + 'yoyBaseline2025',
+        // Carried in verbatimStores. Listed here too so editing one actually
+        // queues a push, rather than waiting for an unrelated key to change.
+        // The first two are hand-typed and cannot be regenerated from anything.
+        STORAGE_PREFIX + 'oneOnOneMeetings',
+        STORAGE_PREFIX + 'midYearMeta',
+        STORAGE_PREFIX + 'celebrationsHistory',
+        STORAGE_PREFIX + 'weeklyFocalPoints',
+        STORAGE_PREFIX + 'tipUsageHistory',
+        STORAGE_PREFIX + 'employeeNicknames',
+        STORAGE_PREFIX + 'employeeSupervisors',
+        STORAGE_PREFIX + 'complianceLog',
+        STORAGE_PREFIX + 'metricCoachingTips',
+        STORAGE_PREFIX + 'coachingTips',
+        STORAGE_PREFIX + 'customMetrics',
+        STORAGE_PREFIX + 'modifiedServerTips',
+        STORAGE_PREFIX + 'deletedServerTips'
+        // dailyData is deliberately absent: dailies are ephemeral and would
+        // churn the queue. It still rides along in verbatimStores, so it has a
+        // backup without driving a push of its own.
     ]);
 
     function shouldSyncForStorageKey(key) {
@@ -764,6 +783,59 @@
         };
     }
 
+    // Stores the explicit payload fields below already carry. Everything else
+    // under the prefix rides along in verbatimStores, so a store added later is
+    // backed up the day it is first written instead of the day someone notices
+    // it was never in this list. That gap is how oneOnOneMeetings, midYearMeta,
+    // celebrationsHistory, weeklyFocalPoints, tipUsageHistory, employeeNicknames,
+    // employeeSupervisors, dailyData, complianceLog and metricCoachingTips came
+    // to have no remote copy at all.
+    const EXPLICITLY_SYNCED_STORES = new Set([
+        'weeklyData', 'ytdData', 'coachingHistory', 'callListeningLogs',
+        'sentimentPhraseDatabase', 'associateSentimentSnapshots', 'myTeamMembers',
+        'callCenterAverages', 'ptoTracker', 'reliabilityTracker', 'attendanceTracker',
+        'followUpHistory', 'hotTipHistory', 'yearEndAnnualGoals', 'yearEndDraftEntries',
+        'employeePreferredNames', 'executiveSummaryNotes', 'userCustomTips', 'yoyBaseline2025'
+    ]);
+
+    // Bookkeeping tied to one machine and moment. Syncing it would let one
+    // browser's view state and sync timestamps overwrite another's.
+    const NON_SYNCED_STORES = new Set([
+        'deleteAllJustRan', 'debugLog', 'errorLog', 'lastError',
+        'repoSyncLastSuccess', 'repoBackupAppliedAt',
+        'uiNavState', 'selectedAssociate', 'teamMemberSelectorExpanded',
+        'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection'
+    ]);
+
+    function collectVerbatimStores() {
+        const stores = {};
+        for (let index = 0; index < localStorage.length; index += 1) {
+            const key = localStorage.key(index);
+            if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
+            const name = key.slice(STORAGE_PREFIX.length);
+            if (EXPLICITLY_SYNCED_STORES.has(name) || NON_SYNCED_STORES.has(name)) continue;
+            const raw = localStorage.getItem(key);
+            if (typeof raw === 'string') stores[name] = raw;
+        }
+        return stores;
+    }
+
+    function applyVerbatimStores(stores) {
+        if (!stores || typeof stores !== 'object') return [];
+        const failures = [];
+        Object.keys(stores).forEach((name) => {
+            const raw = stores[name];
+            if (typeof raw !== 'string') return;
+            if (EXPLICITLY_SYNCED_STORES.has(name) || NON_SYNCED_STORES.has(name)) return;
+            try {
+                localStorage.setItem(STORAGE_PREFIX + name, raw);
+            } catch (error) {
+                failures.push(`${name}: ${error?.name || 'write failed'}`);
+            }
+        });
+        return failures;
+    }
+
     function getAllAppStorageSnapshot() {
         const snapshot = {};
         for (let index = 0; index < localStorage.length; index += 1) {
@@ -973,6 +1045,10 @@
             executiveSummaryNotes: safeLoadJson('executiveSummaryNotes') || {},
             userCustomTips: safeLoadJson('userCustomTips') || {},
             yoyBaseline2025: safeLoadJson('yoyBaseline2025') || null,
+            verbatimStores: collectVerbatimStores(),
+            // A manifest of {valueType, itemCount, byteLength}, not the data.
+            // Useful for diagnosing drift, never a backup. verbatimStores above
+            // is what actually carries the rest of the stores.
             appStorageSnapshot: getAllAppStorageSnapshot(),
             callListeningCsv: window.exportCallListeningLogsToCSV?.() || '',
             coachingHistoryCsv: window.exportCoachingHistoryToCSV?.() || ''
@@ -1266,6 +1342,13 @@
         }
         if (payload?.hotTipHistory && typeof payload.hotTipHistory === 'object') {
             safeSaveToStorage('hotTipHistory', payload.hotTipHistory);
+        }
+
+        const verbatimFailures = applyVerbatimStores(payload?.verbatimStores);
+        if (verbatimFailures.length) writeFailures.push(...verbatimFailures);
+        const verbatimCount = Object.keys(payload?.verbatimStores || {}).length;
+        if (verbatimCount) {
+            console.log(`[Repo Restore] Restored ${verbatimCount - verbatimFailures.length}/${verbatimCount} additional stores`);
         }
 
         console.log(`[Repo Restore] Saved ${savedCount} data keys to localStorage`);
@@ -1629,6 +1712,8 @@
         // Storage snapshot / data helpers
         summarizeStorageValue,
         getAllAppStorageSnapshot,
+        collectVerbatimStores,
+        applyVerbatimStores,
         hasNonEmptyEntries,
         getMeaningfulLocalDataSources,
         getMeaningfulBackupDataSources,
