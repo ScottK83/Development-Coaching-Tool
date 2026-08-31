@@ -12,8 +12,6 @@
     <script src="bootstrap.js"></script>
     <!-- Load libraries WITHOUT source map references -->
     <script src="lib-chart.js" crossorigin="anonymous"></script>
-    <script src="lib-html2canvas.js" crossorigin="anonymous"></script>
-    <script src="lib-xlsx.js" crossorigin="anonymous"></script>
 <!-- A11Y: Form inputs throughout lack <label> elements or aria-label attributes.
      Future: add labels to all inputs, selects, and textareas for screen reader support. -->
 </head>
@@ -1723,9 +1721,6 @@ Box 2 - Future Improvement Areas:
             var scripts = [
                 // Foundation Layer (No Dependencies)
                 'modules/constants.module.js',
-                'modules/action-registry.module.js',
-                'modules/asset-loader.module.js',
-                'modules/logger.module.js',
                 'modules/metrics-registry.module.js',
                 'modules/period-index.module.js',
                 'modules/period-picker.module.js',
@@ -1791,7 +1786,6 @@ Box 2 - Future Improvement Areas:
                 'modules/my-team.module.js',
                 'modules/celebrations.module.js',
                 'modules/monday-morning-post.module.js',
-                'lib-pdf.js',
                 'modules/reliability.module.js',
                 'modules/copilot-prompt.module.js',
                 'modules/team-snapshot.module.js',
