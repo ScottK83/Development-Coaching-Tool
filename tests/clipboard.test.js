@@ -2,6 +2,17 @@
 
 const { suite } = require('./harness');
 
+// Captured before any suite runs, so the stubs installed below can be undone.
+// Leaving them in place silently disables timers for every suite loaded after
+// this file, which is invisible until something actually awaits one.
+const realSetTimeout = global.setTimeout;
+const realClearTimeout = global.clearTimeout;
+
+function restoreTimers() {
+    global.setTimeout = realSetTimeout;
+    global.clearTimeout = realClearTimeout;
+}
+
 // Builds a fake browser whose clipboard can be made to fail on either path.
 function setup(t) {
     t.installFakeBrowser();
@@ -90,4 +101,13 @@ suite('copyToClipboard — button flash', async (t) => {
     await api.copyToClipboard('b', { button: btn });
     t.equal('a double-click keeps the true original label', btn.dataset.flashRestore, 'Copy Q1 Prompt');
     t.equal('  and shows the copied state', btn.textContent, '✓ Copied');
+});
+
+// Runs last in this file. The harness catches a throwing suite, so this still
+// runs if one of the three above fails, and every suite loaded after this file
+// gets working timers back.
+suite('clipboard: the timer stubs do not leak into later suites', (t) => {
+    restoreTimers();
+    t.check('setTimeout is the real one again', global.setTimeout === realSetTimeout);
+    t.check('and so is clearTimeout', global.clearTimeout === realClearTimeout);
 });
