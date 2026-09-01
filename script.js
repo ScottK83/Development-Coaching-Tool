@@ -2461,6 +2461,40 @@ function refreshStorageQuotaWidget() {
 }
 
 /**
+ * Confirms the cloud copy is current, and says so.
+ *
+ * This is what stands in for downloading a JSON file before a destructive step.
+ * The work computer must never have a file written to it, so a safety net that
+ * depends on one cannot be used on the machine that holds the data.
+ *
+ * Cloudflare is the better guarantee regardless: a file in Downloads is one
+ * more copy on the same disk, while the cloud copy is already off the machine,
+ * versioned, and provably readable.
+ */
+async function ensureCloudCopyIsCurrent() {
+    const sync = window.DevCoachModules?.manifestSync;
+    const storage = window.DevCoachModules?.storage;
+    const registry = window.DevCoachModules?.storeRegistry;
+    if (!sync || !registry) return { ok: false, reason: 'cloud sync is unavailable in this build' };
+
+    const pending = registry.syncedNames().filter((n) => storage?.isStoreDirty?.(n));
+    if (pending.length) {
+        const pushed = await sync.push(pending, 'before a destructive step');
+        if (!pushed.ok) return { ok: false, reason: pushed.error || pushed.code || 'the push failed' };
+        storage?.clearDirtyStores?.();
+    }
+
+    // Checked against what actually landed, not against a request returning
+    // 200. The question is whether a copy EXISTS, not whether one was sent.
+    const state = sync.loadSyncState();
+    const applied = Object.keys(state.applied || {}).length;
+    if (!state.version || !applied) {
+        return { ok: false, reason: 'no cloud copy of this computer exists yet' };
+    }
+    return { ok: true, version: state.version, stores: applied };
+}
+
+/**
  * Gives back the localStorage space the bulk stores no longer need, now that
  * IndexedDB holds them.
  *
@@ -2484,18 +2518,18 @@ async function handleReclaimStorageClick() {
         `Free up space\n\n` +
         `Your data has been copied to browser database storage, which is not limited to 5 MB. ` +
         `The old copies are still sitting in local storage, using most of your ${before} MB.\n\n` +
-        `This removes only the copies that are verified present in the new location, and downloads a full backup first.\n\n` +
+        `This removes only the copies that are verified present in the new location, and checks your cloud copy is current first. No file is saved to this computer.\n\n` +
         `Continue?`
     );
     if (!proceed) return;
 
-    try {
-        // Unconditional, and before the delete rather than after. If anything
-        // below goes wrong, there is a file on disk that covers every store.
-        exportToExcel();
-    } catch (error) {
-        console.error('[reclaim] Backup export failed:', error);
-        alert('⚠️ Could not download a backup, so nothing was deleted.\n\n' + (error?.message || error));
+    // No file is written to this computer, ever. The cloud copy is the safety
+    // net and it is CHECKED rather than assumed: anything unsent goes up first,
+    // and a copy has to exist before a single byte is deleted.
+    const cloud = await ensureCloudCopyIsCurrent();
+    if (!cloud.ok) {
+        alert('⚠️ Nothing was deleted.\n\nYour cloud copy could not be confirmed: ' + cloud.reason +
+              '\n\nFix the sync first. Freeing space is only safe once the data is somewhere else.');
         return;
     }
 
@@ -2887,16 +2921,17 @@ async function handleRestoreSnapshotClick() {
         `Restore the copy saved on ${date}?\n\n` +
         `This replaces what is currently in the app with that day's data. ` +
         `Anything added since then that has not been synced will be lost.\n\n` +
-        `A backup of the current state downloads first.`
+        `Your current state is sent to the cloud first, so it stays recoverable. No file is saved to this computer.`
     );
     if (!proceed) return;
 
-    // The current state may be the good one and the snapshot the mistake, so
-    // take a copy before overwriting it. The export is free.
-    try {
-        exportToExcel();
-    } catch (error) {
-        alert('⚠️ Could not download a backup of the current state, so nothing was restored.\n\n' + (error?.message || error));
+    // The state being replaced may be the good one and the snapshot the
+    // mistake, so it has to survive this. Sent to the cloud, never written to a
+    // file: nothing is ever downloaded to this computer.
+    const cloud = await ensureCloudCopyIsCurrent();
+    if (!cloud.ok) {
+        alert('⚠️ Nothing was restored.\n\nYour current data could not be saved to the cloud first: ' + cloud.reason +
+              '\n\nRestoring would leave it unrecoverable, so it was stopped.');
         return;
     }
 
