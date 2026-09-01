@@ -442,3 +442,50 @@ suite('first push: later pushes stay narrow', async (t) => {
     t.equal('the second push carries one store', second.changed.length, 1);
     t.equal('and it is the one that changed', second.changed[0], 'ptoTracker');
 });
+
+suite('reset: a machine holding an etag for a deleted manifest reseeds', async (t) => {
+    const bucket = createFakeR2();
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: {}, w2: {} };
+    a.values.metricCoachingTips = { transfers: ['a tip'] };
+
+    await a.sync.push(['weeklyData'], 'baseline');
+    const afterFirst = a.sync.loadSyncState();
+    t.check('it recorded an etag', !!afterFirst.etag);
+
+    // The cloud copy is reset, which is exactly what happens when a bad or
+    // partial manifest has to be cleared out. The machine still holds the old
+    // etag, so its next commit references something that no longer exists.
+    bucket._objects.delete('state/v2/manifest.json');
+
+    const pushed = await a.sync.push(['metricCoachingTips'], 'after the reset');
+
+    t.equal('the push still succeeds', pushed.ok, true);
+    t.equal('by reseeding rather than failing on a dead etag', pushed.created, true);
+    // And the reseed is a full baseline, not just the one store being pushed.
+    t.check('with everything, not just the store that triggered it', pushed.changed.length > 1);
+
+    const b = machine(t, bucket, 'b');
+    await b.sync.pull();
+    t.equal('so the other machine gets the data', Object.keys(b.values.weeklyData).length, 2);
+});
+
+suite('reset: a pull against an empty cloud clears the stale local record', async (t) => {
+    const bucket = createFakeR2();
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: {} };
+    await a.sync.push(['weeklyData'], 'baseline');
+
+    bucket._objects.delete('state/v2/manifest.json');
+
+    const pulled = await a.sync.pull();
+    t.equal('the pull reports nothing to do', pulled.skipped, true);
+
+    // Left in place, this record would make the next push commit against a dead
+    // etag and make a pull believe it was in step with a cloud copy that is not
+    // there.
+    const state = a.sync.loadSyncState();
+    t.equal('the version is cleared', state.version, 0);
+    t.equal('and the etag', state.etag, null);
+    t.equal('and nothing is still marked as applied', Object.keys(state.applied || {}).length, 0);
+});

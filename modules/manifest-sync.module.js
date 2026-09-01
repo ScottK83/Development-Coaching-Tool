@@ -335,6 +335,18 @@
                 return { ok: true, version: manifest.version, changed: Object.keys(changed), attempts: attempt };
             }
 
+            if (commit.data?.code === 'NO_MANIFEST') {
+                // We hold an etag for a manifest the server does not have. That
+                // happens when the cloud copy is reset, or when a machine's
+                // saved state outlives the data it described. The local record
+                // is the stale one: drop it and let the next turn of this loop
+                // take the seeding path, rather than retrying an etag that can
+                // never match anything again.
+                console.warn('[v2] Local state references a manifest the server no longer has; reseeding.');
+                saveSyncState({ version: 0, etag: null, applied: {} });
+                continue;
+            }
+
             if (commit.status === 409 && commit.data?.code === 'CAS_CONFLICT') {
                 // Someone else moved the manifest. Take theirs as the new base
                 // and re-apply ONLY our own changed set on top. Their shards
@@ -408,7 +420,18 @@
     async function pull() {
         const read = await callWorker({ mode: 'v2.manifest' });
         if (read.status !== 200) return { ok: false, error: read.data?.error || 'Could not read the manifest.' };
-        if (!read.data.exists) return { ok: true, skipped: true, reason: 'no manifest yet' };
+        if (!read.data.exists) {
+            // The server holds nothing, so this machine's record of what it has
+            // "applied" describes a manifest that is gone. Left in place it
+            // would make the next push commit against a dead etag, and would
+            // make a pull think it was up to date with nothing.
+            const stale = loadSyncState();
+            if (stale.etag || stale.version) {
+                console.warn('[v2] The cloud copy is gone; clearing this machine\'s record of it.');
+                saveSyncState({ version: 0, etag: null, applied: {} });
+            }
+            return { ok: true, skipped: true, reason: 'no manifest yet' };
+        }
 
         const manifest = read.data.manifest;
         const state = loadSyncState();
