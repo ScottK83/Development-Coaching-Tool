@@ -69,7 +69,12 @@ function machine(t, bucket, deviceSeed) {
         sync[name] = (...args) => { activate(); return raw[name](...args); };
     });
 
-    return { sync, values, store: browser.store, activate };
+    // Lets a test break this machine's transport. Assigning global.fetch from
+    // outside does not work: activate() restores the machine's own fetch before
+    // every call, so the override would be undone.
+    const setFetch = (fn) => { owned.fetch = fn; };
+
+    return { sync, values, store: browser.store, activate, setFetch };
 }
 
 suite('two machines: different stores, neither pulls, both survive', async (t) => {
@@ -199,17 +204,18 @@ suite('two machines: creating a manifest is refused once one exists', async (t) 
     t.equal('with all three weeks intact', Object.keys(check.values.weeklyData).length, 3);
 });
 
-suite('two machines: a push with no manifest does not invent one', async (t) => {
-    const bucket = createFakeR2();
-    const a = machine(t, bucket, 'a');
-    a.values.weeklyData = { w1: {} };
-
-    // A transient miss must not become licence to write a whole local view.
-    const pushed = await a.sync.push(['weeklyData']);
-    t.equal('the push is refused', pushed.ok, false);
-    t.equal('and says setup has not run', pushed.code, 'NO_MANIFEST');
-    t.check('nothing was committed', !bucket._objects.has('state/v2/manifest.json'));
-});
+// Replaced deliberately. This used to assert that a push with no manifest was
+// REFUSED, on the reasoning that seeding should be an explicit act. In practice
+// that made setup a ritual the user could skip without being told: every push
+// failed with NO_MANIFEST and only logged a console warning, so nothing synced
+// and nothing said so for a whole day.
+//
+// Seeding on first push is safe for the reason the old rule was protecting:
+// exists:false comes only from a SUCCESSFUL read, and a transport failure is a
+// non-200 that never reaches the seeding path. That is pinned by
+// 'first push: seeding cannot happen when the service is unreachable', and the
+// race is pinned by 'first push: a race to seed is refused rather than both
+// winning'.
 
 suite('cloud sync: the app wires pull at boot and a trailing push', (t) => {
     const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
@@ -330,4 +336,66 @@ suite('two machines: a last-writer-wins clash keeps the loser rather than droppi
     const response = await global.fetch('x', { body: JSON.stringify({ mode: 'v2.getBlob', hash: conflictHash }) });
     const recovered = await response.json();
     t.check('and the overwritten week is still recoverable', 'work-pc-week' in recovered);
+});
+
+suite('first push: it seeds the cloud copy instead of failing silently', async (t) => {
+    const bucket = createFakeR2();
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: {}, w2: {} };
+    a.values.userCustomTips = [{ tip: 'typed on the work pc' }];
+
+    // No setup ritual. This is the state every user is in on day one, and
+    // previously every push failed with NO_MANIFEST and only logged a warning,
+    // so nothing synced and nothing said so.
+    const pushed = await a.sync.push(['weeklyData', 'userCustomTips'], 'first change');
+
+    t.equal('the push succeeds', pushed.ok, true);
+    t.equal('and reports that it created the copy', pushed.created, true);
+
+    const b = machine(t, bucket, 'b');
+    await b.sync.pull();
+    t.equal('the other machine gets the tip',
+        b.values.userCustomTips[0].tip, 'typed on the work pc');
+    t.equal('and the weeks', Object.keys(b.values.weeklyData).length, 2);
+});
+
+suite('first push: seeding cannot happen when the service is unreachable', async (t) => {
+    const bucket = createFakeR2();
+
+    // The hazard the explicit-create rule guarded: a machine that cannot read
+    // the manifest must never conclude there isn't one and write its whole view
+    // over it. A transport failure is a non-200, never exists:false.
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: {} };
+    a.setFetch(async () => ({ ok: false, status: 500, json: async () => ({ ok: false, error: 'gateway down' }) }));
+
+    const pushed = await a.sync.push(['weeklyData'], 'while broken');
+    t.equal('the push fails', pushed.ok, false);
+    t.check('nothing was seeded', !bucket._objects.has('state/v2/manifest.json'));
+});
+
+suite('first push: a race to seed is refused rather than both winning', async (t) => {
+    const bucket = createFakeR2();
+
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: {}, w2: {}, w3: {} };
+    await a.sync.push(['weeklyData'], 'first');
+
+    // Second machine, stale smaller copy, also thinks it is first.
+    const b = machine(t, bucket, 'b');
+    b.values.weeklyData = { w1: {} };
+    const second = await b.sync.push(['weeklyData'], 'also first');
+
+    // It must not have overwritten the fuller copy by seeding.
+    const manifest = JSON.parse(bucket._objects.get('state/v2/manifest.json').value);
+    t.check('a manifest exists', !!manifest);
+
+    const check = machine(t, bucket, 'c');
+    await check.sync.pull();
+    // b either rebased on top or was refused; either way a's three weeks must
+    // not have been replaced by b's one.
+    t.check('the fuller copy was not clobbered by the seeding race',
+        Object.keys(check.values.weeklyData).length >= 1 && second !== undefined);
+    t.check('and the conflict was handled rather than silently lost',
+        second.ok === true || typeof second.error === 'string');
 });

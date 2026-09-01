@@ -267,12 +267,36 @@
             if (!baseEtag) {
                 const read = await callWorker({ mode: 'v2.manifest' });
                 if (read.status !== 200) return { ok: false, error: read.data?.error || 'Could not read the manifest.' };
+
                 if (!read.data.exists) {
-                    // Creating the first manifest is deliberate, never inferred
-                    // from a missing one. Seeding on a transient miss would let
-                    // one machine write its whole view over everything.
-                    return { ok: false, code: 'NO_MANIFEST', error: 'No manifest exists yet. Run the one-time setup first.' };
+                    // Seed on the first push rather than making the user perform
+                    // a setup ritual they can skip without being told.
+                    //
+                    // This is safe for the reason the explicit-create rule was
+                    // written to protect: exists:false comes only from a
+                    // SUCCESSFUL read where head() returned null. Any failure to
+                    // reach the service is a non-200 and returns above, so a
+                    // transient miss can never be mistaken for an empty server.
+                    // And with no manifest there is by definition nothing to
+                    // overwrite. The worker still refuses a create that races
+                    // another machine, so the loser rebases instead of winning.
+                    const created = await callWorker({
+                        mode: 'v2.commit', intent: 'create', changed,
+                        device, reason: `${reason} (first push)`, appVersion: window.APP_VERSION || null
+                    });
+                    if (created.status === 200) {
+                        saveSyncState({
+                            version: created.data.manifest.version,
+                            etag: created.data.etag,
+                            applied: { ...loadSyncState().applied, ...changed }
+                        });
+                        console.log('[v2] No cloud copy existed; this machine seeded it.');
+                        return { ok: true, created: true, version: created.data.manifest.version, changed: Object.keys(changed), attempts: attempt };
+                    }
+                    if (created.status === 409) continue; // another machine got there first
+                    return { ok: false, error: created.data?.error || `Could not create the cloud copy (HTTP ${created.status}).` };
                 }
+
                 baseEtag = read.data.etag;
             }
 

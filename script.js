@@ -2202,6 +2202,7 @@ function bindCoachingFormHandlers() {
     document.getElementById('cloudSyncPullBtn')?.addEventListener('click', handleCloudSyncPullClick);
     document.getElementById('cloudSyncPushBtn')?.addEventListener('click', handleCloudSyncPushClick);
     document.getElementById('cloudSyncSetupBtn')?.addEventListener('click', handleCloudSyncSetupClick);
+    document.getElementById('cloudSyncTestBtn')?.addEventListener('click', handleCloudSyncTestClick);
     refreshUploadUndoBanner();
     refreshStorageQuotaWidget();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
@@ -2525,6 +2526,18 @@ async function handleReclaimStorageClick() {
 
 var _cloudPushTimer = null;
 var _cloudSyncBackgroundStarted = false;
+var _lastCloudFailToast = 0;
+
+// Throttled: a repeated failure is one problem, not twenty. Offline is handled
+// by the caller and never reaches here.
+function notifyCloudPushFailed(reason) {
+    const now = Date.now();
+    if (now - _lastCloudFailToast < 60000) return;
+    _lastCloudFailToast = now;
+    try {
+        showToast('⚠️ Changes are saved on this computer but did not reach the cloud: ' + reason, 7000);
+    } catch (_e) { /* toast unavailable */ }
+}
 
 /**
  * Pulls once at startup, then pushes whatever changed, on a trailing debounce.
@@ -2570,12 +2583,16 @@ function startCloudSyncBackground() {
                     storage?.clearDirtyStores?.();
                     console.log(`[cloud] Pushed ${result.changed.join(', ')} as version ${result.version}.`);
                 } else if (result && !result.ok) {
-                    // Left dirty on purpose, so the next change retries it
-                    // rather than the work being quietly dropped.
+                    // Left dirty on purpose, so the next change retries rather
+                    // than the work being quietly dropped. Surfaced too: three
+                    // separate silent push failures survived a full day of
+                    // testing because this was a console.warn and nothing else.
                     console.warn('[cloud] Push failed, will retry on the next change:', result.error || result.code);
+                    notifyCloudPushFailed(result.error || result.code);
                 }
             }).catch((error) => {
                 console.warn('[cloud] Push failed, will retry on the next change:', error?.message || error);
+                notifyCloudPushFailed(error?.message || error);
             });
         }, 5000);
     };
@@ -2672,6 +2689,67 @@ async function handleCloudSyncPushClick() {
         refreshCloudSyncStatus();
     } catch (error) {
         setCloudSyncResult('Could not push: ' + (error?.message || error), true);
+    }
+}
+
+/**
+ * Runs the whole sync chain and prints what happened, on screen.
+ *
+ * Exists because the work PC cannot have code pasted into its console: the
+ * clipboard route is blocked, so a diagnostic that needs pasting is a
+ * diagnostic that cannot be run on the machine that has the problem.
+ */
+async function handleCloudSyncTestClick() {
+    const out = document.getElementById('cloudSyncDiagnostics');
+    if (!out) return;
+    const lines = [];
+    const say = (text) => { lines.push(text); out.textContent = lines.join('\n'); };
+    out.style.display = 'block';
+    say('Running...');
+    lines.length = 0;
+
+    const storage = window.DevCoachModules?.storage;
+    const sync = window.DevCoachModules?.manifestSync;
+    const registry = window.DevCoachModules?.storeRegistry;
+
+    say(`modules: storage=${!!storage} sync=${!!sync} registry=${!!registry}`);
+    if (!storage || !sync || !registry) { say('FAILED: a module did not load.'); return; }
+
+    say(`backend: ${storage.getBackendMode()}`);
+    say(`this machine: ${sync.getDeviceId()}`);
+
+    const state = sync.loadSyncState();
+    say(`local version: ${state.version || 0}, tracking ${Object.keys(state.applied || {}).length} stores`);
+
+    try {
+        const pulled = await sync.pull();
+        say(pulled.skipped ? 'cloud: no copy yet (the first push will create one)' : `cloud: version ${pulled.version}`);
+    } catch (error) {
+        say(`cloud: UNREACHABLE (${error?.message || error})`);
+    }
+
+    // Write through the real path, so this proves the chain the app uses.
+    const existing = storage.readStore('userCustomTips') || [];
+    const marker = 'SYNC TEST ' + new Date().toISOString().slice(0, 19);
+    storage.saveWithSizeCheck('userCustomTips', existing.concat([{ tip: marker, metric: 'transfers' }]));
+    say(`wrote a test tip: ${marker}`);
+    say(`marked as changed: ${storage.isStoreDirty('userCustomTips')}`);
+
+    const dirty = registry.syncedNames().filter((n) => storage.isStoreDirty(n));
+    say(`changed stores: ${dirty.join(', ') || '(none)'}`);
+
+    try {
+        const result = await sync.push(dirty, 'test button');
+        if (result.ok) {
+            storage.clearDirtyStores();
+            say(`PUSH OK${result.created ? ' (created the cloud copy)' : ''}, version ${result.version}`);
+            say('');
+            say('Now open the other computer and press Pull changes.');
+        } else {
+            say(`PUSH FAILED: ${result.error || result.code}`);
+        }
+    } catch (error) {
+        say(`PUSH FAILED: ${error?.message || error}`);
     }
 }
 
