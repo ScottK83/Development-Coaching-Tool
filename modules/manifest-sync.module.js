@@ -131,8 +131,23 @@
      */
     async function push(storeNames, reason = 'updated') {
         const registry = window.DevCoachModules?.storeRegistry;
-        const names = (storeNames || []).filter((n) => (registry ? registry.isSynced(n) : true));
+        let names = (storeNames || []).filter((n) => (registry ? registry.isSynced(n) : true));
         if (!names.length) return { ok: true, skipped: true, reason: 'nothing to push' };
+
+        // The first push has to be a complete baseline, not just whatever
+        // happened to be edited in the seconds before it.
+        //
+        // Dirty tracking starts empty on every boot, so a normal push carries
+        // only what changed this session. That is right once the cloud holds a
+        // full copy and wrong when it holds nothing: the seed would create a
+        // manifest naming one store, and the other machine would pull that one
+        // store and consider itself in step.
+        const existing = await callWorker({ mode: 'v2.manifest' });
+        if (existing.status === 200 && existing.data && !existing.data.exists) {
+            const everything = registry?.syncedNames?.() || names;
+            names = everything.filter((n) => readStoreValue(n) !== undefined);
+            console.log(`[v2] No cloud copy yet; sending all ${names.length} stores as the baseline.`);
+        }
 
         // Blobs first, and awaited. A manifest naming bytes that are not in the
         // bucket is unresolvable on every machine forever, so the reference must

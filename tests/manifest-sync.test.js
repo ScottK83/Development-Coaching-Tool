@@ -399,3 +399,46 @@ suite('first push: a race to seed is refused rather than both winning', async (t
     t.check('and the conflict was handled rather than silently lost',
         second.ok === true || typeof second.error === 'string');
 });
+
+suite('first push: the baseline carries everything, not just what changed', async (t) => {
+    const bucket = createFakeR2();
+    const a = machine(t, bucket, 'a');
+
+    // A real machine's state: a lot of data, one thing edited just now.
+    a.values.weeklyData = { w1: {}, w2: {}, w3: {} };
+    a.values.ytdData = { '2026': {} };
+    a.values.coachingHistory = { 'Alyssa Dimes': [{ note: 'kept' }] };
+    a.values.ptoTracker = { associates: { 'Chris Vale': {} } };
+    a.values.metricCoachingTips = { transfers: ['the one just typed'] };
+
+    // Only the tip is dirty, which is what the app would pass in.
+    const pushed = await a.sync.push(['metricCoachingTips'], 'typed a tip');
+    t.equal('the push succeeds', pushed.ok, true);
+    t.equal('and it created the cloud copy', pushed.created, true);
+
+    // The whole point: a second machine pulling this must get a usable app,
+    // not one coaching tip and nothing else.
+    t.check('the baseline carries more than the edited store', pushed.changed.length > 1);
+
+    const b = machine(t, bucket, 'b');
+    await b.sync.pull();
+    t.equal('the other machine gets the weeks', Object.keys(b.values.weeklyData).length, 3);
+    t.equal('and the coaching history', b.values.coachingHistory['Alyssa Dimes'][0].note, 'kept');
+    t.equal('and PTO', Object.keys(b.values.ptoTracker.associates).length, 1);
+    t.check('and the tip that triggered it', !!b.values.metricCoachingTips);
+});
+
+suite('first push: later pushes stay narrow', async (t) => {
+    const bucket = createFakeR2();
+    const a = machine(t, bucket, 'a');
+    a.values.weeklyData = { w1: {} };
+    a.values.ptoTracker = { associates: {} };
+    await a.sync.push(['weeklyData'], 'baseline');
+
+    // Once a copy exists, a push must carry only what it was given. Sending
+    // everything every time is how one machine overwrites another's work.
+    a.values.ptoTracker = { associates: { 'Dana Roe': {} } };
+    const second = await a.sync.push(['ptoTracker'], 'just pto');
+    t.equal('the second push carries one store', second.changed.length, 1);
+    t.equal('and it is the one that changed', second.changed[0], 'ptoTracker');
+});
