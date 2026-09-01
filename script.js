@@ -2580,15 +2580,16 @@ function startCloudSyncBackground() {
         }, 5000);
     };
 
-    // Every write goes through saveWithSizeCheck, so one hook covers them all.
-    if (typeof storage?.saveWithSizeCheck === 'function' && !storage.__cloudPushHooked) {
-        const original = storage.saveWithSizeCheck;
-        storage.saveWithSizeCheck = function hookedSave(key, data) {
-            const ok = original.call(storage, key, data);
-            if (ok && registry.isSynced(key)) scheduleCloudPush();
-            return ok;
-        };
-        storage.__cloudPushHooked = true;
+    // A listener inside the storage module, not a wrapper around its export.
+    // The module's own save* functions call the local closure directly, so a
+    // wrapper on the export never sees them: writes from tips or team members
+    // would schedule a push and writes from saveWeeklyData would not.
+    if (typeof storage?.onStoreChanged === 'function') {
+        storage.onStoreChanged((key) => {
+            if (registry.isSynced(key)) scheduleCloudPush();
+        });
+    } else {
+        console.warn('[cloud] storage.onStoreChanged is unavailable; changes will not auto-push.');
     }
 }
 

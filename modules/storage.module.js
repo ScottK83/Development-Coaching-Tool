@@ -78,9 +78,30 @@
     // every alt-tab, so a machine that merely had the tab open overwrites what
     // the other machine wrote. That is the widest lost-update path in the app.
     const dirtyStores = new Set();
+    const storeChangeListeners = [];
+
+    /**
+     * Called for every store write, from inside the module.
+     *
+     * Deliberately here rather than in a wrapper around the exported
+     * saveWithSizeCheck: the module's own save* functions call the local
+     * closure directly, so a wrapper on the export only ever sees writes from
+     * other files. Half the writes would be invisible, silently, which is the
+     * same class of failure as writing around the module in the first place.
+     */
+    function onStoreChanged(listener) {
+        if (typeof listener === 'function') storeChangeListeners.push(listener);
+    }
 
     function markStoreDirty(key) {
         dirtyStores.add(key);
+        storeChangeListeners.forEach((listener) => {
+            try {
+                listener(key);
+            } catch (error) {
+                console.error('[storage] A store-change listener threw:', error);
+            }
+        });
     }
 
     function isStoreDirty(key) {
@@ -139,8 +160,9 @@
             const existing = await backend.getAll();
             const backendHasData = Object.keys(existing).length > 0;
 
+            let copied = false;
             if (!marked && !backendHasData) {
-                const copied = await copyBulkStoresIntoBackend(backend);
+                copied = await copyBulkStoresIntoBackend(backend);
                 if (!copied) {
                     console.warn('[storage] Copy into IndexedDB could not be verified; staying on localStorage.');
                     return 'localStorage';
@@ -162,9 +184,12 @@
             // IndexedDB but present in localStorage, and the checks above have
             // already decided the migration ran. Without this it would keep
             // reading from a cache that has never held it, and look empty.
-            await backfillNewBulkStores(backend, existing);
+            const backfilled = await backfillNewBulkStores(backend, existing);
 
-            bulkCache = await backend.getAll();
+            // Reuses the read above when nothing was written since. Two full
+            // getAll() calls meant loading every bulk store twice before a
+            // single line of the app ran, which is dead time on every boot.
+            bulkCache = (copied || backfilled.length) ? await backend.getAll() : existing;
             backendMode = 'idb';
             return 'idb';
         } catch (error) {
@@ -940,6 +965,7 @@
         isStoreDirty,
         markStoreDirty,
         clearDirtyStores,
+        onStoreChanged,
         // Storage helpers
         saveWithSizeCheck,
         // Weekly data

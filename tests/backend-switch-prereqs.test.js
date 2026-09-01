@@ -344,3 +344,44 @@ suite('restore: a field the backup does not carry leaves local data alone', (t) 
             line.indexOf('coerceNullableObject') > -1);
     });
 });
+
+suite('dirty: the change listener fires for the module\'s OWN writes too', async (t) => {
+    const { storage } = load(t, {});
+    await storage.hydrate();
+
+    const seen = [];
+    storage.onStoreChanged((key) => seen.push(key));
+
+    // An external caller, the shape tips and team members use.
+    storage.saveWithSizeCheck('userCustomTips', [{ tip: 'x' }]);
+    t.check('an external write notifies', seen.indexOf('userCustomTips') > -1);
+
+    // An internal caller. saveWeeklyData calls the module's LOCAL closure, so a
+    // wrapper around the export would never see this one, and half the writes
+    // would silently never push.
+    storage.saveWeeklyData({ w1: {} });
+    t.check('a write from inside the module notifies as well',
+        seen.indexOf('weeklyData') > -1);
+
+    storage.saveCoachingHistory({ 'Alyssa Dimes': [] });
+    t.check('and so does another internal saver',
+        seen.indexOf('coachingHistory') > -1);
+
+    // A listener that throws must not take the save down with it.
+    storage.onStoreChanged(() => { throw new Error('listener blew up'); });
+    t.equal('a throwing listener does not break the write',
+        storage.saveWeeklyData({ w2: {} }), true);
+});
+
+suite('dirty: the cloud push subscribes rather than wrapping the export', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('function startCloudSyncBackground');
+    const body = src.slice(start, src.indexOf('\nfunction setCloudSyncResult', start));
+
+    t.check('it subscribes through onStoreChanged', body.indexOf('onStoreChanged') > -1);
+    // Wrapping the export misses every write the module makes internally.
+    t.check('it does not reassign saveWithSizeCheck',
+        body.indexOf('storage.saveWithSizeCheck =') === -1);
+    t.check('and it says so when the hook is unavailable',
+        /will not auto-push/.test(body));
+});
