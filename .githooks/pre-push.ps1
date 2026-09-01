@@ -128,6 +128,29 @@ if (-not $autoBumpEnabled) {
 $lines[$versionLineIndex] = "const APP_VERSION = '$nextVersion'; // Version: YYYY.MM.DD.NN"
 Set-Content -Path $scriptJsPath -Value $lines
 
+# index.html carries the same version as its script cache key. It has to be
+# rewritten here because the loader reads it before script.js exists, so it
+# cannot take the value from APP_VERSION at runtime.
+#
+# If these two drift, the browser serves cached modules from an older deploy
+# against a newer script.js. A test fails the build when they disagree, but
+# keeping them in step is this hook's job.
+$indexHtmlPath = Join-Path $repoRoot 'index.html'
+if (Test-Path $indexHtmlPath) {
+    $htmlLines = Get-Content $indexHtmlPath
+    $buildLineIndex = -1
+    for ($i = 0; $i -lt $htmlLines.Count; $i++) {
+        if ($htmlLines[$i].Contains('// APP_BUILD')) { $buildLineIndex = $i; break }
+    }
+    if ($buildLineIndex -ge 0) {
+        $htmlLines[$buildLineIndex] = "            var APP_BUILD = '$nextVersion'; // APP_BUILD"
+        Set-Content -Path $indexHtmlPath -Value $htmlLines
+        git add index.html
+    } else {
+        Write-Host "APP_BUILD marker not found in index.html. Script caching will fall back to per-load."
+    }
+}
+
 git add script.js
 
 git diff --cached --quiet

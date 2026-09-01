@@ -1,0 +1,45 @@
+# Cloudflare Pages headers.
+#
+# Two kinds of file here, and they need opposite treatment.
+#
+# Anything loaded through the script loader is requested as <path>?v=<APP_BUILD>,
+# so a given URL's contents genuinely never change: a deploy bumps APP_BUILD and
+# the browser fetches a different URL. Those can be cached hard.
+#
+# Anything loaded from a plain tag in index.html has no version in its URL, so
+# caching it hard would mean a change never reaches the browser. Those revalidate
+# instead: no-cache means "ask first", not "do not store", so an unchanged file
+# costs a 304 rather than a download.
+
+/index.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
+
+# Versioned by the loader.
+/modules/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/script.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# Plain tags in index.html, so no version in the URL. Revalidate.
+/styles-v2.css
+  Cache-Control: no-cache
+
+/bootstrap.js
+  Cache-Control: no-cache
+
+/lib-chart.js
+  Cache-Control: no-cache
+
+# Fetched on demand by the asset loader, also unversioned.
+/lib-xlsx.js
+  Cache-Control: no-cache
+
+/lib-html2canvas.js
+  Cache-Control: no-cache
+
+/lib-pdf.js
+  Cache-Control: no-cache
