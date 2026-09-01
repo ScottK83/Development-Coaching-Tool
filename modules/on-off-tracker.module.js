@@ -1274,7 +1274,7 @@
         } else {
             try {
                 var prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
-                localStorage.setItem(prefix + 'midYearMeta', JSON.stringify(map));
+                window.DevCoachModules?.storage?.saveWithSizeCheck?.('midYearMeta', map);
             } catch (e) { /* ignore quota errors */ }
         }
     }

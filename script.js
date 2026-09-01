@@ -596,7 +596,7 @@ function saveNickname(employeeFullName, nickname) {
     try {
         const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
         nicknames[employeeFullName] = nickname;
-        localStorage.setItem(STORAGE_PREFIX + 'employeeNicknames', JSON.stringify(nicknames));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeNicknames', nicknames);
     } catch (error) {
         console.error('Error saving nickname:', error);
     }
@@ -986,7 +986,7 @@ function loadCallCenterAverages() {
 
 function saveCallCenterAverages(averages) {
     try {
-        localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(averages));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('callCenterAverages', averages);
     } catch (error) {
         console.error('Error saving call center averages:', error);
     }
@@ -1259,7 +1259,7 @@ function setEmployeePreferredName(fullName, preferredName) {
         delete preferredNames[fullName];
     }
     
-    localStorage.setItem(STORAGE_PREFIX + 'employeePreferredNames', JSON.stringify(preferredNames));
+    window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeePreferredNames', preferredNames);
 }
 
 window.saveEmployeePreferredName = function(fullName) {
@@ -1461,7 +1461,7 @@ function purgeNonRosteredEmployees() {
                 const kept = names.filter(isRosteredAssociate);
                 if (kept.length !== names.length) { byWeek[weekKey] = kept; touched = true; }
             });
-            if (touched) localStorage.setItem(STORAGE_PREFIX + 'myTeamMembers', JSON.stringify(byWeek));
+            if (touched) window.DevCoachModules?.storage?.saveWithSizeCheck?.('myTeamMembers', byWeek);
         }
     } catch (_e) { console.warn('[purgeNonRostered] Could not clean myTeamMembers:', _e.message); }
 
@@ -1534,7 +1534,7 @@ window.backfillBlankReliability = backfillBlankReliability;
             Object.keys(stored).forEach(function(name) {
                 if (stored[name] === 'Chenal Howard') { stored[name] = 'Schnelle Howard'; touched = true; }
             });
-            if (touched) localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(stored));
+            if (touched) window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeSupervisors', stored);
         } catch (_e) { console.warn('[seedSupervisorTeams] rename skipped:', _e.message); }
         localStorage.setItem(STORAGE_PREFIX + 'supervisorRenamed_schnelle', '1');
     }
@@ -1605,7 +1605,7 @@ window.backfillBlankReliability = backfillBlankReliability;
         });
     });
 
-    localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(existing));
+    window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeSupervisors', existing);
     if (unmatched.length) console.info('[seedSupervisorTeams] No employee data matched ' + unmatched.length + ' rostered name(s):', unmatched);
 })();
 
@@ -1623,7 +1623,7 @@ function setEmployeeSupervisor(name, supervisor) {
     } else {
         delete sups[name];
     }
-    localStorage.setItem(STORAGE_PREFIX + 'employeeSupervisors', JSON.stringify(sups));
+    window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeSupervisors', sups);
 }
 
 function formatDateMMDDYYYY(dateString) {
@@ -5825,7 +5825,7 @@ function loadTipUsageHistory() {
 }
 
 function saveTipUsageHistory(history) {
-    localStorage.setItem(STORAGE_PREFIX + 'tipUsageHistory', JSON.stringify(history));
+    window.DevCoachModules?.storage?.saveWithSizeCheck?.('tipUsageHistory', history);
 }
 
 function selectSmartTip({ employeeId, metricKey, severity, tips }) {
@@ -5932,7 +5932,7 @@ function logComplianceFlag(entry) {
     try {
         const log = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'complianceLog') || '[]');
         log.push(entry);
-        localStorage.setItem(STORAGE_PREFIX + 'complianceLog', JSON.stringify(log.slice(-200)));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('complianceLog', log.slice(-200));
     } catch {
         // no-op
     }

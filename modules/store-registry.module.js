@@ -60,6 +60,7 @@
         { name: 'deletedServerTips', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'metricCoachingTips', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'yoyBaseline2025', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
+        { name: 'ccEmail', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'complianceLog', tier: 'data', backend: 'local', merge: 'unionByEntryHash' },
         { name: 'weeklyFocalPoints', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'celebrationsHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
@@ -85,6 +86,11 @@
         { name: 'repoBackupAppliedAt', tier: 'device', backend: 'local' },
         { name: 'deleteAllJustRan', tier: 'device', backend: 'local' },
         { name: 'idbMigrated_v1', tier: 'device', backend: 'local' },
+        // This machine's identity and its view of the cloud manifest. Syncing
+        // either would give every machine the same device id and overwrite each
+        // one's record of what it has already applied.
+        { name: 'v2DeviceId', tier: 'device', backend: 'local' },
+        { name: 'v2SyncState', tier: 'device', backend: 'local' },
         { name: 'selectedYearEndYear', tier: 'device', backend: 'local' },
         { name: 'lastTrendPeriod', tier: 'device', backend: 'local' },
 

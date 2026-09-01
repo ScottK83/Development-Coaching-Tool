@@ -925,7 +925,7 @@
         saveExecutiveSummaryNoteFields(saved, associate, '.redflags-input', 'redFlags');
         saveExecutiveSummaryNoteFields(saved, associate, '.phishing-input', 'phishing');
 
-        localStorage.setItem(STORAGE_PREFIX + 'executiveSummaryNotes', JSON.stringify(saved));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('executiveSummaryNotes', saved);
         showToast('Notes saved for ' + associate, 3000);
     }
 

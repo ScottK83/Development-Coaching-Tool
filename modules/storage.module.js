@@ -722,7 +722,7 @@
 
     function saveTeamMembers(teamMembersRef) {
         try {
-            localStorage.setItem(STORAGE_PREFIX + 'myTeamMembers', JSON.stringify(teamMembersRef));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('myTeamMembers', teamMembersRef);
             return true;
         } catch (error) {
             console.error('Error saving team members:', error);
@@ -752,7 +752,7 @@
         try {
             const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
             nicknames[employeeFullName] = nickname;
-            localStorage.setItem(STORAGE_PREFIX + 'employeeNicknames', JSON.stringify(nicknames));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeNicknames', nicknames);
             return true;
         } catch (error) {
             console.error('Error saving nickname:', error);
@@ -783,7 +783,7 @@
 
     function saveUserTips(tips) {
         try {
-            localStorage.setItem(STORAGE_PREFIX + 'coachingTips', JSON.stringify(tips));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('coachingTips', tips);
             return true;
         } catch (error) {
             console.error('Error saving user tips:', error);

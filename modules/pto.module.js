@@ -72,7 +72,7 @@ function savePtoStore(store) {
         ok = storage.savePtoTracker(store);
     } else {
         try {
-            localStorage.setItem(STORAGE_PREFIX + 'ptoTracker', JSON.stringify(store));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('ptoTracker', store);
             ok = true;
         } catch (e) {
             console.error('[PTO] savePtoStore failed:', e);
@@ -267,12 +267,13 @@ function importPtoBalanceExcel(file) {
     }
 
     var reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
+            await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
             var data = new Uint8Array(e.target.result);
-            var workbook = XLSX.read(data, { type: 'array' });
+            var workbook = window.XLSX.read(data, { type: 'array' });
             var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            var rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
+            var rows = window.XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
             processPtoBalanceRows(rows);
         } catch (err) {
             console.error('PTO balance import error:', err);
@@ -292,10 +293,13 @@ function importPtoBalancePdf(file) {
     }
 
     var reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
+            var assetLoader = window.DevCoachModules?.assetLoader;
+            if (!assetLoader?.ensurePdf) throw new Error('PDF asset loader is unavailable');
+            await assetLoader.ensurePdf();
             var pdfData = new Uint8Array(e.target.result);
-            pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
+            window.pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
                 var pagePromises = [];
                 for (var p = 1; p <= pdf.numPages; p++) {
                     pagePromises.push(pdf.getPage(p).then(function(page) {
@@ -555,12 +559,13 @@ function importPayrollExcel(file) {
     }
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
+            await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            const workbook = window.XLSX.read(data, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
+            const rows = window.XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: true, defval: '' });
             processPayrollExcelRows(rows);
         } catch (err) {
             console.error('Payroll Excel import error:', err);

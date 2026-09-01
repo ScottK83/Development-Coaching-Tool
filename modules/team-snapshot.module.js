@@ -302,7 +302,7 @@
             var raw = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
             var all = raw ? JSON.parse(raw) : {};
             all[periodKey] = storageAvg;
-            localStorage.setItem(STORAGE_PREFIX + 'callCenterAverages', JSON.stringify(all));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('callCenterAverages', all);
         } catch(e) {
             console.error('Failed to save center averages from snapshot:', e);
         }
@@ -891,16 +891,19 @@
     // EXPORT TO IMAGE
     // ============================================
 
-    function exportSnapshotAsImage() {
+    async function exportSnapshotAsImage() {
         var el = document.getElementById('snapshotExportArea');
         if (!el) return;
 
-        if (typeof html2canvas !== 'function') {
-            alert('html2canvas library not loaded.');
+        try {
+            await window.DevCoachModules?.assetLoader?.ensureHtml2Canvas?.();
+        } catch (err) {
+            console.error('html2canvas load failed:', err);
+            alert('Image export could not be loaded. Please try again.');
             return;
         }
 
-        html2canvas(el, {
+        window.html2canvas(el, {
             scale: 2,
             useCORS: true,
             backgroundColor: '#ffffff',
@@ -916,16 +919,19 @@
         });
     }
 
-    function copySnapshotToClipboard() {
+    async function copySnapshotToClipboard() {
         var el = document.getElementById('snapshotExportArea');
         if (!el) return;
 
-        if (typeof html2canvas !== 'function') {
-            alert('html2canvas library not loaded.');
+        try {
+            await window.DevCoachModules?.assetLoader?.ensureHtml2Canvas?.();
+        } catch (err) {
+            console.error('html2canvas load failed:', err);
+            alert('Clipboard image support could not be loaded. Please try again.');
             return;
         }
 
-        html2canvas(el, {
+        window.html2canvas(el, {
             scale: 2,
             useCORS: true,
             backgroundColor: '#ffffff',

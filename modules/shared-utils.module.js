@@ -64,6 +64,13 @@
      */
     function getCoachingCcEmail() {
         try {
+            const read = window.DevCoachModules?.storage?.readStore;
+            if (typeof read === 'function') {
+                const value = read('ccEmail');
+                if (typeof value === 'string') return value;
+            }
+            // Written as a bare string before it was routed through the storage
+            // module, so an existing setting is still readable.
             const prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
             return localStorage.getItem(prefix + 'ccEmail') || '';
         } catch (_e) {
@@ -174,7 +181,12 @@
         var prefix = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
         var clean = String(value == null ? '' : value).trim();
         try {
-            if (clean) localStorage.setItem(prefix + 'ccEmail', clean);
+            // Through the storage module so the write is tracked and synced.
+            // A store written around it never marks itself dirty and therefore
+            // never reaches the other machine, silently.
+            const save = window.DevCoachModules?.storage?.saveWithSizeCheck;
+            if (clean && typeof save === 'function') save('ccEmail', clean);
+            else if (clean) localStorage.setItem(prefix + 'ccEmail', clean);
             else localStorage.removeItem(prefix + 'ccEmail');
             return true;
         } catch (err) {

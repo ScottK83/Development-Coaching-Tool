@@ -588,7 +588,7 @@ function loadUserTips() {
 
 function saveUserTips(tips) {
     try {
-        localStorage.setItem(STORAGE_PREFIX + 'userCustomTips', JSON.stringify(tips));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('userCustomTips', tips);
     } catch (error) {
         console.error('Error saving user tips:', error);
     }
@@ -606,7 +606,7 @@ function loadCustomMetrics() {
 
 function saveCustomMetrics(metrics) {
     try {
-        localStorage.setItem(STORAGE_PREFIX + 'customMetrics', JSON.stringify(metrics));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('customMetrics', metrics);
     } catch (error) {
         console.error('Error saving custom metrics:', error);
     }
@@ -934,7 +934,7 @@ window.updateServerTip = async function(metricKey, index) {
     }
 
     modifiedServerTips[metricKey][index] = updatedTip;
-    localStorage.setItem(STORAGE_PREFIX + 'modifiedServerTips', JSON.stringify(modifiedServerTips));
+    window.DevCoachModules?.storage?.saveWithSizeCheck?.('modifiedServerTips', modifiedServerTips);
 
     showToast('✅ Server tip updated!');
 
@@ -956,7 +956,7 @@ window.deleteServerTip = async function(metricKey, index) {
         deletedServerTips[metricKey].push(index);
     }
 
-    localStorage.setItem(STORAGE_PREFIX + 'deletedServerTips', JSON.stringify(deletedServerTips));
+    window.DevCoachModules?.storage?.saveWithSizeCheck?.('deletedServerTips', deletedServerTips);
 
     showToast('🗑️ Server tip deleted');
 
@@ -1096,18 +1096,18 @@ function initializeDefaultTips() {
     // (userCustomTips) and are untouched here.
     loadServerTips().then(serverTips => {
         if (Object.keys(serverTips).length > 0) {
-            localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(serverTips));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', serverTips);
             return;
         }
         // CSV returned nothing, only seed defaults if nothing is stored yet.
         const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
         if (!stored) {
-            localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', DEFAULT_METRIC_TIPS);
         }
     }).catch(() => {
         const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
         if (!stored) {
-            localStorage.setItem(STORAGE_PREFIX + 'metricCoachingTips', JSON.stringify(DEFAULT_METRIC_TIPS));
+            window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', DEFAULT_METRIC_TIPS);
         }
     });
 }
