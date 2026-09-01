@@ -24,7 +24,7 @@ function read(rel) {
 
 // Handlers that run a destructive or automatic action. None may download.
 const AUTOMATIC_FLOWS = [
-    'async function handleReclaimStorageClick',
+    'async function reclaimLocalStorageSpaceAutomatically',
     'async function handleRestoreSnapshotClick',
     'function startCloudSyncBackground'
 ];
@@ -49,7 +49,7 @@ suite('no downloads: destructive flows protect data via the cloud, not a file', 
     // The two that used to download must now verify the cloud instead, and must
     // stop if it cannot be confirmed. Protecting data by checking a copy exists
     // is only protection if the check can refuse.
-    ['handleReclaimStorageClick', 'handleRestoreSnapshotClick'].forEach((name) => {
+    ['reclaimLocalStorageSpaceAutomatically', 'handleRestoreSnapshotClick'].forEach((name) => {
         const start = src.indexOf('async function ' + name);
         const body = src.slice(start, start + 2200);
         t.check(`${name} confirms the cloud copy first`,
@@ -82,4 +82,32 @@ suite('no downloads: user-initiated exports still exist', (t) => {
     t.check('the backup button is still there', html.indexOf('id="exportDataBtn"') > -1);
     t.check('and still wired', src.indexOf("getElementById('exportDataBtn')") > -1);
     t.check('exportToExcel still exists for it', src.indexOf('function exportToExcel') > -1);
+});
+
+suite('reclaim: runs on its own, with no button and no decision to make', (t) => {
+    const src = read('script.js');
+    const html = read('index.html');
+
+    // A button here would only be asking the user to approve arithmetic: the
+    // reclaim deletes a duplicate the backend verifiably holds, or it does not
+    // delete it. There is nothing to weigh up.
+    t.check('there is no Free up space button', html.indexOf('reclaimStorageBtn') === -1);
+    t.check('and nothing wires one', src.indexOf('reclaimStorageBtn') === -1);
+
+    const start = src.indexOf('async function reclaimLocalStorageSpaceAutomatically');
+    t.check('the automatic reclaim exists', start > -1);
+    const body = src.slice(start, start + 2200);
+
+    t.check('it only runs on the IndexedDB backend', /getBackendMode\?\.\(\) !== 'idb'/.test(body));
+    t.check('it confirms the cloud copy before deleting anything',
+        body.indexOf('ensureCloudCopyIsCurrent()') > -1);
+    t.check('and does nothing at all if that fails',
+        /if \(!cloud\.ok\)[\s\S]{0,300}return;/.test(body));
+    t.check('it reports what it could not verify rather than forcing it',
+        body.indexOf('report.skipped') > -1);
+
+    // Boot must not wait on it, and a failure must not break boot.
+    const boot = src.slice(src.indexOf('startCloudSyncBackground();'), src.indexOf('startCloudSyncBackground();') + 500);
+    t.check('boot does not await it', boot.indexOf('await reclaimLocalStorageSpaceAutomatically') === -1);
+    t.check('and a failure is caught', /reclaimLocalStorageSpaceAutomatically\(\)\.catch/.test(boot));
 });

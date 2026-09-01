@@ -2201,7 +2201,6 @@ function bindCoachingFormHandlers() {
     // weeks after downloading a file no importer in this codebase can read, and
     // pushed the shrunken store to the repo, degrading the remote copy too. It
     // was the remedy the storage-full message used to recommend.
-    document.getElementById('reclaimStorageBtn')?.addEventListener('click', handleReclaimStorageClick);
     document.getElementById('loadSnapshotListBtn')?.addEventListener('click', handleLoadSnapshotListClick);
     document.getElementById('restoreSnapshotBtn')?.addEventListener('click', handleRestoreSnapshotClick);
     document.getElementById('cloudSyncPullBtn')?.addEventListener('click', handleCloudSyncPullClick);
@@ -2495,41 +2494,29 @@ async function ensureCloudCopyIsCurrent() {
 }
 
 /**
- * Gives back the localStorage space the bulk stores no longer need, now that
- * IndexedDB holds them.
+ * Reclaims the localStorage duplicates of stores IndexedDB already holds.
  *
- * Takes a full backup first, without asking, because the export is free and
- * this is the only irreversible step in the whole move. Then deletes only the
- * copies the backend verifiably already has, entry count matching.
+ * Runs on its own rather than behind a button. There is no judgement here for
+ * anyone to make: it deletes only a copy the backend verifiably holds with a
+ * matching entry count, after confirming a current cloud copy exists, and it
+ * leaves anything it cannot verify exactly where it is. A button would be
+ * asking the user to approve arithmetic.
+ *
+ * Silent when there is nothing to do, which is every boot after the first.
  */
-async function handleReclaimStorageClick() {
+async function reclaimLocalStorageSpaceAutomatically() {
     const storage = window.DevCoachModules?.storage;
-    const backend = storage?.getBackendMode?.() || 'localStorage';
-
-    if (backend !== 'idb') {
-        alert('Nothing to reclaim.\n\nThe data is still stored in browser local storage, so there is no second copy to remove. This becomes available once the data has moved.');
-        return;
-    }
+    if (storage?.getBackendMode?.() !== 'idb') return;
 
     const { totalBytes } = measureLocalStorageUsage();
-    const before = (totalBytes / (1024 * 1024)).toFixed(2);
+    // Below this there is nothing worth touching anything for.
+    if (totalBytes < 256 * 1024) return;
 
-    const proceed = confirm(
-        `Free up space\n\n` +
-        `Your data has been copied to browser database storage, which is not limited to 5 MB. ` +
-        `The old copies are still sitting in local storage, using most of your ${before} MB.\n\n` +
-        `This removes only the copies that are verified present in the new location, and checks your cloud copy is current first. No file is saved to this computer.\n\n` +
-        `Continue?`
-    );
-    if (!proceed) return;
-
-    // No file is written to this computer, ever. The cloud copy is the safety
-    // net and it is CHECKED rather than assumed: anything unsent goes up first,
-    // and a copy has to exist before a single byte is deleted.
+    // The data has to exist somewhere else before a duplicate is removed. If
+    // the cloud copy cannot be confirmed, nothing is deleted.
     const cloud = await ensureCloudCopyIsCurrent();
     if (!cloud.ok) {
-        alert('⚠️ Nothing was deleted.\n\nYour cloud copy could not be confirmed: ' + cloud.reason +
-              '\n\nFix the sync first. Freeing space is only safe once the data is somewhere else.');
+        console.warn(`[reclaim] Skipped: the cloud copy could not be confirmed (${cloud.reason}).`);
         return;
     }
 
@@ -2537,23 +2524,24 @@ async function handleReclaimStorageClick() {
     try {
         report = await storage.reclaimLocalStorageCopies();
     } catch (error) {
-        console.error('[reclaim] Failed:', error);
-        alert('⚠️ Could not free up space: ' + (error?.message || error) + '\n\nNothing was deleted.');
+        console.error('[reclaim] Failed; nothing was deleted:', error);
         return;
     }
 
-    refreshStorageQuotaWidget();
-    const freedMb = (report.freedBytes / (1024 * 1024)).toFixed(2);
-    const after = (measureLocalStorageUsage().totalBytes / (1024 * 1024)).toFixed(2);
-
-    let message = `✅ Freed ${freedMb} MB.\n\nLocal storage went from ${before} MB to ${after} MB.\n\n` +
-        `Removed the spare copies of: ${report.reclaimed.join(', ') || 'nothing'}`;
-    if (report.skipped.length) {
-        // Anything unverifiable keeps its copy. Say which, so it is a known
-        // state rather than a silent partial result.
-        message += `\n\nLeft in place because they could not be verified:\n${report.skipped.join('\n')}`;
+    if (!report.reclaimed.length) {
+        if (report.skipped.length) console.log('[reclaim] Nothing reclaimed:', report.skipped.join('; '));
+        return;
     }
-    alert(message);
+
+    const freed = (report.freedBytes / (1024 * 1024)).toFixed(2);
+    const after = (measureLocalStorageUsage().totalBytes / (1024 * 1024)).toFixed(2);
+    console.log(`[reclaim] Freed ${freed} MB of duplicates (now ${after} MB): ${report.reclaimed.join(', ')}`);
+    if (report.skipped.length) {
+        // Anything unverifiable keeps its copy. Named, so a partial reclaim is
+        // a known state rather than a silent one.
+        console.warn('[reclaim] Left in place, could not verify:', report.skipped.join('; '));
+    }
+    refreshStorageQuotaWidget();
 }
 
 // ============================================
@@ -7729,6 +7717,12 @@ async function initApp() {
     window.addEventListener('beforeunload', saveEverythingBeforeLeaving);
 
     startCloudSyncBackground();
+
+    // After the sync is up, so anything unsent reaches the cloud before a
+    // duplicate is removed. Not awaited: it must never delay boot.
+    reclaimLocalStorageSpaceAutomatically().catch((error) => {
+        console.warn('[reclaim] Skipped:', error?.message || error);
+    });
 
     // beforeunload is the weakest point of the IndexedDB backend and no amount
     // of engineering fixes it: a browser will not hold a page open for a
