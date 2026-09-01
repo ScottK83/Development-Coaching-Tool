@@ -882,7 +882,7 @@
 
     function getExecutiveSummaryNotesStore() {
         try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'executiveSummaryNotes');
+            var raw = (function(){var v=window.DevCoachModules?.storage?.readStore?.('executiveSummaryNotes');return v===undefined||v===null?null:JSON.stringify(v);})();
             return raw ? JSON.parse(raw) : {};
         } catch (e) {
             console.error('Failed to parse executiveSummaryNotes:', e);
@@ -1065,7 +1065,10 @@
         // Load call center averages from localStorage
         var callCenterAverages = {};
         try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
+            var read = window.DevCoachModules?.storage?.readStore;
+            var raw = typeof read === 'function'
+                ? JSON.stringify(read('callCenterAverages') ?? null)
+                : localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
             if (raw) callCenterAverages = JSON.parse(raw);
         } catch (e) {
             console.error('Failed to parse callCenterAverages:', e);

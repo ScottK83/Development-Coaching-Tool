@@ -594,7 +594,7 @@ function copyDebugInfo() {
 
 function saveNickname(employeeFullName, nickname) {
     try {
-        const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
+        const nicknames = (window.DevCoachModules?.storage?.readStore?.('employeeNicknames') ?? {});
         nicknames[employeeFullName] = nickname;
         window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeNicknames', nicknames);
     } catch (error) {
@@ -604,7 +604,7 @@ function saveNickname(employeeFullName, nickname) {
 
 function getSavedNickname(employeeFullName) {
     try {
-        const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
+        const nicknames = (window.DevCoachModules?.storage?.readStore?.('employeeNicknames') ?? {});
         return nicknames[employeeFullName] || '';
     } catch (error) {
         console.error('Error getting nickname:', error);
@@ -976,6 +976,8 @@ window.isAssociateIncludedByTeamFilter = isAssociateIncludedByTeamFilter;
 
 function loadCallCenterAverages() {
     try {
+        const storage = window.DevCoachModules?.storage;
+        if (storage?.loadCallCenterAverages) return storage.loadCallCenterAverages() || {};
         const saved = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
         return saved ? JSON.parse(saved) : {};
     } catch (error) {
@@ -1237,7 +1239,7 @@ function getEmployeeNickname(fullName) {
 
     // Check if a custom preferred name has been set
     let preferredNames = {};
-    try { preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}'); } catch (_e) { /* corrupt data */ }
+    try { preferredNames = (window.DevCoachModules?.storage?.readStore?.('employeePreferredNames') ?? {}); } catch (_e) { /* corrupt data */ }
     if (preferredNames[fullName]) {
         return preferredNames[fullName];
     }
@@ -1250,7 +1252,7 @@ function setEmployeePreferredName(fullName, preferredName) {
     if (!fullName) return;
     
     let preferredNames = {};
-    try { preferredNames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeePreferredNames') || '{}'); } catch (_e) { /* corrupt data */ }
+    try { preferredNames = (window.DevCoachModules?.storage?.readStore?.('employeePreferredNames') ?? {}); } catch (_e) { /* corrupt data */ }
 
     if (preferredName && preferredName.trim()) {
         preferredNames[fullName] = preferredName.trim();
@@ -1451,7 +1453,7 @@ function purgeNonRosteredEmployees() {
     // value, so this branch has never cleaned anything. Worse, had it ever
     // matched it would have written a flat array back over the object store.
     try {
-        const raw = localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers');
+        const raw = (function(){var v=window.DevCoachModules?.storage?.readStore?.('myTeamMembers');return v===undefined||v===null?null:JSON.stringify(v);})();
         const byWeek = raw ? JSON.parse(raw) : {};
         if (byWeek && typeof byWeek === 'object' && !Array.isArray(byWeek)) {
             let touched = false;
@@ -1529,7 +1531,7 @@ window.backfillBlankReliability = backfillBlankReliability;
     // forever and lose their row colour.
     if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorRenamed_schnelle')) {
         try {
-            const stored = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+            const stored = (window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') ?? {});
             let touched = false;
             Object.keys(stored).forEach(function(name) {
                 if (stored[name] === 'Chenal Howard') { stored[name] = 'Schnelle Howard'; touched = true; }
@@ -1549,7 +1551,7 @@ window.backfillBlankReliability = backfillBlankReliability;
         localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v5_migration', '1');
         localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v4_migration', '1');
     } else {
-        try { existing = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}'); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
+        try { existing = (window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') ?? {}); } catch (_e) { console.warn('[seedSupervisorTeams] Failed to parse existing supervisors:', _e.message); }
     }
 
     const allEmps = {};
@@ -1611,7 +1613,7 @@ window.backfillBlankReliability = backfillBlankReliability;
 
 function getEmployeeSupervisors() {
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+        return (window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') ?? {});
     } catch (_e) { return {}; }
 }
 
@@ -6057,7 +6059,7 @@ function detectComplianceFlags(text) {
 
 function logComplianceFlag(entry) {
     try {
-        const log = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'complianceLog') || '[]');
+        const log = (window.DevCoachModules?.storage?.readStore?.('complianceLog') ?? []);
         log.push(entry);
         window.DevCoachModules?.storage?.saveWithSizeCheck?.('complianceLog', log.slice(-200));
     } catch {
@@ -6783,7 +6785,7 @@ function initializeTrendIntelligence() {
 function renderComplianceAlerts() {
     const container = document.getElementById('complianceAlertsOutput');
     if (!container) return;
-    const log = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'complianceLog') || '[]');
+    const log = (window.DevCoachModules?.storage?.readStore?.('complianceLog') ?? []);
     const teamFilterContext = getTeamSelectionContext();
     const filteredLog = log.filter(entry => isAssociateIncludedByTeamFilter(entry?.employeeId, teamFilterContext));
     if (!filteredLog.length) {

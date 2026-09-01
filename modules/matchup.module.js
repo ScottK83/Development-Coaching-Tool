@@ -52,7 +52,7 @@
 
     function _getSupervisors() {
         try {
-            return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+            return (window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') ?? {});
         } catch (_e) { return {}; }
     }
 

@@ -38,13 +38,17 @@
     // route gets copied to IndexedDB and then still read from localStorage,
     // which is fine until the localStorage copy is reclaimed and then is not.
     const BULK_STORAGE_KEYS = window.DevCoachModules?.storeRegistry?.bulkNames?.() || [
-        // Fallback only if the registry did not load. Keep in step with it;
-        // a drift test fails the build if these disagree.
-        'weeklyData', 'ytdData', 'dailyData', 'coachingHistory', 'callListeningLogs',
-        'associateSentimentSnapshots', 'sentimentPhraseDatabase', 'reliabilityTracker',
+        // Fallback only if the registry did not load. A drift test
+        // fails the build if these disagree.
+        'weeklyData', 'ytdData', 'dailyData', 'coachingHistory',
+        'callListeningLogs', 'associateSentimentSnapshots', 'sentimentPhraseDatabase', 'reliabilityTracker',
         'ptoTracker', 'tipUsageHistory', 'followUpHistory', 'hotTipHistory',
-        'callCenterAverages', 'weeklyFocalPoints', 'celebrationsHistory',
-        'oneOnOneMeetings', 'midYearMeta'
+        'attendanceTracker', 'myTeamMembers', 'callCenterAverages', 'yearEndAnnualGoals',
+        'yearEndDraftEntries', 'employeePreferredNames', 'employeeNicknames', 'employeeSupervisors',
+        'executiveSummaryNotes', 'userCustomTips', 'coachingTips', 'customMetrics',
+        'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips', 'yoyBaseline2025',
+        'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory', 'oneOnOneMeetings',
+        'midYearMeta'
     ];
 
     window.DevCoachConstants = {

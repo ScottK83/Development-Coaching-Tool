@@ -200,7 +200,10 @@
      */
     function getCenterAverages(periodKey) {
         try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
+            var read = window.DevCoachModules?.storage?.readStore;
+            var raw = typeof read === 'function'
+                ? JSON.stringify(read('callCenterAverages') ?? null)
+                : localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
             var all = raw ? JSON.parse(raw) : {};
             return all[periodKey] || null;
         } catch(e) {
@@ -299,7 +302,10 @@
         storageAvg.lastUpdated = new Date().toISOString();
 
         try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
+            var readAvg = window.DevCoachModules?.storage?.readStore;
+            var raw = typeof readAvg === 'function'
+                ? JSON.stringify(readAvg('callCenterAverages') ?? null)
+                : localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
             var all = raw ? JSON.parse(raw) : {};
             all[periodKey] = storageAvg;
             window.DevCoachModules?.storage?.saveWithSizeCheck?.('callCenterAverages', all);

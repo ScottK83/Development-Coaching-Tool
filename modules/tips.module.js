@@ -538,7 +538,7 @@ async function loadServerTips() {
             }
         });
 
-        const modifiedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'modifiedServerTips') || '{}');
+        const modifiedServerTips = (window.DevCoachModules?.storage?.readStore?.('modifiedServerTips') ?? {});
         Object.keys(modifiedServerTips).forEach(metricKey => {
             if (tipsWithOriginalIndex[metricKey]) {
                 Object.keys(modifiedServerTips[metricKey]).forEach(index => {
@@ -551,7 +551,7 @@ async function loadServerTips() {
             }
         });
 
-        const deletedServerTips = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'deletedServerTips') || '{}');
+        const deletedServerTips = (window.DevCoachModules?.storage?.readStore?.('deletedServerTips') ?? {});
         Object.keys(deletedServerTips).forEach(metricKey => {
             if (tipsWithOriginalIndex[metricKey]) {
                 const deletedIndices = deletedServerTips[metricKey] || [];
@@ -578,7 +578,7 @@ async function loadServerTips() {
 
 function loadUserTips() {
     try {
-        const saved = localStorage.getItem(STORAGE_PREFIX + 'userCustomTips');
+        const saved = (function(){var v=window.DevCoachModules?.storage?.readStore?.('userCustomTips');return v===undefined||v===null?null:JSON.stringify(v);})();
         return saved ? JSON.parse(saved) : {};
     } catch (error) {
         console.error('Error loading user tips:', error);
@@ -596,7 +596,7 @@ function saveUserTips(tips) {
 
 function loadCustomMetrics() {
     try {
-        const saved = localStorage.getItem(STORAGE_PREFIX + 'customMetrics');
+        const saved = (function(){var v=window.DevCoachModules?.storage?.readStore?.('customMetrics');return v===undefined||v===null?null:JSON.stringify(v);})();
         return saved ? JSON.parse(saved) : {};
     } catch (error) {
         console.error('Error loading custom metrics:', error);
@@ -1100,12 +1100,12 @@ function initializeDefaultTips() {
             return;
         }
         // CSV returned nothing, only seed defaults if nothing is stored yet.
-        const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+        const stored = (function(){var v=window.DevCoachModules?.storage?.readStore?.('metricCoachingTips');return v===undefined||v===null?null:JSON.stringify(v);})();
         if (!stored) {
             window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', DEFAULT_METRIC_TIPS);
         }
     }).catch(() => {
-        const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+        const stored = (function(){var v=window.DevCoachModules?.storage?.readStore?.('metricCoachingTips');return v===undefined||v===null?null:JSON.stringify(v);})();
         if (!stored) {
             window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', DEFAULT_METRIC_TIPS);
         }
@@ -1150,7 +1150,7 @@ function readJsonSetting(key) {
 function getMetricTips(metricNameOrKey) {
     const metricName = resolveMetricTipKey(metricNameOrKey);
     // Load base tips (server/default)
-    const stored = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+    const stored = (function(){var v=window.DevCoachModules?.storage?.readStore?.('metricCoachingTips');return v===undefined||v===null?null:JSON.stringify(v);})();
     // Outside the try below, so a corrupt value used to throw straight out of
     // getMetricTips and take the caller with it. Falling back to the built-in
     // pool is the same thing an absent value does.
@@ -1163,8 +1163,8 @@ function getMetricTips(metricNameOrKey) {
 
     // Apply server tip modifications (edits and deletions)
     try {
-        const modifications = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'modifiedServerTips') || '{}');
-        const deletions = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'deletedServerTips') || '{}');
+        const modifications = (window.DevCoachModules?.storage?.readStore?.('modifiedServerTips') ?? {});
+        const deletions = (window.DevCoachModules?.storage?.readStore?.('deletedServerTips') ?? {});
         const metricMods = modifications[metricName] || {};
         const metricDels = deletions[metricName] || [];
 

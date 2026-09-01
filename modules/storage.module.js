@@ -775,7 +775,7 @@
 
     function saveNickname(employeeFullName, nickname) {
         try {
-            const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
+            const nicknames = (window.DevCoachModules?.storage?.readStore?.('employeeNicknames') ?? {});
             nicknames[employeeFullName] = nickname;
             window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeNicknames', nicknames);
             return true;
@@ -787,7 +787,7 @@
 
     function getSavedNickname(employeeFullName) {
         try {
-            const nicknames = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeNicknames') || '{}');
+            const nicknames = (window.DevCoachModules?.storage?.readStore?.('employeeNicknames') ?? {});
             return nicknames[employeeFullName] || '';
         } catch (error) {
             console.error('Error getting nickname:', error);

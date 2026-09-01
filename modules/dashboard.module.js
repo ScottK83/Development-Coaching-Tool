@@ -333,7 +333,7 @@
 
     function getRandomTip() {
         try {
-            var raw = localStorage.getItem(STORAGE_PREFIX + 'metricCoachingTips');
+            var raw = (function(){var v=window.DevCoachModules?.storage?.readStore?.('metricCoachingTips');return v===undefined||v===null?null:JSON.stringify(v);})();
             var tips = raw ? JSON.parse(raw) : {};
             var allTips = [];
             var keys = Object.keys(tips);

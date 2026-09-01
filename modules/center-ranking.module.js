@@ -23,7 +23,7 @@
 
     function _getSupervisorColor(empName) {
         try {
-            var sups = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+            var sups = (window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') ?? {});
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) {
                 var isDark = _isDark();
@@ -35,7 +35,7 @@
 
     function _getSupervisorDotColor(empName) {
         try {
-            var sups = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'employeeSupervisors') || '{}');
+            var sups = (window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') ?? {});
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].dot;
         } catch (_e) { /* localStorage parse failure — fall through to default */ }
