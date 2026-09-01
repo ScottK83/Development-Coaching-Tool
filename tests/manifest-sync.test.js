@@ -489,3 +489,41 @@ suite('reset: a pull against an empty cloud clears the stale local record', asyn
     t.equal('and the etag', state.etag, null);
     t.equal('and nothing is still marked as applied', Object.keys(state.applied || {}).length, 0);
 });
+
+suite('status: the panel reports local state without needing the network', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('function renderCloudSyncStatus');
+    const body = src.slice(start, src.indexOf('/** The network check', start));
+
+    // The old status could only say anything by doing a pull, so it was as
+    // fresh as the last time someone triggered it. A readout that was true ten
+    // minutes ago looks identical to one that is true now, which is how a
+    // working sync got read as a broken one.
+    t.check('it exists', start > -1);
+    t.check('it does not call pull', body.indexOf('sync.pull(') === -1);
+    t.check('it reads the local record', body.indexOf('loadSyncState') > -1);
+    t.check('it names changes still waiting to send', /waiting to send/.test(body));
+    t.check('and reports when nothing is waiting', /Nothing waiting/.test(body));
+
+    // Repainted wherever the truth can change, so it cannot go stale on screen.
+    ['renderCloudSyncStatus();'].forEach(() => {
+        const calls = (src.match(/renderCloudSyncStatus\(\)/g) || []).length;
+        t.check('it is repainted from several places', calls >= 5);
+    });
+
+    // A push that lands must update what the user sees.
+    const push = src.slice(src.indexOf('const scheduleCloudPush'), src.indexOf('const scheduleCloudPush') + 1400);
+    t.check('an auto-push repaints the status', push.indexOf('renderCloudSyncStatus') > -1);
+    t.check('and records when it happened', push.indexOf('_lastCloudPushAt') > -1);
+});
+
+suite('status: the diagnostics output is stamped with its run time', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = src.indexOf('async function handleCloudSyncTestClick');
+    const body = src.slice(start, start + 2600);
+
+    // This panel prints once and then sits there. Without a stamp, output from
+    // an earlier run is indistinguishable from output produced just now.
+    t.check('the run is timestamped', /run at \$\{new Date\(\)\.toLocaleTimeString\(\)\}/.test(body));
+    t.check('and it is the first thing written', body.indexOf('run at') < body.indexOf('modules:'));
+});

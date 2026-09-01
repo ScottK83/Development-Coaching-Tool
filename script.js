@@ -2136,6 +2136,9 @@ function bindManageDataNavigationHandlers() {
     document.getElementById('subNavSyncBackup')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionSyncBackup');
         initializeRepoSyncControls();
+        // Painted from local state the moment the panel opens, so it is never
+        // showing a readout from a previous visit.
+        renderCloudSyncStatus();
     });
     document.getElementById('subNavDeleteData')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionDeleteData');
@@ -2527,6 +2530,7 @@ async function handleReclaimStorageClick() {
 var _cloudPushTimer = null;
 var _cloudSyncBackgroundStarted = false;
 var _lastCloudFailToast = 0;
+var _lastCloudPushAt = null;
 
 // Throttled: a repeated failure is one problem, not twenty. Offline is handled
 // by the caller and never reaches here.
@@ -2566,7 +2570,10 @@ function startCloudSyncBackground() {
     // send this machine's view of stores nobody touched.
     storage?.clearDirtyStores?.();
 
+    renderCloudSyncStatus();
+
     sync.pull().then((result) => {
+        renderCloudSyncStatus();
         if (result?.updated?.length) {
             console.log(`[cloud] Pulled ${result.updated.length} change(s) from another machine:`, result.updated.join(', '));
             showToast(`☁️ Picked up ${result.updated.length} change(s) from your other machine. Reload to see them.`, 6000);
@@ -2581,6 +2588,8 @@ function startCloudSyncBackground() {
             sync.push(dirty, 'auto').then((result) => {
                 if (result?.ok && !result.skipped) {
                     storage?.clearDirtyStores?.();
+                    _lastCloudPushAt = new Date().toLocaleTimeString();
+                    renderCloudSyncStatus();
                     console.log(`[cloud] Pushed ${result.changed.join(', ')} as version ${result.version}.`);
                 } else if (result && !result.ok) {
                     // Left dirty on purpose, so the next change retries rather
@@ -2617,33 +2626,68 @@ function setCloudSyncResult(text, isError) {
     el.style.color = isError ? '#ef5350' : 'var(--text-secondary)';
 }
 
-async function refreshCloudSyncStatus() {
+/**
+ * Renders what this machine knows, from local state only. No network, so it is
+ * always current and can be called after every push without cost.
+ *
+ * Separate from the network probe on purpose. The old status did a pull to find
+ * out anything at all, which meant the panel was only ever as fresh as the last
+ * time someone triggered it. A readout that was true ten minutes ago and looks
+ * identical to one that is true now is worse than no readout.
+ */
+function renderCloudSyncStatus() {
     const el = document.getElementById('cloudSyncStatus');
-    const setupBtn = document.getElementById('cloudSyncSetupBtn');
     if (!el) return;
 
     const sync = window.DevCoachModules?.manifestSync;
+    const storage = window.DevCoachModules?.storage;
+    const registry = window.DevCoachModules?.storeRegistry;
     if (!sync) { el.textContent = 'Cloud sync is unavailable in this build.'; return; }
 
     const state = sync.loadSyncState();
-    const device = sync.getDeviceId();
+    const tracked = Object.keys(state.applied || {}).length;
+    const pending = registry && storage?.isStoreDirty
+        ? registry.syncedNames().filter((n) => storage.isStoreDirty(n))
+        : [];
 
+    const parts = [];
+    if (!state.version) {
+        parts.push('Nothing backed up from this computer yet. Your next change will send it.');
+    } else {
+        parts.push(`Backed up: version ${state.version}, ${tracked} stores.`);
+        if (_lastCloudPushAt) parts.push(`Last sent ${_lastCloudPushAt}.`);
+    }
+    if (pending.length) {
+        parts.push(`${pending.length} change(s) waiting to send: ${pending.join(', ')}.`);
+    } else if (state.version) {
+        parts.push('Nothing waiting.');
+    }
+    parts.push(`This computer is "${sync.getDeviceId()}".`);
+
+    el.textContent = parts.join(' ');
+    el.style.color = pending.length ? '#ef6c00' : 'var(--text-secondary)';
+
+    const setupBtn = document.getElementById('cloudSyncSetupBtn');
+    // The first push seeds the copy, so the button is a manual escape hatch
+    // rather than a required step. Hidden once a copy exists.
+    if (setupBtn) setupBtn.style.display = state.version ? 'none' : '';
+}
+
+/** The network check, for when the user explicitly asks. */
+async function refreshCloudSyncStatus() {
+    renderCloudSyncStatus();
+    const sync = window.DevCoachModules?.manifestSync;
+    if (!sync) return;
     try {
         const probe = await sync.pull();
-        if (probe.skipped) {
-            el.textContent = `No cloud copy yet. This machine is "${device}". Run the one-time setup to send your data up.`;
-            if (setupBtn) setupBtn.style.display = '';
-            return;
-        }
-        if (setupBtn) setupBtn.style.display = 'none';
-        const applied = Object.keys(sync.loadSyncState().applied || {}).length;
-        el.textContent = `In step at version ${probe.version}. ${applied} stores tracked. This machine is "${device}".`;
-        if (probe.updated.length) {
+        if (!probe.skipped && probe.updated?.length) {
             setCloudSyncResult(`Pulled ${probe.updated.length} change(s): ${probe.updated.join(', ')}`);
         }
     } catch (error) {
-        el.textContent = `Could not reach cloud storage. Working from this machine's copy. (was at version ${state.version || 0})`;
+        const el = document.getElementById('cloudSyncStatus');
+        if (el) el.textContent += ' (cloud unreachable right now)';
     }
+    renderCloudSyncStatus();
 }
 
 async function handleCloudSyncPullClick() {
@@ -2685,8 +2729,9 @@ async function handleCloudSyncPushClick() {
         }
         if (result.skipped) { setCloudSyncResult('Nothing to push.'); return; }
         storage?.clearDirtyStores?.();
+        _lastCloudPushAt = new Date().toLocaleTimeString();
         setCloudSyncResult(`Pushed ${result.changed.length} store(s) as version ${result.version}.`);
-        refreshCloudSyncStatus();
+        renderCloudSyncStatus();
     } catch (error) {
         setCloudSyncResult('Could not push: ' + (error?.message || error), true);
     }
@@ -2705,8 +2750,11 @@ async function handleCloudSyncTestClick() {
     const lines = [];
     const say = (text) => { lines.push(text); out.textContent = lines.join('\n'); };
     out.style.display = 'block';
-    say('Running...');
     lines.length = 0;
+    // Stamped because this panel prints once and then sits there. Output that
+    // was true ten minutes ago looks identical to output that is true now,
+    // which is exactly how a working sync gets read as a broken one.
+    say(`--- run at ${new Date().toLocaleTimeString()} ---`);
 
     const storage = window.DevCoachModules?.storage;
     const sync = window.DevCoachModules?.manifestSync;
