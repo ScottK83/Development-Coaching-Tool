@@ -385,3 +385,43 @@ suite('dirty: the cloud push subscribes rather than wrapping the export', (t) =>
     t.check('and it says so when the hook is unavailable',
         /will not auto-push/.test(body));
 });
+
+suite('reclaim: a backend that has moved on still lets the stale copy go', async (t) => {
+    const { storage, store } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {}, w2: {} })
+    });
+    await storage.hydrate();
+
+    // The real state after a migration: the localStorage copy froze at the
+    // moment it was made, and every write since went to the backend alone. The
+    // counts diverge immediately and never converge, so requiring them to be
+    // equal blocks the reclaim permanently, which is how the space stayed
+    // occupied for a full day.
+    storage.saveWeeklyData({ w1: {}, w2: {}, w3: {}, w4: {} });
+
+    const report = await storage.reclaimLocalStorageCopies();
+
+    t.check('the stale copy is reclaimed', report.reclaimed.indexOf('weeklyData') > -1);
+    t.check('and the space is freed', report.freedBytes > 0);
+    t.check('the localStorage copy is gone', store[PREFIX + 'weeklyData'] === undefined);
+    t.equal('while the backend keeps every period', Object.keys(storage.loadWeeklyData()).length, 4);
+});
+
+suite('reclaim: a backend holding LESS than the copy still refuses', async (t) => {
+    const { storage, store } = load(t, {
+        [PREFIX + 'weeklyData']: JSON.stringify({ w1: {} })
+    });
+    await storage.hydrate();
+
+    // Fewer entries in the backend means the read came back partial or empty.
+    // Deleting against that is precisely the loss this guard exists to stop, so
+    // relaxing equality to "at least" must not relax this direction.
+    store[PREFIX + 'weeklyData'] = JSON.stringify({ w1: {}, w2: {}, w3: {} });
+
+    const report = await storage.reclaimLocalStorageCopies();
+
+    t.check('nothing is reclaimed', report.reclaimed.indexOf('weeklyData') === -1);
+    t.check('the copy is still there', typeof store[PREFIX + 'weeklyData'] === 'string');
+    t.check('and the mismatch is reported',
+        report.skipped.some((s) => s.indexOf('weeklyData') > -1));
+});

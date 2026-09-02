@@ -306,8 +306,21 @@
             }
 
             const backendCount = countEntries(stored[key]);
-            if (backendCount !== localCount) {
-                report.skipped.push(`${key}: backend has ${backendCount} entries, localStorage has ${localCount}`);
+
+            // The backend must hold AT LEAST what the stale copy holds, not
+            // exactly what it holds.
+            //
+            // Requiring equality looked safer and was actually a permanent
+            // block: the localStorage copies froze at the moment of migration,
+            // every write since has gone to the backend alone, so the counts
+            // diverge immediately and never converge again. Nothing would ever
+            // be reclaimed, which is how the space stayed occupied.
+            //
+            // Fewer entries in the backend is the case worth refusing: it means
+            // the read came back partial or empty, and deleting against that is
+            // exactly the loss this guard exists for.
+            if (backendCount < localCount) {
+                report.skipped.push(`${key}: the backend has ${backendCount} entries but localStorage has ${localCount}, so the copy is kept`);
                 continue;
             }
 
