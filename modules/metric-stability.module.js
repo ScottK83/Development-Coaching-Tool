@@ -107,9 +107,32 @@
      * Get a rep's metric value for a given period, parsed to number,
      * or null if missing/invalid.
      */
+    /**
+     * name -> row, built once per employees array and reused.
+     *
+     * getNumericMetric used to scan the array with .find() on every call, and
+     * it is called once per (rep, metric, tip, week): a 127-name centre paid
+     * 127 comparisons for every single lookup. Keyed on the employees array
+     * rather than the period so that replacing the rows invalidates it for
+     * free, and held weakly so nothing is pinned in memory.
+     */
+    const employeeIndexCache = new WeakMap();
+
+    function employeeIndexFor(employees) {
+        let index = employeeIndexCache.get(employees);
+        if (index) return index;
+        index = new Map();
+        employees.forEach(function (e) {
+            // First wins, which is what .find() did with duplicate names.
+            if (e && e.name && !index.has(e.name)) index.set(e.name, e);
+        });
+        employeeIndexCache.set(employees, index);
+        return index;
+    }
+
     function getNumericMetric(period, employeeName, metricKey) {
         if (!period || !period.employees) return null;
-        const emp = period.employees.find(function (e) { return e && e.name === employeeName; });
+        const emp = employeeIndexFor(period.employees).get(employeeName);
         if (!emp) return null;
         const raw = emp[metricKey];
         if (raw === undefined || raw === null || raw === '') return null;
