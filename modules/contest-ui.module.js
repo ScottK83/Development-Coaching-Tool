@@ -121,11 +121,18 @@
             <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
                 <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <button type="button" id="contestCopyBtn" class="btn-secondary">Copy standings</button>
+                    <button type="button" id="contestCopyBtn" class="btn-secondary">📋 Copy the post</button>
+                    <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
+                    <button type="button" id="contestDownloadGraphicBtn" class="btn-secondary">Download it</button>
                     <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
                 </div>
+                <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
                 <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
                 <div id="contestStandings"></div>
+                <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+                    <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is exactly what gets copied. Paste the graphic and the post together.</p>
+                    <div style="overflow-x: auto;"><div id="contestGraphicExport" style="width: 900px;"></div></div>
+                </div>
             </div>
         `;
     }
@@ -170,6 +177,7 @@
 
         if (!board.length) {
             host.innerHTML = '<p style="color: var(--text-secondary);">No entries yet. Save a day above and they will appear here.</p>';
+            renderGraphic();
             return;
         }
 
@@ -191,6 +199,7 @@
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>`;
+        renderGraphic();
     }
 
     // ============================================
@@ -256,12 +265,13 @@
     }
 
     function copyStandings() {
-        const date = document.getElementById('contestDate')?.value;
-        const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        const text = contest()?.buildStandingsPost(currentMonthData(), monthKey) || '';
-        if (!text) return;
+        const text = contest()?.buildTeamPost(currentMonthData(), postOptions()) || '';
+        if (!text) {
+            graphicStatus('There are no entries to post yet.');
+            return;
+        }
         const copy = window.DevCoachModules?.uiUtils?.copyToClipboard;
-        if (typeof copy === 'function') copy(text, { message: 'Standings copied' });
+        if (typeof copy === 'function') copy(text, { message: 'Post copied. Paste it under the graphic.' });
     }
 
     function draw() {
@@ -288,6 +298,108 @@
     }
 
     // ============================================
+    // THE GRAPHIC
+    // ============================================
+
+    var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+
+    /** "2026-09" reads as "September 2026" on the card and in the post. */
+    function monthLabelFor(monthKey) {
+        var parts = String(monthKey || '').split('-');
+        var month = MONTH_NAMES[Number(parts[1]) - 1];
+        return month ? month + ' ' + parts[0] : String(monthKey || '');
+    }
+
+    /** What the post and the graphic both cover: the team on screen. */
+    function postOptions() {
+        var team = selectedTeam();
+        var monthKey = monthKeyFor(document.getElementById('contestDate')?.value)
+            || new Date().toISOString().slice(0, 10).slice(0, 7);
+        return {
+            monthLabel: monthLabelFor(monthKey),
+            target: contest()?.adherenceTarget(),
+            teamLabel: team === '__all__' ? 'Everyone' : 'Team ' + team,
+            names: namesForTeam(team)
+        };
+    }
+
+    function renderGraphic() {
+        var host = document.getElementById('contestGraphicExport');
+        if (!host) return;
+        var build = contest()?.buildStandingsGraphicHtml;
+        if (typeof build !== 'function') { host.innerHTML = ''; return; }
+        host.innerHTML = build(contest().buildLeaderboard(currentMonthData()), postOptions());
+    }
+
+    /**
+     * Rasterises the card.
+     *
+     * The clone strips data-theme, and that is not a nicety. styles-v2.css
+     * repaints every inline light background to #1f2a3e and forces text to
+     * #e2e8f0 whenever dark mode is on, with !important, app-wide. html2canvas
+     * reads computed style off the live DOM, so without this a supervisor
+     * working in dark mode exports a half-navy, unreadable card. The graphic is
+     * always a light card, whatever theme the app is wearing.
+     */
+    async function renderGraphicToCanvas() {
+        var el = document.getElementById('contestGraphicExport');
+        if (!el || !el.firstChild) return null;
+
+        await window.DevCoachModules?.assetLoader?.ensureHtml2Canvas?.();
+
+        return window.html2canvas(el, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            onclone: function (doc) {
+                if (doc && doc.documentElement) doc.documentElement.removeAttribute('data-theme');
+            }
+        });
+    }
+
+    function graphicStatus(message) {
+        var host = document.getElementById('contestGraphicStatus');
+        if (host) host.textContent = message || '';
+    }
+
+    async function copyGraphic() {
+        var toast = window.DevCoachModules?.uiUtils?.showToast;
+        try {
+            var canvas = await renderGraphicToCanvas();
+            if (!canvas) { graphicStatus('There is nothing to copy yet.'); return; }
+
+            var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
+            if (!blob) { graphicStatus('The image could not be built.'); return; }
+
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            graphicStatus('');
+            if (toast) toast('Graphic copied. Paste it into Teams.');
+        } catch (error) {
+            // Clipboard image writing needs a secure context and a permission,
+            // and neither is guaranteed. Say what happened and point at the
+            // button that does not need it.
+            graphicStatus('Could not copy the image: ' + (error?.message || error) + ' Use Download instead.');
+        }
+    }
+
+    async function downloadGraphic() {
+        try {
+            var canvas = await renderGraphicToCanvas();
+            if (!canvas) { graphicStatus('There is nothing to download yet.'); return; }
+            var link = document.createElement('a');
+            link.download = 'raffle-standings-' + (monthKeyFor(document.getElementById('contestDate')?.value)
+                || new Date().toISOString().slice(0, 7)) + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            graphicStatus('');
+        } catch (error) {
+            graphicStatus('Could not build the image: ' + (error?.message || error));
+        }
+    }
+
+    // ============================================
     // MOUNT
     // ============================================
 
@@ -301,9 +413,11 @@
             if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
 
             document.getElementById('contestDate')?.addEventListener('change', loadMonthAndRender);
-            document.getElementById('contestTeam')?.addEventListener('change', renderDayGrid);
+            document.getElementById('contestTeam')?.addEventListener('change', () => { renderDayGrid(); renderStandings(); });
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
+            document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
+            document.getElementById('contestDownloadGraphicBtn')?.addEventListener('click', downloadGraphic);
             document.getElementById('contestDrawBtn')?.addEventListener('click', draw);
             rendered = true;
         }
@@ -336,5 +450,5 @@
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
-    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, saveDay, draw, loadMonthAndRender };
+    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
 })();

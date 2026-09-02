@@ -260,3 +260,213 @@ suite('contest: editing one team does not wipe the rest of that day', (t) => {
     t.check('rather than starting from an empty object',
         body.indexOf('const day = {};') === -1);
 });
+
+// ============================================
+// THE POSTABLE TEXT
+// ============================================
+//
+// The graphic carries the standings, so the post's job is to frame the pool,
+// name who is out front, and give somebody sitting on zero tickets a reason to
+// go earn one. These tests pin the parts that would quietly go wrong: a tie at
+// the top, the team filter, and the house rules on what a public post may say.
+
+suite('contest: the post names who is out front without counting who they beat', (t) => {
+    const contest = load(t);
+
+    const post = contest.buildTeamPost(month({
+        '2026-09-01': { 'Dana Roe': { perfectSurveys: 4 }, 'Chris Vale': { perfectSurveys: 1 } }
+    }), { monthLabel: 'September', openerIndex: 0, closerIndex: 0 });
+
+    t.check('it names the leader', post.indexOf('Dana Roe') > -1);
+    t.check('with their count', /out front with 4 tickets/.test(post));
+    t.check('and says how many people are on the board', /2 of you have tickets/.test(post));
+
+    // House rule: a placing may go in the channel, a beaten-count may not.
+    t.check('it never says who anybody beat', !/better than \d+ of \d+/.test(post));
+    t.check('and never quotes a person\'s odds', post.indexOf(' of 5') === -1);
+});
+
+suite('contest: a tie at the top is not handed to one person', (t) => {
+    const contest = load(t);
+
+    // Early in the month several people sit on one ticket each. Picking one of
+    // them as "out front" is simply false, and it is the first thing the people
+    // tied with them would notice.
+    const post = contest.buildTeamPost(month({
+        '2026-09-01': { 'A Bee': { perfectSurveys: 1 }, 'C Dee': { perfectSurveys: 1 }, 'E Eff': { perfectSurveys: 1 } }
+    }), { openerIndex: 0, closerIndex: 0 });
+
+    t.check('it says they are tied', /3 people are tied out front with 1 ticket each/.test(post));
+    t.check('and does not crown one of them', post.indexOf('is out front with') === -1);
+});
+
+suite('contest: the post covers the team that was picked, not the whole center', (t) => {
+    const contest = load(t);
+
+    // buildLeaderboard is not team scoped, so a post built without the name
+    // list would show all 127 people when the supervisor picked their own 18.
+    const both = month({
+        '2026-09-01': { 'Mine One': { perfectSurveys: 5 }, 'Theirs Two': { perfectSurveys: 99 } }
+    });
+
+    const mine = contest.buildTeamPost(both, { names: ['Mine One'], openerIndex: 0, closerIndex: 0 });
+
+    t.check('the other team is not named', mine.indexOf('Theirs Two') === -1);
+    t.check('and the pool is only this team\'s tickets', /^5 tickets in the bowl/.test(mine));
+    t.equal('a name list matching nobody produces no post',
+        contest.buildTeamPost(both, { names: ['Ghost Person'] }), '');
+});
+
+suite('contest: the post follows house style', (t) => {
+    const contest = load(t);
+    const days = { '2026-09-01': { 'Dana Roe': { perfectSurveys: 2, adherence: 96 } } };
+
+    // Every opener and closer, not just the pair that happened to be picked.
+    for (let i = 0; i < 12; i += 1) {
+        const post = contest.buildTeamPost(month(days), { openerIndex: i, closerIndex: i, monthLabel: 'September' });
+        t.check('no em dashes in variant ' + i, post.indexOf('\u2014') === -1);
+        t.check('the three ways to earn are always spelled out in variant ' + i,
+            post.indexOf('A perfect survey is one ticket') > -1);
+        t.check('and the target comes from the app in variant ' + i, /93% adherence/.test(post));
+    }
+
+    t.equal('an empty month produces no post', contest.buildTeamPost(month({}), {}), '');
+});
+
+// ============================================
+// THE GRAPHIC
+// ============================================
+//
+// A 900px light card, rasterised by html2canvas and pasted into Teams. The
+// tests here pin the things that would be invisible until somebody had already
+// posted the picture to a hundred people: a name rendered raw, a person quietly
+// left off, a colour the dark theme would repaint, or a number that was typed
+// rather than counted.
+
+function graphicFor(contest, rows, options) {
+    return contest.buildStandingsGraphicHtml(rows, Object.assign({
+        monthLabel: '2026-09', target: 93, teamLabel: 'Team Scott'
+    }, options || {}));
+}
+
+function row(name, total, parts) {
+    return Object.assign({
+        associate: name, total: total, perfectSurvey: total,
+        dailyAdherence: 0, weeklyAdherence: 0, monthlyAdherence: 0, reasons: []
+    }, parts || {});
+}
+
+suite('contest: the graphic leaves nobody off the board', (t) => {
+    const contest = load(t);
+
+    // The people on zero are the ones the card exists to reach, and
+    // buildLeaderboard only ever returns earners. The roster is what puts them
+    // on the board, so a card built with a roster must show all of them.
+    const roster = ['Ann Zeta', 'Bob Young', 'Cal Xu', 'Dee Wren', 'Eve Vane'];
+    const html = graphicFor(contest, [row('Ann Zeta', 6), row('Cal Xu', 2)], { names: roster });
+
+    roster.forEach((name) => {
+        t.check(name + ' is on the card', html.indexOf(name) > -1);
+    });
+    t.check('and the people on zero are told the slot is open', /No tickets yet\. The slot is open\./.test(html));
+
+    // A placing is public. "You are last of five" is not something this card
+    // should ever say, so a person on zero gets no rank numeral at all.
+    const ranks = (html.match(/>(\d+)<\/div>/g) || []).join(' ');
+    t.check('nobody on zero is given a placing', ranks.indexOf('>5<') === -1);
+});
+
+suite('contest: the graphic covers the team that was picked', (t) => {
+    const contest = load(t);
+
+    const html = graphicFor(contest, [row('Mine One', 5), row('Theirs Two', 99)], { names: ['Mine One'] });
+
+    t.check('the picked team is there', html.indexOf('Mine One') > -1);
+    t.check('the rest of the center is not', html.indexOf('Theirs Two') === -1);
+    t.check('and the pool counts only this team', html.indexOf('>5<') > -1);
+});
+
+suite('contest: the graphic survives the dark theme and hostile names', (t) => {
+    const contest = load(t);
+
+    const html = graphicFor(contest, [row("O'Brien-McAllister", 4), row('<script>alert(1)</script>', 2)]);
+
+    // styles-v2.css repaints any inline `background: #f`, `#e`, `#d`, `#fff` or
+    // `white` and forces light text, app-wide, when data-theme is dark. The
+    // caller strips data-theme in the html2canvas clone; writing every colour
+    // rgb() means the background half cannot match even if that caller changes.
+    t.check('no hex colours to repaint', !/background:\s*#/.test(html));
+    t.check('no theme variables', html.indexOf('var(--') === -1);
+
+    t.check('a script tag in a name is inert', html.indexOf('<script>') === -1);
+    t.check('and the name still shows', html.indexOf('&lt;script&gt;') > -1);
+    t.check('an apostrophe survives', /O(&#39;|&apos;|')Brien-McAllister/.test(html));
+});
+
+suite('contest: the graphic counts rather than states', (t) => {
+    const contest = load(t);
+
+    const rows = [row('Ann Zeta', 7), row('Bob Young', 3), row('Cal Xu', 2)];
+    const html = graphicFor(contest, rows);
+
+    // 7 + 3 + 2. If the pool were ever typed rather than summed, this is where
+    // a stale poster would come from.
+    t.check('the pool is the sum of the rows', html.indexOf('>12<') > -1);
+    t.check('and it says how many people hold tickets', /3 people have tickets/.test(html));
+
+    t.check('no em dashes', html.indexOf('\u2014') === -1);
+    t.check('nothing undefined leaked in', !/undefined|NaN|Infinity/.test(html));
+});
+
+suite('contest: the graphic marks a sole leader, never a tied field', (t) => {
+    const contest = load(t);
+
+    // Week one is everybody on one ticket. An accent on all nineteen rows means
+    // nothing, and an accent on whichever name sorted first is simply wrong.
+    const tied = graphicFor(contest, [row('Ann Zeta', 1), row('Bob Young', 1), row('Cal Xu', 1)]);
+    const sole = graphicFor(contest, [row('Ann Zeta', 9), row('Bob Young', 1), row('Cal Xu', 1)]);
+
+    const accent = /border-left: 3px solid/g;
+    t.equal('a tied top gets no accent', (tied.match(accent) || []).length, 0);
+    t.equal('a sole leader gets exactly one', (sole.match(accent) || []).length, 1);
+});
+
+suite('contest: an empty board is still worth posting', (t) => {
+    const contest = load(t);
+
+    const open = graphicFor(contest, []);
+    t.check('it is a poster, not an error', /The bowl is open/.test(open));
+    t.check('and it says what puts the first name in', /puts the first name in/.test(open));
+
+    // A full roster on day one is a different case: every name belongs on the
+    // board with an open slot, not collapsed into the empty-board card.
+    const dayOne = graphicFor(contest, [], { names: ['Ann Zeta', 'Bob Young'] });
+    t.check('day one shows the roster', dayOne.indexOf('Ann Zeta') > -1 && dayOne.indexOf('Bob Young') > -1);
+    t.check('rather than the open-board card', dayOne.indexOf('The bowl is open') === -1);
+});
+
+suite('contest: the graphic holds its shape at every team size', (t) => {
+    const contest = load(t);
+
+    const build = (n) => {
+        const rows = [];
+        for (let i = 0; i < n; i += 1) rows.push(row('Person Number ' + i, n - i));
+        return graphicFor(contest, rows);
+    };
+
+    [1, 12, 18, 19, 30, 31, 127].forEach((n) => {
+        const html = build(n);
+        const widths = (html.match(/width:\s*(-?\d+(?:\.\d+)?)px/g) || [])
+            .map((w) => Number(w.replace(/[^0-9.-]/g, '')));
+
+        t.check('no negative widths at ' + n, widths.filter((w) => w < 0).length === 0);
+        t.check('nothing wider than the card at ' + n, widths.filter((w) => w > 900).length === 0);
+        t.check('every name is present at ' + n, html.indexOf('Person Number ' + (n - 1)) > -1);
+    });
+
+    // Past thirty the board splits into columns rather than cutting the list.
+    // The column gutter is the only marker unique to that layout: the rail in
+    // every row is a flex child too.
+    t.check('a big board splits into columns', build(60).indexOf('margin-right: 24px') > -1);
+    t.check('a team-sized board does not', build(12).indexOf('margin-right: 24px') === -1);
+});
