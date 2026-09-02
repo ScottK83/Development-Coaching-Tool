@@ -15,6 +15,63 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
+
+/* ── The clock ──
+ *
+ * Every fixture in this suite is written in 2026, and the modules under test
+ * ask the real calendar what year and month it is right now. So the suite's
+ * result depended on the day you ran it, and it changed underneath us twice:
+ *
+ *   from 2026-09-01   8 assertions in period-compare failed, because a
+ *                     month-to-date row only takes over the CURRENT month and
+ *                     August had stopped being it.
+ *   from 2027-01-01   143 assertions fail across ~40 suites — rankings, rank
+ *                     ladder, cheers, period compare — because the helpers
+ *                     default to the current year and there is no 2027 data.
+ *
+ * The first one went unnoticed for a day and quietly disabled the pre-push
+ * gate, which is the real cost: a suite that fails for calendar reasons stops
+ * being a signal and starts being something people bypass.
+ *
+ * A test whose result depends on when it runs is not a test, so the clock is
+ * fixed here. Any date in August 2026 makes the whole suite green; the 18th is
+ * the day the month-to-date feature landed, which is the behaviour most
+ * sensitive to it.
+ *
+ * TEST_CLOCK overrides it, and that is the point rather than an escape hatch:
+ *
+ *   TEST_CLOCK=2027-01-01 node tests/run.js    probe the year rollover
+ *   TEST_CLOCK=real       node tests/run.js    run against the wall clock
+ *
+ * Note what fixing the clock does NOT tell you. It makes the suite reproducible;
+ * it does not prove the app behaves correctly on 1 January. Use TEST_CLOCK to
+ * ask that question deliberately.
+ */
+const FIXTURE_CLOCK = '2026-08-18';
+const clockSetting = process.env.TEST_CLOCK || FIXTURE_CLOCK;
+
+if (clockSetting !== 'real') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(clockSetting)) {
+        throw new Error(`TEST_CLOCK must be YYYY-MM-DD or "real", got "${clockSetting}"`);
+    }
+    const RealDate = Date;
+    const fixedMs = new RealDate(`${clockSetting}T12:00:00Z`).getTime();
+    if (Number.isNaN(fixedMs)) throw new Error(`TEST_CLOCK is not a real date: "${clockSetting}"`);
+
+    // Only an argument-less `new Date()` is redirected. Every other form has to
+    // keep working exactly as before, because the fixtures are built from
+    // explicit date strings and the modules parse them.
+    class PinnedDate extends RealDate {
+        constructor(...args) {
+            if (args.length === 0) super(fixedMs);
+            else super(...args);
+        }
+        static now() { return fixedMs; }
+    }
+    global.Date = PinnedDate;
+}
+
+
 const suites = [];
 
 function suite(name, fn) {
