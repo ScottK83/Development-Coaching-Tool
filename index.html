@@ -1753,7 +1753,7 @@ Box 2 - Future Improvement Areas:
         </footer>
     </div>
 
-    <!-- All scripts loaded dynamically with cache busting v30 -->
+    <!-- Every script is loaded from here, keyed to APP_BUILD so a deploy busts the cache and nothing else does. -->
     <script>
         (function loadAllScriptsWithCacheBust() {
             // See tests/cache-busting.test.js
