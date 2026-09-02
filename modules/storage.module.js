@@ -407,6 +407,29 @@
     function normalizeEmployeeMetricRow(employee) {
         if (!employee || typeof employee !== 'object') return employee;
 
+        // A blank stays blank.
+        //
+        // findPhantomZeroMetrics deliberately blanks a column it has decided was
+        // absent from the upload, and normalizeTransfersPercentage returns 0 for
+        // any value it cannot parse -- so normalizing a just-blanked row put the
+        // 0 straight back, the next pass recognised an all-zero column and
+        // blanked it again, and the two never agreed on an answer.
+        //
+        // Every read therefore looked like a change: loadWeeklyData persisted the
+        // whole store and marked it dirty, and a dirty store schedules a cloud
+        // push. Reading data wrote it back, and filling one dropdown did that
+        // hundreds of times. On a second machine that is the lost-update path the
+        // rest of this module works hard to avoid -- a tab that only ever read
+        // could still push over what another machine wrote.
+        //
+        // Nothing is lost by skipping it: normalizeTransfersPercentage bails to 0
+        // on a non-numeric value before it ever looks at transfersCount, so a
+        // blank was never going to be derived into a real percentage anyway.
+        const storedTransfers = employee.transfers;
+        if (storedTransfers === '' || storedTransfers === null || storedTransfers === undefined) {
+            return employee;
+        }
+
         const normalizedTransfers = normalizeTransferPercentageValue(
             employee.transfers,
             employee.transfersCount,
