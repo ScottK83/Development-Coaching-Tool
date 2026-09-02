@@ -1763,6 +1763,11 @@ Box 2 - Future Improvement Areas:
                 // Foundation Layer (No Dependencies)
                 // Declares every storage key once. Must precede constants,
                 // which derives BULK_STORAGE_KEYS from it.
+                // Fetches the heavy libraries on demand. Six call sites across
+                // pto, reliability, repo-sync and sentiment need it, and the
+                // static lib-xlsx tag they replaced is gone, so without this
+                // every Excel upload fails on an undefined XLSX.
+                'modules/asset-loader.module.js',
                 'modules/store-registry.module.js',
                 'modules/constants.module.js',
                 'modules/metrics-registry.module.js',

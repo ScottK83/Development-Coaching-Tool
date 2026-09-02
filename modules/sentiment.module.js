@@ -1218,15 +1218,19 @@
 
         const reader = new FileReader();
 
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 let lines = [];
 
                 if (isExcel) {
+                    // The library is fetched on demand rather than shipped on
+                    // every page load. Without this the bare XLSX below is
+                    // undefined, because nothing loads it up front any more.
+                    await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = window.XLSX.read(data, { type: 'array' });
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                    const csvContent = window.XLSX.utils.sheet_to_csv(firstSheet);
                     lines = csvContent.split('\n').filter(line => line.trim());
                     if (isEmotions) {
                         debugLog(`🎭 MANAGING EMOTIONS - Excel file converted to ${lines.length} lines`);
