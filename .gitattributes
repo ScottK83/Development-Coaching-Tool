@@ -1,0 +1,30 @@
+# Line endings.
+#
+# core.autocrlf=true already stores LF in the repository; what it also does is
+# add a CR to every line on checkout. That makes the working tree bigger than
+# the thing that actually ships, and one test measures the working tree:
+# tests/artifact-budget.test.js caps the HTML shell at 175 KB via fs.statSync.
+#
+# index.html is 178,636 bytes in git and in production, comfortably under the
+# 179,200 cap, and 180,570 bytes on a Windows checkout. The 1,934 byte
+# difference is exactly its 1,934 CRs. So the budget test passed on macOS and
+# Linux and failed on Windows for the same commit, and the file it was
+# complaining about was never over budget.
+#
+# Pinning LF makes every checkout byte-for-byte identical to what is deployed.
+# Nothing in the repository changes: the stored blobs were already LF.
+*.html  text eol=lf
+*.js    text eol=lf
+*.css   text eol=lf
+*.json  text eol=lf
+*.csv   text eol=lf
+*.md    text eol=lf
+
+# PowerShell on Windows is happier with CRLF, and no budget measures it.
+*.ps1   text eol=crlf
+
+# Never touched.
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.xlsx  binary

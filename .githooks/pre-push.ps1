@@ -126,7 +126,11 @@ if (-not $autoBumpEnabled) {
 }
 
 $lines[$versionLineIndex] = "const APP_VERSION = '$nextVersion'; // Version: YYYY.MM.DD.NN"
-Set-Content -Path $scriptJsPath -Value $lines
+# LF, not Set-Content. Set-Content writes CRLF on Windows, which re-inflates
+# every line of the file the hook just edited and leaves the working tree
+# bigger than the blob that ships. .gitattributes pins these to LF on checkout;
+# writing CRLF here would put them straight back on every push.
+[IO.File]::WriteAllText($scriptJsPath, ($lines -join "`n") + "`n")
 
 # index.html carries the same version as its script cache key. It has to be
 # rewritten here because the loader reads it before script.js exists, so it
@@ -144,7 +148,10 @@ if (Test-Path $indexHtmlPath) {
     }
     if ($buildLineIndex -ge 0) {
         $htmlLines[$buildLineIndex] = "            var APP_BUILD = '$nextVersion'; // APP_BUILD"
-        Set-Content -Path $indexHtmlPath -Value $htmlLines
+        # LF here too, for the same reason. index.html is 178,636 bytes as
+        # deployed and the budget test caps it at 179,200, so the 1,934 CRs
+        # Set-Content adds are the difference between passing and failing.
+        [IO.File]::WriteAllText($indexHtmlPath, ($htmlLines -join "`n") + "`n")
         git add index.html
     } else {
         Write-Host "APP_BUILD marker not found in index.html. Script caching will fall back to per-load."
