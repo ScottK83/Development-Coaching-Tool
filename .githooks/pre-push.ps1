@@ -32,6 +32,21 @@ if ((Test-Path $testRunner) -and ($env:SKIP_TESTS_ON_PUSH -ne "1")) {
 
 $scriptJsPath = Join-Path $repoRoot "script.js"
 
+# One explicit encoder for every read and write below.
+#
+# Get-Content and Set-Content both pick an encoding by heuristic, and the
+# heuristic is not the same when git invokes this hook as it is in an
+# interactive shell. Reading index.html through it turned every emoji in the
+# nav into mojibake -- the file grew by 1,381 bytes and 252 lines changed for a
+# one-line version bump. Set-Content happened to hide that by writing the
+# mangled text back in the same mangled encoding; writing real UTF-8 made it
+# permanent.
+#
+# ReadAllLines/WriteAllText with an explicit encoder have no heuristic to get
+# wrong. UTF8Encoding($false) means no BOM, which is what these files already
+# are.
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+
 if (!(Test-Path $scriptJsPath)) {
     Write-Host "No script.js found. Skipping APP_VERSION bump."
     exit 0
@@ -53,7 +68,7 @@ function Get-NextAppVersion {
     return "$datePart.1"
 }
 
-$lines = Get-Content $scriptJsPath
+$lines = [IO.File]::ReadAllLines($scriptJsPath, $Utf8NoBom)
 $versionLineIndex = -1
 $currentVersion = $null
 
@@ -126,11 +141,10 @@ if (-not $autoBumpEnabled) {
 }
 
 $lines[$versionLineIndex] = "const APP_VERSION = '$nextVersion'; // Version: YYYY.MM.DD.NN"
-# LF, not Set-Content. Set-Content writes CRLF on Windows, which re-inflates
-# every line of the file the hook just edited and leaves the working tree
-# bigger than the blob that ships. .gitattributes pins these to LF on checkout;
-# writing CRLF here would put them straight back on every push.
-[IO.File]::WriteAllText($scriptJsPath, ($lines -join "`n") + "`n")
+# LF and explicit UTF-8. Set-Content writes CRLF on Windows, which re-inflates
+# every line of the file the hook just edited; .gitattributes pins these to LF
+# on checkout and writing CRLF here would put them straight back on every push.
+[IO.File]::WriteAllText($scriptJsPath, ($lines -join "`n") + "`n", $Utf8NoBom)
 
 # index.html carries the same version as its script cache key. It has to be
 # rewritten here because the loader reads it before script.js exists, so it
@@ -141,17 +155,18 @@ $lines[$versionLineIndex] = "const APP_VERSION = '$nextVersion'; // Version: YYY
 # keeping them in step is this hook's job.
 $indexHtmlPath = Join-Path $repoRoot 'index.html'
 if (Test-Path $indexHtmlPath) {
-    $htmlLines = Get-Content $indexHtmlPath
+    $htmlLines = [IO.File]::ReadAllLines($indexHtmlPath, $Utf8NoBom)
     $buildLineIndex = -1
     for ($i = 0; $i -lt $htmlLines.Count; $i++) {
         if ($htmlLines[$i].Contains('// APP_BUILD')) { $buildLineIndex = $i; break }
     }
     if ($buildLineIndex -ge 0) {
         $htmlLines[$buildLineIndex] = "            var APP_BUILD = '$nextVersion'; // APP_BUILD"
-        # LF here too, for the same reason. index.html is 178,636 bytes as
-        # deployed and the budget test caps it at 179,200, so the 1,934 CRs
-        # Set-Content adds are the difference between passing and failing.
-        [IO.File]::WriteAllText($indexHtmlPath, ($htmlLines -join "`n") + "`n")
+        # Same treatment. index.html is 178,636 bytes as deployed against a
+        # 179,200 budget, so the 1,934 CRs Set-Content adds are the difference
+        # between passing and failing -- and it is full of emoji, so the
+        # encoder matters just as much as the line ending.
+        [IO.File]::WriteAllText($indexHtmlPath, ($htmlLines -join "`n") + "`n", $Utf8NoBom)
         git add index.html
     } else {
         Write-Host "APP_BUILD marker not found in index.html. Script caching will fall back to per-load."

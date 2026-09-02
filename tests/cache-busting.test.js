@@ -92,3 +92,67 @@ suite('cache: headers match how each file is actually requested', (t) => {
             /no-cache/.test(entry) && !/immutable/.test(entry));
     });
 });
+
+/**
+ * The release hook rewrites index.html and script.js to stamp the version in.
+ * It must change the version line and nothing else.
+ *
+ * It did not. Set-Content picks both a line ending and an encoding by
+ * heuristic, and neither is the same when git invokes a hook as it is in an
+ * interactive shell:
+ *
+ *   line endings  every line came back CRLF, inflating index.html by 1,934
+ *                 bytes past the 175 KB budget on Windows checkouts only.
+ *   encoding      every emoji in the nav came back as mojibake -- a one-line
+ *                 version bump produced a 252-line diff and grew the file by
+ *                 1,381 bytes. "📋 Dashboard" became "ðŸ“‹ Dashboard".
+ *
+ * Both are invisible in a hook whose output nobody reads, and both ship.
+ */
+suite('cache: the release hook rewrites files without reformatting them', (t) => {
+    const hook = read('.githooks/pre-push.ps1');
+
+    // Set-Content and Get-Content are the two heuristics. Neither may touch
+    // these files again.
+    const versionWrites = hook.split('\n').filter((l) =>
+        /Set-Content|Get-Content/.test(l) && /scriptJsPath|indexHtmlPath/.test(l));
+    t.equal('neither file is read or written through an encoding heuristic',
+        versionWrites.length, 0);
+
+    t.check('an explicit UTF-8 encoder is declared',
+        /\$Utf8NoBom = \[System\.Text\.UTF8Encoding\]::new\(\$false\)/.test(hook));
+
+    // Both reads and both writes must pass it. Plain substring checks: the
+    // strings being matched are full of $ and (), and a regex here is more
+    // likely to be wrong than the thing it is checking.
+    ['scriptJsPath', 'indexHtmlPath'].forEach((pathVar) => {
+        t.check(`${pathVar} is read with the explicit encoder`,
+            hook.indexOf('ReadAllLines($' + pathVar + ', $Utf8NoBom)') > -1);
+
+        const writeAt = hook.indexOf('WriteAllText($' + pathVar);
+        t.check(`${pathVar} is written at all`, writeAt > -1);
+        t.check(`${pathVar} is written with the explicit encoder`,
+            writeAt > -1 && hook.slice(writeAt, writeAt + 120).indexOf('$Utf8NoBom') > -1);
+    });
+
+    // LF, explicitly, not whatever the platform prefers.
+    t.equal('both writes join on LF', (hook.match(/-join "`n"/g) || []).length, 2);
+});
+
+suite('cache: the files the hook rewrites are LF and UTF-8 to begin with', (t) => {
+    // If these ever drift, the hook's one-line edit becomes a whole-file diff
+    // again and the budget test starts failing for a reason unrelated to size.
+    ['index.html', 'script.js'].forEach((file) => {
+        const raw = fs.readFileSync(path.join(ROOT, file));
+        t.equal(`${file} has no CR bytes`, raw.indexOf(0x0d), -1);
+        // A BOM would be re-emitted as content by a non-BOM encoder.
+        t.check(`${file} has no UTF-8 BOM`,
+            !(raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf));
+    });
+
+    // The characters that actually broke. If index.html can hold an emoji and
+    // survive a round trip, the encoding is right.
+    const html = read('index.html');
+    t.check('the nav emoji are intact', html.indexOf('📋 Dashboard') > -1);
+    t.check('and not mojibake', html.indexOf('ðŸ“‹') === -1);
+});
