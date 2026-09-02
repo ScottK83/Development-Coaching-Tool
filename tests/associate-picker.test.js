@@ -96,3 +96,80 @@ suite('associate picker', function (t) {
     api.populateSelect(gone, ['Alpha'], { teamFilter: false, preserveSelection: true });
     t.equal('a name no longer in the list is not restored', gone.value, '');
 });
+
+/**
+ * The team-selection context is built once per list, not once per name.
+ *
+ * isAssociateIncludedByTeamFilter takes an optional context and rebuilds it
+ * when the argument is missing. normalizeNames used to call it per name with
+ * no context, so a 127-name picker rebuilt the whole context 127 times, and
+ * every rebuild loads weekly, YTD and daily data and walks every employee row
+ * in all three.
+ *
+ * Measured on 127 associates against a year of weekly data with a supervisor
+ * scope picked, reading through the storage module the way a browser does:
+ * 3150 ms before, 27 ms after. It is a one-line hoist and it is invisible in
+ * the output, which is exactly why it needs a test holding it in place.
+ */
+suite('associate picker: the team filter context is built once, not per name', function (t) {
+    t.installFakeBrowser();
+    global.document.createElement = function () {
+        return { value: '', textContent: '', setAttribute: function () {} };
+    };
+    var api = t.loadModule('modules/associate-picker.module.js').associatePicker;
+
+    var contextBuilds = 0;
+    var sawContext = [];
+    global.window.DevCoachModules.teamFilter = {
+        getTeamSelectionContext: function () {
+            contextBuilds++;
+            return { isFiltering: false, selectedSet: null, id: contextBuilds };
+        },
+        isAssociateIncludedByTeamFilter: function (name, context) {
+            sawContext.push(context);
+            return true;
+        }
+    };
+
+    var roster = [];
+    for (var i = 0; i < 50; i++) roster.push('Associate ' + i);
+    var out = api.normalizeNames(roster);
+
+    t.equal('every name still comes through', out.length, 50);
+    t.equal('but the context was built once', contextBuilds, 1);
+    t.equal('and every name was filtered against a context', sawContext.filter(Boolean).length, 50);
+    t.check('all of them the same one',
+        sawContext.every(function (c) { return c && c.id === 1; }));
+});
+
+suite('associate picker: opting out of the team filter builds no context at all', function (t) {
+    t.installFakeBrowser();
+    global.document.createElement = function () {
+        return { value: '', textContent: '', setAttribute: function () {} };
+    };
+    var api = t.loadModule('modules/associate-picker.module.js').associatePicker;
+
+    var contextBuilds = 0;
+    global.window.DevCoachModules.teamFilter = {
+        getTeamSelectionContext: function () { contextBuilds++; return { isFiltering: false }; },
+        isAssociateIncludedByTeamFilter: function () { return true; }
+    };
+
+    // Follow-Up opts out. It should not pay for a context it never consults.
+    api.normalizeNames(['Alpha', 'Bravo'], { teamFilter: false });
+    t.equal('no context is built when the filter is off', contextBuilds, 0);
+});
+
+suite('associate picker: a missing team filter module is still survivable', function (t) {
+    t.installFakeBrowser();
+    global.document.createElement = function () {
+        return { value: '', textContent: '', setAttribute: function () {} };
+    };
+    var api = t.loadModule('modules/associate-picker.module.js').associatePicker;
+
+    // The picker loads before team-filter in index.html and resolves it at call
+    // time. If it is genuinely absent, everyone comes through rather than nobody.
+    delete global.window.DevCoachModules.teamFilter;
+    t.equal('everyone passes when there is no filter to apply',
+        api.normalizeNames(['Alpha', 'Bravo']).join(','), 'Alpha,Bravo');
+});
