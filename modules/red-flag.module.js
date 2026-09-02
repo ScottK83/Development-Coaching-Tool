@@ -461,10 +461,8 @@ function logFollowUpEntry(details) {
 
     history.entries.unshift(entry);
 
-    // Cap at 200 entries
-    if (history.entries.length > 200) {
-        history.entries = history.entries.slice(0, 200);
-    }
+    // Uncapped. The 200 protected a storage limit that no longer applies, and
+    // a follow-up from earlier in the year is the kind of thing worth finding.
 
     saveFollowUpHistory(history);
     renderFollowUpHistory();

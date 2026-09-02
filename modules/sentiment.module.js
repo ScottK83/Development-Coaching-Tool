@@ -1085,15 +1085,16 @@
 
             const reader = new FileReader();
 
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     let lines = [];
 
                     if (isExcel) {
+                        await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
+                        const workbook = window.XLSX.read(data, { type: 'array' });
                         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const csvContent = XLSX.utils.sheet_to_csv(firstSheet);
+                        const csvContent = window.XLSX.utils.sheet_to_csv(firstSheet);
                         lines = csvContent.split('\n').filter(line => line.trim());
                     } else {
                         const content = e.target.result;
@@ -1442,9 +1443,11 @@
             associateSentimentSnapshots[associateName].push(snapshot);
         }
 
+        // Sorted newest first, but not truncated. A year of sentiment history
+        // is what answers "how has this person been trending", which was the
+        // reason for keeping snapshots in the first place.
         associateSentimentSnapshots[associateName] = associateSentimentSnapshots[associateName]
-            .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
-            .slice(0, 200);
+            .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
 
         debugLog('💾 Saving sentiment snapshot:', { associateName, startDate, endDate, snapshot });
         debugLog('📦 All snapshots after save:', associateSentimentSnapshots);

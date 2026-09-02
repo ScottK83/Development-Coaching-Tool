@@ -40,15 +40,15 @@
     const BULK_STORAGE_KEYS = window.DevCoachModules?.storeRegistry?.bulkNames?.() || [
         // Fallback only if the registry did not load. A drift test
         // fails the build if these disagree.
-        'weeklyData', 'ytdData', 'dailyData', 'coachingHistory',
-        'callListeningLogs', 'associateSentimentSnapshots', 'sentimentPhraseDatabase', 'reliabilityTracker',
-        'ptoTracker', 'tipUsageHistory', 'followUpHistory', 'hotTipHistory',
-        'attendanceTracker', 'myTeamMembers', 'callCenterAverages', 'yearEndAnnualGoals',
-        'yearEndDraftEntries', 'employeePreferredNames', 'employeeNicknames', 'employeeSupervisors',
-        'executiveSummaryNotes', 'userCustomTips', 'coachingTips', 'customMetrics',
-        'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips', 'yoyBaseline2025',
-        'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory', 'oneOnOneMeetings',
-        'midYearMeta'
+        'weeklyData', 'ytdData', 'dailyData', 'dailyArchive',
+        'coachingHistory', 'callListeningLogs', 'associateSentimentSnapshots', 'sentimentPhraseDatabase',
+        'reliabilityTracker', 'ptoTracker', 'tipUsageHistory', 'followUpHistory',
+        'hotTipHistory', 'attendanceTracker', 'myTeamMembers', 'callCenterAverages',
+        'yearEndAnnualGoals', 'yearEndDraftEntries', 'employeePreferredNames', 'employeeNicknames',
+        'employeeSupervisors', 'executiveSummaryNotes', 'userCustomTips', 'coachingTips',
+        'customMetrics', 'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips',
+        'yoyBaseline2025', 'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory',
+        'oneOnOneMeetings', 'midYearMeta'
     ];
 
     window.DevCoachConstants = {

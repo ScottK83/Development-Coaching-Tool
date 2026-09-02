@@ -33,6 +33,10 @@
         { name: 'weeklyData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'ytdData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'dailyData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        // Dailies that a weekly upload has superseded. Kept rather than
+        // deleted: day-level detail is the only thing that answers a trend
+        // question at finer resolution than a week.
+        { name: 'dailyArchive', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'coachingHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'callListeningLogs', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'associateSentimentSnapshots', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },

@@ -5342,20 +5342,52 @@ function getPeriodDataStore(periodType) {
 // (inclusive). Used when a larger period upload (week/month/quarter/custom/YTD)
 // supersedes the ephemeral daily rows for the same dates. Returns the count
 // removed so the caller can decide whether to persist dailyData.
+/**
+ * Moves dailies out of the working set once a larger upload covers them.
+ *
+ * These used to be deleted outright, because dailies were ephemeral and
+ * localStorage had a ceiling. Neither is true now, and the day-level detail is
+ * the only thing that can answer "how was this person trending in March" at any
+ * resolution finer than a week. Destroying it to save space that is no longer
+ * scarce is the wrong trade.
+ *
+ * They move to dailyArchive rather than staying in dailyData, so everything
+ * that reads dailyData behaves exactly as before: the working set still means
+ * "days not yet covered by a weekly upload". Nothing on screen changes; the
+ * rows simply still exist.
+ */
 function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
     if (!rangeStart || !rangeEnd) return 0;
-    let removed = 0;
+
+    const storage = window.DevCoachModules?.storage;
+    const archive = storage?.readStore?.('dailyArchive') || {};
+    let moved = 0;
+
     Object.keys(dailyData).forEach(key => {
         const meta = dailyData[key]?.metadata || {};
         // Daily key format is "YYYY-MM-DD|YYYY-MM-DD" with start === end.
         const dayDate = meta.endDate || (key.includes('|') ? key.split('|')[1] : '');
         if (!dayDate) return;
         if (dayDate >= rangeStart && dayDate <= rangeEnd) {
+            archive[key] = dailyData[key];
             delete dailyData[key];
-            removed += 1;
+            moved += 1;
         }
     });
-    return removed;
+
+    if (moved) {
+        // A failed archive write must not cost the rows. They are still in
+        // dailyData at this point only if the save succeeded, so save first and
+        // let the caller's own save of dailyData follow.
+        if (storage?.saveWithSizeCheck?.('dailyArchive', archive) === false) {
+            console.error('[dailies] Could not archive; restoring them to the working set.');
+            Object.keys(archive).forEach((key) => {
+                if (!dailyData[key] && archive[key]) dailyData[key] = archive[key];
+            });
+            return 0;
+        }
+    }
+    return moved;
 }
 
 // Weighted team averages across a set of employees within a single period.
@@ -6022,7 +6054,9 @@ function selectSmartTip({ employeeId, metricKey, severity, tips }) {
     const selectionPool = severityFiltered.length ? severityFiltered : pickFrom;
     const chosen = selectionPool[Math.floor(Math.random() * selectionPool.length)];
 
-    const updated = metricHistory.concat([{ tip: chosen, usedAt: new Date().toISOString() }]).slice(-50);
+    // Uncapped: knowing a tip was given eight months ago is the point of
+    // keeping the history at all.
+    const updated = metricHistory.concat([{ tip: chosen, usedAt: new Date().toISOString() }]);
     history[employeeId] = { ...empHistory, [metricKey]: updated };
     saveTipUsageHistory(history);
 
@@ -6092,7 +6126,7 @@ function logComplianceFlag(entry) {
     try {
         const log = (window.DevCoachModules?.storage?.readStore?.('complianceLog') ?? []);
         log.push(entry);
-        window.DevCoachModules?.storage?.saveWithSizeCheck?.('complianceLog', log.slice(-200));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('complianceLog', log);
     } catch {
         // no-op
     }
@@ -7961,7 +7995,9 @@ function appendCallListeningEntry(employeeName, entry) {
     }
     callListeningLogs[employeeName].push(entry);
     if (callListeningLogs[employeeName].length > 500) {
-        callListeningLogs[employeeName] = callListeningLogs[employeeName].slice(-500);
+        // No cap. The 500 was there for the 5MB localStorage ceiling, and
+        // these logs are the record of what was actually said on a call, which
+        // is exactly what someone asks about months later.
     }
 }
 
