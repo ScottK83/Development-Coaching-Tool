@@ -470,3 +470,31 @@ suite('contest: the graphic holds its shape at every team size', (t) => {
     t.check('a big board splits into columns', build(60).indexOf('margin-right: 24px') > -1);
     t.check('a team-sized board does not', build(12).indexOf('margin-right: 24px') === -1);
 });
+
+suite('contest: the card reads correctly in the panel, not just in the export', (t) => {
+    const contest = load(t);
+    const html = graphicFor(contest, [row('Ann Zeta', 6), row('Bob Young', 2)]);
+
+    // The card is previewed live inside the running app, and styles-v2.css
+    // forces color:#e2e8f0 !important onto bare div, span, p and td whenever
+    // dark mode is on. That rule is typed on the element, so it reaches every
+    // cell of the card and washes the whole thing out on screen. An inline
+    // declaration marked important outranks an important one from a stylesheet,
+    // which is what keeps the preview honest.
+    const colours = html.match(/color:\s*rgb\([^)]*\)( !important)?/g) || [];
+    t.check('the card sets colours at all', colours.length > 20);
+    t.equal('and every one of them is pinned',
+        colours.filter((c) => c.indexOf('!important') === -1).length, 0);
+
+    // The background half needs no pinning, and must not acquire any: every
+    // background override in that stylesheet matches on the literal hex text in
+    // the style attribute, so rgb() is already out of their reach.
+    t.check('no hex backgrounds for the dark rules to match', !/background:\s*#/.test(html));
+
+    // Two and three word labels in a flex row shrink below their content by
+    // default, which broke "Perfect surveys" across two lines on a machine
+    // whose font ran wider than the one this was designed against.
+    t.check('the legend labels cannot break mid phrase',
+        /white-space: nowrap;[^"]*">Perfect surveys</.test(html)
+        || /Perfect surveys/.test(html) && (html.match(/white-space: nowrap/g) || []).length >= 3);
+});

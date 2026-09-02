@@ -804,10 +804,16 @@
             + '</div>';
     }
 
+    // flex: 0 0 auto and nowrap on the label, because the label is two or three
+    // words and a flex child is allowed to shrink below its content by default.
+    // On a machine whose Segoe UI runs a little wider than the fallback these
+    // were shrinking and breaking mid-phrase, so "Perfect surveys" arrived over
+    // two lines and pushed the legend to double height.
     function gfxLegendItem(color, label, count, last) {
-        return '<div style="display: flex; align-items: center; margin-right: ' + (last ? '0' : '26px') + ';">'
+        return '<div style="display: flex; align-items: center; flex: 0 0 auto; '
+            + 'margin-right: ' + (last ? '0' : '26px') + ';">'
             + '<div style="flex: 0 0 9px; height: 9px; border-radius: 2px; background: ' + color + ';"></div>'
-            + '<div style="margin-left: 8px; ' + gfxType(GFX_T.small) + ' font-weight: 600; '
+            + '<div style="margin-left: 8px; white-space: nowrap; ' + gfxType(GFX_T.small) + ' font-weight: 600; '
             + 'color: ' + GFX.inkSoft + ';">' + label + '</div>'
             + '<div style="margin-left: 7px; ' + gfxType(GFX_T.small) + ' font-weight: 700; '
             + 'color: ' + GFX.ink + ';">' + gfxCommas(count) + '</div>'
@@ -825,7 +831,8 @@
             + 'border-bottom: 1px solid ' + GFX.rule + ';">'
             + items
             + '<div style="flex: 1 1 auto;"></div>'
-            + '<div style="' + gfxType(GFX_T.micro) + ' font-weight: 700; color: ' + GFX.inkFaint + ';">'
+            + '<div style="white-space: nowrap; ' + gfxType(GFX_T.micro) + ' font-weight: 700; '
+            + 'color: ' + GFX.inkFaint + ';">'
             + 'SAME SCALE ON EVERY ROW, 0 TO ' + axisMax + '</div>'
             + '</div>';
     }
@@ -950,11 +957,33 @@
             + '</div>';
     }
 
+    /**
+     * Makes every colour on the card win, on screen as well as in the export.
+     *
+     * The card is previewed live in the panel, inside the running app, and
+     * styles-v2.css forces color:#e2e8f0 !important onto bare div, span, p, td
+     * and the rest whenever dark mode is on. That rule is typed on the element,
+     * so it reaches every cell of the card and washes the whole thing out: the
+     * names, the totals, the legend, the call to action, all pale grey on warm
+     * paper. The export is fine, because the clone is pinned to light, but what
+     * Scott actually looks at before pressing copy is the preview.
+     *
+     * An inline declaration marked important beats an important declaration
+     * from a stylesheet, so marking the card's own colours is what settles it,
+     * in the panel and in the PNG alike. Only colour needs this. The card's
+     * backgrounds and borders are written rgb(), and every background and
+     * border override in that stylesheet matches on the literal hex text in the
+     * style attribute, so none of them can match in the first place.
+     */
+    function gfxPinColours(html) {
+        return String(html).replace(/color:\s*(rgb\([^)]*\))/g, 'color: $1 !important');
+    }
+
     function gfxCard(inner) {
-        return '<div id="contestStandingsCard" style="width: ' + GFX_CARD_W + 'px; '
+        return gfxPinColours('<div id="contestStandingsCard" style="width: ' + GFX_CARD_W + 'px; '
             + 'box-sizing: border-box; background: ' + GFX.paper + '; border-radius: 14px; '
             + 'font-family: ' + GFX_FONT + '; ' + gfxType(GFX_T.body) + ' font-weight: 600; '
-            + 'color: ' + GFX.ink + ';">' + inner + '</div>';
+            + 'color: ' + GFX.ink + ';">' + inner + '</div>');
     }
 
     /**
