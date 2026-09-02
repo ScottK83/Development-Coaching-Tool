@@ -27,6 +27,7 @@
                 <button type="button" id="trendsAnalysisBtn" class="btn-secondary top-nav-btn" aria-label="Trends and Analysis">📈 Trends</button>
                 <button type="button" id="reviewPrepBtn" class="btn-secondary top-nav-btn" aria-label="Review Prep">📋 Review Prep</button>
                 <button type="button" id="redFlagBtn" class="btn-secondary top-nav-btn" aria-label="Follow Up">📌 Follow Up</button>
+                <button type="button" id="contestBtn" class="btn-secondary top-nav-btn" aria-label="Contest">🎟️ Contest</button>
                 <button type="button" id="manageDataBtn" class="btn-secondary top-nav-btn top-nav-btn-manage" aria-label="Settings">⚙️ Settings</button>
                 <button type="button" id="darkModeToggle" class="btn-secondary top-nav-btn" aria-label="Toggle dark mode" style="min-width:auto; padding:8px 12px;">🌙</button>
                 <button type="button" id="shortcutHelpBtn" class="btn-secondary top-nav-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" style="min-width:auto; padding:8px 12px;">⌨️</button>
@@ -1077,6 +1078,9 @@ Box 2 - Future Improvement Areas:
             </section>
 
             <!-- Manage Data Section -->
+            <!-- Panel rendered by modules/contest-ui.module.js -->
+            <section id="contestSection" style="display: none;"></section>
+
             <section id="manageDataSection" style="display: none;">
                 <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ff9800;">
                     <h2>⚙️ Settings</h2>
@@ -1842,6 +1846,8 @@ Box 2 - Future Improvement Areas:
                 'modules/dashboard.module.js',
                 'modules/upload-wizard.module.js',
                 'modules/metric-stability.module.js',
+                'modules/contest.module.js',
+                'modules/contest-ui.module.js',
                 // Main Application
                 'script.js'
             ];

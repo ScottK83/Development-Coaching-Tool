@@ -14,6 +14,7 @@
         trendsAnalysisSection: 'trendsAnalysisBtn',
         reviewPrepSection: 'reviewPrepBtn',
         redFlagSection: 'redFlagBtn',
+        contestSection: 'contestBtn',
         manageDataSection: 'manageDataBtn'
     };
     var ACTIVE_TOP_NAV_GRADIENT = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';

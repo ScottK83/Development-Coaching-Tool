@@ -47,8 +47,8 @@
         'yearEndDraftEntries', 'employeePreferredNames', 'employeeNicknames', 'employeeSupervisors',
         'executiveSummaryNotes', 'userCustomTips', 'coachingTips', 'customMetrics',
         'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips', 'yoyBaseline2025',
-        'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory', 'oneOnOneMeetings',
-        'midYearMeta'
+        'complianceLog', 'contestData', 'weeklyFocalPoints', 'celebrationsHistory',
+        'oneOnOneMeetings', 'midYearMeta'
     ];
 
     window.DevCoachConstants = {

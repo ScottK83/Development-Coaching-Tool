@@ -1400,6 +1400,10 @@ function isRosteredAssociate(name) {
     });
 }
 window.isRosteredAssociate = isRosteredAssociate;
+// Exposed for the contest panel, which needs the names to build its day grid.
+// Read at click time, so the load order between modules and script.js does not
+// matter.
+window.SUPERVISOR_ROSTER = SUPERVISOR_ROSTER;
 
 // Strips everyone off the roster out of stored period data. Historical rows are
 // rewritten, so past center averages shift — that is the point, those numbers were
@@ -2158,6 +2162,10 @@ function bindQuickActionHandlers() {
     document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
     document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
+    document.getElementById('contestBtn')?.addEventListener('click', () => {
+        showOnlySection('contestSection');
+        window.DevCoachModules?.contestUi?.show?.();
+    });
     document.getElementById('subNavTeamSnapshot')?.addEventListener('click', () => {
         showMyTeamSubSection('subSectionTeamSnapshot', 'subNavTeamSnapshot');
         embedTeamSnapshot();
