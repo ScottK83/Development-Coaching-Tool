@@ -80,21 +80,32 @@ suite('retention: superseded dailies are archived, not destroyed', (t) => {
  * Run against the real function, lifted out of script.js, because the source
  * regex this replaces matched the broken version perfectly.
  */
+function extractFn(script, name) {
+    const start = script.indexOf('function ' + name);
+    if (start < 0) throw new Error('not found in script.js: ' + name);
+    const end = script.indexOf(String.fromCharCode(10) + '/**', start + 10);
+    return script.slice(start, end > -1 ? end : undefined);
+}
+
 function loadPurge(t, opts) {
     const script = read('script.js');
-    const start = script.indexOf('function purgeDailiesCoveredBy');
-    const src = script.slice(start, script.indexOf('\n/**', start + 10));
+    const src = extractFn(script, 'makeRoomInDailyArchive')
+        + String.fromCharCode(10) + extractFn(script, 'purgeDailiesCoveredBy');
 
     const calls = { saved: [], notified: [] };
     const storage = {
         readStore: () => opts.archive,
-        // Mirrors the real one: a store over the cap refuses the write.
+        // Mirrors the real one: a store over the cap refuses the write. maxKeys
+        // stands in for the 4 MB ceiling, so a test can be about behaviour
+        // rather than about megabytes.
         saveWithSizeCheck: (key, data) => {
             calls.saved.push(key);
             if (opts.failWrite) return false;
+            if (opts.maxKeys && Object.keys(data).length > opts.maxKeys) return false;
             opts.archive = data;
             return true;
-        }
+        },
+        isBackedByIdb: () => !!opts.onIdb
     };
     const scope = {
         window: { DevCoachModules: { storage } },
@@ -189,4 +200,70 @@ suite('retention: a year of history is what the stores are sized for', (t) => {
         const entry = registry.get(name);
         t.check(`${name} is on the uncapped backend`, entry && entry.backend === 'idb');
     });
+});
+
+/**
+ * A full archive gives up its oldest days rather than wedging.
+ *
+ * dailyArchive is uncapped on the IndexedDB backend, but a browser in the
+ * localStorage fallback meets the 4 MB ceiling after roughly four months of
+ * check-ins. Before this, that wedged permanently: the archive write failed on
+ * every upload from then on, so dailies never left the working set, dailyData
+ * grew every week, and once IT passed the ceiling the daily upload itself
+ * stopped persisting while the UI still reported success. Keeping every old day
+ * was costing new days.
+ */
+suite('retention: a full archive drops its oldest days rather than wedging', (t) => {
+    const archive = {};
+    for (let m = 1; m <= 4; m++) {
+        for (let d = 1; d <= 28; d++) {
+            Object.assign(archive, day(`2026-0${m}-${String(d).padStart(2, '0')}`));
+        }
+    }
+    const before = Object.keys(archive).length;
+    const dailyData = Object.assign({}, day('2026-08-10'), day('2026-08-11'));
+
+    // localStorage fallback, already at the ceiling.
+    const { fn, calls, opts } = loadPurge(t, {
+        archive, dailyData, onIdb: false, maxKeys: before
+    });
+    const moved = fn('2026-08-10', '2026-08-11');
+
+    t.equal('the new days are archived, not rolled back', moved, 2);
+    t.equal('and they leave the working set', Object.keys(dailyData).length, 0);
+    t.check('the days this call moved are in the archive',
+        !!opts.archive['2026-08-10|2026-08-10'] && !!opts.archive['2026-08-11|2026-08-11']);
+    t.check('the oldest day was given up', !opts.archive['2026-01-01|2026-01-01']);
+    t.check('recent history survived', Object.keys(opts.archive).some((k) => k.startsWith('2026-04')));
+    t.check('and the archive is back under the ceiling', Object.keys(opts.archive).length <= before);
+    t.equal('nothing needed reporting to the user', calls.notified.length, 0);
+});
+
+suite('retention: eviction never drops the rows it is archiving', (t) => {
+    const archive = {};
+    for (let d = 1; d <= 10; d++) Object.assign(archive, day(`2026-01-${String(d).padStart(2, '0')}`));
+    const dailyData = Object.assign({}, day('2026-08-10'));
+
+    // Room for one key only: everything evictable has to go, and the row being
+    // archived still has to survive.
+    const { fn, opts } = loadPurge(t, { archive, dailyData, onIdb: false, maxKeys: 1 });
+    fn('2026-08-10', '2026-08-10');
+
+    t.check('the row being archived survived', !!opts.archive['2026-08-10|2026-08-10']);
+    t.equal('everything older was given up', Object.keys(opts.archive).length, 1);
+});
+
+suite('retention: on the backend a failure is never paid for with history', (t) => {
+    const archive = Object.assign({}, day('2026-01-05'), day('2026-01-06'));
+    const dailyData = Object.assign({}, day('2026-08-10'));
+
+    // IndexedDB has no ceiling, so a failure there means something else is
+    // wrong. Dropping history would not fix it and would cost real data.
+    const { fn, calls } = loadPurge(t, { archive, dailyData, onIdb: true, failWrite: true });
+    const moved = fn('2026-08-10', '2026-08-10');
+
+    t.equal('nothing is reported as moved', moved, 0);
+    t.equal('the day comes back to the working set', Object.keys(dailyData).length, 1);
+    t.equal('and no archived history was dropped', Object.keys(archive).length, 2);
+    t.equal('the failure is surfaced instead', calls.notified.length, 1);
 });

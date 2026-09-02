@@ -5342,6 +5342,56 @@ function getPeriodDataStore(periodType) {
 // (inclusive). Used when a larger period upload (week/month/quarter/custom/YTD)
 // supersedes the ephemeral daily rows for the same dates. Returns the count
 // removed so the caller can decide whether to persist dailyData.
+
+/**
+ * Drops the oldest archived days until the archive will save again.
+ *
+ * dailyArchive is uncapped on the IndexedDB backend, but a browser in the
+ * localStorage fallback -- IndexedDB blocked, a private window, a stalled open
+ * -- meets the 4 MB ceiling after roughly four months of check-ins. Before
+ * this, that wedged: the archive write failed forever, so dailies never left
+ * the working set, dailyData grew every week, and once IT passed the ceiling
+ * the daily upload itself stopped persisting while the UI still reported
+ * success. The cost of keeping every old day was new days.
+ *
+ * So when there is genuinely no room, the oldest days go. They are the right
+ * thing to give up: the archive is day-level detail sitting behind a weekly
+ * upload that is already authoritative for the same dates, and the newest days
+ * are the ones a trend question actually reaches for. What must never be
+ * dropped is the rows this call is trying to archive right now, which is what
+ * protectedKeys is.
+ *
+ * Returns how many were dropped, or 0 if it could not make room at all.
+ */
+function makeRoomInDailyArchive(storage, archive, protectedKeys) {
+    const safe = new Set(protectedKeys);
+    // Daily keys are "YYYY-MM-DD|YYYY-MM-DD", so a plain sort is chronological.
+    const evictable = Object.keys(archive).filter((key) => !safe.has(key)).sort();
+
+    // Held so a failed sweep can be undone. The archive object is the live
+    // cache by reference in IndexedDB mode, so leaving it emptied after a write
+    // that never landed would throw away history the store still holds.
+    const removed = {};
+    let dropped = 0;
+
+    // A month at a time: one-at-a-time would re-serialize the whole archive per
+    // day removed, and this runs on the upload path.
+    while (evictable.length) {
+        evictable.splice(0, 30).forEach((key) => {
+            removed[key] = archive[key];
+            delete archive[key];
+            dropped += 1;
+        });
+        if (storage?.saveWithSizeCheck?.('dailyArchive', archive) !== false) return dropped;
+    }
+
+    // No room even with everything evictable gone, so the ceiling was not the
+    // problem. Put it all back and let the caller roll the working set back
+    // instead.
+    Object.keys(removed).forEach((key) => { archive[key] = removed[key]; });
+    return 0;
+}
+
 /**
  * Moves dailies out of the working set once a larger upload covers them.
  *
@@ -5382,7 +5432,21 @@ function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
         // A failed archive write must not cost the rows. They are still in
         // dailyData at this point only if the save succeeded, so save first and
         // let the caller's own save of dailyData follow.
-        if (storage?.saveWithSizeCheck?.('dailyArchive', archive) === false) {
+        let archived = storage?.saveWithSizeCheck?.('dailyArchive', archive) !== false;
+
+        // Only the localStorage fallback has a ceiling; on the backend the
+        // archive is uncapped and a failure there means something else is
+        // wrong, which eviction would not fix and would cost history for
+        // nothing.
+        if (!archived && storage?.isBackedByIdb?.('dailyArchive') === false) {
+            const dropped = makeRoomInDailyArchive(storage, archive, movedKeys);
+            if (dropped > 0) {
+                console.warn(`[dailies] The archive was full; dropped the ${dropped} oldest archived day(s) to make room.`);
+                archived = true;
+            }
+        }
+
+        if (!archived) {
             console.error('[dailies] Could not archive; restoring them to the working set.');
             // Exactly the rows this call took, and no others. This used to walk
             // every key in the archive, which pours the whole accumulated year

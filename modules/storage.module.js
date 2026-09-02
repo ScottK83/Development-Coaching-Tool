@@ -1047,6 +1047,9 @@
         clearDirtyStores,
         onStoreChanged,
         // Storage helpers
+        // Lets a caller ask whether a store is subject to the localStorage size
+        // ceiling, so it can make room rather than simply failing.
+        isBackedByIdb,
         saveWithSizeCheck,
         // Weekly data
         loadWeeklyData,
