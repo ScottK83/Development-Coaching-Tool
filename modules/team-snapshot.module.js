@@ -904,6 +904,41 @@
     // EXPORT TO IMAGE
     // ============================================
 
+    /**
+     * The options both exports share.
+     *
+     * onclone is the part that matters. The export area is styled with
+     * var(--bg-surface), var(--text-primary) and var(--border), and on top of
+     * that styles-v2.css repaints every inline light background to #1f2a3e and
+     * forces color:#e2e8f0 onto bare div/span/p/td, app-wide and with
+     * !important, whenever dark mode is on. html2canvas reads computed style
+     * off the live DOM, so a supervisor working in dark mode used to export a
+     * dark, unreadable picture, and could not tell until it was already pasted
+     * into Teams.
+     *
+     * The clone is pinned to the light theme rather than having the attribute
+     * removed, because the stylesheet has two independent dark triggers: the
+     * app's own [data-theme="dark"] toggle, and @media (prefers-color-scheme:
+     * dark) scoped to :root:not([data-theme="light"]), which fires off the
+     * operating system whatever the toggle says. Removing the attribute beats
+     * the first and leaves the second. Pinning it to "light" beats both,
+     * because that is what the media query's own guard excludes.
+     *
+     * With that, the variables resolve light again and the nuclear override
+     * stops matching. The snapshot is always a light card.
+     */
+    function snapshotCanvasOptions() {
+        return {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            onclone: function (doc) {
+                if (doc && doc.documentElement) doc.documentElement.setAttribute('data-theme', 'light');
+            }
+        };
+    }
+
     async function exportSnapshotAsImage() {
         var el = document.getElementById('snapshotExportArea');
         if (!el) return;
@@ -916,12 +951,7 @@
             return;
         }
 
-        window.html2canvas(el, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false
-        }).then(function(canvas) {
+        window.html2canvas(el, snapshotCanvasOptions()).then(function(canvas) {
             var link = document.createElement('a');
             link.download = 'team-snapshot-' + new Date().toISOString().slice(0, 10) + '.png';
             link.href = canvas.toDataURL('image/png');
@@ -944,12 +974,7 @@
             return;
         }
 
-        window.html2canvas(el, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false
-        }).then(function(canvas) {
+        window.html2canvas(el, snapshotCanvasOptions()).then(function(canvas) {
             canvas.toBlob(function(blob) {
                 if (!blob) {
                     alert('Failed to create image blob.');

@@ -335,12 +335,21 @@
     /**
      * Rasterises the card.
      *
-     * The clone strips data-theme, and that is not a nicety. styles-v2.css
-     * repaints every inline light background to #1f2a3e and forces text to
-     * #e2e8f0 whenever dark mode is on, with !important, app-wide. html2canvas
-     * reads computed style off the live DOM, so without this a supervisor
-     * working in dark mode exports a half-navy, unreadable card. The graphic is
-     * always a light card, whatever theme the app is wearing.
+     * The clone is pinned to the light theme, and that is not a nicety.
+     * styles-v2.css repaints every inline light background to #1f2a3e and
+     * forces text to #e2e8f0 whenever dark mode is on, with !important,
+     * app-wide. html2canvas reads computed style off the live DOM, so without
+     * this a supervisor working in dark mode exports a half-navy, unreadable
+     * card.
+     *
+     * It pins rather than removes because the stylesheet has two independent
+     * dark triggers: the app's own [data-theme="dark"] toggle, and
+     * @media (prefers-color-scheme: dark) scoped to :root:not([data-theme="light"]),
+     * which fires off the operating system whatever the toggle says. Removing
+     * the attribute beats the first and leaves the second, so a machine set to
+     * dark still exported dark surfaces. Setting it to "light" beats both,
+     * because that is exactly what the media query's own guard excludes.
+     * The graphic is always a light card, whatever theme anything is wearing.
      */
     async function renderGraphicToCanvas() {
         var el = document.getElementById('contestGraphicExport');
@@ -354,7 +363,7 @@
             backgroundColor: '#ffffff',
             logging: false,
             onclone: function (doc) {
-                if (doc && doc.documentElement) doc.documentElement.removeAttribute('data-theme');
+                if (doc && doc.documentElement) doc.documentElement.setAttribute('data-theme', 'light');
             }
         });
     }
