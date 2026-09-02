@@ -1868,6 +1868,9 @@ Box 2 - Future Improvement Areas:
                 return new Promise(function(resolve, reject) {
                     var s = document.createElement('script');
                     s.src = src + '?v=' + bust;
+                    // createElement gives a script the force-async flag; clearing it
+                    // moves the script to the execute-in-order list, which is what lets
+                    // the fetches overlap without the execution order drifting.
                     s.async = false;
                     s.onload = resolve;
                     s.onerror = function() { reject(new Error('Failed to load ' + src)); };
@@ -1875,10 +1878,15 @@ Box 2 - Future Improvement Areas:
                 });
             }
 
+            // All the tags go in on this tick, so the downloads overlap and
+            // async = false above is what still holds them to manifest order.
+            //
+            // They used to be chained: append one, wait for it to download and run,
+            // then append the next. That is 72 sequential round trips with nothing
+            // ever in flight alongside anything else, so boot cost tracked latency
+            // rather than bytes: seconds on a fast link, minutes on a slow one.
             function loadInOrder(list) {
-                return list.reduce(function(chain, src) {
-                    return chain.then(function() { return loadRequiredScript(src); });
-                }, Promise.resolve());
+                return Promise.all(list.map(loadRequiredScript));
             }
 
             // script.js reads three bulk stores at parse time, and roughly sixty
