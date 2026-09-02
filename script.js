@@ -5361,7 +5361,10 @@ function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
 
     const storage = window.DevCoachModules?.storage;
     const archive = storage?.readStore?.('dailyArchive') || {};
-    let moved = 0;
+    // Only the rows THIS call moved. The archive already holds everything moved
+    // before it, and the rollback below must not pour a year of history back
+    // into the working set.
+    const movedKeys = [];
 
     Object.keys(dailyData).forEach(key => {
         const meta = dailyData[key]?.metadata || {};
@@ -5371,23 +5374,39 @@ function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
         if (dayDate >= rangeStart && dayDate <= rangeEnd) {
             archive[key] = dailyData[key];
             delete dailyData[key];
-            moved += 1;
+            movedKeys.push(key);
         }
     });
 
-    if (moved) {
+    if (movedKeys.length) {
         // A failed archive write must not cost the rows. They are still in
         // dailyData at this point only if the save succeeded, so save first and
         // let the caller's own save of dailyData follow.
         if (storage?.saveWithSizeCheck?.('dailyArchive', archive) === false) {
             console.error('[dailies] Could not archive; restoring them to the working set.');
-            Object.keys(archive).forEach((key) => {
-                if (!dailyData[key] && archive[key]) dailyData[key] = archive[key];
+            // Exactly the rows this call took, and no others. This used to walk
+            // every key in the archive, which pours the whole accumulated year
+            // back into dailyData -- on a browser sitting in the localStorage
+            // fallback that took the working set from five keys to eighty in one
+            // upload, and it grew from there until dailyData itself hit the cap
+            // and daily check-ins stopped persisting with nothing on screen to
+            // say so.
+            //
+            // The delete matters too: in IndexedDB mode readStore hands back the
+            // live cache BY REFERENCE, so these rows were written into it before
+            // saveWithSizeCheck was ever called and would survive a failed write.
+            movedKeys.forEach((key) => {
+                dailyData[key] = archive[key];
+                delete archive[key];
             });
+            // Silence here is the actual damage. The rows are safe, but the
+            // archive is full and will stay full, so say so rather than letting
+            // it fail quietly on every upload from here on.
+            notifyStorageSaveFailed('archived daily check-ins');
             return 0;
         }
     }
-    return moved;
+    return movedKeys.length;
 }
 
 // Weighted team averages across a set of employees within a single period.
