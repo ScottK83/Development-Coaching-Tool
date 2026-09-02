@@ -183,8 +183,21 @@
         } catch (e) { /* storage blocked — the pick just won't persist */ }
     }
 
+    /**
+     * The picked team member, or null for "all of my team".
+     *
+     * The id is read first on purpose. resolveActiveMember returns null
+     * immediately for the ALL_MEMBERS_ID case, but arguments evaluate before
+     * the call, so building the roster first meant walking every key of
+     * weeklyData, ytdData and dailyData and every employee row inside each --
+     * and then throwing the answer away. "All of my team" is the default state,
+     * so that was the common path, and getScopeMembers and getActiveScope each
+     * call this, which doubled it.
+     */
     function getActiveMember() {
-        return resolveActiveMember(getMyTeamRoster(), getActiveMemberId());
+        const storedId = getActiveMemberId();
+        if (!storedId || storedId === ALL_MEMBERS_ID) return null;
+        return resolveActiveMember(getMyTeamRoster(), storedId);
     }
 
     /**
