@@ -217,3 +217,47 @@ suite('v2: a shard can be removed by naming it null', async (t) => {
     t.check('the named shard is gone', !('ptoTracker' in dropped.body.manifest.shards));
     t.equal('the other is untouched', dropped.body.manifest.shards.weeklyData, a);
 });
+
+suite('contest: the month is stored in R2, read back and verified', async (t) => {
+    const bucket = createFakeR2();
+
+    const empty = await call(bucket, { mode: 'contestGet', month: '2026-09' });
+    t.equal('a month with nothing in it reads cleanly', empty.status, 200);
+    t.equal('and reports that it does not exist yet', empty.body.exists, false);
+    t.equal('with an empty days map to render from', Object.keys(empty.body.data.days).length, 0);
+
+    const saved = await call(bucket, {
+        mode: 'contestSave', month: '2026-09',
+        data: { days: { '2026-09-01': { 'Alyssa Dimes': { adherence: 96, perfectSurveys: 2 } } } }
+    });
+    t.equal('saving works', saved.status, 200);
+    // The worker reads back after writing, so "saved" means stored rather than
+    // meaning a request returned 200.
+    t.equal('and reports what actually landed', saved.body.days, 1);
+
+    const back = await call(bucket, { mode: 'contestGet', month: '2026-09' });
+    t.equal('it exists now', back.body.exists, true);
+    t.equal('the day is there', back.body.data.days['2026-09-01']['Alyssa Dimes'].adherence, 96);
+    t.check('and it is stamped', typeof back.body.data.updatedAt === 'string');
+
+    // Months are separate objects, so September cannot overwrite October.
+    await call(bucket, { mode: 'contestSave', month: '2026-10', data: { days: { '2026-10-01': {} } } });
+    const sept = await call(bucket, { mode: 'contestGet', month: '2026-09' });
+    t.equal('September is untouched by an October save',
+        Object.keys(sept.body.data.days)[0], '2026-09-01');
+});
+
+suite('contest: a bad month or payload is refused, not stored', async (t) => {
+    const bucket = createFakeR2();
+
+    // The month goes into an R2 key, so it is pinned to the exact shape.
+    const bad = await call(bucket, { mode: 'contestGet', month: '../../state/latest' });
+    t.equal('a crafted month is refused', bad.status, 400);
+
+    const badSave = await call(bucket, { mode: 'contestSave', month: '2026-13-XX', data: { days: {} } });
+    t.equal('so is a malformed month on save', badSave.status, 400);
+
+    const noDays = await call(bucket, { mode: 'contestSave', month: '2026-09', data: { nope: true } });
+    t.equal('a payload with no days is refused', noDays.status, 400);
+    t.check('and nothing was written', !bucket._objects.has('state/contest/2026-09.json'));
+});

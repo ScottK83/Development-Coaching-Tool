@@ -203,10 +203,15 @@ suite('contest: the feature is wired and self-contained', (t) => {
     const section = html.slice(html.indexOf('id="contestSection"'));
     t.check('the section ships empty', section.slice(0, 80).indexOf('</section>') > -1);
 
-    // The contest keeps its own daily numbers. dailyData is purged the moment a
-    // weekly upload covers those dates, which would delete entries already
-    // earned.
+    // Nothing is stored in the browser. The panel reads and writes R2 directly,
+    // so the numbers live in one place and the machine that typed them stops
+    // mattering.
     const registry = fs.readFileSync(path.join(ROOT, 'modules/store-registry.module.js'), 'utf8');
-    t.check('it has its own store', registry.indexOf("name: 'contestData'") > -1);
-    t.check('on the backend with no ceiling', /contestData', tier: 'data', backend: 'idb'/.test(registry));
+    t.check('it has no browser store', registry.indexOf("name: 'contestData'") === -1);
+
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
+    t.check('it reads from cloud storage', ui.indexOf("mode: 'contestGet'") > -1);
+    t.check('and writes to it', ui.indexOf("mode: 'contestSave'") > -1);
+    t.check('it never touches the storage module', ui.indexOf('saveWithSizeCheck') === -1 && ui.indexOf('readStore') === -1);
+    t.check('and never touches localStorage', ui.indexOf('localStorage') === -1);
 });

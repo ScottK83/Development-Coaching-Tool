@@ -62,9 +62,6 @@
         { name: 'yoyBaseline2025', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'ccEmail', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         { name: 'complianceLog', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
-        // The contest's own daily numbers. Deliberately not dailyData, which
-        // purgeDailiesCoveredBy deletes once a weekly upload covers the dates.
-        { name: 'contestData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'weeklyFocalPoints', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'celebrationsHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'oneOnOneMeetings', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },

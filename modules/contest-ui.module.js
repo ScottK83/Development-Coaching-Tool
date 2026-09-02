@@ -11,8 +11,13 @@
 (function () {
     'use strict';
 
-    const STORE = 'contestData';
     let rendered = false;
+    // The month currently on screen, held in memory only for the life of the
+    // page. Nothing is written to this browser: the numbers live in R2 and are
+    // read when the panel opens.
+    let loadedMonth = null;
+    let loadedData = { days: {} };
+    let busy = false;
 
     function esc(text) {
         const fn = window.DevCoachModules?.sharedUtils?.escapeHtml;
@@ -24,26 +29,44 @@
     }
 
     // ============================================
-    // STORAGE
+    // STORAGE: Cloudflare, and only Cloudflare
     // ============================================
-
-    function loadAll() {
-        const read = window.DevCoachModules?.storage?.readStore;
-        const value = typeof read === 'function' ? read(STORE) : undefined;
-        return (value && typeof value === 'object') ? value : {};
-    }
-
-    function saveAll(all) {
-        const save = window.DevCoachModules?.storage?.saveWithSizeCheck;
-        return typeof save === 'function' ? save(STORE, all) : false;
-    }
+    // There is no browser copy. The panel fetches the month when it opens and
+    // writes it back when a day is saved, so the numbers exist in exactly one
+    // place and it does not matter which computer typed them.
 
     function monthKeyFor(dateIso) {
         return String(dateIso || '').slice(0, 7);
     }
 
-    function monthData(all, monthKey) {
-        return all[monthKey] || { days: {} };
+    async function callWorker(body) {
+        const repoSync = window.DevCoachModules?.repoSync;
+        const config = repoSync?.loadCallListeningSyncConfig?.();
+        const endpoint = config?.endpoint;
+        if (!endpoint) throw new Error('No sync endpoint is configured.');
+        const headers = { 'Content-Type': 'application/json' };
+        if (config?.sharedSecret) headers['x-sync-secret'] = config.sharedSecret;
+        const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.ok) throw new Error(data?.error || `The service returned HTTP ${response.status}.`);
+        return data;
+    }
+
+    async function fetchMonth(monthKey) {
+        const data = await callWorker({ mode: 'contestGet', month: monthKey });
+        loadedMonth = monthKey;
+        loadedData = (data.data && typeof data.data === 'object') ? data.data : { days: {} };
+        if (!loadedData.days) loadedData.days = {};
+        return loadedData;
+    }
+
+    async function pushMonth(monthKey, data) {
+        return callWorker({ mode: 'contestSave', month: monthKey, data });
+    }
+
+    /** What is on screen. Never a source of truth, only what was last fetched. */
+    function currentMonthData() {
+        return loadedData;
     }
 
     // ============================================
@@ -113,7 +136,7 @@
         if (!host) return;
         if (!date) { host.innerHTML = '<p style="color: var(--text-secondary);">Pick a date to start.</p>'; return; }
 
-        const day = monthData(loadAll(), monthKeyFor(date)).days[date] || {};
+        const day = currentMonthData().days[date] || {};
         const names = namesForTeam(selectedTeam());
 
         const rows = names.map((name) => {
@@ -143,8 +166,7 @@
         if (!host) return;
 
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        const data = monthData(loadAll(), monthKey);
-        const board = contest()?.buildLeaderboard(data) || [];
+        const board = contest()?.buildLeaderboard(currentMonthData()) || [];
 
         if (!board.length) {
             host.innerHTML = '<p style="color: var(--text-secondary);">No entries yet. Save a day above and they will appear here.</p>';
@@ -175,14 +197,14 @@
     // ACTIONS
     // ============================================
 
-    function saveDay() {
+    async function saveDay() {
         const status = document.getElementById('contestDayStatus');
         const date = document.getElementById('contestDate')?.value;
         if (!date) { if (status) status.textContent = 'Pick a date first.'; return; }
+        if (busy) return;
 
-        const all = loadAll();
         const monthKey = monthKeyFor(date);
-        const month = all[monthKey] = all[monthKey] || { days: {} };
+        const month = currentMonthData();
 
         // The day is rebuilt from what is on screen rather than merged into what
         // was there. Clearing a box has to mean "this did not happen", which a
@@ -202,10 +224,18 @@
         if (Object.keys(day).length) month.days[date] = day;
         else delete month.days[date];
 
-        if (!saveAll(all)) {
-            if (status) status.textContent = 'Could not save. Check the console.';
+        busy = true;
+        if (status) status.textContent = 'Saving to cloud storage...';
+        try {
+            await pushMonth(monthKey, month);
+        } catch (error) {
+            // Nothing was written anywhere, so say so plainly rather than
+            // letting the screen imply it landed.
+            if (status) status.textContent = 'Not saved: ' + (error?.message || error);
+            busy = false;
             return;
         }
+        busy = false;
 
         const people = Object.keys(day).length;
         if (status) status.textContent = `Saved ${people} ${people === 1 ? 'person' : 'people'} for ${date}.`;
@@ -215,7 +245,7 @@
     function copyStandings() {
         const date = document.getElementById('contestDate')?.value;
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        const text = contest()?.buildStandingsPost(monthData(loadAll(), monthKey), monthKey) || '';
+        const text = contest()?.buildStandingsPost(currentMonthData(), monthKey) || '';
         if (!text) return;
         const copy = window.DevCoachModules?.uiUtils?.copyToClipboard;
         if (typeof copy === 'function') copy(text, { message: 'Standings copied' });
@@ -225,7 +255,7 @@
         const host = document.getElementById('contestDrawResult');
         const date = document.getElementById('contestDate')?.value;
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        const result = contest()?.drawWinner(monthData(loadAll(), monthKey));
+        const result = contest()?.drawWinner(currentMonthData());
         if (!host) return;
 
         if (!result) {
@@ -257,7 +287,7 @@
             const dateInput = document.getElementById('contestDate');
             if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
 
-            document.getElementById('contestDate')?.addEventListener('change', () => { renderDayGrid(); renderStandings(); });
+            document.getElementById('contestDate')?.addEventListener('change', loadMonthAndRender);
             document.getElementById('contestTeam')?.addEventListener('change', renderDayGrid);
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
@@ -265,10 +295,33 @@
             rendered = true;
         }
 
+        loadMonthAndRender();
+    }
+
+    /** Fetches the month from R2, then paints. Nothing renders from a guess. */
+    async function loadMonthAndRender() {
+        const status = document.getElementById('contestDayStatus');
+        const date = document.getElementById('contestDate')?.value;
+        const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
+
+        if (loadedMonth === monthKey) { renderDayGrid(); renderStandings(); return; }
+
+        if (status) status.textContent = 'Loading from cloud storage...';
+        try {
+            await fetchMonth(monthKey);
+            if (status) status.textContent = '';
+        } catch (error) {
+            // No local fallback on purpose: showing an empty grid as though it
+            // were the real state is how someone types a day twice.
+            if (status) status.textContent = 'Could not reach cloud storage: ' + (error?.message || error);
+            const grid = document.getElementById('contestDayGrid');
+            if (grid) grid.innerHTML = '<p style="color: var(--text-secondary);">Cannot load the contest without a connection. Nothing is stored on this computer.</p>';
+            return;
+        }
         renderDayGrid();
         renderStandings();
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
-    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, saveDay, draw };
+    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, saveDay, draw, loadMonthAndRender };
 })();

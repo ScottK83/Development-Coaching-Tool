@@ -236,6 +236,47 @@ export default {
       }
 
       // ============================================
+      // CONTEST: read and write straight to R2
+      // ============================================
+      // No browser copy at all. The contest panel reads this when it opens and
+      // writes it when a day is saved, so the numbers live in one place and the
+      // machine you typed them on stops mattering.
+
+      if (mode === 'contestGet') {
+        const month = String(body?.month || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(month)) {
+          return json({ ok: false, error: 'A contest month must look like YYYY-MM.' }, 400, cors);
+        }
+        const obj = await env.COACHING_BUCKET.get(`state/contest/${month}.json`);
+        if (!obj) {
+          return json({ ok: true, mode: 'contestGet', month, data: { days: {} }, exists: false }, 200, cors);
+        }
+        return json({ ok: true, mode: 'contestGet', month, data: await obj.json(), exists: true }, 200, cors);
+      }
+
+      if (mode === 'contestSave') {
+        const month = String(body?.month || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(month)) {
+          return json({ ok: false, error: 'A contest month must look like YYYY-MM.' }, 400, cors);
+        }
+        const data = body?.data;
+        if (!data || typeof data !== 'object' || typeof data.days !== 'object') {
+          return json({ ok: false, error: 'A contest save needs a data object with days.' }, 400, cors);
+        }
+        const serialized = JSON.stringify({ days: data.days, updatedAt: new Date().toISOString() });
+        await env.COACHING_BUCKET.put(`state/contest/${month}.json`, serialized, {
+          httpMetadata: { contentType: 'application/json' }
+        });
+        // Read back rather than trusting the put, so "saved" means stored.
+        const check = await env.COACHING_BUCKET.get(`state/contest/${month}.json`);
+        const stored = check ? await check.json() : null;
+        return json({
+          ok: true, mode: 'contestSave', month,
+          days: Object.keys(stored?.days || {}).length
+        }, 200, cors);
+      }
+
+      // ============================================
       // LIST SNAPSHOTS: What point-in-time copies exist
       // ============================================
       // Every sync already writes state/snapshots/YYYY-MM-DD.json and deleteAll
