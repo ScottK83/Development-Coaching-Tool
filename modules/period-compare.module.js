@@ -80,8 +80,32 @@
     function _weeklyData() {
         return typeof weeklyData !== 'undefined' ? weeklyData : {};
     }
+    /**
+     * The year to work in when a caller does not name one.
+     *
+     * The calendar year, but only while there is data in it. On 1 January every
+     * one of the twelve call sites below started asking for a year with nothing
+     * uploaded yet, so the rankings, the rank ladder and the month timeline all
+     * went blank -- and stayed blank until the first upload of the new year
+     * landed, which is a week into January at best. The first week of the year
+     * is when last year's numbers get looked at hardest.
+     *
+     * Falling back to the newest year that actually has data changes nothing on
+     * any ordinary day, because the current year is that year. It only differs
+     * in the gap, which is the case that was broken. executiveSummary already
+     * resolves its year this way.
+     */
     function _year() {
-        return new Date().getFullYear();
+        var now = new Date().getFullYear();
+        var newest = 0;
+        var stores = [_weeklyData(), (typeof ytdData !== 'undefined' ? ytdData : {})];
+        stores.forEach(function (store) {
+            Object.keys(store || {}).forEach(function (key) {
+                var yr = _yearOf(key);
+                if (Number.isFinite(yr) && yr <= now && yr > newest) newest = yr;
+            });
+        });
+        return newest || now;
     }
     function _entry(key) {
         return _weeklyData()[key] || null;

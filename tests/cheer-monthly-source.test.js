@@ -51,6 +51,11 @@ function setup(t, weekly) {
 }
 
 suite('cheers — a real monthly upload outranks the weekly rebuild', (t) => {
+    // Month-bound fixtures: a month-to-date row only ever takes over the
+    // CURRENT month, so this suite has to agree with the calendar about which
+    // month that is. Declared rather than inherited, so it stays true under
+    // TEST_CLOCK.
+    t.pinClock('2026-08-18');
     const weekly = baseWeeks();
     weekly['2026-06-01|2026-06-30'] = period('2026-06-01', '2026-06-30', 8.4, 2200, 'month');
     weekly['2026-07-01|2026-07-31'] = period('2026-07-01', '2026-07-31', 5.9, 2300, 'month');
@@ -68,6 +73,11 @@ suite('cheers — a real monthly upload outranks the weekly rebuild', (t) => {
 });
 
 suite('cheers — falls back to the rebuild when no month was uploaded', (t) => {
+    // Month-bound fixtures: a month-to-date row only ever takes over the
+    // CURRENT month, so this suite has to agree with the calendar about which
+    // month that is. Declared rather than inherited, so it stays true under
+    // TEST_CLOCK.
+    t.pinClock('2026-08-18');
     const data = setup(t, baseWeeks()).buildCheerData();
     const p = data.periods;
 
@@ -80,6 +90,11 @@ suite('cheers — falls back to the rebuild when no month was uploaded', (t) => 
 });
 
 suite('cheers — a thin month-to-date upload cannot stand in for the month', (t) => {
+    // Month-bound fixtures: a month-to-date row only ever takes over the
+    // CURRENT month, so this suite has to agree with the calendar about which
+    // month that is. Declared rather than inherited, so it stays true under
+    // TEST_CLOCK.
+    t.pinClock('2026-08-18');
     const weekly = baseWeeks();
     weekly['2026-06-01|2026-06-30'] = period('2026-06-01', '2026-06-30', 8.4, 2200, 'month');
     weekly['2026-07-01|2026-07-31'] = period('2026-07-01', '2026-07-31', 5.9, 2300, 'month');

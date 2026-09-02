@@ -627,6 +627,11 @@ function mtdRow(endDate, aht) {
 }
 
 suite('period compare: a month-to-date upload replaces the weekly rebuild', (t) => {
+    // Month-bound fixtures: a month-to-date row only ever takes over the
+    // CURRENT month, so this suite has to agree with the calendar about which
+    // month that is. Declared rather than inherited, so it stays true under
+    // TEST_CLOCK.
+    t.pinClock('2026-08-18');
     const pc = loadPure(t, Object.assign({}, MTD_WEEKS, mtdRow('2026-08-17', 400)));
     const buckets = pc.getMonthBuckets(2026);
 
@@ -643,6 +648,11 @@ suite('period compare: a month-to-date upload replaces the weekly rebuild', (t) 
 });
 
 suite('period compare: a completed month is left to its own rules', (t) => {
+    // Month-bound fixtures: a month-to-date row only ever takes over the
+    // CURRENT month, so this suite has to agree with the calendar about which
+    // month that is. Declared rather than inherited, so it stays true under
+    // TEST_CLOCK.
+    t.pinClock('2026-08-18');
     // Only the current month can be carried by a month-to-date row. A stale one
     // for a finished month must not out-rank four real weeks.
     const pc = loadPure(t, Object.assign({}, MTD_WEEKS, {
@@ -656,6 +666,11 @@ suite('period compare: a completed month is left to its own rules', (t) => {
 });
 
 suite('period compare: one day into the month still beats a rebuild made of last month', (t) => {
+    // Month-bound fixtures: a month-to-date row only ever takes over the
+    // CURRENT month, so this suite has to agree with the calendar about which
+    // month that is. Declared rather than inherited, so it stays true under
+    // TEST_CLOCK.
+    t.pinClock('2026-08-18');
     // No fortnight floor here, unlike a real monthly upload: on the second of
     // the month the rebuild's "August" is almost entirely July.
     const pc = loadPure(t, Object.assign({}, MTD_WEEKS, mtdRow('2026-08-01', 350)));

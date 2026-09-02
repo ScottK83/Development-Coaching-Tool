@@ -49,26 +49,36 @@ const ROOT = path.join(__dirname, '..');
  */
 const FIXTURE_CLOCK = '2026-08-18';
 const clockSetting = process.env.TEST_CLOCK || FIXTURE_CLOCK;
+// Captured before anything below reassigns global.Date, so pinClock always
+// builds on the genuine Date rather than on another pin.
+const REAL_DATE = Date;
 
 if (clockSetting !== 'real') {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(clockSetting)) {
         throw new Error(`TEST_CLOCK must be YYYY-MM-DD or "real", got "${clockSetting}"`);
     }
-    const RealDate = Date;
-    const fixedMs = new RealDate(`${clockSetting}T12:00:00Z`).getTime();
+    const fixedMs = new REAL_DATE(`${clockSetting}T12:00:00Z`).getTime();
     if (Number.isNaN(fixedMs)) throw new Error(`TEST_CLOCK is not a real date: "${clockSetting}"`);
 
     // Only an argument-less `new Date()` is redirected. Every other form has to
     // keep working exactly as before, because the fixtures are built from
     // explicit date strings and the modules parse them.
-    class PinnedDate extends RealDate {
+    global.Date = makePinnedDate(fixedMs);
+}
+
+/**
+ * A Date whose argument-less constructor is fixed. Every other form is
+ * untouched: fixtures are built from explicit date strings and the modules
+ * parse them.
+ */
+function makePinnedDate(fixedMs) {
+    return class PinnedDate extends REAL_DATE {
         constructor(...args) {
             if (args.length === 0) super(fixedMs);
             else super(...args);
         }
         static now() { return fixedMs; }
-    }
-    global.Date = PinnedDate;
+    };
 }
 
 
@@ -184,13 +194,33 @@ async function run(filter) {
                 ctx.check(ok ? label : `${label}\n      expected: ${JSON.stringify(expected)}\n      actual:   ${JSON.stringify(actual)}`, ok);
             },
             installFakeBrowser,
-            loadModule
+            loadModule,
+            /**
+             * Pin this suite's clock to a specific day.
+             *
+             * For fixtures inherently tied to a date: a month-to-date row only
+             * ever takes over the CURRENT month, so a suite testing one has to
+             * agree with the calendar about which month that is. Declaring the
+             * date makes a suite say what it depends on, and keeps
+             * TEST_CLOCK=2027-01-01 a signal about the application rather than
+             * about fixture dates.
+             *
+             * Restored after the suite, so it never leaks into the next one.
+             */
+            pinClock(date) {
+                const ms = new REAL_DATE(`${date}T12:00:00Z`).getTime();
+                if (Number.isNaN(ms)) throw new Error(`pinClock needs YYYY-MM-DD, got "${date}"`);
+                global.Date = makePinnedDate(ms);
+            }
         };
+        const clockBeforeSuite = global.Date;
         try {
             await s.fn(ctx);
         } catch (err) {
             failures.push(`${s.name} → threw: ${err && err.message}`);
             console.log(`  ✗ threw: ${err && err.stack ? err.stack.split('\n')[0] : err}`);
+        } finally {
+            global.Date = clockBeforeSuite;
         }
     }
 
