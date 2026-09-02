@@ -215,3 +215,48 @@ suite('contest: the feature is wired and self-contained', (t) => {
     t.check('it never touches the storage module', ui.indexOf('saveWithSizeCheck') === -1 && ui.indexOf('readStore') === -1);
     t.check('and never touches localStorage', ui.indexOf('localStorage') === -1);
 });
+
+suite('contest: a late survey added to an earlier day just adds entries', (t) => {
+    const contest = load(t);
+
+    // Monday as it was known on Monday: adherence in, no surveys yet.
+    const data = month({
+        '2026-09-07': { 'Alyssa Dimes': { adherence: 96 } },
+        '2026-09-08': { 'Alyssa Dimes': { adherence: 95 } }
+    });
+    const before = contest.buildLeaderboard(data)[0];
+    t.equal('two days on adherence', before.dailyAdherence, 2);
+    t.equal('and no survey entries yet', before.perfectSurvey, 0);
+
+    // Thursday: the survey for Monday's call finally lands, and gets recorded
+    // against Monday because that is the day it was sent out.
+    data.days['2026-09-07']['Alyssa Dimes'].perfectSurveys = 2;
+    const after = contest.buildLeaderboard(data)[0];
+
+    t.equal('the surveys now count', after.perfectSurvey, 2);
+    // Backfilling must not disturb what was already earned. Adherence is known
+    // on the day and never changes, so the day, week and month awards are
+    // untouched by a survey arriving late.
+    t.equal('the adherence days are unchanged', after.dailyAdherence, before.dailyAdherence);
+    t.equal('and so is the week', after.weeklyAdherence, before.weeklyAdherence);
+    t.equal('total went up by exactly the surveys', after.total, before.total + 2);
+});
+
+suite('contest: editing one team does not wipe the rest of that day', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8').replace(/\r\n/g, '\n');
+    const start = ui.indexOf('async function saveDay');
+    const body = ui.slice(start, start + 2400);
+
+    // A day is revisited days later to add surveys that arrived late. If that
+    // revisit happens with a different team selected, rebuilding the day from
+    // the visible rows would delete everyone not on screen.
+    t.check('the save starts from what is already stored for that date',
+        /const day = Object\.assign\(\{\}, month\.days\[date\] \|\| \{\}\)/.test(body));
+    t.check('and a visible person with both boxes empty is still removed',
+        /delete day\[name\]/.test(body));
+    t.check('rather than starting from an empty object',
+        body.indexOf('const day = {};') === -1);
+});

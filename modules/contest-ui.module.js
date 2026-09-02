@@ -206,16 +206,29 @@
         const monthKey = monthKeyFor(date);
         const month = currentMonthData();
 
-        // The day is rebuilt from what is on screen rather than merged into what
-        // was there. Clearing a box has to mean "this did not happen", which a
-        // merge would quietly ignore.
-        const day = {};
+        // Only the people on screen are rewritten. Anyone stored for this date
+        // but not currently listed is left exactly as they were.
+        //
+        // This matters because of how surveys arrive: a call taken on Monday can
+        // have its survey land on Thursday, so a day gets revisited days later
+        // to add them. If that revisit happened with a different team selected,
+        // rebuilding the whole day from the visible rows would delete everyone
+        // who was not on screen. Entering a day as Everyone and coming back as
+        // one team would silently drop the other hundred people.
+        //
+        // Clearing a box still means "this did not happen" for that person,
+        // because a visible name with both boxes empty is removed below.
+        const day = Object.assign({}, month.days[date] || {});
         document.querySelectorAll('[data-contest-adherence]').forEach((input) => {
             const name = input.getAttribute('data-contest-adherence');
             const adherence = input.value === '' ? null : Number(input.value);
             const perfectInput = document.querySelector(`[data-contest-perfect="${CSS.escape(name)}"]`);
             const perfect = perfectInput && perfectInput.value !== '' ? Number(perfectInput.value) : 0;
-            if (adherence === null && !perfect) return;
+
+            if (adherence === null && !perfect) {
+                delete day[name];
+                return;
+            }
             day[name] = {};
             if (Number.isFinite(adherence)) day[name].adherence = adherence;
             if (perfect) day[name].perfectSurveys = perfect;
