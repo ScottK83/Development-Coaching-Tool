@@ -10,6 +10,7 @@
     // CONSTANTS
     // ============================================
     const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+    const HYDRATE_TIMEOUT_MS = window.DevCoachConstants?.HYDRATE_TIMEOUT_MS || 8000;
     const SENTIMENT_PHRASE_DB_STORAGE_KEY = window.DevCoachConstants?.SENTIMENT_PHRASE_DB_STORAGE_KEY || 'sentimentPhraseDatabase';
     const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = window.DevCoachConstants?.ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY || 'associateSentimentSnapshots';
     const LOCALSTORAGE_MAX_SIZE_MB = window.DevCoachConstants?.LOCALSTORAGE_MAX_SIZE_MB || 4;
@@ -134,7 +135,44 @@
      * the deploy back costs nothing. Reclaiming the localStorage space is a
      * separate, explicit step.
      */
+    // Set once the deadline below has given up. A hydrate that finishes after
+    // that point must not retarget the app at the backend: boot has already read
+    // through localStorage and the two copies can have diverged since.
+    let hydrateAbandoned = false;
+
+    /**
+     * Bounds hydrate so it always settles.
+     *
+     * open() holds the only timeout in the backend. getAll() and put() hold
+     * none, and this awaits getAll four times, so one stalled IndexedDB
+     * transaction hung it forever. index.html does not create the script.js tag
+     * until hydrate resolves and its catch only fires on a rejection, so the
+     * result was an app that never booted and never said why -- a blank page,
+     * indefinitely.
+     *
+     * A timeout is not a new failure mode. Every error this function already
+     * knows about ends the same way, on localStorage, and that is what a stall
+     * now does too.
+     */
     async function hydrate() {
+        let timer = null;
+        const deadline = new Promise((resolve) => {
+            timer = setTimeout(() => {
+                hydrateAbandoned = true;
+                backendMode = 'localStorage';
+                console.error(`[storage] The storage backend did not respond within ${HYDRATE_TIMEOUT_MS}ms; continuing on localStorage.`);
+                resolve('localStorage');
+            }, HYDRATE_TIMEOUT_MS);
+        });
+
+        try {
+            return await Promise.race([hydrateUsingBackend(), deadline]);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    async function hydrateUsingBackend() {
         const backend = window.DevCoachModules?.idbBackend;
         if (!backend) {
             console.warn('[storage] idb backend module is absent; staying on localStorage.');
@@ -189,7 +227,13 @@
             // Reuses the read above when nothing was written since. Two full
             // getAll() calls meant loading every bulk store twice before a
             // single line of the app ran, which is dead time on every boot.
-            bulkCache = (copied || backfilled.length) ? await backend.getAll() : existing;
+            const cache = (copied || backfilled.length) ? await backend.getAll() : existing;
+            // The deadline may have fired while those reads were outstanding.
+            // Boot has already gone ahead on localStorage by then, so switching
+            // now would point live reads at a cache the running app never agreed
+            // to use.
+            if (hydrateAbandoned) return 'localStorage';
+            bulkCache = cache;
             backendMode = 'idb';
             return 'idb';
         } catch (error) {

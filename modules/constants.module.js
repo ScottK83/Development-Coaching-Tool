@@ -21,6 +21,16 @@
     // locked profile, can leave the request pending forever, and boot must not
     // depend on it resolving.
     const IDB_OPEN_TIMEOUT_MS = 4000;
+    // A ceiling on the whole of storage.hydrate(), not just the open.
+    //
+    // open() carries the only timeout in the backend; getAll() and put() carry
+    // none, and hydrate awaits getAll four times. A stalled IndexedDB read
+    // therefore hung hydrate forever -- and index.html does not create the
+    // script.js tag until hydrate resolves, so the app never booted at all and
+    // showed nothing, because the loader's catch fires on a rejection and a
+    // hang is not one. Comfortably above the open timeout so a merely slow
+    // backend is still used rather than abandoned.
+    const HYDRATE_TIMEOUT_MS = 8000;
 
     // The stores that grow with weeks, associates or calls. These are what move
     // to IndexedDB; the ~35 small config and view-state keys stay in
@@ -62,6 +72,7 @@
         IDB_BULK_STORE,
         IDB_ARCHIVE_STORE,
         IDB_OPEN_TIMEOUT_MS,
+        HYDRATE_TIMEOUT_MS,
         BULK_STORAGE_KEYS
     };
 })();
