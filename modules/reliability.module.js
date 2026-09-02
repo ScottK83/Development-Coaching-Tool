@@ -506,8 +506,9 @@
     function parseVerintExcel(file) {
         return new Promise(function(resolve, reject) {
             var reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
+                    await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
                     var XLSX = window.XLSX;
                     if (!XLSX) return reject(new Error('SheetJS not loaded'));
                     var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
@@ -676,8 +677,9 @@
     function parsePayrollExcel(file) {
         return new Promise(function(resolve, reject) {
             var reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
+                    await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
                     var XLSX = window.XLSX;
                     if (!XLSX) return reject(new Error('SheetJS not loaded'));
                     var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });

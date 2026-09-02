@@ -518,7 +518,7 @@
                         // tell the user their data did not come back.
                         const verifyWeekly = safeLoadJson('weeklyData');
                         const verifyKeys = verifyWeekly ? Object.keys(verifyWeekly).length : 0;
-                        const verifyTeam = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'myTeamMembers') || '{}');
+                        const verifyTeam = (window.DevCoachModules?.storage?.readStore?.('myTeamMembers') ?? {});
                         const verifyTeamKeys = Object.keys(verifyTeam).length;
                         console.log(`[Repo Restore] Verification: weeklyData=${verifyKeys} periods, myTeamMembers=${verifyTeamKeys} entries`);
 
@@ -764,12 +764,9 @@
     }
 
     async function exportIntelligenceLedgerWorkbook() {
-        if (typeof XLSX === 'undefined') {
-            showToast('XLSX library not loaded. Refresh and try again.', 3500);
-            return;
-        }
-
         try {
+            await window.DevCoachModules?.assetLoader?.ensureXlsx?.();
+            if (typeof window.XLSX === 'undefined') throw new Error('XLSX library is unavailable');
             const changeLogCsv = await fetchReferenceCsvFromWorkspaceOrRepo('performance-intelligence-change-log.csv');
             const metrics2026Csv = await fetchReferenceCsvFromWorkspaceOrRepo('performance-intelligence-metrics-2026.csv');
 
