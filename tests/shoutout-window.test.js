@@ -41,14 +41,24 @@ function load(t, overrides) {
     t.installFakeBrowser();
     const data = Object.assign(stores(), overrides || {});
 
-    // celebrations reads the bare globals; periodIndex reads them off window.
-    // Both point at the same objects, the way script.js has them.
+    // celebrations reads the bare globals; periodIndex reads through the
+    // storage module. Both point at the same objects, the way script.js has
+    // them.
+    //
+    // This used to put the stores on `window` as well, with a comment claiming
+    // periodIndex read them there. It does not, and it could not: script.js
+    // declares those globals with `let`, which never creates a window property,
+    // so in a browser that branch was dead and storage was always what ran.
+    // These suites were passing through a path the application does not have.
     global.weeklyData = data.weeklyData;
     global.ytdData = data.ytdData;
     global.dailyData = data.dailyData;
-    global.window.weeklyData = data.weeklyData;
-    global.window.ytdData = data.ytdData;
-    global.window.dailyData = data.dailyData;
+
+    global.window.DevCoachModules.storage = {
+        loadWeeklyData: () => data.weeklyData,
+        loadYtdData: () => data.ytdData,
+        loadDailyData: () => data.dailyData
+    };
 
     global.window.DevCoachModules.centerRanking = {
         buildCenterRankings: () => ({ rankings: [], totalEmployees: 0, teamMembers: new Set(), periodKey: '' }),

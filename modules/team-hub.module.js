@@ -54,9 +54,17 @@
         return String(fullName || '').split(/[\s,]+/)[0] || fullName;
     }
 
+    // Reads go through the storage module.
+    //
+    // These used to check `window.weeklyData` first and fall back to storage.
+    // script.js declares those globals with `let`, which creates a script-scope
+    // binding and never a property on window, and nothing anywhere assigns
+    // them -- so in a browser the check was always false and the fallback was
+    // always what ran. It was not merely dead, it was actively misleading: the
+    // test harness DOES put fixtures on window, so tests took the cheap branch
+    // the browser can never reach. A picker benchmark read 1 ms under test and
+    // 3150 ms in the shape a browser actually runs.
     function store(name) {
-        const live = typeof window[name] === 'object' && window[name] ? window[name] : null;
-        if (live) return live;
         const loaders = { weeklyData: 'loadWeeklyData', ytdData: 'loadYtdData', dailyData: 'loadDailyData' };
         return window.DevCoachModules?.storage?.[loaders[name]]?.() || {};
     }

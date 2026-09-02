@@ -1144,12 +1144,11 @@ function loadWithPeriod(t, key, periodType) {
     t.loadModule('modules/metric-profiles.module.js');
     const store = {};
     store[key] = { metadata: { periodType, startDate: key.split('|')[0], endDate: key.split('|')[1] }, employees: [] };
+    // Bare globals only. Mirroring these onto `window` did nothing: script.js
+    // declares them with `let`, so no module can read them there.
     global.weeklyData = store;
-    global.window.weeklyData = store;
     global.ytdData = {};
-    global.window.ytdData = {};
     global.dailyData = {};
-    global.window.dailyData = {};
     return t.loadModule('modules/celebrations.module.js').celebrations;
 }
 

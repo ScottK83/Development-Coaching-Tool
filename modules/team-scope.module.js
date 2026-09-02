@@ -145,12 +145,22 @@
 
     // Everyone the tool has seen, across every store — a rep who only appears
     // in daily uploads should still be selectable.
+    // Reads go through the storage module.
+    //
+    // These used to check `window.weeklyData` first and fall back to storage.
+    // script.js declares those globals with `let`, which creates a script-scope
+    // binding and never a property on window, and nothing anywhere assigns
+    // them -- so in a browser the check was always false and the fallback was
+    // always what ran. It was not merely dead, it was actively misleading: the
+    // test harness DOES put fixtures on window, so tests took the cheap branch
+    // the browser can never reach. A picker benchmark read 1 ms under test and
+    // 3150 ms in the shape a browser actually runs.
     function getKnownEmployeeNames() {
         const storage = window.DevCoachModules?.storage;
         const stores = [
-            (typeof window.weeklyData === 'object' && window.weeklyData) || storage?.loadWeeklyData?.() || {},
-            (typeof window.ytdData === 'object' && window.ytdData) || storage?.loadYtdData?.() || {},
-            (typeof window.dailyData === 'object' && window.dailyData) || storage?.loadDailyData?.() || {}
+            storage?.loadWeeklyData?.() || {},
+            storage?.loadYtdData?.() || {},
+            storage?.loadDailyData?.() || {}
         ];
 
         const names = new Set();

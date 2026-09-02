@@ -66,7 +66,9 @@ suite('year standing: refuses to guess a direction', (t) => {
     t.check('nonsense yields nothing', ys.classifyMovement('x', 'y', 127) === null);
 
     // Only one YTD upload means there is no earlier point to compare against.
-    global.window.ytdData = { 'a|2026-06-30': { employees: [] } };
+    // Through the storage module, which is where year-standing reads it.
+    const oneUpload = { 'a|2026-06-30': { employees: [] } };
+    global.window.DevCoachModules.storage = { loadYtdData: () => oneUpload };
     t.check('one upload is not a direction', ys.gatherYearMovement('Anyone') === null);
 });
 

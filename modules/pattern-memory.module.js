@@ -289,9 +289,7 @@
 
         // script.js declares weeklyData with `let`, so it never lands on `window`.
         // Fall back to the storage module, same as team-snapshot/dashboard.
-        const weeklyData = (typeof window.weeklyData === 'object' && window.weeklyData)
-            ? window.weeklyData
-            : (window.DevCoachModules?.storage?.loadWeeklyData?.() || {});
+        const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
         const { reps, summary } = runPatternScan(weeklyData);
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));

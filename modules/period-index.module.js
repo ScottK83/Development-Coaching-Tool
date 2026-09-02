@@ -263,10 +263,17 @@
 
     function currentStores() {
         const storage = window.DevCoachModules?.storage;
-        const live = (name, loader) => {
-            const value = typeof window[name] === 'object' && window[name] ? window[name] : null;
-            return value || storage?.[loader]?.() || {};
-        };
+    // Reads go through the storage module.
+    //
+    // These used to check `window.weeklyData` first and fall back to storage.
+    // script.js declares those globals with `let`, which creates a script-scope
+    // binding and never a property on window, and nothing anywhere assigns
+    // them -- so in a browser the check was always false and the fallback was
+    // always what ran. It was not merely dead, it was actively misleading: the
+    // test harness DOES put fixtures on window, so tests took the cheap branch
+    // the browser can never reach. A picker benchmark read 1 ms under test and
+    // 3150 ms in the shape a browser actually runs.
+        const live = (name, loader) => storage?.[loader]?.() || {};
         return {
             dailyData: live('dailyData', 'loadDailyData'),
             weeklyData: live('weeklyData', 'loadWeeklyData'),

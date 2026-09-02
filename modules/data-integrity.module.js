@@ -336,12 +336,8 @@
 
         // script.js declares these with `let`, so they never land on `window`.
         // Fall back to the storage module, same as team-snapshot/dashboard.
-        const weeklyData = (typeof window.weeklyData === 'object' && window.weeklyData)
-            ? window.weeklyData
-            : (window.DevCoachModules?.storage?.loadWeeklyData?.() || {});
-        const ytdData = (typeof window.ytdData === 'object' && window.ytdData)
-            ? window.ytdData
-            : (window.DevCoachModules?.storage?.loadYtdData?.() || {});
+        const weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
+        const ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
         const { issues } = runDataIntegrityScan(weeklyData, ytdData);
 
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));

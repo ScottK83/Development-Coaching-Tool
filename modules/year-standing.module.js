@@ -174,8 +174,7 @@
         const ranking = window.DevCoachModules?.centerRanking;
         if (!ranking?.buildRankingsForPeriod) return null;
 
-        const ytd = (typeof window.ytdData === 'object' && window.ytdData)
-            || window.DevCoachModules?.storage?.loadYtdData?.() || {};
+        const ytd = window.DevCoachModules?.storage?.loadYtdData?.() || {};
         const keys = sortedKeysByEnd(ytd);
         if (keys.length < 2) return null;
 
