@@ -2095,6 +2095,46 @@
         return map;
     }
 
+    var _SURVEY_WEIGHTED_AVG = { cxRepOverall: true, fcr: true, overallExperience: true };
+
+    /**
+     * What the centre actually ran at, for one metric.
+     *
+     * Volume weighted, following computeTeamMetricValue, because a flat mean of
+     * per person rates counts a twelve call week the same as a two hundred call
+     * one. That is the mistake this app avoids everywhere else and it would be
+     * no less wrong printed next to somebody name.
+     *
+     * Reliability is the exception and is a mean per person. It is hours missed,
+     * so the centre total is a five figure number nobody can place themselves
+     * against; what somebody wants to know is what a typical person missed.
+     */
+    function _centerAverageForMetric(holders, row) {
+        var values = [];
+        var wSum = 0;
+        var wTotal = 0;
+
+        holders.forEach(function (h) {
+            var value = _trajectoryMetricValue(h.holder, row);
+            if (value === null || value === undefined || isNaN(value)) return;
+            values.push(Number(value));
+
+            var weight;
+            if (_SURVEY_WEIGHTED_AVG[row.registry]) {
+                weight = Number(h.holder.surveyTotal) > 0 ? Number(h.holder.surveyTotal) : 0;
+            } else {
+                weight = Number(h.holder.totalCalls) > 0 ? Number(h.holder.totalCalls) : 1;
+            }
+            if (weight > 0) { wSum += Number(value) * weight; wTotal += weight; }
+        });
+
+        if (!values.length) return null;
+        if (row.registry === 'reliability') {
+            return values.reduce(function (a, b) { return a + b; }, 0) / values.length;
+        }
+        return wTotal > 0 ? wSum / wTotal : null;
+    }
+
     /** Per metric placings for one period, keyed by metric label then name. */
     function _metricRanksFor(holders) {
         var out = {};
@@ -2156,10 +2196,20 @@
             };
         });
 
+        var centerMetrics = TRAJECTORY_METRIC_ROWS.map(function (row) {
+            var avg = _centerAverageForMetric(holders, row);
+            return {
+                label: row.label,
+                display: (avg === null || avg === undefined || isNaN(avg))
+                    ? '' : _formatMetricDisplay(row.registry, avg)
+            };
+        });
+
         return {
             label: 'YTD',
             present: true,
             metrics: metrics,
+            centerMetrics: centerMetrics,
             meetsCount: metrics.filter(function (m) { return m.meets === true; }).length,
             measuredAgainstTarget: metrics.filter(function (m) { return m.meets !== null; }).length
         };
@@ -2267,14 +2317,18 @@
         // The year so far sits in its own wider column in front of January, so
         // the first thing read is where the year actually stands.
         var ytd = model.ytd || null;
-        var ytdW = ytd ? 112 : 0;
+        var ytdW = ytd ? 104 : 0;
+        // The centre beside the person, so above or below it is read rather
+        // than worked out.
+        var hasAvg = !!(ytd && ytd.centerMetrics);
+        var avgW = hasAvg ? 96 : 0;
         var headerH = 96, chartH = 210, gap = 26, headRowH = 30;
         // Taller rows than before: every cell now carries a placing under its
         // verdict, and 44px had no room left under the pill.
-        var rowH = 56;
+        var rowH = 46;
         var rows = TRAJECTORY_METRIC_ROWS.length + 1;   // targets-met row + one per metric
-        var W = padX * 2 + labelW + ytdW + colW * n;
-        var H = headerH + chartH + gap + headRowH + rowH * rows + 68;
+        var W = padX * 2 + labelW + ytdW + avgW + colW * n;
+        var H = headerH + chartH + gap + headRowH + rowH * rows + 84;
 
         // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
         // display and still sharp on a high-DPI one.
@@ -2308,7 +2362,7 @@
         var most = model.columns.reduce(function (m, c) {
             return Math.max(m, c.measuredAgainstTarget || 0);
         }, 1);
-        var x = function (i) { return padX + labelW + ytdW + colW * (i + 0.5); };
+        var x = function (i) { return padX + labelW + ytdW + avgW + colW * (i + 0.5); };
         var y = function (v) { return chartBottom - (v / most) * (chartBottom - chartTop); };
 
         // Up is better, which is the way the word reads.
@@ -2357,17 +2411,38 @@
         var gridTop = headerH + chartH + gap;
         var gridBottom = gridTop + headRowH + rowH * rows;
         var ytdCx = padX + labelW + ytdW / 2;
+        var avgCx = padX + labelW + ytdW + avgW / 2;
 
         // A placing, drawn small and grey under the verdict it belongs to.
+        // The verdict is the cell colour now. A pill inside a shaded cell was
+        // saying the same thing twice and spending the row height to do it.
+        var MEETS_BG = "#e4f3e8", MEETS_INK = "#1a6b32";
+        var BELOW_BG = "#fbe6e4", BELOW_INK = "#a52f26";
+
+        var shade = function (m, left, width, ry) {
+            if (!m || m.meets === null) return;
+            ctx.fillStyle = m.meets ? MEETS_BG : BELOW_BG;
+            // Inset by a pixel so the row rule above stays visible.
+            ctx.fillRect(left, ry - rowH / 2 + 1, width, rowH - 1);
+        };
+
+        // Just the placing. The field size lives in the footer once, because it
+        // is not the same number in every cell and repeating it forty times was
+        // the noisiest thing on the card.
         var placing = function (m, cx, ry) {
-            if (!m || !m.rank || !m.rankTotal) return;
-            text(_ordinal(m.rank) + " of " + m.rankTotal, cx, ry + 21, 9.5, "#8798a8", "600", "center");
+            if (!m || !m.rank) return;
+            text(_ordinal(m.rank), cx, ry + 13, 10, "#7d8d9d", "600", "center");
         };
 
         if (ytd) {
             ctx.fillStyle = "#eef4fb";
             ctx.fillRect(padX + labelW, gridTop, ytdW, gridBottom - gridTop);
             text("YTD", ytdCx, gridTop + headRowH / 2, 13, "#0f2a4a", "700", "center");
+        }
+        if (hasAvg) {
+            ctx.fillStyle = "#f4f6f9";
+            ctx.fillRect(padX + labelW + ytdW, gridTop, avgW, gridBottom - gridTop);
+            text("Center avg", avgCx, gridTop + headRowH / 2, 12, "#5b6b7c", "700", "center");
         }
         model.columns.forEach(function (c, i) {
             var cx = x(i);
@@ -2390,6 +2465,16 @@
             ctx.stroke();
             text(label, padX + 6, ry, 12, '#5b6b7c', r === 0 ? '700' : '400');
 
+            if (hasAvg) {
+                if (r === 0) {
+                    text('', avgCx, ry, 12, '#5b6b7c', '400', 'center');
+                } else {
+                    var cm = ytd.centerMetrics[r - 1];
+                    text(cm && cm.display ? cm.display : '.', avgCx, ry,
+                        12.5, cm && cm.display ? '#5b6b7c' : '#c3ccd6', '600', 'center');
+                }
+            }
+
             if (ytd) {
                 if (r === 0) {
                     text(ytd.meetsCount + ' of ' + ytd.measuredAgainstTarget, ytdCx, ry, 13, '#0f2a4a', '700', 'center');
@@ -2398,20 +2483,11 @@
                     if (!ym || !ym.display) {
                         text('.', ytdCx, ry, 12, '#c3ccd6', '400', 'center');
                     } else if (ym.meets !== null) {
-                        var ypw = 52, yph = 15, ypx = ytdCx - ypw / 2, ypy = ry + 1;
-                        ctx.fillStyle = ym.meets ? IMG_MEETS_COLOR : IMG_BELOW_COLOR;
-                        if (typeof ctx.roundRect === 'function') {
-                            ctx.beginPath();
-                            ctx.roundRect(ypx, ypy, ypw, yph, 7);
-                            ctx.fill();
-                        } else {
-                            ctx.fillRect(ypx, ypy, ypw, yph);
-                        }
-                        text(ym.meets ? 'meets' : 'below', ytdCx, ypy + yph / 2 + 0.5, 10, '#ffffff', '700', 'center');
-                        text(ym.display, ytdCx, ry - 8, 13, '#0f2a4a', '700', 'center');
+                        shade(ym, padX + labelW, ytdW, ry);
+                        text(ym.display, ytdCx, ry - 7, 13.5, ym.meets ? MEETS_INK : BELOW_INK, '700', 'center');
                         placing(ym, ytdCx, ry);
                     } else {
-                        text(ym.display, ytdCx, ry - 4, 13, '#0f2a4a', '700', 'center');
+                        text(ym.display, ytdCx, ry - 7, 13.5, '#0f2a4a', '700', 'center');
                         placing(ym, ytdCx, ry);
                     }
                 }
@@ -2431,20 +2507,11 @@
                 // value sits above, because the value is what backs the verdict up
                 // and the verdict is the point.
                 if (m.meets !== null) {
-                    var pw = 52, ph = 15, px = cx - pw / 2, py = ry + 1;
-                    ctx.fillStyle = m.meets ? IMG_MEETS_COLOR : IMG_BELOW_COLOR;
-                    if (typeof ctx.roundRect === 'function') {
-                        ctx.beginPath();
-                        ctx.roundRect(px, py, pw, ph, 7);
-                        ctx.fill();
-                    } else {
-                        ctx.fillRect(px, py, pw, ph);
-                    }
-                    text(m.meets ? 'meets' : 'below', cx, py + ph / 2 + 0.5, 10, '#ffffff', '700', 'center');
-                    text(m.display, cx, ry - 8, 12, '#26364a', '600', 'center');
+                    shade(m, cx - colW / 2, colW, ry);
+                    text(m.display, cx, ry - 7, 12.5, m.meets ? MEETS_INK : BELOW_INK, '700', 'center');
                     placing(m, cx, ry);
                 } else {
-                    text(m.display, cx, ry - 4, 12, '#26364a', '400', 'center');
+                    text(m.display, cx, ry - 7, 12.5, '#26364a', '400', 'center');
                     placing(m, cx, ry);
                 }
             });
@@ -2464,8 +2531,9 @@
         text('* month still in progress', padX + 6, lastRow + 32, 11, '#9aa7b4');
         // Said in full, because a placing with no scope on it is read as an
         // overall one, and that is not what any of these are.
-        text('Placings are within that one metric across the call center, for that column only. '
-            + 'They are not an overall ranking.', padX + 6, lastRow + 48, 11, '#7a8794');
+        text('Green meets the target, red is below it.', padX + 6, lastRow + 48, 11, '#7a8794');
+        text('Placings are within that one metric, against everyone measured in that column. '
+            + 'They are not an overall ranking.', padX + 6, lastRow + 64, 11, '#7a8794');
 
         return canvas;
     }

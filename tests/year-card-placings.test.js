@@ -95,3 +95,39 @@ suite('year card: placings say what they are', (t) => {
     t.check('and that they are not an overall ranking',
         src.indexOf('not an overall ranking') > -1);
 });
+
+suite('year card: the verdict is the cell colour, not a pill inside it', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/center-ranking.module.js'), 'utf8');
+
+    // A shaded cell already says meets or below. The pill was saying it twice
+    // and spending the row height to do it.
+    t.check('the pills are gone', src.indexOf("m.meets ? 'meets' : 'below'") === -1);
+    t.check('the cell is shaded instead', /function shade/.test(src) || src.indexOf('var shade = function') > -1);
+    t.check('and the footer explains the colours',
+        src.indexOf('Green meets the target, red is below it.') > -1);
+
+    // A placing with no field size on it has to be explained once, in the
+    // footer, or it reads as an overall placing.
+    t.check('the placing is just the ordinal', src.indexOf('_ordinal(m.rank) + " of "') === -1);
+    t.check('and the footer says what it is measured against',
+        src.indexOf('against everyone measured in that column') > -1);
+});
+
+suite('year card: the centre average is weighted, never a flat mean', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/center-ranking.module.js'), 'utf8');
+    const start = src.indexOf('function _centerAverageForMetric');
+    t.check('there is a centre average', start > -1);
+
+    const fn = src.slice(start, start + 1600);
+
+    // A flat mean of per person rates counts a twelve call week the same as a
+    // two hundred call one. Everywhere else in this app aggregates by volume,
+    // and a number printed beside somebody's name is no place to stop.
+    t.check('rate metrics are weighted', /wSum \+= Number\(value\) \* weight/.test(fn));
+    t.check('surveys weight by survey count', /surveyTotal/.test(fn));
+    t.check('everything else by calls', /totalCalls/.test(fn));
+
+    // Hours missed is the exception. The centre TOTAL is a five figure number
+    // nobody can place themselves against, so that one is a mean per person.
+    t.check('reliability is a per person mean', /reliability/.test(fn) && /values\.length/.test(fn));
+});

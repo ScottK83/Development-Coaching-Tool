@@ -1131,8 +1131,13 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
 
         t.check('the targets are named, so meets can be checked',
             texts.some((s) => /^Target:/.test(s)));
-        t.check('the verdict is a word',
-            texts.indexOf('meets') !== -1 || texts.indexOf('below') !== -1);
+        // The verdict used to be the word "meets" or "below" in a pill. It is
+        // the cell colour now, so what has to be checked is that the card still
+        // says somewhere what the colour means.
+        t.check('the colours are explained',
+            texts.some((str) => /Green meets the target/.test(str)));
+        t.check('and the placings say what they are measured against',
+            texts.some((str) => /not an overall ranking/.test(str)));
         t.check('a month with no data says so', texts.indexOf('no data') !== -1);
     });
 });
