@@ -1095,6 +1095,224 @@
         );
     }
 
+    // ============================================
+    // IMPORT FROM WHAT WAS ALREADY UPLOADED
+    // ============================================
+    //
+    // Typing a grid of eighteen people every day, for numbers the app already
+    // holds, is not work anybody should be doing. This reads the daily uploads
+    // and works the entries out instead.
+    //
+    // Adherence imports cleanly. Perfect surveys mostly cannot, and that is a
+    // property of the data rather than a corner cut here. Nothing in this app
+    // has ever stored a single survey: an upload carries rate percentages and
+    // their denominators, one row per person per period, so there is no record
+    // of an individual response to call perfect.
+    //
+    // There is exactly one case where the count follows without assuming
+    // anything. If every survey rate that came back is 100, then every response
+    // counted was flawless, so the number of perfect surveys IS the number of
+    // responses. Below 100 the rates cannot be unpicked: the questions carry
+    // different denominators, so 80% on one and 100% on another does not say
+    // which responses were which, and any number taken from it would be
+    // invented. Those days are reported as needing a look rather than guessed
+    // at, because this decides who gets a prize.
+
+    var IMPORT_SURVEY_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
+
+    function importNumber(value) {
+        if (value === null || value === undefined || value === '') return null;
+        var n = Number(value);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    /** The date a stored period covers, or '' when it covers more than one. */
+    function importSingleDate(key, metadata) {
+        var meta = metadata || {};
+        var start = String(meta.startDate || '');
+        var end = String(meta.endDate || '');
+        var iso = /^\d{4}-\d{2}-\d{2}$/;
+
+        if (!end && String(key).indexOf('|') > -1) {
+            var halves = String(key).split('|');
+            start = start || halves[0];
+            end = halves[1];
+        }
+        if (!end && iso.test(String(key))) end = String(key);
+        if (!iso.test(end)) return '';
+
+        // A row covering a span cannot be pinned to one day, and spreading it
+        // across the days would award entries nobody earned on any of them.
+        if (start && iso.test(start) && start !== end) return '';
+        return end;
+    }
+
+    /**
+     * Perfect surveys for one row.
+     *
+     * Gives a count only when every rate that came back is 100. Otherwise it
+     * says so, and the day waits for a person.
+     */
+    function importPerfectSurveys(row) {
+        var total = importNumber(row.surveyTotal);
+        if (total === null || total <= 0) return { count: 0, certain: true };
+
+        var scored = [];
+        IMPORT_SURVEY_KEYS.forEach(function (key) {
+            var value = importNumber(row[key]);
+            if (value !== null) scored.push(value);
+        });
+        if (!scored.length) return { count: 0, certain: true };
+
+        var allPerfect = scored.every(function (v) { return v >= 100; });
+        if (allPerfect) return { count: Math.round(total), certain: true };
+
+        return { count: 0, certain: false, total: Math.round(total) };
+    }
+
+    /**
+     * What an import would do, without doing it.
+     *
+     * Pure: everything arrives through arguments, so the panel can show this
+     * and let the supervisor decide before anything is written.
+     */
+    function buildImportPreview(stores, options) {
+        var opts = options || {};
+        var daily = (stores && stores.dailyData) || {};
+        var monthKey = String(opts.monthKey || '');
+        var allowed = null;
+        if (Array.isArray(opts.names)) {
+            allowed = {};
+            opts.names.forEach(function (name) { allowed[String(name).trim()] = true; });
+        }
+
+        var days = {};
+        var notes = [];
+        var needsSurveyCheck = [];
+        var spans = 0;
+        var people = {};
+        var adherenceValues = 0;
+        var surveyEntries = 0;
+
+        Object.keys(daily).sort().forEach(function (key) {
+            var period = daily[key] || {};
+            var date = importSingleDate(key, period.metadata);
+
+            if (!date) { spans += 1; return; }
+            if (monthKey && date.slice(0, 7) !== monthKey) return;
+
+            (period.employees || []).forEach(function (row) {
+                if (!row || !row.name) return;
+                var name = String(row.name).trim();
+                if (!name) return;
+                if (allowed && !allowed[name]) return;
+
+                var adherence = importNumber(row.scheduleAdherence);
+                var surveys = importPerfectSurveys(row);
+
+                if (adherence === null && !surveys.count) {
+                    if (!surveys.certain) needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
+                    return;
+                }
+
+                var day = days[date] || (days[date] = {});
+                var person = day[name] || (day[name] = {});
+
+                if (adherence !== null) {
+                    person.adherence = adherence;
+                    adherenceValues += 1;
+                }
+                if (surveys.count) {
+                    person.perfectSurveys = surveys.count;
+                    surveyEntries += surveys.count;
+                }
+                if (!surveys.certain) {
+                    needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
+                }
+
+                people[name] = true;
+            });
+        });
+
+        var dayList = Object.keys(days).sort();
+
+        if (spans) {
+            notes.push(spans + ' upload' + (spans === 1 ? '' : 's') + ' cover more than one day, so '
+                + (spans === 1 ? 'it was' : 'they were') + ' left out. Only a single day upload can say what happened on a day.');
+        }
+        if (needsSurveyCheck.length) {
+            notes.push(needsSurveyCheck.length + ' person day'
+                + (needsSurveyCheck.length === 1 ? '' : 's')
+                + ' had surveys that were not all perfect. The upload holds rates rather than single surveys, so how '
+                + 'many were perfect is not in it. Type those in. Everything at 100% came in on its own.');
+        }
+        if (!dayList.length) {
+            notes.push('Nothing to import for this month. Daily uploads are what this reads.');
+        }
+
+        return {
+            days: days,
+            notes: notes,
+            needsSurveyCheck: needsSurveyCheck,
+            dateRange: { first: dayList[0] || '', last: dayList[dayList.length - 1] || '' },
+            counts: {
+                days: dayList.length,
+                people: Object.keys(people).length,
+                adherenceValues: adherenceValues,
+                surveyEntries: surveyEntries
+            }
+        };
+    }
+
+    /**
+     * Folds a preview into a month, mutating neither.
+     *
+     * Fills gaps and leaves typed work alone. Nothing is ever deleted: a person
+     * or a day the import did not cover comes through untouched, which is the
+     * rule saveDay already follows and for the same reason.
+     */
+    function mergeImportIntoMonth(monthData, preview, options) {
+        var opts = options || {};
+        var overwrite = opts.overwrite === true;
+        var source = (monthData && monthData.days) || {};
+        var incoming = (preview && preview.days) || {};
+
+        var merged = {};
+        Object.keys(source).forEach(function (date) {
+            merged[date] = {};
+            Object.keys(source[date] || {}).forEach(function (name) {
+                merged[date][name] = Object.assign({}, source[date][name]);
+            });
+        });
+
+        var filled = 0;
+        var kept = 0;
+
+        Object.keys(incoming).forEach(function (date) {
+            var day = merged[date] || (merged[date] = {});
+            Object.keys(incoming[date]).forEach(function (name) {
+                var from = incoming[date][name] || {};
+                var to = day[name] || (day[name] = {});
+
+                ['adherence', 'perfectSurveys'].forEach(function (field) {
+                    if (from[field] === undefined) return;
+                    if (to[field] === undefined || overwrite) {
+                        to[field] = from[field];
+                        filled += 1;
+                    } else if (to[field] !== from[field]) {
+                        kept += 1;
+                    }
+                });
+            });
+        });
+
+        return {
+            month: Object.assign({}, monthData, { days: merged }),
+            filled: filled,
+            kept: kept
+        };
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.contest = {
         adherenceTarget,
@@ -1105,6 +1323,8 @@
         drawWinner,
         buildStandingsPost,
         buildTeamPost,
-        buildStandingsGraphicHtml
+        buildStandingsGraphicHtml,
+        buildImportPreview,
+        mergeImportIntoMonth
     };
 })();

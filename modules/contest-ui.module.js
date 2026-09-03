@@ -113,6 +113,7 @@
                         ${teamOptions}<option value="__all__">Everyone</option>
                     </select>
                     <button type="button" id="contestSaveDayBtn" class="btn-secondary" style="background: #2e7d32; color: white;">Save this day</button>
+                    <button type="button" id="contestImportBtn" class="btn-secondary" style="background: #1565c0; color: white;">⬇️ Pull from uploads</button>
                 </div>
                 <div id="contestDayGrid" style="max-height: 420px; overflow-y: auto;"></div>
                 <div id="contestDayStatus" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
@@ -261,6 +262,75 @@
 
         const people = Object.keys(day).length;
         if (status) status.textContent = `Saved ${people} ${people === 1 ? 'person' : 'people'} for ${date}.`;
+        renderStandings();
+    }
+
+    /**
+     * Fills the month from the daily uploads the app already holds.
+     *
+     * Shows what it found and what it could not work out before writing, then
+     * saves in one go. It fills gaps only: anything already typed stays, since
+     * a typed correction is the more reliable number of the two.
+     */
+    async function importFromUploads() {
+        var status = document.getElementById('contestDayStatus');
+        var say = function (message) { if (status) status.textContent = message; };
+        if (busy) return;
+
+        var api = contest();
+        if (!api?.buildImportPreview) { say('The import is not available.'); return; }
+
+        var date = document.getElementById('contestDate')?.value;
+        var monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
+        var stores = { dailyData: typeof dailyData !== 'undefined' ? dailyData : {} };
+
+        var preview = api.buildImportPreview(stores, {
+            monthKey: monthKey,
+            names: namesForTeam(selectedTeam())
+        });
+
+        if (!preview.counts.days) {
+            say(preview.notes.join(' '));
+            return;
+        }
+
+        var merged = api.mergeImportIntoMonth(currentMonthData(), preview);
+        var summary = 'Found ' + preview.counts.adherenceValues + ' adherence '
+            + (preview.counts.adherenceValues === 1 ? 'number' : 'numbers')
+            + ' and ' + preview.counts.surveyEntries + ' perfect '
+            + (preview.counts.surveyEntries === 1 ? 'survey' : 'surveys')
+            + ' across ' + preview.counts.days + ' day' + (preview.counts.days === 1 ? '' : 's')
+            + ' for ' + preview.counts.people + ' ' + (preview.counts.people === 1 ? 'person' : 'people') + '.';
+
+        var lines = [summary];
+        if (merged.kept) {
+            lines.push(merged.kept + ' ' + (merged.kept === 1 ? 'number you typed was' : 'numbers you typed were')
+                + ' left as they are.');
+        }
+        preview.notes.forEach(function (note) { lines.push(note); });
+        lines.push('', 'Fill in ' + merged.filled + ' ' + (merged.filled === 1 ? 'value' : 'values') + '?');
+
+        if (!window.confirm(lines.join('\n'))) { say('Nothing was imported.'); return; }
+
+        busy = true;
+        say('Saving to cloud storage...');
+        try {
+            await pushMonth(monthKey, merged.month);
+        } catch (error) {
+            say('Not saved: ' + (error?.message || error));
+            busy = false;
+            return;
+        }
+        loadedData = merged.month;
+        busy = false;
+
+        say('Imported ' + merged.filled + ' ' + (merged.filled === 1 ? 'value' : 'values') + '. '
+            + (preview.needsSurveyCheck.length
+                ? preview.needsSurveyCheck.length + ' person day'
+                    + (preview.needsSurveyCheck.length === 1 ? '' : 's')
+                    + ' still need perfect surveys typed in.'
+                : ''));
+        renderDayGrid();
         renderStandings();
     }
 
@@ -424,6 +494,7 @@
             document.getElementById('contestDate')?.addEventListener('change', loadMonthAndRender);
             document.getElementById('contestTeam')?.addEventListener('change', () => { renderDayGrid(); renderStandings(); });
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
+            document.getElementById('contestImportBtn')?.addEventListener('click', importFromUploads);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
             document.getElementById('contestDownloadGraphicBtn')?.addEventListener('click', downloadGraphic);
@@ -459,5 +530,5 @@
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
-    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
+    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
 })();

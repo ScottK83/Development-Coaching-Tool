@@ -498,3 +498,135 @@ suite('contest: the card reads correctly in the panel, not just in the export', 
         /white-space: nowrap;[^"]*">Perfect surveys</.test(html)
         || /Perfect surveys/.test(html) && (html.match(/white-space: nowrap/g) || []).length >= 3);
 });
+
+// ============================================
+// IMPORTING WHAT WAS ALREADY UPLOADED
+// ============================================
+
+function upload(date, employees) {
+    const stores = { dailyData: {} };
+    stores.dailyData[date + '|' + date] = { metadata: { startDate: date, endDate: date }, employees };
+    return stores;
+}
+
+suite('contest: adherence comes straight off the daily upload', (t) => {
+    const contest = load(t);
+
+    const preview = contest.buildImportPreview(upload('2026-09-01', [
+        { name: 'Alyssa Dimes', scheduleAdherence: 95.2 },
+        { name: 'Betty Yanez', scheduleAdherence: 88 }
+    ]), { monthKey: '2026-09' });
+
+    t.equal('Alyssa came through', preview.days['2026-09-01']['Alyssa Dimes'].adherence, 95.2);
+    t.equal('so did Betty', preview.days['2026-09-01']['Betty Yanez'].adherence, 88);
+    t.equal('two values found', preview.counts.adherenceValues, 2);
+});
+
+suite('contest: a perfect survey count is only taken when it is certain', (t) => {
+    const contest = load(t);
+
+    // Every rate at 100 means every response was flawless, so the count is the
+    // number of responses and nothing is being assumed.
+    const clean = contest.buildImportPreview(upload('2026-09-01', [
+        { name: 'Alyssa Dimes', surveyTotal: 3, cxRepOverall: 100, fcr: 100, overallExperience: 100 }
+    ]), { monthKey: '2026-09' });
+    t.equal('three responses, three perfect surveys',
+        clean.days['2026-09-01']['Alyssa Dimes'].perfectSurveys, 3);
+
+    // A rate below 100 says some response was not perfect, but not which or how
+    // many, because the questions carry different denominators. Guessing here
+    // would hand somebody raffle tickets they did not earn.
+    const mixed = contest.buildImportPreview(upload('2026-09-01', [
+        { name: 'Betty Yanez', surveyTotal: 5, cxRepOverall: 80, fcr: 100, overallExperience: 100 }
+    ]), { monthKey: '2026-09' });
+    t.check('no count is invented', !mixed.days['2026-09-01']);
+    t.equal('and it is reported for a person to type', mixed.needsSurveyCheck.length, 1);
+    t.check('naming who and when',
+        mixed.needsSurveyCheck[0].name === 'Betty Yanez' && mixed.needsSurveyCheck[0].date === '2026-09-01');
+});
+
+suite('contest: an upload spanning several days is left out', (t) => {
+    const contest = load(t);
+
+    // A week of adherence cannot be pinned to a day, and spreading it across
+    // the days would award entries nobody earned on any of them.
+    const stores = { dailyData: {
+        '2026-09-07|2026-09-11': {
+            metadata: { startDate: '2026-09-07', endDate: '2026-09-11' },
+            employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 96 }]
+        }
+    } };
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    t.equal('nothing was imported from it', preview.counts.days, 0);
+    t.check('and it says why', /more than one day/.test(preview.notes.join(' ')));
+});
+
+suite('contest: the import respects the month and the team', (t) => {
+    const contest = load(t);
+
+    const stores = { dailyData: {} };
+    stores.dailyData['2026-08-31|2026-08-31'] = { metadata: { startDate: '2026-08-31', endDate: '2026-08-31' },
+        employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 99 }] };
+    stores.dailyData['2026-09-01|2026-09-01'] = { metadata: { startDate: '2026-09-01', endDate: '2026-09-01' },
+        employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 95 }, { name: 'Someone Else', scheduleAdherence: 91 }] };
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09', names: ['Alyssa Dimes'] });
+
+    t.check('last month is left alone', !preview.days['2026-08-31']);
+    t.check('the other team is not imported', !preview.days['2026-09-01']['Someone Else']);
+    t.equal('only the picked person came through', preview.counts.people, 1);
+});
+
+suite('contest: importing never overwrites what was typed, and never deletes', (t) => {
+    const contest = load(t);
+
+    const existing = { days: {
+        '2026-09-01': { 'Alyssa Dimes': { adherence: 91, perfectSurveys: 2 } },
+        '2026-09-02': { 'Betty Yanez': { adherence: 97 } }
+    } };
+
+    const preview = contest.buildImportPreview(upload('2026-09-01', [
+        { name: 'Alyssa Dimes', scheduleAdherence: 95 },
+        { name: 'Kamella Dash', scheduleAdherence: 94 }
+    ]), { monthKey: '2026-09' });
+
+    const merged = contest.mergeImportIntoMonth(existing, preview);
+
+    t.equal('the typed number wins', merged.month.days['2026-09-01']['Alyssa Dimes'].adherence, 91);
+    t.equal('and is reported as kept', merged.kept, 1);
+    t.equal('a person who had nothing is filled in', merged.month.days['2026-09-01']['Kamella Dash'].adherence, 94);
+    t.equal('a day the import never touched survives', merged.month.days['2026-09-02']['Betty Yanez'].adherence, 97);
+    t.equal("and so does the typed survey count", merged.month.days['2026-09-01']['Alyssa Dimes'].perfectSurveys, 2);
+
+    // The caller still holds the month it passed in, so a failed save leaves
+    // the screen showing what is actually stored.
+    t.equal('the original was not mutated', existing.days['2026-09-01']['Alyssa Dimes'].adherence, 91);
+    t.check('and gained nobody', !existing.days['2026-09-01']['Kamella Dash']);
+
+    // With the flag, the import is allowed to win.
+    const forced = contest.mergeImportIntoMonth(existing, preview, { overwrite: true });
+    t.equal('overwrite replaces it', forced.month.days['2026-09-01']['Alyssa Dimes'].adherence, 95);
+});
+
+suite('contest: the import survives junk without inventing anything', (t) => {
+    const contest = load(t);
+
+    t.equal('no stores at all', contest.buildImportPreview(null, {}).counts.days, 0);
+    t.equal('empty stores', contest.buildImportPreview({ dailyData: {} }, {}).counts.days, 0);
+
+    const messy = contest.buildImportPreview(upload('2026-09-01', [
+        { name: '  Alyssa Dimes  ', scheduleAdherence: '95' },
+        { name: 'No Adherence', scheduleAdherence: '' },
+        { name: 'Null Adherence', scheduleAdherence: null },
+        { name: 'Zero Adherence', scheduleAdherence: 0 },
+        { scheduleAdherence: 90 }
+    ]), { monthKey: '2026-09' });
+
+    const day = messy.days['2026-09-01'];
+    t.equal('a padded name is trimmed to the roster spelling', day['Alyssa Dimes'].adherence, 95);
+    t.check('a blank adherence is not stored', !day['No Adherence']);
+    t.check('nor a null one', !day['Null Adherence']);
+    t.equal('but a real zero is kept, because it is a number', day['Zero Adherence'].adherence, 0);
+    t.check('a row with no name is skipped', Object.keys(day).length === 2);
+});
