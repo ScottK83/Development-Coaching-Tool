@@ -2038,6 +2038,133 @@
     var IMG_BELOW_COLOR = '#c62828';
     var IMG_FONT = '-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
 
+    /* ── Placing inside one metric ──
+
+       This card carries no overall placing, on purpose, and still does not. A
+       composite rank is a management number and it is the one thing that turns
+       a coaching picture into a league table.
+
+       A placing inside a single metric is a different claim, and it is the one
+       Scott asked for: "you are 6th on adherence" is a coaching fact somebody
+       can act on, because it names the thing to work on. It is only honest
+       while it is unmistakably per metric, so every one of these is drawn under
+       its own metric and the footer says in plain words that it is not an
+       overall placing. */
+
+    function _metricIsReverse(registryKey) {
+        if (typeof window.isReverseMetric === 'function') return !!window.isReverseMetric(registryKey);
+        var entry = window.METRICS_REGISTRY && window.METRICS_REGISTRY[registryKey];
+        return !!(entry && entry.isReverse);
+    }
+
+    function _ordinal(n) {
+        var mod100 = n % 100;
+        if (mod100 >= 11 && mod100 <= 13) return n + 'th';
+        var mod10 = n % 10;
+        return n + (mod10 === 1 ? 'st' : mod10 === 2 ? 'nd' : mod10 === 3 ? 'rd' : 'th');
+    }
+
+    /**
+     * Everybody placed on one metric, best first.
+     *
+     * Competition ranking, so a tie shares a placing rather than being split by
+     * whatever order the names arrived in. Anyone the metric did not measure is
+     * left out of the field entirely instead of being ranked last on a blank.
+     */
+    function _metricRankMap(holders, row) {
+        var reverse = _metricIsReverse(row.registry);
+        var scored = [];
+
+        holders.forEach(function (h) {
+            var value = _trajectoryMetricValue(h.holder, row);
+            if (value === null || value === undefined || isNaN(value)) return;
+            scored.push({ name: h.name, value: Number(value) });
+        });
+
+        scored.sort(function (a, b) { return reverse ? a.value - b.value : b.value - a.value; });
+
+        var map = {};
+        var lastValue = null;
+        var lastRank = 0;
+        scored.forEach(function (entry, index) {
+            var rank = (lastValue !== null && entry.value === lastValue) ? lastRank : index + 1;
+            lastValue = entry.value;
+            lastRank = rank;
+            map[entry.name] = { rank: rank, total: scored.length };
+        });
+        return map;
+    }
+
+    /** Per metric placings for one period, keyed by metric label then name. */
+    function _metricRanksFor(holders) {
+        var out = {};
+        TRAJECTORY_METRIC_ROWS.forEach(function (row) {
+            out[row.label] = _metricRankMap(holders, row);
+        });
+        return out;
+    }
+
+    /** The most recent uploaded YTD for a year, which is the year's truth. */
+    function _latestYtdKeyForYear(year) {
+        var yData = _getYtdData();
+        var best = null;
+        var bestEnd = '';
+        Object.keys(yData).forEach(function (key) {
+            var meta = (yData[key] && yData[key].metadata) || {};
+            var end = meta.endDate || (String(key).indexOf('|') > -1 ? String(key).split('|')[1] : '');
+            if (!end || String(end).slice(0, 4) !== String(year)) return;
+            if (String(end) > bestEnd) { bestEnd = String(end); best = key; }
+        });
+        return best;
+    }
+
+    /**
+     * The year so far, as one column, with a placing inside each metric.
+     *
+     * Read off the uploaded YTD rather than averaged out of the months. A real
+     * YTD upload is the year's own arithmetic and takes precedence over
+     * anything rebuilt beside it, and averaging twelve monthly rates would be
+     * wrong regardless of what it was compared against.
+     */
+    function _buildYtdColumn(name, year) {
+        var key = _latestYtdKeyForYear(year);
+        if (!key) return null;
+
+        var data = buildRankingsForPeriod(key);
+        if (!data || !data.rankings || !data.rankings.length) return null;
+
+        var mine = null;
+        var holders = data.rankings.map(function (r) {
+            if (r.name === name) mine = r;
+            return { name: r.name, holder: r };
+        });
+        if (!mine) return null;
+
+        var ranks = _metricRanksFor(holders);
+
+        var metrics = TRAJECTORY_METRIC_ROWS.map(function (row) {
+            var value = _trajectoryMetricValue(mine, row);
+            var has = !(value === null || value === undefined || isNaN(value));
+            var placing = ranks[row.label] && ranks[row.label][name];
+            return {
+                label: row.label,
+                registry: row.registry,
+                meets: has ? _meetsTarget(row.registry, value, year) : null,
+                display: has ? _formatMetricDisplay(row.registry, value) : '',
+                rank: has && placing ? placing.rank : null,
+                rankTotal: has && placing ? placing.total : null
+            };
+        });
+
+        return {
+            label: 'YTD',
+            present: true,
+            metrics: metrics,
+            meetsCount: metrics.filter(function (m) { return m.meets === true; }).length,
+            measuredAgainstTarget: metrics.filter(function (m) { return m.meets !== null; }).length
+        };
+    }
+
     function buildYearImageModel(name) {
         var series = _timelineFor(name);
         if (!series || !series.length) return null;
@@ -2050,8 +2177,26 @@
         // already covers. The empty months included, so a gap reads as a gap
         // rather than as a year that started in May.
         var first = columns[0], last = columns[columns.length - 1];
+
+        // Everybody who has a point in a month, so the placing inside each
+        // metric is worked out against the whole centre for that same month
+        // rather than against whoever happens to be on screen.
+        var holdersByPeriod = {};
+        Object.keys((tl && tl.byName) || {}).forEach(function (who) {
+            (tl.byName[who] || []).forEach(function (point) {
+                if (!point || !point.key) return;
+                (holdersByPeriod[point.key] = holdersByPeriod[point.key] || [])
+                    .push({ name: who, holder: point });
+            });
+        });
+        var ranksByPeriod = {};
+        Object.keys(holdersByPeriod).forEach(function (key) {
+            ranksByPeriod[key] = _metricRanksFor(holdersByPeriod[key]);
+        });
+
         return {
             name: name,
+            ytd: _buildYtdColumn(name, year),
             title: name,
             year: year,
             subtitle: _shortPeriodLabel(first.label) + ' to ' + _shortPeriodLabel(last.label) + ' ' +
@@ -2086,11 +2231,16 @@
                     metrics: TRAJECTORY_METRIC_ROWS.map(function (row) {
                         var value = pt ? _trajectoryMetricValue(pt, row) : null;
                         var has = !(value === null || value === undefined || isNaN(value));
+                        var placing = has && ranksByPeriod[col.key]
+                            && ranksByPeriod[col.key][row.label]
+                            && ranksByPeriod[col.key][row.label][name];
                         return {
                             label: row.label,
                             registry: row.registry,
                             meets: has ? _meetsTarget(row.registry, value, year) : null,
-                            display: has ? _formatMetricDisplay(row.registry, value) : ''
+                            display: has ? _formatMetricDisplay(row.registry, value) : '',
+                            rank: placing ? placing.rank : null,
+                            rankTotal: placing ? placing.total : null
                         };
                     })
                 };
@@ -2114,10 +2264,17 @@
 
         var n = model.columns.length;
         var padX = 34, labelW = 116, colW = 96;
-        var headerH = 96, chartH = 210, gap = 26, rowH = 44, headRowH = 30;
+        // The year so far sits in its own wider column in front of January, so
+        // the first thing read is where the year actually stands.
+        var ytd = model.ytd || null;
+        var ytdW = ytd ? 112 : 0;
+        var headerH = 96, chartH = 210, gap = 26, headRowH = 30;
+        // Taller rows than before: every cell now carries a placing under its
+        // verdict, and 44px had no room left under the pill.
+        var rowH = 56;
         var rows = TRAJECTORY_METRIC_ROWS.length + 1;   // targets-met row + one per metric
-        var W = padX * 2 + labelW + colW * n;
-        var H = headerH + chartH + gap + headRowH + rowH * rows + 48;
+        var W = padX * 2 + labelW + ytdW + colW * n;
+        var H = headerH + chartH + gap + headRowH + rowH * rows + 68;
 
         // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
         // display and still sharp on a high-DPI one.
@@ -2151,7 +2308,7 @@
         var most = model.columns.reduce(function (m, c) {
             return Math.max(m, c.measuredAgainstTarget || 0);
         }, 1);
-        var x = function (i) { return padX + labelW + colW * (i + 0.5); };
+        var x = function (i) { return padX + labelW + ytdW + colW * (i + 0.5); };
         var y = function (v) { return chartBottom - (v / most) * (chartBottom - chartTop); };
 
         // Up is better, which is the way the word reads.
@@ -2198,11 +2355,25 @@
 
         // ── Grid ──
         var gridTop = headerH + chartH + gap;
+        var gridBottom = gridTop + headRowH + rowH * rows;
+        var ytdCx = padX + labelW + ytdW / 2;
+
+        // A placing, drawn small and grey under the verdict it belongs to.
+        var placing = function (m, cx, ry) {
+            if (!m || !m.rank || !m.rankTotal) return;
+            text(_ordinal(m.rank) + " of " + m.rankTotal, cx, ry + 21, 9.5, "#8798a8", "600", "center");
+        };
+
+        if (ytd) {
+            ctx.fillStyle = "#eef4fb";
+            ctx.fillRect(padX + labelW, gridTop, ytdW, gridBottom - gridTop);
+            text("YTD", ytdCx, gridTop + headRowH / 2, 13, "#0f2a4a", "700", "center");
+        }
         model.columns.forEach(function (c, i) {
             var cx = x(i);
             if (i % 2 === 1) {
                 ctx.fillStyle = '#f7f9fc';
-                ctx.fillRect(cx - colW / 2, gridTop, colW, headRowH + rowH * rows);
+                ctx.fillRect(cx - colW / 2, gridTop, colW, gridBottom - gridTop);
             }
             text(c.label + (c.inProgress ? '*' : ''), cx, gridTop + headRowH / 2, 13,
                 c.inProgress ? '#b45309' : '#0f2a4a', '700', 'center');
@@ -2218,6 +2389,33 @@
             ctx.lineTo(W - padX, ry - rowH / 2);
             ctx.stroke();
             text(label, padX + 6, ry, 12, '#5b6b7c', r === 0 ? '700' : '400');
+
+            if (ytd) {
+                if (r === 0) {
+                    text(ytd.meetsCount + ' of ' + ytd.measuredAgainstTarget, ytdCx, ry, 13, '#0f2a4a', '700', 'center');
+                } else {
+                    var ym = ytd.metrics[r - 1];
+                    if (!ym || !ym.display) {
+                        text('.', ytdCx, ry, 12, '#c3ccd6', '400', 'center');
+                    } else if (ym.meets !== null) {
+                        var ypw = 52, yph = 15, ypx = ytdCx - ypw / 2, ypy = ry + 1;
+                        ctx.fillStyle = ym.meets ? IMG_MEETS_COLOR : IMG_BELOW_COLOR;
+                        if (typeof ctx.roundRect === 'function') {
+                            ctx.beginPath();
+                            ctx.roundRect(ypx, ypy, ypw, yph, 7);
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(ypx, ypy, ypw, yph);
+                        }
+                        text(ym.meets ? 'meets' : 'below', ytdCx, ypy + yph / 2 + 0.5, 10, '#ffffff', '700', 'center');
+                        text(ym.display, ytdCx, ry - 8, 13, '#0f2a4a', '700', 'center');
+                        placing(ym, ytdCx, ry);
+                    } else {
+                        text(ym.display, ytdCx, ry - 4, 13, '#0f2a4a', '700', 'center');
+                        placing(ym, ytdCx, ry);
+                    }
+                }
+            }
 
             model.columns.forEach(function (c, i) {
                 var cx = x(i);
@@ -2244,8 +2442,10 @@
                     }
                     text(m.meets ? 'meets' : 'below', cx, py + ph / 2 + 0.5, 10, '#ffffff', '700', 'center');
                     text(m.display, cx, ry - 8, 12, '#26364a', '600', 'center');
+                    placing(m, cx, ry);
                 } else {
-                    text(m.display, cx, ry, 12, '#26364a', '400', 'center');
+                    text(m.display, cx, ry - 4, 12, '#26364a', '400', 'center');
+                    placing(m, cx, ry);
                 }
             });
         });
@@ -2262,6 +2462,10 @@
         var key = (model.targets || []).map(function (tg) { return tg.label + ' ' + tg.phrase; }).join('   ');
         text('Target:  ' + key, padX + 6, lastRow + 16, 11, '#7a8794');
         text('* month still in progress', padX + 6, lastRow + 32, 11, '#9aa7b4');
+        // Said in full, because a placing with no scope on it is read as an
+        // overall one, and that is not what any of these are.
+        text('Placings are within that one metric across the call center, for that column only. '
+            + 'They are not an overall ranking.', padX + 6, lastRow + 48, 11, '#7a8794');
 
         return canvas;
     }
@@ -3001,6 +3205,8 @@
         // What goes into the year picture. The canvas itself can only be
         // eyeballed; this is the part that can be asserted.
         buildYearImageModel: buildYearImageModel,
+        rankWithinMetric: _metricRankMap,
+        ordinal: _ordinal,
         // Exported so the geometry can be checked against a recording context.
         // Pixels cannot be asserted; coordinates landing off the canvas can.
         drawYearCard: _drawYearCard,
