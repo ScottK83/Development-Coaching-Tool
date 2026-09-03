@@ -299,17 +299,6 @@
     // The lines rotate because this gets posted week after week to the same
     // channel, and a post that opens the same way every time stops being read.
 
-    var POST_OPENERS = [
-        function (v) { return v.pool + ' tickets in the bowl. One of them wins.'; },
-        function (v) { return 'Raffle standings are in for ' + v.month + '. 🎟️'; },
-        function (v) { return 'The bowl is up to ' + v.pool + ' tickets, and every one of them has a name on it.'; },
-        function (v) { return 'Fresh raffle board. ' + v.pool + ' tickets earned so far this month.'; },
-        function (v) { return v.pool + ' tickets and counting. Here is where the raffle stands.'; },
-        function (v) { return 'Raffle update. ' + v.pool + ' tickets in the bowl for ' + v.month + '. 🎉'; },
-        function (v) { return 'New standings on the board. ' + v.pool + ' tickets are in play.'; },
-        function (v) { return 'Here is the math: ' + v.pool + ' tickets, one drawing, one winner.'; }
-    ];
-
     var POST_CLOSERS = [
         function () { return 'The person who wins this may not be the one leading right now. That is the whole point of a drawing.'; },
         function () { return 'One ticket is enough to win. Zero tickets is not.'; },
@@ -330,63 +319,6 @@
             ? ((forcedIndex % pool.length) + pool.length) % pool.length
             : Math.floor(Math.random() * pool.length);
         return pool[index](values);
-    }
-
-    /**
-     * The message that goes in the channel next to the graphic.
-     *
-     * Names the leader's placing, because that is the half of ranking this app
-     * puts in public. It never says who anybody beat, and it never quotes a
-     * person's odds, which stay in the manager's own view.
-     */
-    function buildTeamPost(monthData, options) {
-        var opts = options || {};
-        var board = buildLeaderboard(monthData, opts);
-        if (opts.names) {
-            var allowed = {};
-            opts.names.forEach(function (name) { allowed[name] = true; });
-            board = board.filter(function (row) { return allowed[row.associate]; });
-        }
-        if (!board.length) return '';
-
-        var pool = board.reduce(function (sum, row) { return sum + row.total; }, 0);
-        var values = {
-            pool: pool,
-            month: opts.monthLabel || '',
-            target: opts.target || adherenceTarget(),
-            leader: board[0].associate,
-            leaderTotal: board[0].total,
-            onBoard: board.length
-        };
-
-        var lines = [];
-        lines.push(pickLine(POST_OPENERS, values, opts.openerIndex));
-        lines.push('');
-
-        // A tie at the top is common early in the month, when several people
-        // have one ticket each. Calling one of them the leader would be wrong.
-        var tied = board.filter(function (row) { return row.total === board[0].total; });
-        var ticketWord = board[0].total === 1 ? 'ticket' : 'tickets';
-        if (tied.length > 1) {
-            lines.push(tied.length + ' people are tied out front with ' + board[0].total + ' ' + ticketWord
-                + ' each, and ' + values.onBoard + (values.onBoard === 1 ? ' name is' : ' names are') + ' on the board.');
-        } else if (values.onBoard === 1) {
-            lines.push(values.leader + ' is on the board with ' + values.leaderTotal + ' ' + ticketWord + '.');
-        } else {
-            lines.push(values.leader + ' is out front with ' + values.leaderTotal + ' ' + ticketWord + ', and '
-                + values.onBoard + ' of you have tickets with your name on them.');
-        }
-        lines.push('');
-
-        lines.push('Three ways to add to your pile:');
-        lines.push('• A perfect survey is one ticket');
-        lines.push('• A day at ' + values.target + '% adherence is one ticket');
-        lines.push('• A full week at ' + values.target + '% is a bonus ticket, and the whole month adds one more');
-        lines.push('');
-
-        lines.push(pickLine(POST_CLOSERS, values, opts.closerIndex));
-
-        return lines.join('\n');
     }
 
     // ============================================
@@ -1180,25 +1112,22 @@
     // This one carries the whole list, so it works pasted on its own into a
     // chat, read on a phone, or forwarded by somebody who never saw the card.
 
-    var CHECKIN_OPENERS = [
-        function (v) { return '🎟️ Raffle check in for ' + v.month; },
-        function (v) { return '🎟️ Where the raffle stands, ' + v.month; },
-        function (v) { return 'Raffle check in. ' + v.pool + ' tickets are in the bowl.'; },
-        function (v) { return '🎟️ Ticket count, ' + v.month; },
-        function (v) { return 'Quick raffle update for ' + v.month + '. Here is the board.'; },
-        function (v) { return '🎟️ ' + v.pool + ' tickets in the bowl. Here is who is holding them.'; }
-    ];
-
-    /** "1." for a clear placing, "=3." for a shared one. */
-    function checkinPlace(rank, shared) {
-        return (shared ? '=' : '') + rank + '.';
+    /** "9/1" from "2026-09-01". The way a date gets typed in a chat. */
+    function shortDate(iso) {
+        var parts = String(iso || '').split('-');
+        if (parts.length < 3) return String(iso || '');
+        return Number(parts[1]) + '/' + Number(parts[2]);
     }
 
     /**
-     * The whole board as text.
+     * The post that goes in the channel.
      *
-     * Names a placing, never a beaten count, which is the line this app draws
-     * between what belongs in a channel and what belongs in a one to one.
+     * Says which days it covers, lists everybody who earned a ticket, and
+     * restates how a ticket is earned. Nothing else. It gets pasted into a chat
+     * and read on a phone, so every extra line is one more to scroll past.
+     *
+     * The span comes from the days that were actually entered rather than from
+     * the calendar, so it never claims to cover a day nobody has uploaded yet.
      */
     function buildCheckinPost(monthData, options) {
         var opts = options || {};
@@ -1213,56 +1142,34 @@
         if (!board.length) return '';
 
         var target = opts.target || adherenceTarget();
-        var pool = board.reduce(function (sum, row) { return sum + row.total; }, 0);
-        var values = { pool: pool, month: opts.monthLabel || 'this month', target: target };
+        var dates = Object.keys((monthData && monthData.days) || {}).sort();
+        var span = '';
+        if (dates.length === 1) span = shortDate(dates[0]);
+        else if (dates.length > 1) span = shortDate(dates[0]) + ' to ' + shortDate(dates[dates.length - 1]);
 
         var lines = [];
-        lines.push(pickLine(CHECKIN_OPENERS, values, opts.openerIndex));
-        lines.push('');
-        lines.push(pool + ' ' + (pool === 1 ? 'ticket is' : 'tickets are') + ' in the bowl and '
-            + board.length + ' of you ' + (board.length === 1 ? 'has' : 'have')
-            + ' your name on at least one.');
+        lines.push(span
+            ? 'So for the days ' + span + ', these are all those who have earned a raffle ticket.'
+            : 'These are all those who have earned a raffle ticket.');
         lines.push('');
 
-        // Competition placing, so a tie shares a number rather than being split
-        // by whoever sorted first.
-        lines.push('Where it stands right now:');
-        var lastTotal = null;
-        var lastRank = 0;
-        board.forEach(function (row, index) {
-            var rank = row.total === lastTotal ? lastRank : index + 1;
-            lastTotal = row.total;
-            lastRank = rank;
-            var shared = board.filter(function (r) { return r.total === row.total; }).length > 1;
-            lines.push(checkinPlace(rank, shared) + ' ' + row.associate + ', ' + row.total + ' '
+        board.forEach(function (row) {
+            lines.push(row.associate + ', ' + row.total + ' '
                 + (row.total === 1 ? 'ticket' : 'tickets'));
         });
 
-        // Everyone still on zero, named. The point of the post is the people who
-        // are not on the board yet, and a list they cannot find themselves in
-        // is a list that was written for somebody else.
-        if (roster) {
-            var onBoard = {};
-            board.forEach(function (row) { onBoard[row.associate] = true; });
-            var waiting = roster.map(function (n) { return String(n).trim(); })
-                .filter(function (name) { return name && !onBoard[name]; });
+        lines.push('');
+        lines.push('Remember, you get a raffle ticket for a day above ' + target
+            + '% adherence, and for a perfect survey.');
 
-            if (waiting.length) {
-                lines.push('');
-                var shown = waiting.slice(0, 10);
-                var rest = waiting.length - shown.length;
-                lines.push('Still to get on the board: ' + shown.join(', ')
-                    + (rest > 0 ? ' and ' + rest + ' more' : '') + '.');
-            }
+        // Only mentioned once it has actually paid. Naming a bonus nobody has
+        // earned yet reads as a rule somebody missed.
+        var bonus = board.reduce(function (sum, row) {
+            return sum + row.weeklyAdherence + row.monthlyAdherence;
+        }, 0);
+        if (bonus) {
+            lines.push('A full week at ' + target + '% adds a bonus ticket, and so does the whole month.');
         }
-
-        lines.push('');
-        lines.push('Three ways to add to your pile:');
-        lines.push('• A perfect survey is one ticket');
-        lines.push('• A day at ' + target + '% adherence is one ticket');
-        lines.push('• A full week at ' + target + '% is a bonus ticket, and the whole month adds one more');
-        lines.push('');
-        lines.push(pickLine(POST_CLOSERS, values, opts.closerIndex));
 
         return lines.join('\n');
     }
@@ -1495,7 +1402,6 @@
         buildAdherenceSummary,
         drawWinner,
         buildStandingsPost,
-        buildTeamPost,
         buildCheckinPost,
         buildStandingsGraphicHtml,
         buildImportPreview,

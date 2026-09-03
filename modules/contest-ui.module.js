@@ -122,17 +122,15 @@
             <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
                 <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <button type="button" id="contestCopyBtn" class="btn-secondary">📋 Copy the post</button>
-                    <button type="button" id="contestCheckinBtn" class="btn-secondary" style="background: #00695c; color: white;">💬 Copy a check in</button>
+                    <button type="button" id="contestCopyBtn" class="btn-secondary" style="background: #00695c; color: white;">📣 Post to Teams</button>
                     <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
-                    <button type="button" id="contestDownloadGraphicBtn" class="btn-secondary">Download it</button>
                     <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
                 </div>
                 <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
                 <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
                 <div id="contestStandings"></div>
                 <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
-                    <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is exactly what gets copied. Paste the graphic and the post together.</p>
+                    <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is the graphic. Post to Teams copies the words that go with it.</p>
                     <div style="overflow-x: auto;"><div id="contestGraphicExport" style="width: 900px;"></div></div>
                 </div>
             </div>
@@ -336,30 +334,20 @@
     }
 
     /**
-     * The standings as text, for a chat post with no picture beside it.
+     * The standings as text.
      *
-     * The other copy button writes a caption and leaves the list to the
-     * graphic. This one carries the whole board, so it survives being pasted on
-     * its own, read on a phone, or forwarded by somebody who never saw the card.
+     * Carries the whole board rather than a caption, so it survives being
+     * pasted on its own, read on a phone, or forwarded by somebody who never
+     * saw the graphic.
      */
-    function copyCheckin() {
+    function copyStandings() {
         const text = contest()?.buildCheckinPost(currentMonthData(), postOptions()) || '';
         if (!text) {
             graphicStatus('There are no entries to post yet.');
             return;
         }
         const copy = window.DevCoachModules?.uiUtils?.copyToClipboard;
-        if (typeof copy === 'function') copy(text, { message: 'Check in copied. Paste it straight into Teams.' });
-    }
-
-    function copyStandings() {
-        const text = contest()?.buildTeamPost(currentMonthData(), postOptions()) || '';
-        if (!text) {
-            graphicStatus('There are no entries to post yet.');
-            return;
-        }
-        const copy = window.DevCoachModules?.uiUtils?.copyToClipboard;
-        if (typeof copy === 'function') copy(text, { message: 'Post copied. Paste it under the graphic.' });
+        if (typeof copy === 'function') copy(text, { message: 'Post copied. Paste it straight into Teams.' });
     }
 
     function draw() {
@@ -478,7 +466,17 @@
             // Clipboard image writing needs a secure context and a permission,
             // and neither is guaranteed. Say what happened and point at the
             // button that does not need it.
-            graphicStatus('Could not copy the image: ' + (error?.message || error) + ' Use Download instead.');
+            const host = document.getElementById('contestGraphicStatus');
+            if (host) {
+                host.textContent = 'Could not copy the image: ' + (error?.message || error) + ' ';
+                const link = document.createElement('button');
+                link.type = 'button';
+                link.id = 'contestDownloadGraphicBtn';
+                link.className = 'btn-secondary';
+                link.textContent = 'Download it instead';
+                link.addEventListener('click', downloadGraphic);
+                host.appendChild(link);
+            }
         }
     }
 
@@ -515,9 +513,7 @@
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
             document.getElementById('contestImportBtn')?.addEventListener('click', importFromUploads);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
-            document.getElementById('contestCheckinBtn')?.addEventListener('click', copyCheckin);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
-            document.getElementById('contestDownloadGraphicBtn')?.addEventListener('click', downloadGraphic);
             document.getElementById('contestDrawBtn')?.addEventListener('click', draw);
             rendered = true;
         }
@@ -550,5 +546,5 @@
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
-    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, draw, copyStandings, copyCheckin, copyGraphic, downloadGraphic, loadMonthAndRender };
+    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
 })();

@@ -286,78 +286,9 @@ suite('contest: editing one team does not wipe the rest of that day', (t) => {
 // go earn one. These tests pin the parts that would quietly go wrong: a tie at
 // the top, the team filter, and the house rules on what a public post may say.
 
-suite('contest: the post names who is out front without counting who they beat', (t) => {
-    const contest = load(t);
-
-    const post = contest.buildTeamPost(month({
-        '2026-09-01': { 'Dana Roe': { perfectSurveys: 4 }, 'Chris Vale': { perfectSurveys: 1 } }
-    }), { monthLabel: 'September', openerIndex: 0, closerIndex: 0 });
-
-    t.check('it names the leader', post.indexOf('Dana Roe') > -1);
-    t.check('with their count', /out front with 4 tickets/.test(post));
-    t.check('and says how many people are on the board', /2 of you have tickets/.test(post));
-
-    // House rule: a placing may go in the channel, a beaten-count may not.
-    t.check('it never says who anybody beat', !/better than \d+ of \d+/.test(post));
-    t.check('and never quotes a person\'s odds', post.indexOf(' of 5') === -1);
-});
-
-suite('contest: a tie at the top is not handed to one person', (t) => {
-    const contest = load(t);
-
-    // Early in the month several people sit on one ticket each. Picking one of
-    // them as "out front" is simply false, and it is the first thing the people
-    // tied with them would notice.
-    const post = contest.buildTeamPost(month({
-        '2026-09-01': { 'A Bee': { perfectSurveys: 1 }, 'C Dee': { perfectSurveys: 1 }, 'E Eff': { perfectSurveys: 1 } }
-    }), { openerIndex: 0, closerIndex: 0 });
-
-    t.check('it says they are tied', /3 people are tied out front with 1 ticket each/.test(post));
-    t.check('and does not crown one of them', post.indexOf('is out front with') === -1);
-});
-
-suite('contest: the post covers the team that was picked, not the whole center', (t) => {
-    const contest = load(t);
-
-    // buildLeaderboard is not team scoped, so a post built without the name
-    // list would show all 127 people when the supervisor picked their own 18.
-    const both = month({
-        '2026-09-01': { 'Mine One': { perfectSurveys: 5 }, 'Theirs Two': { perfectSurveys: 99 } }
-    });
-
-    const mine = contest.buildTeamPost(both, { names: ['Mine One'], openerIndex: 0, closerIndex: 0 });
-
-    t.check('the other team is not named', mine.indexOf('Theirs Two') === -1);
-    t.check('and the pool is only this team\'s tickets', /^5 tickets in the bowl/.test(mine));
-    t.equal('a name list matching nobody produces no post',
-        contest.buildTeamPost(both, { names: ['Ghost Person'] }), '');
-});
-
-suite('contest: the post follows house style', (t) => {
-    const contest = load(t);
-    const days = { '2026-09-01': { 'Dana Roe': { perfectSurveys: 2, adherence: 96 } } };
-
-    // Every opener and closer, not just the pair that happened to be picked.
-    for (let i = 0; i < 12; i += 1) {
-        const post = contest.buildTeamPost(month(days), { openerIndex: i, closerIndex: i, monthLabel: 'September' });
-        t.check('no em dashes in variant ' + i, post.indexOf('\u2014') === -1);
-        t.check('the three ways to earn are always spelled out in variant ' + i,
-            post.indexOf('A perfect survey is one ticket') > -1);
-        t.check('and the target comes from the app in variant ' + i, /93% adherence/.test(post));
-    }
-
-    t.equal('an empty month produces no post', contest.buildTeamPost(month({}), {}), '');
-});
-
 // ============================================
 // THE GRAPHIC
 // ============================================
-//
-// A 900px light card, rasterised by html2canvas and pasted into Teams. The
-// tests here pin the things that would be invisible until somebody had already
-// posted the picture to a hundred people: a name rendered raw, a person quietly
-// left off, a colour the dark theme would repaint, or a number that was typed
-// rather than counted.
 
 function graphicFor(contest, rows, options) {
     return contest.buildStandingsGraphicHtml(rows, Object.assign({
@@ -689,54 +620,76 @@ suite('contest: the card shows where adherence actually stands', (t) => {
     t.check('and the one that is behind', /80\.0% over 1 day/.test(html));
 });
 
-suite('contest: the check in carries the whole board on its own', (t) => {
+
+// ============================================
+// THE TEAMS POST
+// ============================================
+
+suite('contest: the Teams post says what it covers and how to earn', (t) => {
     const contest = load(t);
 
-    // The other post is a caption and leaves the list to the picture. This one
-    // has to survive being pasted into a chat with nothing beside it.
     const post = contest.buildCheckinPost(month({
-        '2026-09-01': {
-            'Alyssa Dimes': { perfectSurveys: 4 },
-            'Betty Yanez': { perfectSurveys: 2 },
-            'Kamella Dash': { perfectSurveys: 2 }
-        }
-    }), { monthLabel: 'September', target: 93, names: ['Alyssa Dimes', 'Betty Yanez', 'Kamella Dash', 'Esther Ramos'],
-          asOf: '2026-09-02', openerIndex: 0, closerIndex: 0 });
+        '2026-09-01': { 'Alyssa Dimes': { perfectSurveys: 2 }, 'Betty Yanez': { adherence: 95 } },
+        '2026-09-02': { 'Alyssa Dimes': { adherence: 94 } }
+    }), { target: 93, names: ['Alyssa Dimes', 'Betty Yanez', 'Esther Ramos'], asOf: '2026-09-03' });
 
-    t.check('every earner is listed', /Alyssa Dimes, 4 tickets/.test(post)
-        && /Betty Yanez, 2 tickets/.test(post) && /Kamella Dash, 2 tickets/.test(post));
-    t.check('the pool is stated', /8 tickets are in the bowl/.test(post));
-    t.check('a tie shares its placing', /=2\. Betty Yanez/.test(post) && /=2\. Kamella Dash/.test(post));
-    t.check('and the leader has a clean one', /^1\. Alyssa Dimes/m.test(post));
+    // The span comes from the days that were entered, never the calendar, so it
+    // cannot claim to cover a day nobody has uploaded.
+    t.check('it names the days it covers', /^So for the days 9\/1 to 9\/2,/.test(post));
+    t.check('and says what the list is', /earned a raffle ticket\./.test(post));
 
-    // The people on zero are the reason the post exists, so they are named
-    // rather than left to notice they are missing.
-    t.check('the people still on zero are named', /Still to get on the board: Esther Ramos\./.test(post));
+    t.check('everyone who earned one is listed', /Alyssa Dimes, 3 tickets/.test(post)
+        && /Betty Yanez, 1 ticket/.test(post));
+    t.check('and nobody who earned none is', post.indexOf('Esther Ramos') === -1);
 
-    t.check('it still says how to earn', /A perfect survey is one ticket/.test(post));
+    t.check('the rule is restated', /Remember, you get a raffle ticket for a day above 93% adherence, and for a perfect survey\./.test(post));
+
+    // Nothing else. It is read on a phone.
+    t.check('no leaderboard numbering', !/^1\. /m.test(post));
     t.check('no em dashes', post.indexOf('\u2014') === -1);
-    t.check('and it never counts who anybody beat', !/better than \d+ of \d+/.test(post));
+    t.check('and no beaten counts', !/better than \d+ of \d+/.test(post));
+});
+
+suite('contest: a single day reads as one day, and a bonus is only named once earned', (t) => {
+    const contest = load(t);
+
+    const oneDay = contest.buildCheckinPost(month({
+        '2026-09-01': { 'Alyssa Dimes': { adherence: 95 } }
+    }), { target: 93, asOf: '2026-09-02' });
+    t.check('one day is not a range', /^So for the days 9\/1, /.test(oneDay));
+    // Naming a bonus nobody has earned yet reads as a rule somebody missed.
+    t.check('the bonus is not mentioned', oneDay.indexOf('bonus ticket') === -1);
+
+    // A closed week pays, and only then is it worth explaining.
+    const days = {};
+    ['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11'].forEach((d) => {
+        days[d] = { 'Dana Roe': { adherence: 96 } };
+    });
+    const withBonus = contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-16' });
+    t.check('once a bonus is earned it is explained', /A full week at 93% adds a bonus ticket/.test(withBonus));
 
     t.equal('an empty month has nothing to post', contest.buildCheckinPost(month({}), {}), '');
 });
 
-suite('contest: the check in covers the picked team only', (t) => {
-    const contest = load(t);
+suite('contest: the panel offers one way to do each thing', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
 
-    const both = month({
-        '2026-09-01': { 'Mine One': { perfectSurveys: 3 }, 'Theirs Two': { perfectSurveys: 9 } }
-    });
-    const post = contest.buildCheckinPost(both, {
-        names: ['Mine One'], asOf: '2026-09-02', openerIndex: 0, closerIndex: 0
-    });
+    // Five buttons for three actions was two too many. The words, the picture,
+    // and the draw.
+    const buttons = (ui.match(/<button type="button" id="contest\w+Btn"/g) || []);
+    t.equal('three buttons in the standings row and two in the day entry',
+        buttons.length, 5);
+    t.check('the post button says where it goes', ui.indexOf('📣 Post to Teams') > -1);
+    t.check('there is no second post button', ui.indexOf('Copy a check in') === -1);
 
-    t.check('the other team is absent', post.indexOf('Theirs Two') === -1);
-    t.check('and the pool is only this team', /3 tickets are in the bowl/.test(post));
-
-    // A long roster would otherwise paste a wall of names into a channel.
-    const many = [];
-    for (let i = 0; i < 30; i += 1) many.push('Person ' + i);
-    const big = contest.buildCheckinPost(month({ '2026-09-01': { 'Person 0': { perfectSurveys: 1 } } }),
-        { names: many, asOf: '2026-09-02', openerIndex: 0, closerIndex: 0 });
-    t.check('a long waiting list is trimmed and counted', /and \d+ more\./.test(big));
+    // Downloading is a fallback, not a button somebody has to read past. Scott's
+    // work machine cannot download at all, so it earns its place only on the
+    // failure path.
+    t.check('download is not in the toolbar',
+        ui.indexOf('id="contestDownloadGraphicBtn"') === -1);
+    t.check('but it still appears when the clipboard refuses',
+        ui.indexOf('Download it instead') > -1);
 });
