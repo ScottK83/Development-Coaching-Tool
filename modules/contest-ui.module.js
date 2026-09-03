@@ -123,6 +123,7 @@
                 <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                     <button type="button" id="contestCopyBtn" class="btn-secondary">📋 Copy the post</button>
+                    <button type="button" id="contestCheckinBtn" class="btn-secondary" style="background: #00695c; color: white;">💬 Copy a check in</button>
                     <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
                     <button type="button" id="contestDownloadGraphicBtn" class="btn-secondary">Download it</button>
                     <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
@@ -334,6 +335,23 @@
         renderStandings();
     }
 
+    /**
+     * The standings as text, for a chat post with no picture beside it.
+     *
+     * The other copy button writes a caption and leaves the list to the
+     * graphic. This one carries the whole board, so it survives being pasted on
+     * its own, read on a phone, or forwarded by somebody who never saw the card.
+     */
+    function copyCheckin() {
+        const text = contest()?.buildCheckinPost(currentMonthData(), postOptions()) || '';
+        if (!text) {
+            graphicStatus('There are no entries to post yet.');
+            return;
+        }
+        const copy = window.DevCoachModules?.uiUtils?.copyToClipboard;
+        if (typeof copy === 'function') copy(text, { message: 'Check in copied. Paste it straight into Teams.' });
+    }
+
     function copyStandings() {
         const text = contest()?.buildTeamPost(currentMonthData(), postOptions()) || '';
         if (!text) {
@@ -497,6 +515,7 @@
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
             document.getElementById('contestImportBtn')?.addEventListener('click', importFromUploads);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
+            document.getElementById('contestCheckinBtn')?.addEventListener('click', copyCheckin);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
             document.getElementById('contestDownloadGraphicBtn')?.addEventListener('click', downloadGraphic);
             document.getElementById('contestDrawBtn')?.addEventListener('click', draw);
@@ -531,5 +550,5 @@
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
-    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
+    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, draw, copyStandings, copyCheckin, copyGraphic, downloadGraphic, loadMonthAndRender };
 })();

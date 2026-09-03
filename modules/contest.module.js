@@ -1170,6 +1170,104 @@
     }
 
     // ============================================
+    // THE CHECK IN POST
+    // ============================================
+    //
+    // The other post is a caption. It names the leader and the pool and leaves
+    // the standings to the picture beside it, which is right when the picture is
+    // there and useless when it is not.
+    //
+    // This one carries the whole list, so it works pasted on its own into a
+    // chat, read on a phone, or forwarded by somebody who never saw the card.
+
+    var CHECKIN_OPENERS = [
+        function (v) { return '🎟️ Raffle check in for ' + v.month; },
+        function (v) { return '🎟️ Where the raffle stands, ' + v.month; },
+        function (v) { return 'Raffle check in. ' + v.pool + ' tickets are in the bowl.'; },
+        function (v) { return '🎟️ Ticket count, ' + v.month; },
+        function (v) { return 'Quick raffle update for ' + v.month + '. Here is the board.'; },
+        function (v) { return '🎟️ ' + v.pool + ' tickets in the bowl. Here is who is holding them.'; }
+    ];
+
+    /** "1." for a clear placing, "=3." for a shared one. */
+    function checkinPlace(rank, shared) {
+        return (shared ? '=' : '') + rank + '.';
+    }
+
+    /**
+     * The whole board as text.
+     *
+     * Names a placing, never a beaten count, which is the line this app draws
+     * between what belongs in a channel and what belongs in a one to one.
+     */
+    function buildCheckinPost(monthData, options) {
+        var opts = options || {};
+        var board = buildLeaderboard(monthData, opts);
+        var roster = Array.isArray(opts.names) ? opts.names : null;
+
+        if (roster) {
+            var allowed = {};
+            roster.forEach(function (name) { allowed[String(name).trim()] = true; });
+            board = board.filter(function (row) { return allowed[row.associate]; });
+        }
+        if (!board.length) return '';
+
+        var target = opts.target || adherenceTarget();
+        var pool = board.reduce(function (sum, row) { return sum + row.total; }, 0);
+        var values = { pool: pool, month: opts.monthLabel || 'this month', target: target };
+
+        var lines = [];
+        lines.push(pickLine(CHECKIN_OPENERS, values, opts.openerIndex));
+        lines.push('');
+        lines.push(pool + ' ' + (pool === 1 ? 'ticket is' : 'tickets are') + ' in the bowl and '
+            + board.length + ' of you ' + (board.length === 1 ? 'has' : 'have')
+            + ' your name on at least one.');
+        lines.push('');
+
+        // Competition placing, so a tie shares a number rather than being split
+        // by whoever sorted first.
+        lines.push('Where it stands right now:');
+        var lastTotal = null;
+        var lastRank = 0;
+        board.forEach(function (row, index) {
+            var rank = row.total === lastTotal ? lastRank : index + 1;
+            lastTotal = row.total;
+            lastRank = rank;
+            var shared = board.filter(function (r) { return r.total === row.total; }).length > 1;
+            lines.push(checkinPlace(rank, shared) + ' ' + row.associate + ', ' + row.total + ' '
+                + (row.total === 1 ? 'ticket' : 'tickets'));
+        });
+
+        // Everyone still on zero, named. The point of the post is the people who
+        // are not on the board yet, and a list they cannot find themselves in
+        // is a list that was written for somebody else.
+        if (roster) {
+            var onBoard = {};
+            board.forEach(function (row) { onBoard[row.associate] = true; });
+            var waiting = roster.map(function (n) { return String(n).trim(); })
+                .filter(function (name) { return name && !onBoard[name]; });
+
+            if (waiting.length) {
+                lines.push('');
+                var shown = waiting.slice(0, 10);
+                var rest = waiting.length - shown.length;
+                lines.push('Still to get on the board: ' + shown.join(', ')
+                    + (rest > 0 ? ' and ' + rest + ' more' : '') + '.');
+            }
+        }
+
+        lines.push('');
+        lines.push('Three ways to add to your pile:');
+        lines.push('• A perfect survey is one ticket');
+        lines.push('• A day at ' + target + '% adherence is one ticket');
+        lines.push('• A full week at ' + target + '% is a bonus ticket, and the whole month adds one more');
+        lines.push('');
+        lines.push(pickLine(POST_CLOSERS, values, opts.closerIndex));
+
+        return lines.join('\n');
+    }
+
+    // ============================================
     // IMPORT FROM WHAT WAS ALREADY UPLOADED
     // ============================================
     //
@@ -1398,6 +1496,7 @@
         drawWinner,
         buildStandingsPost,
         buildTeamPost,
+        buildCheckinPost,
         buildStandingsGraphicHtml,
         buildImportPreview,
         mergeImportIntoMonth

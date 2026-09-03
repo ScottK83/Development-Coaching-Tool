@@ -688,3 +688,55 @@ suite('contest: the card shows where adherence actually stands', (t) => {
     t.check('the card carries the live number', /96\.0% over 2 days/.test(html));
     t.check('and the one that is behind', /80\.0% over 1 day/.test(html));
 });
+
+suite('contest: the check in carries the whole board on its own', (t) => {
+    const contest = load(t);
+
+    // The other post is a caption and leaves the list to the picture. This one
+    // has to survive being pasted into a chat with nothing beside it.
+    const post = contest.buildCheckinPost(month({
+        '2026-09-01': {
+            'Alyssa Dimes': { perfectSurveys: 4 },
+            'Betty Yanez': { perfectSurveys: 2 },
+            'Kamella Dash': { perfectSurveys: 2 }
+        }
+    }), { monthLabel: 'September', target: 93, names: ['Alyssa Dimes', 'Betty Yanez', 'Kamella Dash', 'Esther Ramos'],
+          asOf: '2026-09-02', openerIndex: 0, closerIndex: 0 });
+
+    t.check('every earner is listed', /Alyssa Dimes, 4 tickets/.test(post)
+        && /Betty Yanez, 2 tickets/.test(post) && /Kamella Dash, 2 tickets/.test(post));
+    t.check('the pool is stated', /8 tickets are in the bowl/.test(post));
+    t.check('a tie shares its placing', /=2\. Betty Yanez/.test(post) && /=2\. Kamella Dash/.test(post));
+    t.check('and the leader has a clean one', /^1\. Alyssa Dimes/m.test(post));
+
+    // The people on zero are the reason the post exists, so they are named
+    // rather than left to notice they are missing.
+    t.check('the people still on zero are named', /Still to get on the board: Esther Ramos\./.test(post));
+
+    t.check('it still says how to earn', /A perfect survey is one ticket/.test(post));
+    t.check('no em dashes', post.indexOf('\u2014') === -1);
+    t.check('and it never counts who anybody beat', !/better than \d+ of \d+/.test(post));
+
+    t.equal('an empty month has nothing to post', contest.buildCheckinPost(month({}), {}), '');
+});
+
+suite('contest: the check in covers the picked team only', (t) => {
+    const contest = load(t);
+
+    const both = month({
+        '2026-09-01': { 'Mine One': { perfectSurveys: 3 }, 'Theirs Two': { perfectSurveys: 9 } }
+    });
+    const post = contest.buildCheckinPost(both, {
+        names: ['Mine One'], asOf: '2026-09-02', openerIndex: 0, closerIndex: 0
+    });
+
+    t.check('the other team is absent', post.indexOf('Theirs Two') === -1);
+    t.check('and the pool is only this team', /3 tickets are in the bowl/.test(post));
+
+    // A long roster would otherwise paste a wall of names into a channel.
+    const many = [];
+    for (let i = 0; i < 30; i += 1) many.push('Person ' + i);
+    const big = contest.buildCheckinPost(month({ '2026-09-01': { 'Person 0': { perfectSurveys: 1 } } }),
+        { names: many, asOf: '2026-09-02', openerIndex: 0, closerIndex: 0 });
+    t.check('a long waiting list is trimmed and counted', /and \d+ more\./.test(big));
+});
