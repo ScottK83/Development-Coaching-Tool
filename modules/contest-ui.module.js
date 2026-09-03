@@ -101,9 +101,24 @@
 
         return `
             <h2>🎟️ Contest</h2>
-            <p style="color: var(--text-secondary);">Type each day's adherence and perfect surveys. Entries are worked out from what you enter, so correcting a day fixes it rather than awarding twice.</p>
+            <p style="color: var(--text-secondary);">Entries are worked out from the days below, so correcting a day fixes it rather than awarding twice.</p>
 
-            <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #7b1fa2;">
+            <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
+                <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <button type="button" id="contestCopyBtn" class="btn-secondary" style="background: #00695c; color: white;">📣 Post to Teams</button>
+                    <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
+                    <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
+                </div>
+                <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
+                <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
+                <div id="contestStandings"></div>
+                <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+                    <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is the graphic. Post to Teams copies the words that go with it.</p>
+                    <div style="overflow-x: auto;"><div id="contestGraphicExport" style="width: 900px;"></div></div>
+                </div>
+            </div>
+            <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #7b1fa2;">
                 <h3 style="color: #7b1fa2; margin-top: 0;">Enter a day</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
                     <label for="contestDate" style="font-weight: bold; color: var(--text-primary);">Date</label>
@@ -119,21 +134,6 @@
                 <div id="contestDayStatus" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
             </div>
 
-            <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
-                <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <button type="button" id="contestCopyBtn" class="btn-secondary" style="background: #00695c; color: white;">📣 Post to Teams</button>
-                    <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
-                    <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
-                </div>
-                <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
-                <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
-                <div id="contestStandings"></div>
-                <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
-                    <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is the graphic. Post to Teams copies the words that go with it.</p>
-                    <div style="overflow-x: auto;"><div id="contestGraphicExport" style="width: 900px;"></div></div>
-                </div>
-            </div>
         `;
     }
 

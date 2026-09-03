@@ -693,3 +693,55 @@ suite('contest: the panel offers one way to do each thing', (t) => {
     t.check('but it still appears when the clipboard refuses',
         ui.indexOf('Download it instead') > -1);
 });
+
+suite('contest: the post says what each ticket was for', (t) => {
+    const contest = load(t);
+
+    // A bare count tells somebody the score and not the rule. The person on one
+    // ticket needs to see which lever gave it to them, and which one they have
+    // not touched.
+    const post = contest.buildCheckinPost(month({
+        '2026-09-07': { 'Alyssa Dimes': { adherence: 96, perfectSurveys: 2 },
+                        'Betty Yanez': { adherence: 95 },
+                        'Kamella Dash': { perfectSurveys: 1 } }
+    }), { target: 93, asOf: '2026-09-08' });
+
+    t.check('a survey only earner says so', /Kamella Dash, 1 ticket, for 1 perfect survey$/m.test(post));
+    t.check('an adherence only earner says so', /Betty Yanez, 1 ticket, for 1 day at 93%$/m.test(post));
+    t.check('and both reasons are joined readably',
+        /Alyssa Dimes, 3 tickets, for 2 perfect surveys and 1 day at 93%$/m.test(post));
+
+    t.check('no em dashes', post.indexOf('\u2014') === -1);
+});
+
+suite('contest: a bonus is counted in the reason once it is earned', (t) => {
+    const contest = load(t);
+
+    const days = {};
+    ['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11'].forEach((d) => {
+        days[d] = { 'Dana Roe': { adherence: 96 } };
+    });
+
+    // Read after the week closed, so the week bonus has actually paid.
+    const post = contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-16' });
+    t.check('the reason names the bonus',
+        /Dana Roe, 6 tickets, for 5 days at 93% and 1 bonus ticket$/m.test(post));
+
+    // Mid week the same data pays only the days, so the reason must not claim
+    // a bonus that has not happened.
+    const midWeek = contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-11' });
+    t.check('and never before it has', midWeek.indexOf('bonus ticket') === -1);
+});
+
+suite('contest: the standings come before the day entry', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
+
+    // The board is what the panel is for. Entering a day is the chore that
+    // produced it, and eighteen rows of inputs were pushing the answer below
+    // the fold on every visit.
+    t.check('standings is the first panel',
+        ui.indexOf('>Standings</h3>') < ui.indexOf('>Enter a day</h3>'));
+});

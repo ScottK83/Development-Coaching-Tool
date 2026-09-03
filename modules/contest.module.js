@@ -1101,6 +1101,35 @@
     // This one carries the whole list, so it works pasted on its own into a
     // chat, read on a phone, or forwarded by somebody who never saw the card.
 
+    /**
+     * What a person's tickets were actually for.
+     *
+     * A bare count tells somebody the score and not the rule. Naming the reason
+     * next to it is what turns the post into something you can act on, because
+     * the person on one ticket can see which lever gave it to them and which
+     * one they have not touched yet.
+     */
+    function ticketReason(row, target) {
+        var bits = [];
+
+        if (row.perfectSurvey) {
+            bits.push(row.perfectSurvey + ' perfect survey' + (row.perfectSurvey === 1 ? '' : 's'));
+        }
+        if (row.dailyAdherence) {
+            bits.push(row.dailyAdherence + ' day' + (row.dailyAdherence === 1 ? '' : 's')
+                + ' at ' + target + '%');
+        }
+
+        var bonus = row.weeklyAdherence + row.monthlyAdherence;
+        if (bonus) {
+            bits.push(bonus + ' bonus ticket' + (bonus === 1 ? '' : 's'));
+        }
+
+        if (!bits.length) return '';
+        if (bits.length === 1) return ', for ' + bits[0];
+        return ', for ' + bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1];
+    }
+
     /** "9/1" from "2026-09-01". The way a date gets typed in a chat. */
     function shortDate(iso) {
         var parts = String(iso || '').split('-');
@@ -1144,7 +1173,8 @@
 
         board.forEach(function (row) {
             lines.push(row.associate + ', ' + row.total + ' '
-                + (row.total === 1 ? 'ticket' : 'tickets'));
+                + (row.total === 1 ? 'ticket' : 'tickets')
+                + ticketReason(row, target));
         });
 
         lines.push('');
