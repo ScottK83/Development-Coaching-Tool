@@ -101,7 +101,17 @@
 
         return `
             <h2>🎟️ Contest</h2>
-            <p style="color: var(--text-secondary);">Entries are worked out from the days below, so correcting a day fixes it rather than awarding twice.</p>
+            <p style="color: var(--text-secondary);">Entries are worked out from the days you enter, so correcting a day fixes it rather than awarding twice.</p>
+
+            <div style="margin-bottom: 20px; padding: 14px 20px; background: var(--bg-surface-raised); border-radius: 8px; border: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <label for="contestDate" style="font-weight: bold; color: var(--text-primary);">Date</label>
+                <input type="date" id="contestDate" style="padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);">
+                <label for="contestTeam" style="font-weight: bold; color: var(--text-primary);">Team</label>
+                <select id="contestTeam" style="padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);">
+                    ${teamOptions}<option value="__all__">Everyone</option>
+                </select>
+                <button type="button" id="contestImportBtn" class="btn-secondary" style="background: #1565c0; color: white;">⬇️ Pull from uploads</button>
+            </div>
 
             <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
                 <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
@@ -120,15 +130,9 @@
             </div>
             <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #7b1fa2;">
                 <h3 style="color: #7b1fa2; margin-top: 0;">Enter a day</h3>
+                <p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.9em;">For the date picked above. Anything the upload could not work out on its own gets typed here.</p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
-                    <label for="contestDate" style="font-weight: bold; color: var(--text-primary);">Date</label>
-                    <input type="date" id="contestDate" style="padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);">
-                    <label for="contestTeam" style="font-weight: bold; color: var(--text-primary);">Team</label>
-                    <select id="contestTeam" style="padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);">
-                        ${teamOptions}<option value="__all__">Everyone</option>
-                    </select>
                     <button type="button" id="contestSaveDayBtn" class="btn-secondary" style="background: #2e7d32; color: white;">Save this day</button>
-                    <button type="button" id="contestImportBtn" class="btn-secondary" style="background: #1565c0; color: white;">⬇️ Pull from uploads</button>
                 </div>
                 <div id="contestDayGrid" style="max-height: 420px; overflow-y: auto;"></div>
                 <div id="contestDayStatus" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>

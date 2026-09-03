@@ -744,6 +744,17 @@ suite('contest: the standings come before the day entry', (t) => {
     // the fold on every visit.
     t.check('standings is the first panel',
         ui.indexOf('>Standings</h3>') < ui.indexOf('>Enter a day</h3>'));
+
+    // Date, team and the import drive both panels, so they sit above both. They
+    // were inside the day grid, which meant the controls for the standings were
+    // underneath the standings, and the button pressed most often was below
+    // eighteen rows of inputs.
+    t.check('the controls come before the standings',
+        ui.indexOf('id="contestImportBtn"') < ui.indexOf('Standings</h3>'));
+    t.check('and so does the date',
+        ui.indexOf('id="contestDate"') < ui.indexOf('Standings</h3>'));
+    t.check('saving a day stays with the day grid',
+        ui.indexOf('id="contestSaveDayBtn"') > ui.indexOf('Enter a day</h3>'));
 });
 
 suite('contest: the post carries emoji that mean something', (t) => {
