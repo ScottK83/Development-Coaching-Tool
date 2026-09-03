@@ -988,7 +988,14 @@ suite('rankings view: the mail body is short, because the picture carries the ye
        only what a body is good at. */
     t.check('it is short', mail.body.length < 320);
     const lines = mail.body.split(String.fromCharCode(10)).filter((l) => l.trim());
-    t.check('four lines at most', lines.length <= 4);
+    // Five now, not four. The fifth is the date the numbers run through,
+    // which somebody filing this needs a year later and cannot get from a
+    // picture they have lost. It is still the only line that was added.
+    t.check('five lines at most', lines.length <= 5);
+    t.check('and one of them dates the numbers',
+        /complete through [A-Z][a-z]+ \d{1,2}, \d{4}\./.test(mail.body));
+    t.check('the subject carries the date too',
+        /through [A-Z][a-z]+ \d{1,2}, \d{4}$/.test(mail.subject));
 
     t.check('it opens to the person', /^Hi P0,/.test(mail.body));
     t.check('says what is coming', /landed each month this year, against target/.test(mail.body));

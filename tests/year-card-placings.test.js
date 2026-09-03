@@ -131,3 +131,17 @@ suite('year card: the centre average is weighted, never a flat mean', (t) => {
     // nobody can place themselves against, so that one is a mean per person.
     t.check('reliability is a per person mean', /reliability/.test(fn) && /values\.length/.test(fn));
 });
+
+suite('year card: the email dates the numbers it is sending', (t) => {
+    const ranking = load(t);
+
+    // Built from the string, never new Date(iso). "2026-08-29" parses as UTC
+    // midnight and prints as the 28th anywhere west of Greenwich, and a date
+    // somebody files for their records is the last place to be off by one.
+    t.equal('a date reads in full', ranking.longDate('2026-08-29'), 'August 29, 2026');
+    t.equal('the first of a month', ranking.longDate('2026-01-01'), 'January 1, 2026');
+    t.equal('and the last of a year', ranking.longDate('2026-12-31'), 'December 31, 2026');
+    t.equal('junk gives nothing rather than a guess', ranking.longDate('not a date'), '');
+    t.equal('and so does a missing one', ranking.longDate(''), '');
+    t.equal('a month out of range is refused', ranking.longDate('2026-13-01'), '');
+});

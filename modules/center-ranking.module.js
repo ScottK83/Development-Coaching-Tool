@@ -1045,6 +1045,7 @@
                 key: mo.key,
                 label: mo.label,
                 inProgress: !!mo.inProgress,
+                spanEnd: mo.spanEnd || '',
                 status: byKey[mo.key] ? 'ranked' : mo.status,
                 reason: byKey[mo.key] ? '' : mo.reason,
                 point: byKey[mo.key] || null
@@ -1883,13 +1884,25 @@
             }
         }
 
+        // The date the numbers actually run through, so somebody filing this
+        // knows what it covers a year from now. Read off the last FINISHED
+        // month, never a month still running: a part month dated as though it
+        // were complete is the one thing this email must not do.
+        var complete = scored.filter(function (c) { return !c.inProgress && c.spanEnd; });
+        var through = complete.length ? _longDate(complete[complete.length - 1].spanEnd) : '';
+        if (through) {
+            lines.push('');
+            lines.push('These numbers are complete through ' + through + '.');
+        }
+
         lines.push('');
         lines.push('Happy to walk through any of it.');
 
         return {
             to: _apsEmailFor(name),
             cc: COACHING_CC,
-            subject: 'Your ' + model.year + ' numbers, month by month',
+            subject: 'Your ' + model.year + ' numbers, month by month'
+                + (through ? ', through ' + through : ''),
             body: lines.join('\n'),
             monthCount: scored.length
         };
@@ -2050,6 +2063,23 @@
        while it is unmistakably per metric, so every one of these is drawn under
        its own metric and the footer says in plain words that it is not an
        overall placing. */
+
+    /**
+     * "2026-08-29" reads as "August 29, 2026".
+     *
+     * Built from the string rather than a Date, because new Date('2026-08-29')
+     * is parsed as UTC midnight and then printed in local time, which west of
+     * Greenwich is the day before. A date somebody is filing for their records
+     * is the last place to be off by one.
+     */
+    function _longDate(iso) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+        if (!m) return '';
+        var months = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        var name = months[Number(m[2]) - 1];
+        return name ? name + ' ' + Number(m[3]) + ', ' + m[1] : '';
+    }
 
     function _metricIsReverse(registryKey) {
         if (typeof window.isReverseMetric === 'function') return !!window.isReverseMetric(registryKey);
@@ -2262,6 +2292,7 @@
                     fullLabel: col.label,
                     present: !!pt,
                     inProgress: !!col.inProgress,
+                    spanEnd: col.spanEnd || '',
                     rank: pt ? pt.rank : null,
                     total: pt ? pt.total : null,
                     overallRank: pt ? pt.overallRank : null,
@@ -3274,6 +3305,7 @@
         // eyeballed; this is the part that can be asserted.
         buildYearImageModel: buildYearImageModel,
         rankWithinMetric: _metricRankMap,
+        longDate: _longDate,
         ordinal: _ordinal,
         // Exported so the geometry can be checked against a recording context.
         // Pixels cannot be asserted; coordinates landing off the canvas can.

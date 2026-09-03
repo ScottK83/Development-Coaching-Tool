@@ -801,11 +801,22 @@
             var count = Object.keys(names).length;
             var isUsable = buckets.usable.indexOf(mo) !== -1;
 
+            // The last day the uploads behind this month actually reach. Not
+            // the last of the calendar month: a rebuild buckets whole weekly
+            // uploads by the day they end on, so the data can stop mid month or
+            // run a few days past it, and a person keeping this for their
+            // records needs the date the numbers really cover.
+            var spanEnd = keys.reduce(function (max, k) {
+                var d = _endDate(k);
+                return (!max || String(d) > String(max)) ? d : max;
+            }, '');
+
             var entry = {
                 key: mo,
                 label: _monthLabel(mo),
                 weekCount: keys.length,
                 count: count,
+                spanEnd: spanEnd || '',
                 fromUpload: !!buckets.fromUpload[mo],
                 inProgress: mo === nowMonth,
                 status: 'none',
