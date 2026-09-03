@@ -638,8 +638,8 @@ suite('contest: the Teams post says what it covers and how to earn', (t) => {
     t.check('it names the days it covers', /So for the days 9\/1 to 9\/2,/.test(post));
     t.check('and says what the list is', /earned a raffle ticket\./.test(post));
 
-    t.check('everyone who earned one is listed', /Alyssa Dimes, 3 tickets/.test(post)
-        && /Betty Yanez, 1 ticket/.test(post));
+    t.check('everyone who earned one is listed', /@Alyssa, 3 tickets/.test(post)
+        && /@Betty, 1 ticket/.test(post));
     t.check('and nobody who earned none is', post.indexOf('Esther Ramos') === -1);
 
     t.check('the rule is restated', /Remember, you get a raffle ticket for a day above 93% adherence, and for a perfect survey\./.test(post));
@@ -706,10 +706,10 @@ suite('contest: the post says what each ticket was for', (t) => {
                         'Kamella Dash': { perfectSurveys: 1 } }
     }), { target: 93, asOf: '2026-09-08' });
 
-    t.check('a survey only earner says so', /Kamella Dash, 1 ticket, for 1 perfect survey/.test(post));
-    t.check('an adherence only earner says so', /Betty Yanez, 1 ticket, for 1 day at 93%$/m.test(post));
+    t.check('a survey only earner says so', /@Kamella, 1 ticket, for 1 perfect survey/.test(post));
+    t.check('an adherence only earner says so', /@Betty, 1 ticket, for 1 day at 93%/.test(post));
     t.check('and both reasons are joined readably',
-        /Alyssa Dimes, 3 tickets, for 2 perfect surveys and 1 day at 93%/.test(post));
+        /@Alyssa, 3 tickets, for 2 perfect surveys and 1 day at 93%/.test(post));
 
     t.check('no em dashes', post.indexOf('\u2014') === -1);
 });
@@ -725,7 +725,7 @@ suite('contest: a bonus is counted in the reason once it is earned', (t) => {
     // Read after the week closed, so the week bonus has actually paid.
     const post = contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-16' });
     t.check('the reason names the bonus',
-        /Dana Roe, 6 tickets, for 5 days at 93% and 1 bonus ticket$/m.test(post));
+        /@Dana, 6 tickets, for 5 days at 93% and 1 bonus ticket/.test(post));
 
     // Mid week the same data pays only the days, so the reason must not claim
     // a bonus that has not happened.
@@ -763,7 +763,7 @@ suite('contest: the post carries emoji that mean something', (t) => {
        fewer of them, because adherence has thirty chances in a month and a
        survey arrives when it arrives. Marking the rarer lever rewards luck. */
     const rows = post.split(String.fromCharCode(10))
-        .filter((l) => /^(Alyssa|Betty)/.test(l));
+        .filter((l) => /^@(Alyssa|Betty)/.test(l));
     t.equal('both people are listed', rows.length, 2);
     t.check('and neither row is badged', rows.every((l) => !/🌟/.test(l)));
 
@@ -794,4 +794,30 @@ suite('contest: the closing line points at the lever you can choose', (t) => {
     });
     t.check('a strong run gets applause',
         /Cracking run on adherence/.test(contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-10' })));
+});
+
+suite('contest: names go out as Teams mentions', (t) => {
+    const contest = load(t);
+
+    // @First so the cursor landing after one turns it into a real mention.
+    const post = contest.buildCheckinPost(month({
+        '2026-09-01': { 'Alyssa Dimes': { adherence: 95 }, 'Matrece Muldrow': { adherence: 96 } }
+    }), { target: 93, asOf: '2026-09-02' });
+
+    t.check('the first name is used', /@Alyssa, 1 ticket/.test(post));
+    t.check('and the surname is dropped', post.indexOf('Alyssa Dimes') === -1);
+    t.check('for everybody', /@Matrece, 1 ticket/.test(post));
+
+    // Two people sharing a first name keep their surnames. An @ that resolves
+    // to the wrong person is worse than one that does not resolve at all, and
+    // on the Everyone board there are several.
+    const shared = contest.buildCheckinPost(month({
+        '2026-09-01': { 'Sarah Gregory': { adherence: 95 }, 'Sarah Jordan': { adherence: 96 },
+                        'Betty Yanez': { adherence: 94 } }
+    }), { target: 93, asOf: '2026-09-02' });
+
+    t.check('a shared first name keeps its surname', /@Sarah Gregory, 1 ticket/.test(shared)
+        && /@Sarah Jordan, 1 ticket/.test(shared));
+    t.check('and nobody is left as a bare ambiguous Sarah', !/@Sarah,/.test(shared));
+    t.check('while an unshared name is still short', /@Betty, 1 ticket/.test(shared));
 });

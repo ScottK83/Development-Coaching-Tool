@@ -1172,15 +1172,27 @@
             : 'These are all those who have earned a raffle ticket.'));
         lines.push('');
 
+        // Names go out as @First so Teams turns them into real mentions when
+        // the cursor lands after one. A first name shared by two people on the
+        // same board keeps its surname instead: an @ that resolves to the wrong
+        // person is worse than one that does not resolve at all, and on the
+        // Everyone board there are several.
+        var firstNameCount = {};
+        board.forEach(function (row) {
+            var first = String(row.associate).trim().split(/\s+/)[0] || row.associate;
+            firstNameCount[first] = (firstNameCount[first] || 0) + 1;
+        });
+
         // No badge on any row. A star went on perfect surveys for a while, on
         // the theory that they were the harder lever, and they are not: there
         // are simply fewer of them, because adherence has thirty chances in a
         // month and a survey arrives when it arrives. Marking the rarer lever
-        // just rewards luck, and marking the other one rewards the daily grind
-        // unevenly. The line already says what the tickets were for, which is
-        // the part somebody can act on.
+        // just rewards luck. The line already says what the tickets were for,
+        // which is the part somebody can act on.
         board.forEach(function (row) {
-            lines.push(row.associate + ', ' + row.total + ' '
+            var first = String(row.associate).trim().split(/\s+/)[0] || row.associate;
+            var handle = firstNameCount[first] > 1 ? row.associate : first;
+            lines.push('@' + handle + ', ' + row.total + ' '
                 + (row.total === 1 ? 'ticket' : 'tickets')
                 + ticketReason(row, target));
         });
