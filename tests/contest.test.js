@@ -754,34 +754,44 @@ suite('contest: the post carries emoji that mean something', (t) => {
                         'Betty Yanez': { adherence: 95 } }
     }), { target: 93, asOf: '2026-09-08' });
 
-    t.check('the header is a ticket', /^\uD83C\uDF9F\uFE0F So for the days/.test(post));
-    t.check('the rules read as a note', /\uD83D\uDCA1 Remember,/.test(post));
+    t.check('the header is a ticket', /^🎟️ So for the days/.test(post));
+    t.check('the rules read as a note', /💡 Remember,/.test(post));
+    t.check('and it closes warmly', /(👏|💪)/.test(post));
 
-    // A star marks a perfect survey, which is the harder of the two levers.
-    // Putting one on every row would decorate eighteen lines and mark nothing.
-    const surveyLine = post.split('\n').find((l) => l.indexOf('Alyssa Dimes') === 0);
-    const dayLine = post.split('\n').find((l) => l.indexOf('Betty Yanez') === 0);
-    t.check('a perfect survey earns a star', /\uD83C\uDF1F$/.test(surveyLine));
-    t.check('a clean day on its own does not', !/\uD83C\uDF1F/.test(dayLine));
+    /* No badge on a standings row. A star sat on perfect surveys for a while on
+       the theory they were the harder lever. They are not: there are simply
+       fewer of them, because adherence has thirty chances in a month and a
+       survey arrives when it arrives. Marking the rarer lever rewards luck. */
+    const rows = post.split(String.fromCharCode(10))
+        .filter((l) => /^(Alyssa|Betty)/.test(l));
+    t.equal('both people are listed', rows.length, 2);
+    t.check('and neither row is badged', rows.every((l) => !/🌟/.test(l)));
 
-    t.check('and it closes warmly', /(\uD83D\uDC4F|\uD83D\uDCAA)/.test(post));
-    t.check('no em dashes', post.indexOf('\u2014') === -1);
+    t.check('no em dashes', post.indexOf(String.fromCharCode(8212)) === -1);
 });
 
-suite('contest: the closing line follows what actually happened', (t) => {
+suite('contest: the closing line points at the lever you can choose', (t) => {
     const contest = load(t);
 
-    // Nobody has a survey yet, so the line points at the lever they can reach
-    // today rather than congratulating a board with nothing on it.
-    const daysOnly = contest.buildCheckinPost(month({
+    /* Adherence, never surveys. There are thirty chances at adherence in a
+       month and only as many surveys as happen to arrive, so a nudge about
+       surveys is a nudge about luck. */
+    const surveysOnly = contest.buildCheckinPost(month({
+        '2026-09-07': { 'Alyssa Dimes': { adherence: 88, perfectSurveys: 3 } }
+    }), { target: 93, asOf: '2026-09-08' });
+    t.check('a board with no clean days nudges at adherence',
+        /One clean day on adherence is a ticket/.test(surveysOnly));
+    t.check('and says how many chances are left', /thirty of them in a month/.test(surveysOnly));
+
+    const some = contest.buildCheckinPost(month({
         '2026-09-07': { 'Betty Yanez': { adherence: 95 } }
     }), { target: 93, asOf: '2026-09-08' });
-    t.check('a thin board nudges', /Every clean day is another ticket/.test(daysOnly));
-    t.check('and does not applaud yet', daysOnly.indexOf('Cracking effort') === -1);
+    t.check('some clean days is encouraged', /Good days on adherence/.test(some));
 
-    // Surveys landing and a real pile of tickets earns the warmer line.
-    const strong = contest.buildCheckinPost(month({
-        '2026-09-07': { 'Alyssa Dimes': { adherence: 96, perfectSurveys: 4 } }
-    }), { target: 93, asOf: '2026-09-08' });
-    t.check('a strong board gets applause', /Cracking effort/.test(strong));
+    const days = {};
+    ['2026-09-07', '2026-09-08', '2026-09-09'].forEach((d) => {
+        days[d] = { 'Dana Roe': { adherence: 96 } };
+    });
+    t.check('a strong run gets applause',
+        /Cracking run on adherence/.test(contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-10' })));
 });

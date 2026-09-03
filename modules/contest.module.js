@@ -1172,11 +1172,17 @@
             : 'These are all those who have earned a raffle ticket.'));
         lines.push('');
 
+        // No badge on any row. A star went on perfect surveys for a while, on
+        // the theory that they were the harder lever, and they are not: there
+        // are simply fewer of them, because adherence has thirty chances in a
+        // month and a survey arrives when it arrives. Marking the rarer lever
+        // just rewards luck, and marking the other one rewards the daily grind
+        // unevenly. The line already says what the tickets were for, which is
+        // the part somebody can act on.
         board.forEach(function (row) {
             lines.push(row.associate + ', ' + row.total + ' '
                 + (row.total === 1 ? 'ticket' : 'tickets')
-                + ticketReason(row, target)
-                + (row.perfectSurvey ? ' 🌟' : ''));
+                + ticketReason(row, target));
         });
 
         lines.push('');
@@ -1195,14 +1201,19 @@
 
         // One warm line at the foot, chosen from what actually happened rather
         // than bolted on regardless. It never names who is behind.
-        var surveys = board.reduce(function (sum, row) { return sum + row.perfectSurvey; }, 0);
+        //
+        // It reads adherence rather than surveys because adherence is the lever
+        // somebody can decide to pull. There are thirty chances at it in a
+        // month and only as many surveys as happen to arrive, so a nudge about
+        // surveys is a nudge about luck.
+        var cleanDays = board.reduce(function (sum, row) { return sum + row.dailyAdherence; }, 0);
         lines.push('');
-        if (surveys && pool >= board.length * 2) {
-            lines.push('👏 Cracking effort on this board. Keep them coming.');
-        } else if (surveys) {
-            lines.push('👏 Nice work getting those surveys in.');
+        if (cleanDays >= board.length * 2) {
+            lines.push('👏 Cracking run on adherence. Keep it going.');
+        } else if (cleanDays) {
+            lines.push('👏 Good days on adherence in there. Plenty of month left for more.');
         } else {
-            lines.push('💪 Every clean day is another ticket. Go get one.');
+            lines.push('💪 One clean day on adherence is a ticket, and there are thirty of them in a month.');
         }
 
         return lines.join('\n');
