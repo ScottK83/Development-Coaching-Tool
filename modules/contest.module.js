@@ -51,6 +51,21 @@
     // ENTRIES
     // ============================================
 
+    /** Today, unless a caller pins it. Tests and replays pin it. */
+    function todayIso(options) {
+        const given = options && options.asOf;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(String(given || ''))) return String(given);
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    /** The Sunday that closes the week a Monday opens. */
+    function weekEndOf(weekStart) {
+        const [y, m, d] = String(weekStart).split('-').map(Number);
+        const at = new Date(Date.UTC(y, m - 1, d));
+        at.setUTCDate(at.getUTCDate() + 6);
+        return at.toISOString().slice(0, 10);
+    }
+
     /**
      * Every entry earned, from the days that were typed in.
      *
@@ -58,9 +73,10 @@
      * show why each was earned and a wrong day can be traced back to what was
      * entered on it.
      */
-    function computeEntries(monthData) {
+    function computeEntries(monthData, options) {
         const days = (monthData && monthData.days) || {};
         const target = adherenceTarget();
+        const asOf = todayIso(options);
         const entries = [];
 
         // Per day: perfect surveys, and the day's own adherence.
@@ -110,10 +126,15 @@
         Object.keys(buckets).sort().forEach((name) => {
             const bucket = buckets[name];
 
+            // A week and a month pay once they are OVER, never while they are
+            // still running. The average of a single logged Tuesday is that
+            // Tuesday, so an unfinished period used to hand out its week bonus
+            // and its month bonus on day one: one good day showed up as three
+            // tickets. Nobody has held a week at target until the week is done.
             Object.keys(bucket.weeks).sort().forEach((week) => {
                 const values = bucket.weeks[week];
                 const average = mean(values);
-                if (average >= target) {
+                if (weekEndOf(week) < asOf && average >= target) {
                     entries.push({
                         associate: name, reason: 'weekly-adherence', on: week,
                         detail: `${average.toFixed(1)}% across ${values.length} day${values.length === 1 ? '' : 's'}, week of ${week}`,
@@ -124,9 +145,11 @@
 
             if (bucket.month.length) {
                 const average = mean(bucket.month);
-                if (average >= target) {
+                const monthKey = monthOf(Object.keys(days).sort()[0] || '');
+                const monthIsOver = monthKey && asOf.slice(0, 7) > monthKey;
+                if (monthIsOver && average >= target) {
                     entries.push({
-                        associate: name, reason: 'monthly-adherence', on: monthOf(Object.keys(days)[0] || ''),
+                        associate: name, reason: 'monthly-adherence', on: monthKey,
                         detail: `${average.toFixed(1)}% across ${bucket.month.length} day${bucket.month.length === 1 ? '' : 's'} this month`,
                         days: bucket.month.length
                     });
@@ -137,9 +160,43 @@
         return entries;
     }
 
+    /**
+     * Where everybody's adherence actually stands, month to date.
+     *
+     * The tickets say what has been banked. This says how the month is going,
+     * which is the thing somebody wants to know before the week closes and
+     * decides whether the bonus is still reachable.
+     */
+    function buildAdherenceSummary(monthData) {
+        const days = (monthData && monthData.days) || {};
+        const totals = {};
+
+        Object.keys(days).forEach((date) => {
+            const people = days[date] || {};
+            Object.keys(people).forEach((name) => {
+                const value = Number(people[name]?.adherence);
+                if (!Number.isFinite(value)) return;
+                const row = totals[name] = totals[name] || { sum: 0, days: 0 };
+                row.sum += value;
+                row.days += 1;
+            });
+        });
+
+        const out = {};
+        Object.keys(totals).forEach((name) => {
+            const row = totals[name];
+            out[name] = {
+                average: row.sum / row.days,
+                days: row.days,
+                meets: (row.sum / row.days) >= adherenceTarget()
+            };
+        });
+        return out;
+    }
+
     /** Entries per person, most first, with the reasons kept. */
-    function buildLeaderboard(monthData) {
-        const entries = computeEntries(monthData);
+    function buildLeaderboard(monthData, options) {
+        const entries = computeEntries(monthData, options);
         const byName = {};
 
         entries.forEach((entry) => {
@@ -178,8 +235,8 @@
      * Accepts a ticket number so a draw can be replayed; without one it uses
      * crypto rather than Math.random, because this decides who gets a gift card.
      */
-    function drawWinner(monthData, forcedTicket) {
-        const entries = computeEntries(monthData);
+    function drawWinner(monthData, forcedTicket, options) {
+        const entries = computeEntries(monthData, options);
         if (!entries.length) return null;
 
         let ticket;
@@ -210,8 +267,8 @@
     // POSTABLE STANDINGS
     // ============================================
 
-    function buildStandingsPost(monthData, monthLabel) {
-        const board = buildLeaderboard(monthData);
+    function buildStandingsPost(monthData, monthLabel, options) {
+        const board = buildLeaderboard(monthData, options);
         if (!board.length) return '';
 
         const pool = board.reduce((sum, row) => sum + row.total, 0);
@@ -284,7 +341,7 @@
      */
     function buildTeamPost(monthData, options) {
         var opts = options || {};
-        var board = buildLeaderboard(monthData);
+        var board = buildLeaderboard(monthData, opts);
         if (opts.names) {
             var allowed = {};
             opts.names.forEach(function (name) { allowed[name] = true; });
@@ -573,7 +630,7 @@
      * An empty `names` array is still applied. A team with nobody on it should
      * produce the open board, not the whole call center.
      */
-    function gfxPrepareRows(board, names) {
+    function gfxPrepareRows(board, names, adherence) {
         var source = Array.isArray(board) ? board : [];
         var seen = {};
         var list = [];
@@ -588,7 +645,8 @@
                 surveys: gfxInt(row.perfectSurvey),
                 days: gfxInt(row.dailyAdherence),
                 bonus: gfxInt(row.weeklyAdherence) + gfxInt(row.monthlyAdherence),
-                reasons: (row && row.reasons) || []
+                reasons: (row && row.reasons) || [],
+                adherence: (adherence && adherence[associate]) || null
             });
         });
 
@@ -607,7 +665,13 @@
             list.forEach(function (row) { present[row.associate] = true; });
             order.forEach(function (name) {
                 if (!present[name]) {
-                    list.push({ associate: name, total: 0, surveys: 0, days: 0, bonus: 0, reasons: [] });
+                    // Somebody on zero tickets may still have adherence
+                    // logged, and below the target is exactly who most needs to
+                    // see where they stand.
+                    list.push({
+                        associate: name, total: 0, surveys: 0, days: 0, bonus: 0, reasons: [],
+                        adherence: (adherence && adherence[name]) || null
+                    });
                 }
             });
         }
@@ -732,6 +796,16 @@
         if (row.bonus) {
             bits.push('<span style="color: ' + GFX.bonus + ';">' + row.bonus + ' bonus</span>');
         }
+        // Where the month actually stands, next to what it has banked. The
+        // target colour is the honest one: a run that is not going to pay
+        // should not be wearing the colour of one that is.
+        if (row.adherence) {
+            var pct = row.adherence.average.toFixed(1) + '% over ' + row.adherence.days + ' '
+                + gfxPlural(row.adherence.days, 'day', 'days');
+            bits.push('<span style="color: ' + (row.adherence.meets ? GFX.day : GFX.inkFaint) + ';">'
+                + pct + '</span>');
+        }
+
         if (!bits.length) {
             return '<span style="color: ' + GFX.inkFaint + ';">No tickets yet. The slot is open.</span>';
         }
@@ -1025,7 +1099,7 @@
         var teamLabel = String(opts.teamLabel === undefined || opts.teamLabel === null ? '' : opts.teamLabel).trim();
         var targetLabel = gfxTargetLabel(opts.target);
 
-        var rows = gfxPrepareRows(board, opts.names);
+        var rows = gfxPrepareRows(board, opts.names, opts.adherence);
         if (!rows.length) return gfxOpenBoard(month, teamLabel, targetLabel);
 
         var totals = { surveys: 0, days: 0, bonus: 0, other: 0 };
@@ -1320,6 +1394,7 @@
         monthOf,
         computeEntries,
         buildLeaderboard,
+        buildAdherenceSummary,
         drawWinner,
         buildStandingsPost,
         buildTeamPost,

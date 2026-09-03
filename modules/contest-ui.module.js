@@ -390,7 +390,8 @@
             monthLabel: monthLabelFor(monthKey),
             target: contest()?.adherenceTarget(),
             teamLabel: team === '__all__' ? 'Everyone' : 'Team ' + team,
-            names: namesForTeam(team)
+            names: namesForTeam(team),
+            adherence: contest()?.buildAdherenceSummary?.(currentMonthData())
         };
     }
 

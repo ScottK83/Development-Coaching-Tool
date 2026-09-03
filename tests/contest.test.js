@@ -60,7 +60,8 @@ suite('contest: the week and the month both pay, and they stack', (t) => {
         days[d] = { 'Dana Roe': { adherence: 96 } };
     });
 
-    const board = contest.buildLeaderboard(month(days));
+    // Read from October, so the week and the month have both closed.
+    const board = contest.buildLeaderboard(month(days), { asOf: '2026-10-01' });
     const row = board[0];
 
     t.equal('five days', row.dailyAdherence, 5);
@@ -79,7 +80,7 @@ suite('contest: a bad day can be carried by the rest of the week', (t) => {
         '2026-09-09': { 'Sam Reed': { adherence: 82 } },
         '2026-09-10': { 'Sam Reed': { adherence: 96 } },
         '2026-09-11': { 'Sam Reed': { adherence: 95 } }
-    }));
+    }), { asOf: '2026-09-14' });
 
     t.equal('four days qualified on their own', board[0].dailyAdherence, 4);
     t.equal('and the week still pays', board[0].weeklyAdherence, 1);
@@ -97,8 +98,9 @@ suite('contest: weeks are Monday to Sunday and do not bleed into each other', (t
     ['2026-09-07', '2026-09-08', '2026-09-14', '2026-09-15'].forEach((d) => {
         days[d] = { 'Jo Park': { adherence: 98 } };
     });
+    // Read once both weeks have closed, since a running week pays nothing.
     t.equal('two weeks, two weekly entries',
-        contest.buildLeaderboard(month(days))[0].weeklyAdherence, 2);
+        contest.buildLeaderboard(month(days), { asOf: '2026-09-21' })[0].weeklyAdherence, 2);
 });
 
 suite('contest: re-entering a day corrects it rather than awarding twice', (t) => {
@@ -118,19 +120,33 @@ suite('contest: re-entering a day corrects it rather than awarding twice', (t) =
     t.equal('and the day no longer qualifies', after.dailyAdherence, 0);
 });
 
-suite('contest: a thin week shows the day count rather than hiding it', (t) => {
+suite('contest: an unfinished week or month pays nothing yet', (t) => {
     const contest = load(t);
 
-    // One logged day averages itself, so the week pays on a single day. That is
-    // what an average with no minimum means, and the fix is to make it visible
-    // rather than to invent a rule that was not asked for.
-    const entries = contest.computeEntries(month({
-        '2026-09-07': { 'Chris Vale': { adherence: 99 } }
-    }));
-    const weekly = entries.find((e) => e.reason === 'weekly-adherence');
+    // One good Monday used to read as three tickets: the day, plus a week whose
+    // average was that one day, plus a month whose average was the same day
+    // again. Nobody has held a week at target until the week has actually run.
+    const oneDay = month({ '2026-09-07': { 'Chris Vale': { adherence: 99 } } });
 
-    t.check('the week paid on one day', !!weekly);
-    t.check('and says so', /across 1 day/.test(weekly.detail));
+    const midWeek = contest.buildLeaderboard(oneDay, { asOf: '2026-09-08' })[0];
+    t.equal('the day itself pays', midWeek.dailyAdherence, 1);
+    t.equal('the running week does not', midWeek.weeklyAdherence, 0);
+    t.equal('nor the running month', midWeek.monthlyAdherence, 0);
+    t.equal('so one good day is one ticket', midWeek.total, 1);
+
+    // The week closes on Sunday the 13th, so from the 14th it can pay. The
+    // month has still not finished.
+    const afterWeek = contest.buildLeaderboard(oneDay, { asOf: '2026-09-14' })[0];
+    t.equal('the closed week pays', afterWeek.weeklyAdherence, 1);
+    t.equal('the month still does not', afterWeek.monthlyAdherence, 0);
+
+    const afterMonth = contest.buildLeaderboard(oneDay, { asOf: '2026-10-01' })[0];
+    t.equal('and once the month is over it pays too', afterMonth.monthlyAdherence, 1);
+
+    // A thin week is still visible as thin, which is what makes it checkable.
+    const weekly = contest.computeEntries(oneDay, { asOf: '2026-09-14' })
+        .find((e) => e.reason === 'weekly-adherence');
+    t.check('and it says how few days carried it', /across 1 day/.test(weekly.detail));
 });
 
 suite('contest: the draw is weighted by entries and can be checked', (t) => {
@@ -168,7 +184,7 @@ suite('contest: the standings post names the reasons, not just the totals', (t) 
         days[d] = { 'Dana Roe': { adherence: 96, perfectSurveys: 1 } };
     });
 
-    const post = contest.buildStandingsPost(month(days), 'September');
+    const post = contest.buildStandingsPost(month(days), 'September', { asOf: '2026-10-01' });
 
     t.check('it names the person', post.indexOf('Dana Roe') > -1);
     t.check('it counts the perfect surveys', /5 perfect surveys/.test(post));
@@ -629,4 +645,46 @@ suite('contest: the import survives junk without inventing anything', (t) => {
     t.check('nor a null one', !day['Null Adherence']);
     t.equal('but a real zero is kept, because it is a number', day['Zero Adherence'].adherence, 0);
     t.check('a row with no name is skipped', Object.keys(day).length === 2);
+});
+
+suite('contest: one day into the month is one ticket, not three', (t) => {
+    const contest = load(t);
+
+    // Exactly what Scott saw: September 1 entered, read on September 2, and
+    // everybody showing 3 tickets off a single day. The day pays. The week and
+    // the month have not happened yet.
+    const board = contest.buildLeaderboard(month({
+        '2026-09-01': { 'Alyssa Dimes': { adherence: 95 }, 'Betty Yanez': { adherence: 94 } }
+    }), { asOf: '2026-09-02' });
+
+    t.equal('one ticket each', board[0].total, 1);
+    t.equal('and it is the day', board[0].dailyAdherence, 1);
+    t.equal('no week bonus', board[0].weeklyAdherence, 0);
+    t.equal('no month bonus', board[0].monthlyAdherence, 0);
+    t.equal('two tickets in the whole bowl', board[0].total + board[1].total, 2);
+});
+
+suite('contest: the card shows where adherence actually stands', (t) => {
+    const contest = load(t);
+
+    const data = month({
+        '2026-09-01': { 'Alyssa Dimes': { adherence: 95 }, 'Betty Yanez': { adherence: 80 } },
+        '2026-09-02': { 'Alyssa Dimes': { adherence: 97 } }
+    });
+
+    const summary = contest.buildAdherenceSummary(data);
+    t.equal('averaged over the days logged', summary['Alyssa Dimes'].average, 96);
+    t.equal('and says how many there were', summary['Alyssa Dimes'].days, 2);
+    t.check('a run at target is marked as meeting it', summary['Alyssa Dimes'].meets === true);
+    t.check('and one below it is not', summary['Betty Yanez'].meets === false);
+
+    // The tickets say what is banked. This says how the month is going, which
+    // is what tells somebody whether the week bonus is still reachable.
+    const html = contest.buildStandingsGraphicHtml(
+        contest.buildLeaderboard(data, { asOf: '2026-09-02' }),
+        { monthLabel: '2026-09', target: 93, adherence: summary,
+          names: ['Alyssa Dimes', 'Betty Yanez'] });
+
+    t.check('the card carries the live number', /96\.0% over 2 days/.test(html));
+    t.check('and the one that is behind', /80\.0% over 1 day/.test(html));
 });
