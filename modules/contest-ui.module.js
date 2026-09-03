@@ -302,14 +302,24 @@
             + ' for ' + preview.counts.people + ' ' + (preview.counts.people === 1 ? 'person' : 'people') + '.';
 
         var lines = [summary];
-        if (merged.kept) {
-            lines.push(merged.kept + ' ' + (merged.kept === 1 ? 'number you typed was' : 'numbers you typed were')
-                + ' left as they are.');
-        }
         preview.notes.forEach(function (note) { lines.push(note); });
-        lines.push('', 'Fill in ' + merged.filled + ' ' + (merged.filled === 1 ? 'value' : 'values') + '?');
+        lines.push('', 'Fill in ' + merged.filled + ' ' + (merged.filled === 1 ? 'value' : 'values')
+            + (merged.kept ? ', and ' + merged.kept + ' more that are stored differently' : '') + '?');
 
         if (!window.confirm(lines.join('\n'))) { say('Nothing was imported.'); return; }
+
+        // A stored number that disagrees with the upload is asked about rather
+        // than decided. Keeping it quietly is how a corrected upload gets
+        // imported and changes nothing, which is exactly what happened.
+        // Replacing it quietly would throw away a typed correction instead.
+        if (merged.kept) {
+            var replace = window.confirm(merged.kept + ' '
+                + (merged.kept === 1 ? 'value is' : 'values are')
+                + ' already stored with a different number than the upload has.\n\n'
+                + 'OK to replace them with the upload.\n'
+                + 'Cancel to keep what is stored and only fill the gaps.');
+            if (replace) merged = api.mergeImportIntoMonth(currentMonthData(), preview, { overwrite: true });
+        }
 
         busy = true;
         say('Saving to cloud storage...');

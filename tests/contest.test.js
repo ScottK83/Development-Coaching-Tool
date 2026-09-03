@@ -821,3 +821,48 @@ suite('contest: names go out as Teams mentions', (t) => {
     t.check('and nobody is left as a bare ambiguous Sarah', !/@Sarah,/.test(shared));
     t.check('while an unshared name is still short', /@Betty, 1 ticket/.test(shared));
 });
+
+suite('contest: a survey counts whichever question it answered', (t) => {
+    const contest = load(t);
+
+    function survey(extra) {
+        const stores = { dailyData: {} };
+        stores.dailyData['2026-09-01|2026-09-01'] = {
+            metadata: { startDate: '2026-09-01', endDate: '2026-09-01' },
+            employees: [Object.assign({ name: 'Oceane Ingram', scheduleAdherence: 91 }, extra)]
+        };
+        const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+        const row = (preview.days['2026-09-01'] || {})['Oceane Ingram'] || {};
+        return { tickets: row.perfectSurveys || 0, flagged: preview.needsSurveyCheck.length > 0 };
+    }
+
+    // Each question keeps its own response count and they differ: somebody can
+    // answer the rep question and skip FCR. Reading only the OE total threw
+    // away a survey that arrived as rep sat, and threw it away silently.
+    t.equal('a rep sat survey with no OE response still counts',
+        survey({ surveyTotal: 0, repSurveyTotal: 1, cxRepOverall: 100 }).tickets, 1);
+    t.equal('and an FCR only survey does too',
+        survey({ surveyTotal: 0, fcrSurveyTotal: 1, fcr: 100 }).tickets, 1);
+    t.equal('an OE survey still counts as it always did',
+        survey({ surveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 }).tickets, 1);
+
+    // Three people answered the rep question and two of them also answered FCR.
+    // Every rate is 100, so three responses were flawless, not two.
+    t.equal('the count is the question everybody answered',
+        survey({ surveyTotal: 3, repSurveyTotal: 3, fcrSurveyTotal: 2,
+                 cxRepOverall: 100, fcr: 100, overallExperience: 100 }).tickets, 3);
+
+    // A rate below 100 means some response was not perfect, and the upload
+    // cannot say which. No ticket, and it is handed back for a person to judge.
+    const mixed = survey({ surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1,
+                           cxRepOverall: 100, fcr: 0, overallExperience: 100 });
+    t.equal('a zero on one question earns nothing', mixed.tickets, 0);
+    t.check('and is flagged rather than dropped', mixed.flagged);
+
+    // Responses with nothing scoring them is odd data, not a ruling either way.
+    t.check('responses with no rates are flagged',
+        survey({ surveyTotal: 2 }).flagged);
+
+    t.equal('and a person with genuinely no surveys is not flagged',
+        survey({ surveyTotal: 0 }).flagged, false);
+});

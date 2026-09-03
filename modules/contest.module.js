@@ -1256,6 +1256,14 @@
 
     var IMPORT_SURVEY_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
 
+    // Which response count belongs to which question. An upload carries three,
+    // and they are not interchangeable.
+    var IMPORT_SURVEY_TOTALS = {
+        cxRepOverall: 'repSurveyTotal',
+        fcr: 'fcrSurveyTotal',
+        overallExperience: 'surveyTotal'
+    };
+
     function importNumber(value) {
         if (value === null || value === undefined || value === '') return null;
         var n = Number(value);
@@ -1290,20 +1298,43 @@
      * says so, and the day waits for a person.
      */
     function importPerfectSurveys(row) {
-        var total = importNumber(row.surveyTotal);
-        if (total === null || total <= 0) return { count: 0, certain: true };
-
         var scored = [];
+        var perfectCounts = [];
+        var responses = 0;
+
         IMPORT_SURVEY_KEYS.forEach(function (key) {
-            var value = importNumber(row[key]);
-            if (value !== null) scored.push(value);
+            var rate = importNumber(row[key]);
+
+            // Each question keeps its own response count, and they differ: a
+            // customer can answer the rep question and skip FCR. Reading only
+            // the OE total, which is what this did, threw away a survey that
+            // arrived as rep sat with no OE response, and threw it away
+            // silently, as though no survey had come in at all.
+            var count = importNumber(row[IMPORT_SURVEY_TOTALS[key]]);
+            if (count === null) count = importNumber(row.surveyTotal);
+            if (count !== null && count > 0) responses = Math.max(responses, count);
+
+            if (rate === null) return;
+            scored.push(rate);
+            if (rate >= 100 && count !== null && count > 0) perfectCounts.push(count);
         });
-        if (!scored.length) return { count: 0, certain: true };
 
+        if (!responses) return { count: 0, certain: true };
+
+        // Responses came in and nothing scored them. Rare, and not something to
+        // rule on quietly in either direction.
+        if (!scored.length) return { count: 0, certain: false, total: Math.round(responses) };
+
+        // Every rate that came back is 100, so every response counted was
+        // flawless. The number of surveys is then the largest response count
+        // among the questions that were scored: the question everybody answered
+        // is the one that saw them all.
         var allPerfect = scored.every(function (v) { return v >= 100; });
-        if (allPerfect) return { count: Math.round(total), certain: true };
+        if (allPerfect && perfectCounts.length) {
+            return { count: Math.round(Math.max.apply(null, perfectCounts)), certain: true };
+        }
 
-        return { count: 0, certain: false, total: Math.round(total) };
+        return { count: 0, certain: false, total: Math.round(responses) };
     }
 
     /**
