@@ -1160,25 +1160,27 @@
         if (!board.length) return '';
 
         var target = opts.target || adherenceTarget();
+        var pool = board.reduce(function (sum, row) { return sum + row.total; }, 0);
         var dates = Object.keys((monthData && monthData.days) || {}).sort();
         var span = '';
         if (dates.length === 1) span = shortDate(dates[0]);
         else if (dates.length > 1) span = shortDate(dates[0]) + ' to ' + shortDate(dates[dates.length - 1]);
 
         var lines = [];
-        lines.push(span
+        lines.push('🎟️ ' + (span
             ? 'So for the days ' + span + ', these are all those who have earned a raffle ticket.'
-            : 'These are all those who have earned a raffle ticket.');
+            : 'These are all those who have earned a raffle ticket.'));
         lines.push('');
 
         board.forEach(function (row) {
             lines.push(row.associate + ', ' + row.total + ' '
                 + (row.total === 1 ? 'ticket' : 'tickets')
-                + ticketReason(row, target));
+                + ticketReason(row, target)
+                + (row.perfectSurvey ? ' 🌟' : ''));
         });
 
         lines.push('');
-        lines.push('Remember, you get a raffle ticket for a day above ' + target
+        lines.push('💡 Remember, you get a raffle ticket for a day above ' + target
             + '% adherence, and for a perfect survey.');
 
         // Only mentioned once it has actually paid. Naming a bonus nobody has
@@ -1187,7 +1189,20 @@
             return sum + row.weeklyAdherence + row.monthlyAdherence;
         }, 0);
         if (bonus) {
-            lines.push('A full week at ' + target + '% adds a bonus ticket, and so does the whole month.');
+            lines.push('🎉 A full week at ' + target
+                + '% adds a bonus ticket, and so does the whole month.');
+        }
+
+        // One warm line at the foot, chosen from what actually happened rather
+        // than bolted on regardless. It never names who is behind.
+        var surveys = board.reduce(function (sum, row) { return sum + row.perfectSurvey; }, 0);
+        lines.push('');
+        if (surveys && pool >= board.length * 2) {
+            lines.push('👏 Cracking effort on this board. Keep them coming.');
+        } else if (surveys) {
+            lines.push('👏 Nice work getting those surveys in.');
+        } else {
+            lines.push('💪 Every clean day is another ticket. Go get one.');
         }
 
         return lines.join('\n');

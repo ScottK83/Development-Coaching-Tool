@@ -635,7 +635,7 @@ suite('contest: the Teams post says what it covers and how to earn', (t) => {
 
     // The span comes from the days that were entered, never the calendar, so it
     // cannot claim to cover a day nobody has uploaded.
-    t.check('it names the days it covers', /^So for the days 9\/1 to 9\/2,/.test(post));
+    t.check('it names the days it covers', /So for the days 9\/1 to 9\/2,/.test(post));
     t.check('and says what the list is', /earned a raffle ticket\./.test(post));
 
     t.check('everyone who earned one is listed', /Alyssa Dimes, 3 tickets/.test(post)
@@ -656,7 +656,7 @@ suite('contest: a single day reads as one day, and a bonus is only named once ea
     const oneDay = contest.buildCheckinPost(month({
         '2026-09-01': { 'Alyssa Dimes': { adherence: 95 } }
     }), { target: 93, asOf: '2026-09-02' });
-    t.check('one day is not a range', /^So for the days 9\/1, /.test(oneDay));
+    t.check('one day is not a range', /So for the days 9\/1, /.test(oneDay));
     // Naming a bonus nobody has earned yet reads as a rule somebody missed.
     t.check('the bonus is not mentioned', oneDay.indexOf('bonus ticket') === -1);
 
@@ -706,10 +706,10 @@ suite('contest: the post says what each ticket was for', (t) => {
                         'Kamella Dash': { perfectSurveys: 1 } }
     }), { target: 93, asOf: '2026-09-08' });
 
-    t.check('a survey only earner says so', /Kamella Dash, 1 ticket, for 1 perfect survey$/m.test(post));
+    t.check('a survey only earner says so', /Kamella Dash, 1 ticket, for 1 perfect survey/.test(post));
     t.check('an adherence only earner says so', /Betty Yanez, 1 ticket, for 1 day at 93%$/m.test(post));
     t.check('and both reasons are joined readably',
-        /Alyssa Dimes, 3 tickets, for 2 perfect surveys and 1 day at 93%$/m.test(post));
+        /Alyssa Dimes, 3 tickets, for 2 perfect surveys and 1 day at 93%/.test(post));
 
     t.check('no em dashes', post.indexOf('\u2014') === -1);
 });
@@ -744,4 +744,44 @@ suite('contest: the standings come before the day entry', (t) => {
     // the fold on every visit.
     t.check('standings is the first panel',
         ui.indexOf('>Standings</h3>') < ui.indexOf('>Enter a day</h3>'));
+});
+
+suite('contest: the post carries emoji that mean something', (t) => {
+    const contest = load(t);
+
+    const post = contest.buildCheckinPost(month({
+        '2026-09-07': { 'Alyssa Dimes': { adherence: 96, perfectSurveys: 2 },
+                        'Betty Yanez': { adherence: 95 } }
+    }), { target: 93, asOf: '2026-09-08' });
+
+    t.check('the header is a ticket', /^\uD83C\uDF9F\uFE0F So for the days/.test(post));
+    t.check('the rules read as a note', /\uD83D\uDCA1 Remember,/.test(post));
+
+    // A star marks a perfect survey, which is the harder of the two levers.
+    // Putting one on every row would decorate eighteen lines and mark nothing.
+    const surveyLine = post.split('\n').find((l) => l.indexOf('Alyssa Dimes') === 0);
+    const dayLine = post.split('\n').find((l) => l.indexOf('Betty Yanez') === 0);
+    t.check('a perfect survey earns a star', /\uD83C\uDF1F$/.test(surveyLine));
+    t.check('a clean day on its own does not', !/\uD83C\uDF1F/.test(dayLine));
+
+    t.check('and it closes warmly', /(\uD83D\uDC4F|\uD83D\uDCAA)/.test(post));
+    t.check('no em dashes', post.indexOf('\u2014') === -1);
+});
+
+suite('contest: the closing line follows what actually happened', (t) => {
+    const contest = load(t);
+
+    // Nobody has a survey yet, so the line points at the lever they can reach
+    // today rather than congratulating a board with nothing on it.
+    const daysOnly = contest.buildCheckinPost(month({
+        '2026-09-07': { 'Betty Yanez': { adherence: 95 } }
+    }), { target: 93, asOf: '2026-09-08' });
+    t.check('a thin board nudges', /Every clean day is another ticket/.test(daysOnly));
+    t.check('and does not applaud yet', daysOnly.indexOf('Cracking effort') === -1);
+
+    // Surveys landing and a real pile of tickets earns the warmer line.
+    const strong = contest.buildCheckinPost(month({
+        '2026-09-07': { 'Alyssa Dimes': { adherence: 96, perfectSurveys: 4 } }
+    }), { target: 93, asOf: '2026-09-08' });
+    t.check('a strong board gets applause', /Cracking effort/.test(strong));
 });
