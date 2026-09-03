@@ -315,7 +315,7 @@ suite('contest: the graphic leaves nobody off the board', (t) => {
     roster.forEach((name) => {
         t.check(name + ' is on the card', html.indexOf(name) > -1);
     });
-    t.check('and the people on zero are told the slot is open', /No tickets yet\. The slot is open\./.test(html));
+    t.check('and the people on zero are told so plainly', /No tickets yet\./.test(html));
 
     // A placing is public. "You are last of five" is not something this card
     // should ever say, so a person on zero gets no rank numeral at all.
@@ -383,7 +383,7 @@ suite('contest: an empty board is still worth posting', (t) => {
 
     const open = graphicFor(contest, []);
     t.check('it is a poster, not an error', /The bowl is open/.test(open));
-    t.check('and it says what puts the first name in', /puts the first name in/.test(open));
+    t.check('and it says what puts the first name in', /puts the first name on the board/.test(open));
 
     // A full roster on day one is a different case: every name belongs on the
     // board with an open slot, not collapsed into the empty-board card.
@@ -616,8 +616,8 @@ suite('contest: the card shows where adherence actually stands', (t) => {
         { monthLabel: '2026-09', target: 93, adherence: summary,
           names: ['Alyssa Dimes', 'Betty Yanez'] });
 
-    t.check('the card carries the live number', /96\.0% over 2 days/.test(html));
-    t.check('and the one that is behind', /80\.0% over 1 day/.test(html));
+    t.check('the card carries the live number', /96\.0% adherence/.test(html));
+    t.check('and the one that is behind', /80\.0% adherence/.test(html));
 });
 
 

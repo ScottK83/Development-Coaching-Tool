@@ -641,23 +641,23 @@
             // height is free in a Teams paste where rail width is not.
             cfg = { columns: 2, rowH: 26, rankW: 24, rankGap: 8, nameW: 162, nameGap: 10,
                 nameFs: GFX_T.small, totalGap: 10, totalW: 32, totalFs: GFX_T.small,
-                barH: 12, slotW: 16, slotGap: 5, minSeg: 2, breakdown: false };
+                barH: 12, minSeg: 2, breakdown: false };
         } else if (rowCount > 18) {
             cfg = { columns: 1, rowH: 30, rankW: 26, rankGap: 10, nameW: 220, nameGap: 12,
                 nameFs: GFX_T.body, totalGap: 12, totalW: 44, totalFs: GFX_T.body,
-                barH: 16, slotW: 20, slotGap: 6, minSeg: 3, breakdown: false };
+                barH: 16, minSeg: 3, breakdown: false };
         } else {
             cfg = { columns: 1, rowH: 38, rankW: 26, rankGap: 10, nameW: 220, nameGap: 12,
                 nameFs: GFX_T.body, totalGap: 12, totalW: 44, totalFs: GFX_T.total,
-                barH: 20, slotW: 22, slotGap: 6, minSeg: 4, breakdown: true };
+                barH: 20, minSeg: 4, breakdown: true };
         }
         cfg.colW = Math.floor((GFX_INNER - ((cfg.columns - 1) * GFX_COL_GAP)) / cfg.columns);
         cfg.leftPad = cfg.rankW + cfg.rankGap + cfg.nameW + cfg.nameGap;
         cfg.rightPad = cfg.totalGap + cfg.totalW;
         cfg.railW = cfg.colW - cfg.leftPad - cfg.rightPad;
-        // The rail reserves the open slot, its gap, and four pixels of slack,
-        // so the dashed box fits behind the longest bar the axis can produce.
-        cfg.barArea = Math.max(24, cfg.railW - cfg.slotW - cfg.slotGap - 4);
+        // Four pixels of slack so the longest bar the axis can produce still
+        // has track showing behind it.
+        cfg.barArea = Math.max(24, cfg.railW - 4);
         return cfg;
     }
 
@@ -732,14 +732,15 @@
         // target colour is the honest one: a run that is not going to pay
         // should not be wearing the colour of one that is.
         if (row.adherence) {
-            var pct = row.adherence.average.toFixed(1) + '% over ' + row.adherence.days + ' '
-                + gfxPlural(row.adherence.days, 'day', 'days');
+            var pct = row.adherence.average.toFixed(1) + '% adherence'
+                + (row.days === row.adherence.days ? '' : ' over ' + row.adherence.days + ' '
+                    + gfxPlural(row.adherence.days, 'day', 'days'));
             bits.push('<span style="color: ' + (row.adherence.meets ? GFX.day : GFX.inkFaint) + ';">'
                 + pct + '</span>');
         }
 
         if (!bits.length) {
-            return '<span style="color: ' + GFX.inkFaint + ';">No tickets yet. The slot is open.</span>';
+            return '<span style="color: ' + GFX.inkFaint + ';">No tickets yet.</span>';
         }
         return bits.join('<span style="color: ' + GFX.inkFaint + ';"> · </span>');
     }
@@ -758,14 +759,6 @@
                 + 'background: ' + part.color + '; border-radius: ' + radius + ';'
                 + (last ? '' : ' margin-right: 2px;') + '"></div>';
         });
-
-        // The open slot. The same width on the leader's row and on a row with
-        // nothing on it, sitting exactly where the next ticket goes. Two pixels
-        // dashed, not one: html2canvas strokes a dashed border at 2w + 1.1, and
-        // a 1px dash rasterizes chunky and uneven at this size.
-        bar += '<div style="flex: 0 0 ' + cfg.slotW + 'px; height: ' + cfg.barH + 'px; '
-            + 'box-sizing: border-box; margin-left: ' + cfg.slotGap + 'px; '
-            + 'border: 2px dashed ' + GFX.slot + '; border-radius: 3px;"></div>';
 
         // A shared placing prints its number, but only a sole leader is marked.
         // On a board where everyone has one ticket, competition ranking makes
@@ -1000,14 +993,13 @@
         return gfxCard(
             gfxHeader(month, teamLabel, 0, 0, '')
             + '<div style="padding: 34px ' + GFX_PAD + 'px 32px ' + GFX_PAD + 'px; text-align: center;">'
-            + '<div style="display: block; margin: 0 auto; width: 96px; height: 30px; '
-            + 'box-sizing: border-box; border: 2px dashed ' + GFX.slot + '; border-radius: 4px; '
-            + 'background: ' + GFX.track + ';"></div>'
+            + '<div style="display: block; margin: 0 auto; width: 240px; height: 20px; '
+            + 'border-radius: 3px; background: ' + GFX.track + ';"></div>'
             + '<div style="margin-top: 16px; ' + gfxType(GFX_T.head) + ' font-weight: 700; '
             + 'color: ' + GFX.ink + ';">The bowl is open</div>'
             + '<div style="margin-top: 6px; ' + gfxType(GFX_T.body) + ' font-weight: 600; '
-            + 'color: ' + GFX.inkSoft + ';">Every row on this board starts as the box above. '
-            + 'One perfect survey, or one day at ' + targetLabel + ', puts the first name in.</div>'
+            + 'color: ' + GFX.inkSoft + ';">One perfect survey, or one day at '
+            + targetLabel + ', puts the first name on the board.</div>'
             + '</div>'
             + gfxCta(targetLabel, 'One ticket is one pull. The first one can go in today.')
         );
@@ -1094,9 +1086,6 @@
             gfxHeader(month, teamLabel, pool, earners, gfxDayLabel(lastDate))
             + gfxLegend(totals, axisMax, totals.other > 0)
             + boardHtml
-            + '<div style="padding: 4px ' + GFX_PAD + 'px 16px ' + GFX_PAD + 'px; '
-            + gfxType(GFX_T.micro) + ' font-weight: 700; color: ' + GFX.inkFaint + ';">'
-            + 'The dashed box on your row is where your next ticket goes.</div>'
             + gfxCta(targetLabel, 'The longest bar is not the winner. Every ticket is one pull.')
         );
     }
