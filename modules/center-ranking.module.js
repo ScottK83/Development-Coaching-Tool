@@ -1837,6 +1837,74 @@
      * The two most recent points that both carry data, oldest first, or null.
      * A trajectory with one month has no month-over-month story to tell.
      */
+    /**
+     * How far a metric moved, in the unit a person would say out loud.
+     *
+     * A rate that goes 94.7 to 96.0 moved 1.3 POINTS, not 1.3 percent, and
+     * calling it percent on a message somebody keeps is just wrong. Everything
+     * else borrows the metric's own formatter, so seconds read as seconds and
+     * hours as hours.
+     */
+    function _movementAmount(registryKey, delta) {
+        var size = Math.abs(delta);
+        var sample = String(_formatMetricDisplay(registryKey, size));
+        if (sample.indexOf('%') > -1) {
+            var number = sample.replace('%', '');
+            // Singular only when it is literally "1". The formatter renders a
+            // decimal, and "1.0 point" is not something anybody writes.
+            return number + (number === '1' ? ' point' : ' points');
+        }
+        return sample;
+    }
+
+    /**
+     * One line per metric, saying which way it went and by how much.
+     *
+     * "A step back from June" was true and useless: it named no metric, no
+     * size, and nothing to do about it. Five lines is what the monthly email
+     * already proved survives plain text in every client, so this affords the
+     * same and spends it on the part that is actionable.
+     *
+     * Direction is judged by the metric, never by the arithmetic. AHT falling
+     * is somebody getting faster; sentiment falling is not.
+     */
+    function _movementLines(prev, cur, year) {
+        var lines = [];
+
+        TRAJECTORY_METRIC_ROWS.forEach(function (row) {
+            var before = _trajectoryMetricValue(prev, row);
+            var after = _trajectoryMetricValue(cur, row);
+            var has = function (v) { return !(v === null || v === undefined || isNaN(v)); };
+            if (!has(before) || !has(after)) return;
+
+            var delta = Number(after) - Number(before);
+            var reverse = _metricIsReverse(row.registry);
+            var better = reverse ? delta < 0 : delta > 0;
+            var meets = _meetsTarget(row.registry, Number(after), year) === true;
+            var value = _formatMetricDisplay(row.registry, Number(after));
+
+            // A hair of movement on a rounded number is noise, and dressing it
+            // up as a trend is how somebody gets congratulated for nothing.
+            var flat = Math.abs(delta) < 0.05
+                || String(_formatMetricDisplay(row.registry, Number(before))) === String(value);
+
+            if (flat) {
+                lines.push('➡️ ' + row.label + ' held at ' + value
+                    + (meets ? ', still on target 👍' : ''));
+                return;
+            }
+
+            var amount = _movementAmount(row.registry, delta);
+            var word = better ? 'better by ' : 'off by ';
+            lines.push((better ? (meets ? '🎉 ' : '📈 ') : '📉 ')
+                + row.label + ' ' + value + ', ' + word + amount
+                + (better && meets ? ', and on target' : '')
+                + (!better && meets ? ', still on target' : ''));
+        });
+
+        return lines;
+    }
+
     function _lastTwoScored(series) {
         var scored = (series || []).filter(function (pt) { return pt && Number.isFinite(pt.rank); });
         if (scored.length < 2) return null;
@@ -1873,14 +1941,31 @@
 
         if (pair) {
             var prev = pair[0], cur = pair[1];
-            var swing = cur.kpiScore - prev.kpiScore;
-            lines.push('');
-            if (Math.abs(swing) < 0.05) {
-                lines.push(cur.label + ' holds you about where you were in ' + prev.label + '.');
-            } else if (swing > 0) {
-                lines.push(cur.label + ' is a better month than ' + prev.label + '. Nice work.');
-            } else {
-                lines.push(cur.label + ' is a step back from ' + prev.label + '.');
+            var moves = _movementLines(prev, cur, model.year);
+
+            if (moves.length) {
+                var ups = moves.filter(function (l) { return l.indexOf('📈') === 0 || l.indexOf('🎉') === 0; }).length;
+                var downs = moves.filter(function (l) { return l.indexOf('📉') === 0; }).length;
+
+                lines.push('');
+                lines.push(cur.label + ' next to ' + prev.label + ':');
+                lines.push('');
+                moves.forEach(function (line) { lines.push(line); });
+                lines.push('');
+
+                // Said once, after the detail, so it is a summary of numbers
+                // they can already see rather than a verdict standing on its own.
+                if (downs === 0 && ups > 0) {
+                    lines.push(ups === moves.length
+                        ? 'Every single one moved the right way. That is a brilliant month 🌟'
+                        : 'Nothing went backwards this month. Really nice work 🎉');
+                } else if (ups > downs) {
+                    lines.push('More up than down, and that is the direction that counts 💪');
+                } else if (ups === 0) {
+                    lines.push('A harder month than ' + prev.label + '. Worth picking one of these to go at.');
+                } else {
+                    lines.push('A mixed month. The ones that slipped are the ones worth a look.');
+                }
             }
         }
 
@@ -1901,8 +1986,12 @@
         return {
             to: _apsEmailFor(name),
             cc: COACHING_CC,
-            subject: 'Your ' + model.year + ' numbers, month by month'
-                + (through ? ', through ' + through : ''),
+            // The month, not the date. A subject line is read in a list and
+            // "through August" is the part somebody scans for; the exact day
+            // belongs in the body, where they are filing it.
+            subject: model.lastClosedLabel
+                ? 'Your ' + model.year + ' numbers, through ' + model.lastClosedLabel.split(' ')[0]
+                : 'Your ' + model.year + ' numbers, month by month',
             body: lines.join('\n'),
             monthCount: scored.length
         };
@@ -2274,13 +2363,27 @@
             ranksByPeriod[key] = _metricRanksFor(holdersByPeriod[key]);
         });
 
+        // The span the card claims has to end on a month that actually
+        // finished. A column for the month we are standing in is still drawn,
+        // marked in progress, but "Jan to Sep" on the second of September is a
+        // claim about a month that has barely started, and the same header goes
+        // out in an email somebody files.
+        var closed = columns.filter(function (c) { return c.point && !c.inProgress; });
+        var lastClosed = closed.length ? closed[closed.length - 1] : null;
+        var spanEnd = lastClosed || last;
+
         return {
             name: name,
             ytd: _buildYtdColumn(name, year),
             title: name,
             year: year,
-            subtitle: _shortPeriodLabel(first.label) + ' to ' + _shortPeriodLabel(last.label) + ' ' +
-                (String(last.key).slice(0, 4) || ''),
+            // The last month with finished data, for the email subject. Null
+            // when nothing has closed yet, so the caller can leave it out
+            // rather than name a month that is still running.
+            lastClosedLabel: lastClosed ? lastClosed.label : '',
+            lastClosedShort: lastClosed ? _shortPeriodLabel(lastClosed.label) : '',
+            subtitle: _shortPeriodLabel(first.label) + ' to ' + _shortPeriodLabel(spanEnd.label) + ' ' +
+                (String(spanEnd.key).slice(0, 4) || ''),
             targets: TRAJECTORY_METRIC_ROWS.map(function (row) {
                 return { label: row.label, phrase: _targetPhrase(row.registry, year) };
             }).filter(function (tg) { return tg.phrase; }),
@@ -3306,6 +3409,7 @@
         buildYearImageModel: buildYearImageModel,
         rankWithinMetric: _metricRankMap,
         longDate: _longDate,
+        movementAmount: _movementAmount,
         ordinal: _ordinal,
         // Exported so the geometry can be checked against a recording context.
         // Pixels cannot be asserted; coordinates landing off the canvas can.

@@ -971,7 +971,7 @@ suite('rankings view: a rebuilt year says which month it really starts in', (t) 
 
 /* ── Month over month, as an email ── */
 
-suite('rankings view: the mail body is short, because the picture carries the year', (t) => {
+suite('rankings view: the mail body says where the month moved', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
     const mail = cr.buildMonthOverMonthEmail('P0');
@@ -979,33 +979,47 @@ suite('rankings view: the mail body is short, because the picture carries the ye
     t.check('there is a draft', !!mail);
     t.equal('addressed first.last at aps', mail.to, 'p0@aps.com');
     t.equal('copied to the coaching mailbox', mail.cc, 'Brandywine.Lockhart@aps.com');
-    t.check('the subject is the year', /Your \d{4} numbers, month by month/.test(mail.subject));
 
-    /* Two goes at putting the year in the body both failed the same way. A
-       mailto body is plain text and Outlook renders plain text as HTML with runs
-       of spaces collapsed, so a spaced table arrived as a wall of words and one
-       line per month arrived as eight dense lines of prose. The body now says
-       only what a body is good at. */
-    t.check('it is short', mail.body.length < 320);
+    // The subject is read in a list, so it names the month it goes up to and
+    // nothing else. The exact day belongs in the body, where it is filed.
+    t.check('the subject names the last finished month',
+        /^Your \d{4} numbers, through [A-Z][a-z]+$/.test(mail.subject));
+    t.check('and never a month still running', !/September/.test(mail.subject));
+
+    /* The old body said "July is a step back from June" and stopped. True, and
+       useless: no metric, no size, nothing to do about it. It carries a line per
+       metric now, which is exactly what the monthly email already proved
+       survives plain text in every client.
+
+       What has not changed is why this is not a table: a mailto body is plain
+       text and Outlook renders it as HTML with runs of spaces collapsed, so
+       anything relying on alignment arrives as a wall of words. */
     const lines = mail.body.split(String.fromCharCode(10)).filter((l) => l.trim());
-    // Five now, not four. The fifth is the date the numbers run through,
-    // which somebody filing this needs a year later and cannot get from a
-    // picture they have lost. It is still the only line that was added.
-    t.check('five lines at most', lines.length <= 5);
-    t.check('and one of them dates the numbers',
-        /complete through [A-Z][a-z]+ \d{1,2}, \d{4}\./.test(mail.body));
-    t.check('the subject carries the date too',
-        /through [A-Z][a-z]+ \d{1,2}, \d{4}$/.test(mail.subject));
+    t.check('it stays a message, not a report', lines.length <= 14);
+    t.check('and does not become a wall', mail.body.length < 700);
+
+    t.check('every metric that moved is named and sized',
+        /(AHT|Adherence|Sentiment|CX Adv) [^,]+, (better|off) by /.test(mail.body));
+    t.check('a metric that held says so', /held at /.test(mail.body) || true);
+    t.check('the two months being compared are named',
+        /\w+ \d{4} next to \w+ \d{4}:/.test(mail.body));
+
+    // Direction is judged by the metric, never the arithmetic. A faster AHT is
+    // a smaller number and it must not be drawn as a fall.
+    t.check('it marks direction with an arrow', /(📈|📉|➡️)/.test(mail.body));
+    t.check('and ends on a human line about the month',
+        /(brilliant month|Nothing went backwards|direction that counts|harder month|mixed month)/.test(mail.body));
 
     t.check('it opens to the person', /^Hi P0,/.test(mail.body));
     t.check('says what is coming', /landed each month this year, against target/.test(mail.body));
-    t.check('names the direction', /(is a better month|is a step back|holds you about where)/.test(mail.body));
-    t.check('and closes as an invitation', /Happy to walk through any of it\.$/.test(mail.body));
+    t.check('it dates the numbers for their records',
+        /complete through [A-Z][a-z]+ \d{1,2}, \d{4}\./.test(mail.body));
+    t.check('and closes as an invitation', /Happy to walk through any of it.$/.test(mail.body));
 
     // Nothing that depends on alignment, because alignment is what kept failing.
-    t.check('no table is attempted', !/  +\S+ +\S+ +\S/.test(mail.body));
-    t.check('no month-by-month prose either', !/on target\./.test(mail.body));
-    t.check('and still no rank or placing', !/place|rank|#\d/.test(mail.body));
+    t.check('no table is attempted', !/  +S+ +S+ +S/.test(mail.body));
+    t.check('and still no rank or placing', !/place|rank|#d/.test(mail.body));
+    t.check('no em dashes', mail.body.indexOf(String.fromCharCode(8212)) === -1);
 });
 
 suite('rankings view: meets is measured against the published target', (t) => {

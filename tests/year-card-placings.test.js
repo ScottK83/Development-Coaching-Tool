@@ -145,3 +145,34 @@ suite('year card: the email dates the numbers it is sending', (t) => {
     t.equal('and so does a missing one', ranking.longDate(''), '');
     t.equal('a month out of range is refused', ranking.longDate('2026-13-01'), '');
 });
+
+suite('year card: movement is judged by the metric, not the arithmetic', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/center-ranking.module.js'), 'utf8');
+    const fn = src.slice(src.indexOf('function _movementLines'), src.indexOf('function _lastTwoScored'));
+
+    // A faster AHT is a smaller number. Reading the sign alone would print a
+    // green arrow on somebody getting slower and a red one on somebody getting
+    // faster, on a message they receive.
+    t.check('direction asks the registry which way is better', /_metricIsReverse\(row\.registry\)/.test(fn));
+    t.check('and flips the comparison for those', /reverse \? delta < 0 : delta > 0/.test(fn));
+
+    // A hair of movement on a rounded number is noise. Congratulating somebody
+    // for 0.02 of a point is how the whole thing stops being believed.
+    t.check('movement below the rounding is called flat', /Math\.abs\(delta\) < 0\.05/.test(fn));
+    t.check('and so is anything that displays the same', /=== String\(value\)/.test(fn));
+});
+
+suite('year card: a rate moves in points, never in percent', (t) => {
+    const ranking = load(t);
+    global.window.formatMetricDisplay = (key, value) =>
+        key === 'aht' ? Math.round(value) + 's' : Number(value).toFixed(1) + '%';
+
+    // 94.7 to 96.0 is 1.3 POINTS. Calling it 1.3 percent is a different number
+    // and this is a message somebody keeps.
+    t.equal('a rate reads as points', ranking.movementAmount('scheduleAdherence', 1.3), '1.3 points');
+    t.equal('one point is singular', ranking.movementAmount('scheduleAdherence', 1.0), '1.0 points');
+    t.equal('and a fall is sized, not signed', ranking.movementAmount('scheduleAdherence', -2.1), '2.1 points');
+
+    // Everything else keeps its own unit.
+    t.equal('seconds stay seconds', ranking.movementAmount('aht', -31), '31s');
+});
