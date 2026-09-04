@@ -121,6 +121,43 @@
     }
 
     /**
+     * How many days of this week a period upload actually covers.
+     *
+     * "(N days in)" hangs off the standings block, and the standings are read
+     * out of the newest weekly file, not out of the daily uploads. Counting
+     * daily uploads for that label was the mistake: a week-in-progress upload
+     * archives every daily it supersedes, so a Monday-through-Thursday file
+     * read as "2 days in" purely because two of its four days had already been
+     * folded into it and left the working set. The file's own date range is the
+     * honest answer, because it is the thing the numbers came from.
+     *
+     * Weekdays only, clamped to this week's Monday at the front and to today at
+     * the back: a file dated forward does not mean days nobody has worked yet.
+     * Returns 0 when the period ends before this week, which is the no-day-count
+     * case rather than a zero to print. Those standings are a whole week, and
+     * "(0 days in)" on a full week would be worse than saying nothing.
+     */
+    function daysCoveredThisWeek(facts) {
+        const f = facts || {};
+        const todayIso = String(f.todayIso || isoDate(new Date())).slice(0, 10);
+        const mondayIso = mondayOf(new Date(todayIso + 'T12:00:00'));
+        const end = String(f.endDate || '').slice(0, 10);
+        if (!mondayIso || !end || end < mondayIso) return 0;
+
+        const start = String(f.startDate || '').slice(0, 10);
+        const from = start && start > mondayIso ? start : mondayIso;
+        const to = end < todayIso ? end : todayIso;
+        if (to < from) return 0;
+
+        let days = 0;
+        for (let iso = from; iso <= to; iso = shiftDays(iso, 1)) {
+            const dow = new Date(iso + 'T12:00:00').getDay();
+            if (dow !== 0 && dow !== 6) days += 1;
+        }
+        return days;
+    }
+
+    /**
      * Does the tool actually hold the period this day's post claims to describe?
      *
      * This is the gap that mattered: a Monday post says "here's your last week",
@@ -437,6 +474,7 @@
         checkCoverage,
         checkPeriodData,
         shiftDays,
+        daysCoveredThisWeek,
         buildDailyRecap,
         buildWeekProgressText,
         joinList,

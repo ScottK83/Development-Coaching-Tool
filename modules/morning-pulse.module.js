@@ -3613,10 +3613,35 @@
     // The base message for the day, plus. When the plan calls for it. The
     // daily numbers slotted in after the opening.
     function latestKeyCoversThisWeek(outreach, latestKey) {
-        if (!outreach || !latestKey) return false;
+        // Asked once per message now, including on the paths that never look at
+        // the answer, so a caller that hands over a bare outreach object gets a
+        // plain false rather than a throw.
+        if (typeof outreach?.mondayOf !== 'function' || !latestKey) return false;
         const period = getPeriodData(latestKey);
         const end = period?.metadata?.endDate || (latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey);
         return Boolean(end) && String(end).slice(0, 10) >= outreach.mondayOf(new Date());
+    }
+
+    /**
+     * The day count that belongs on this week's standings.
+     *
+     * It comes from the weekly file's own range rather than from how many
+     * dailies are still sitting in the working set, because that file is where
+     * the standings numbers came from. The two used to disagree by exactly the
+     * days the file had already absorbed: uploading Monday through Thursday as
+     * one week-in-progress archives those dailies, and the message then said
+     * "2 days in" about four days of work.
+     */
+    function daysOfThisWeekInPeriod(outreach, latestKey) {
+        if (!outreach?.daysCoveredThisWeek || !latestKey) return 0;
+        const period = getPeriodData(latestKey);
+        const meta = period?.metadata || {};
+        const parts = latestKey.indexOf('|') > -1 ? latestKey.split('|') : [];
+        return outreach.daysCoveredThisWeek({
+            startDate: meta.startDate || parts[0] || '',
+            endDate: meta.endDate || parts[1] || '',
+            todayIso: outreach.isoDate(new Date())
+        });
     }
 
     /**
@@ -3683,12 +3708,21 @@
         const finish = (text) =>
             withNearMiss(withStandings(text, employeeName, latestKey, spokenFor), employeeName, latestKey, spokenFor);
 
+        const latestIsThisWeek = latestKeyCoversThisWeek(outreach, latestKey);
+
         let base;
         if (plan.base === 'weekProgress' || plan.base === 'weekClosing') {
             base = await generateWeekProgressMessage(employeeName, latestKey, baselineKey, {
                 tone: plan.base === 'weekClosing' ? 'closing' : 'midweek',
-                daysIn: dailyEntry?.dates?.size || 0,
-                latestIsThisWeek: latestKeyCoversThisWeek(outreach, latestKey)
+                // Only the this-week file can say how far into the week the
+                // standings reach. When the newest file is a completed week the
+                // block already calls itself "most recent full week", and a day
+                // count borrowed from the dailies would be counting a different
+                // period than the numbers above it.
+                daysIn: latestIsThisWeek
+                    ? (daysOfThisWeekInPeriod(outreach, latestKey) || dailyEntry?.dates?.size || 0)
+                    : 0,
+                latestIsThisWeek
             });
             // If the week-vs-week read came back empty, the older nudge is
             // still better than sending nothing at all.
@@ -3702,7 +3736,7 @@
         // When the weekly file already is this week, the recap would be the
         // same numbers a second time.
         if (plan.dailyMode === 'none' || !dailyEntry) return finish(base || '');
-        if (plan.dailyMode === 'wtd' && latestKeyCoversThisWeek(outreach, latestKey)) return finish(base || '');
+        if (plan.dailyMode === 'wtd' && latestIsThisWeek) return finish(base || '');
 
         const rows = plan.dailyMode === 'monday'
             ? (dailyEntry.mondayRow ? [dailyEntry.mondayRow] : [])
@@ -3835,8 +3869,15 @@
         overlay.className = 'modal-overlay';
         overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
+        // Same rule as the messages themselves: when a this-week file is what
+        // the cards are reading, the header counts the days that file covers.
+        // Counting daily uploads there undercounts by however many of them the
+        // weekly upload already absorbed.
+        const weekDaysCovered = weeklyCoversThisWeek ? daysOfThisWeekInPeriod(outreach, latestKey) : 0;
         const coversText = plan.covers === 'thisWeek'
-            ? `${dailyThisWeek.dayCount} daily upload${dailyThisWeek.dayCount === 1 ? '' : 's'} so far`
+            ? (weekDaysCovered > 0
+                ? `${weekDaysCovered} day${weekDaysCovered === 1 ? '' : 's'} of this week uploaded`
+                : `${dailyThisWeek.dayCount} daily upload${dailyThisWeek.dayCount === 1 ? '' : 's'} so far`)
             : `week ending ${escapeHtml(endDate)}`;
 
         overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +

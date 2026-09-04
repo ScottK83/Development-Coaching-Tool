@@ -183,3 +183,40 @@ suite('daily outreach: the send log does not grow forever', (t) => {
     t.check('an entry with no date is kept rather than guessed at', 'monday|undated|Jo Park' in pruned);
     t.check('a nonsense cutoff leaves the log alone', Object.keys(outreach.pruneSentLog(log, 'not-a-date')).length === 3);
 });
+
+suite('daily outreach: the day count comes from the file the numbers came from', (t) => {
+    const outreach = load(t);
+
+    // 2026-08-31 is a Monday, 2026-09-04 the Friday that closes that week.
+    const covered = (startDate, endDate, todayIso) =>
+        outreach.daysCoveredThisWeek({ startDate, endDate, todayIso });
+
+    // The bug: uploading Monday through Thursday as one week-in-progress file
+    // archives the dailies it supersedes, so counting what was left in the
+    // working set reported two days for four days of work.
+    t.equal('a Monday through Thursday file is four days in',
+        covered('2026-08-31', '2026-09-03', '2026-09-04'), 4);
+    t.equal('a Monday only file is one day in',
+        covered('2026-08-31', '2026-08-31', '2026-09-04'), 1);
+    t.equal('the whole week read on Friday is five',
+        covered('2026-08-31', '2026-09-04', '2026-09-04'), 5);
+
+    // Today is the back stop. A file stamped through Friday, opened on Tuesday,
+    // has not seen Wednesday happen.
+    t.equal('days that have not happened yet do not count',
+        covered('2026-08-31', '2026-09-04', '2026-09-01'), 2);
+
+    // And Monday is the front stop, so a range that starts before this week
+    // still only reports this week's part of itself.
+    t.equal('a range reaching back into last week counts from Monday',
+        covered('2026-08-24', '2026-09-02', '2026-09-04'), 3);
+
+    t.equal('a completed prior week is no count at all',
+        covered('2026-08-24', '2026-08-28', '2026-09-04'), 0);
+    t.equal('a weekend tail adds nothing',
+        covered('2026-08-31', '2026-09-06', '2026-09-06'), 5);
+    t.equal('a missing end date is not guessed at',
+        covered('2026-08-31', '', '2026-09-04'), 0);
+    t.equal('a missing start falls back to Monday',
+        covered('', '2026-09-02', '2026-09-04'), 3);
+});
