@@ -163,14 +163,18 @@ suite('saved calls: a truncated copy is still the same call', (t) => {
     const { callTranscript, callCoachingBridge: bridge } = load(t);
     const print = bridge.callFingerprint;
 
-    // prepareForStorage caps the transcript, so a long call's saved copy is a
-    // shortened version of what was pasted. This is the case that made a
-    // length-based fingerprint useless.
-    const verint = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'verint-export.txt'), 'utf8');
-    const stored = callTranscript.prepareForStorage(verint);
-    t.check('the fixture is long enough to be truncated',
+    // A call over the storage ceiling is saved as a shortened version of what
+    // was pasted, which is what made a length-based fingerprint useless. The
+    // ceiling is high enough now that no real call reaches it, so this needs a
+    // deliberately huge one.
+    const huge = ['Agent: Thank you for calling, my name is Jamie.']
+        .concat(Array.from({ length: 4000 }, () => 'Agent: let me check that for you and see what the account shows'))
+        .concat(['Agent: To recap, that is sorted. Anything else I can help with?'])
+        .join('\n');
+    const stored = callTranscript.prepareForStorage(huge);
+    t.check('the call is long enough to be trimmed',
         stored.includes('[transcript truncated for storage]'));
-    t.equal('and still fingerprints as the same call', print(stored), print(verint));
+    t.equal('and still fingerprints as the same call', print(stored), print(huge));
 
     // Two calls that open with the same greeting are not the same call.
     const greeting = 'Agent: Thank you for calling, my name is Jamie. How can I help you today?';

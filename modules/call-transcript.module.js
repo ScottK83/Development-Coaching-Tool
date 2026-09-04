@@ -16,7 +16,36 @@
      * legal footer. All of that gets stripped before analysis.
      */
 
-    const MAX_STORED_TRANSCRIPT_CHARS = 8000;
+    /* ── How much of a call is kept ──
+     *
+     * 8000 characters was set when these logs lived in localStorage under a
+     * 5MB ceiling shared with everything else. They are on IndexedDB now,
+     * which saveWithSizeCheck exempts from that cap entirely, and they sync to
+     * R2, where object size is not a constraint either. So the old number was
+     * costing real information for a limit that no longer exists.
+     *
+     * It cost more than information. 8000 characters is about the first
+     * fifteen minutes of speech, so on any longer call the close was cut off,
+     * and the close is where the recap, the next steps, the courtesy close and
+     * the customer's thank you all live. On the sample export the saved copy
+     * lost four strengths and, worse, invented two coaching points: the
+     * "missing" branch of those rules fired because the evidence had been
+     * deleted, so the associate was coached for not setting next steps and not
+     * closing properly on a call where she did both.
+     *
+     * This is now a safety ceiling rather than a routine trim: big enough that
+     * no real call reaches it, and there to stop one pathological paste
+     * bloating the store.
+     */
+    const MAX_STORED_TRANSCRIPT_CHARS = 120000;
+
+    // Where the head/tail split falls when the ceiling is genuinely hit. The
+    // open and the close are the coachable parts; the long middle of a call is
+    // usually process.
+    const TRUNCATION_HEAD_SHARE = 0.7;
+    const TRUNCATION_MARKER = '[transcript truncated for storage]';
+    // Matches both markers, including the one clampForPrompt writes.
+    const TRUNCATION_PRESENT = /\[transcript truncated(?: for storage)?\]/i;
     const MAX_PROMPT_TRANSCRIPT_CHARS = 12000;
     const MAX_QUOTE_CHARS = 110;
     const MAX_STRENGTH_BULLETS = 6;
@@ -164,6 +193,17 @@
             if (length) {
                 meta.durationLabel = length[1];
                 meta.durationSeconds = clockToSeconds(length[1]);
+                return;
+            }
+            // Verint's speech categories, kept because one strength rule reads
+            // them and stripBoilerplate removes the block they came in.
+            const cats = part.match(/^cats:\s*(.+)$/i);
+            if (cats) {
+                meta.categories = cats[1].split(';').map(item => {
+                    const [name, count] = item.split('=');
+                    return { name: collapse(name), count: Number(count) || 0 };
+                }).filter(item => item.name);
+                meta.isVerintExport = true;
                 return;
             }
             if (/^\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?$/.test(part)) {
@@ -688,10 +728,20 @@
         const strengths = [];
         const improvements = [];
 
+        // A transcript with a piece removed cannot support any conclusion of
+        // the form "this never happened", because absence is exactly what the
+        // removal produced. On the sample export the saved copy coached the
+        // associate for not setting next steps and not closing the call, on a
+        // call where she did both, purely because the end had been trimmed.
+        //
+        // Present-tense findings are unaffected: a phrase that IS in the
+        // remaining text was genuinely said.
+        const truncated = TRUNCATION_PRESENT.test(transcript);
+
         STRENGTH_RULES.forEach(rule => {
             if (rule.pattern.test(agentText)) {
                 strengths.push({ key: rule.key, praise: rule.praise || 5, text: rule.made, quote: findQuote(turns, rule.pattern) });
-            } else if (rule.missing) {
+            } else if (rule.missing && !truncated) {
                 improvements.push({ key: rule.key, weight: rule.missingWeight || 5, text: rule.missing, quote: '' });
             }
         });
@@ -783,8 +833,12 @@
             });
         }
 
+        // Talk share is a proportion of the whole call, so a call with a piece
+        // missing cannot be measured for it either.
         const totalWords = parsed.agentWords + parsed.customerWords;
-        const agentShare = (parsed.labeled && totalWords >= 120) ? parsed.agentWords / totalWords : null;
+        const agentShare = (parsed.labeled && !truncated && totalWords >= 120)
+            ? parsed.agentWords / totalWords
+            : null;
         if (agentShare !== null && agentShare >= 0.8) {
             improvements.push({
                 key: 'airtime',
@@ -830,6 +884,7 @@
             stats: {
                 labeled: parsed.labeled,
                 timed: parsed.timed,
+                truncated,
                 turns: parsed.turns.length,
                 agentWords: parsed.agentWords,
                 customerWords: parsed.customerWords,
@@ -904,6 +959,9 @@
         }
         if (!stats.labeled && !stats.timed) {
             parts.push('no speaker labels found, so everything was read as the associate');
+        }
+        if (stats.truncated) {
+            parts.push('this transcript is trimmed, so nothing is reported as missing from the call');
         }
 
         return `${parts.join(' • ')}. Drafts are editable, review before you send.`;
@@ -986,10 +1044,42 @@
         return (options || []).find(option => key(option) === target) || '';
     }
 
+    /**
+     * Trims a transcript to the storage ceiling, keeping both ends.
+     *
+     * Cutting only the tail is what invented coaching: the rules that fire on
+     * a missing recap or a missing close cannot tell "she never did it" apart
+     * from "the part where she did it was deleted". Keeping the close means the
+     * evidence for those is still there, and analyzeTranscript refuses to draw
+     * "missing" conclusions from a truncated transcript regardless.
+     *
+     * The cut lands on a line boundary so a Verint timestamp is never split
+     * from the speech underneath it.
+     */
     function clampForStorage(rawText) {
         const text = String(rawText || '').trim();
         if (text.length <= MAX_STORED_TRANSCRIPT_CHARS) return text;
-        return `${text.slice(0, MAX_STORED_TRANSCRIPT_CHARS)}\n[transcript truncated for storage]`;
+
+        const budget = MAX_STORED_TRANSCRIPT_CHARS - TRUNCATION_MARKER.length - 2;
+        const headBudget = Math.floor(budget * TRUNCATION_HEAD_SHARE);
+        const tailBudget = budget - headBudget;
+
+        // Snap to line boundaries, then drop a trailing bare timestamp. An
+        // orphaned "04:30" with the speech under it cut away parses as a turn
+        // that never happened, and the silence maths would treat the gap to it
+        // as real dead air.
+        const head = text.slice(0, headBudget);
+        const headCut = head.lastIndexOf('\n');
+        const headLines = (headCut > headBudget * 0.5 ? head.slice(0, headCut) : head).split('\n');
+        while (headLines.length && TIMESTAMP_ONLY_LINE.test(headLines[headLines.length - 1])) {
+            headLines.pop();
+        }
+
+        const tail = text.slice(-tailBudget);
+        const tailCut = tail.indexOf('\n');
+        const tailText = (tailCut >= 0 && tailCut < tailBudget * 0.5) ? tail.slice(tailCut + 1) : tail;
+
+        return [headLines.join('\n'), TRUNCATION_MARKER, tailText].join('\n');
     }
 
     function clampForPrompt(rawText) {
@@ -1003,11 +1093,17 @@
     function prepareForStorage(rawText) {
         const meta = extractMetadata(rawText);
         const body = stripBoilerplate(rawText) || String(rawText || '').trim();
+        const firedCategories = (meta.categories || [])
+            .filter(item => item.count > 0)
+            .map(item => `${item.name}=${item.count}`)
+            .join(';');
+
         const header = [
             meta.callDate ? `Call ${meta.callDate}` : '',
             meta.callTime,
             meta.advisorDisplayName,
-            meta.durationLabel ? `length ${meta.durationLabel}` : ''
+            meta.durationLabel ? `length ${meta.durationLabel}` : '',
+            firedCategories ? `cats:${firedCategories}` : ''
         ].filter(Boolean).join(' • ');
 
         return clampForStorage(header ? `[${header}]\n\n${body}` : body);

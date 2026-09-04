@@ -457,7 +457,13 @@ suite('call transcript: what gets stored', (t) => {
     const { callTranscript } = load(t);
     const stored = callTranscript.prepareForStorage(VERINT_EXPORT);
 
-    t.check('keeps a one line header of the facts', stored.startsWith('[Call 2026-08-04 • 12:38:26 PM • Alyssa Dimes • length 18:24]'));
+    // The header now also carries Verint's speech categories, because one
+    // strength rule reads them and the block they arrive in is stripped as
+    // boilerplate. Checked by parts so adding a fact does not break this.
+    t.check('keeps a one line header of the facts',
+        stored.startsWith('[Call 2026-08-04 • 12:38:26 PM • Alyssa Dimes • length 18:24'));
+    t.check('the header closes on its own line', /^\[[^\]]*\]/.test(stored));
+    t.check('and carries the speech categories', /• cats:[^\]]*Advisor Positive Exp=2/.test(stored));
     t.check('stores what was said', /thank you for being a valued customer/.test(stored));
     t.check('does not store the QA form', !/Did advisor verify caller/.test(stored));
     t.check('does not store the legal footer', !/designated recipient/.test(stored));
