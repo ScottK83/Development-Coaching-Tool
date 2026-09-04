@@ -8914,6 +8914,70 @@ function collectAllSavedCalls() {
         .filter(group => group.rows.length);
 }
 
+// Which rows are open. Keyed by employee and entry id together, because entry
+// ids are only unique inside one associate's log.
+const expandedSavedCalls = new Set();
+
+function savedCallKey(employeeName, entryId) {
+    return `${employeeName}|${entryId}`;
+}
+
+function findSavedCall(employeeName, entryId) {
+    const entries = Array.isArray(callListeningLogs?.[employeeName]) ? callListeningLogs[employeeName] : [];
+    return entries.find(entry => entry?.id === entryId) || null;
+}
+
+/**
+ * What one saved call actually holds, read only.
+ *
+ * Built on expand rather than up front: rescoring a transcript is cheap for one
+ * call and wasteful for forty, and most rows are never opened.
+ *
+ * Deliberately does not touch the form. Loading a call into the form is the
+ * other button on the row, and mixing the two would mean glancing at an old
+ * call quietly replaced whatever was being worked on.
+ */
+function buildSavedCallDetailHtml(employeeName, entry) {
+    const analyzer = window.DevCoachModules?.callTranscript;
+    const notes = [
+        ['What went well', entry.whatWentWell],
+        ['Improvement opportunities', entry.improvementAreas],
+        ['Relevant info shared', entry.relevantInfo],
+        ['Manager notes', entry.managerNotes],
+        ['Oscar / knowledge base', entry.oscarUrl]
+    ].filter(([, value]) => String(value || '').trim());
+
+    const notesHtml = notes.length
+        ? notes.map(([label, value]) => `<div class="saved-call-note">
+                <div class="saved-call-note-label">${escapeHtml(label)}</div>
+                <div>${escapeHtml(value)}</div>
+            </div>`).join('')
+        : '<div class="call-qa-detail">No notes were saved with this call.</div>';
+
+    let readHtml = '';
+    let transcriptHtml = '<div class="call-qa-detail">No transcript was saved with this call, so it cannot be re-read.</div>';
+
+    if (entry.transcript && analyzer?.analyzeTranscript) {
+        const analysis = analyzer.analyzeTranscript(entry.transcript, { associateName: employeeName });
+        if (analysis?.ok) {
+            const strengths = (analysis.allStrengths || []).length;
+            const issues = (analysis.allImprovements || []).length;
+            readHtml = `<div class="call-qa-detail">Re-read now: ${strengths} strength${strengths === 1 ? '' : 's'}, ${issues} coaching point${issues === 1 ? '' : 's'}.</div>`;
+        }
+        transcriptHtml = `<pre class="saved-call-transcript">${escapeHtml(entry.transcript)}</pre>`;
+    }
+
+    return `<div class="saved-call-detail">
+        ${notesHtml}
+        ${readHtml}
+        <div class="saved-call-note-label" style="margin-top: var(--space-3);">Transcript as saved</div>
+        ${transcriptHtml}
+        <div class="flex-row" style="margin-top: var(--space-3);">
+            <button type="button" data-saved-load-employee="${escapeHtml(employeeName)}" data-saved-load-id="${escapeHtml(entry.id || '')}">📂 Load Into The Form</button>
+        </div>
+    </div>`;
+}
+
 function renderAllSavedCalls() {
     const container = document.getElementById('allSavedCalls');
     const summary = document.getElementById('allSavedCallsSummary');
@@ -8945,12 +9009,23 @@ function renderAllSavedCalls() {
                 duplicate ? 'looks like a duplicate' : ''
             ].filter(Boolean).join(' • ');
 
+            const key = savedCallKey(group.employeeName, entry.id || '');
+            const open = expandedSavedCalls.has(key);
+
             return `<li class="saved-call-row${duplicate ? ' saved-call-duplicate' : ''}">
-                <button type="button" class="saved-call-remove" title="Delete this call from memory"
-                    data-saved-employee="${escapeHtml(group.employeeName)}"
-                    data-saved-id="${escapeHtml(entry.id || '')}">✕</button>
-                <span class="saved-call-when">${escapeHtml(moment)}</span>
-                <span class="call-qa-detail">${escapeHtml(bits)}</span>
+                <div class="saved-call-line">
+                    <button type="button" class="saved-call-remove" title="Delete this call from memory"
+                        data-saved-employee="${escapeHtml(group.employeeName)}"
+                        data-saved-id="${escapeHtml(entry.id || '')}">✕</button>
+                    <button type="button" class="saved-call-open" aria-expanded="${open}"
+                        data-saved-open-employee="${escapeHtml(group.employeeName)}"
+                        data-saved-open-id="${escapeHtml(entry.id || '')}">
+                        <span class="saved-call-caret">${open ? '▾' : '▸'}</span>
+                        <span class="saved-call-when">${escapeHtml(moment)}</span>
+                        <span class="call-qa-detail">${escapeHtml(bits)}</span>
+                    </button>
+                </div>
+                ${open ? buildSavedCallDetailHtml(group.employeeName, entry) : ''}
             </li>`;
         }).join('');
 
@@ -8994,10 +9069,58 @@ function deleteSavedCall(employeeName, entryId) {
     showToast('✅ Call deleted from memory.', 2500);
 }
 
+function toggleSavedCall(employeeName, entryId) {
+    const key = savedCallKey(employeeName, entryId);
+    if (expandedSavedCalls.has(key)) expandedSavedCalls.delete(key);
+    else expandedSavedCalls.add(key);
+    renderAllSavedCalls();
+}
+
+/**
+ * Puts an old call back in the form to work on.
+ *
+ * Confirmed first when the form already holds something, because the form is
+ * where unsent work lives and loading over it is not undoable.
+ */
+function loadSavedCallIntoForm(employeeName, entryId) {
+    const entry = findSavedCall(employeeName, entryId);
+    if (!entry) return;
+
+    const select = document.getElementById('callListeningEmployeeSelect');
+    const transcriptField = document.getElementById('callListeningTranscript');
+    const hasWork = String(transcriptField?.value || '').trim()
+        || String(document.getElementById('callListeningStrengths')?.value || '').trim()
+        || String(document.getElementById('callListeningImprovements')?.value || '').trim();
+
+    if (hasWork && !confirm('Load this call into the form? What is in the form now will be replaced.')) return;
+
+    if (select && select.value !== employeeName) {
+        select.value = employeeName;
+        renderCallListeningHistoryForSelectedEmployee();
+        refreshCallListeningRecipient();
+    }
+
+    loadCallListeningEntryIntoForm(entryId);
+    document.getElementById('callListeningTranscript')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 function handleAllSavedCallsClick(event) {
-    const button = event.target?.closest('.saved-call-remove');
-    if (!button) return;
-    deleteSavedCall(button.dataset.savedEmployee, button.dataset.savedId);
+    const remove = event.target?.closest('.saved-call-remove');
+    if (remove) {
+        deleteSavedCall(remove.dataset.savedEmployee, remove.dataset.savedId);
+        return;
+    }
+
+    const load = event.target?.closest('[data-saved-load-id]');
+    if (load) {
+        loadSavedCallIntoForm(load.dataset.savedLoadEmployee, load.dataset.savedLoadId);
+        return;
+    }
+
+    const open = event.target?.closest('.saved-call-open');
+    if (open) {
+        toggleSavedCall(open.dataset.savedOpenEmployee, open.dataset.savedOpenId);
+    }
 }
 
 function populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection) {

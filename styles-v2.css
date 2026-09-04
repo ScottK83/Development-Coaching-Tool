@@ -1157,12 +1157,74 @@ textarea:focus-visible {
 }
 
 .panel-section .saved-call-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
     padding: var(--space-2) 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.9em;
+}
+
+.panel-section .saved-call-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+/* The whole row is the control that opens the call, so the target is the width
+   of the list rather than a caret somebody has to aim at. */
+.panel-section .saved-call-open {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}
+
+.panel-section .saved-call-open:hover {
+    background: var(--bg-surface-sunken);
+    border-color: var(--border);
+}
+
+.panel-section .saved-call-caret {
+    flex: 0 0 auto;
+    color: var(--text-tertiary);
+}
+
+.panel-section .saved-call-detail {
+    padding: var(--space-3) var(--space-4) var(--space-3) 42px;
+}
+
+.panel-section .saved-call-note {
+    margin-bottom: var(--space-3);
+}
+
+.panel-section .saved-call-note-label {
+    font-weight: 650;
+    font-size: 0.82em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+.panel-section .saved-call-transcript {
+    max-height: 320px;
+    overflow: auto;
+    margin: var(--space-2) 0 0;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-sunken);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85em;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .panel-section .saved-call-duplicate {

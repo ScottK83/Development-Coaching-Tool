@@ -178,3 +178,39 @@ suite('saved calls: a truncated copy is still the same call', (t) => {
     const b = [greeting, 'Customer: I need to move my due date to the 20th.', 'Agent: I can get that changed today.'].join('\n');
     t.check('a shared greeting does not make two calls one', print(a) !== print(b));
 });
+
+suite('saved calls: reading an old call', (t) => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const css = fs.readFileSync(path.join(ROOT, 'styles-v2.css'), 'utf8');
+
+    t.check('rows are clickable controls', script.includes('class="saved-call-open"'));
+    t.check('and report their open state', script.includes('aria-expanded="${open}"'));
+    t.check('expanding is tracked per associate and entry',
+        /function savedCallKey[\s\S]{0,200}\$\{employeeName\}\|\$\{entryId\}/.test(script));
+    t.check('clicking a row toggles it', /function handleAllSavedCallsClick[\s\S]{0,900}toggleSavedCall\(/.test(script));
+
+    // The detail is what he asked to see: the transcript and the notes.
+    t.check('the detail shows the transcript', script.includes('saved-call-transcript'));
+    t.check('the transcript is escaped', /saved-call-transcript">\$\{escapeHtml\(entry\.transcript\)\}/.test(script));
+    t.check('the detail shows the saved notes', script.includes("['What went well', entry.whatWentWell]"));
+    t.check('a call with no transcript says so',
+        /No transcript was saved with this call/.test(script));
+    t.check('a call with no notes says so', /No notes were saved with this call/.test(script));
+
+    // Built on expand, because rescoring forty transcripts to draw a list
+    // nobody has opened is wasted work.
+    t.check('the detail is only built when open',
+        /\$\{open \? buildSavedCallDetailHtml\(group\.employeeName, entry\) : ''\}/.test(script));
+
+    // Viewing must not quietly replace unsent work in the form.
+    t.check('loading into the form is a separate action', script.includes('data-saved-load-id'));
+    t.check('and asks before overwriting work',
+        /function loadSavedCallIntoForm[\s\S]{0,900}hasWork && !confirm\(/.test(script));
+    t.check('loading switches to that associate',
+        /function loadSavedCallIntoForm[\s\S]{0,1200}select\.value = employeeName/.test(script));
+
+    t.check('the panel says a call can be opened', html.includes('Click a call to read the transcript'));
+    t.check('the transcript box scrolls rather than stretching the page',
+        /\.saved-call-transcript[\s\S]{0,200}overflow: auto/.test(css));
+});
