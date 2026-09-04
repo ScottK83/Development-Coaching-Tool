@@ -736,12 +736,17 @@ Box 2 - Future Improvement Areas:
                             </div>
                         </div>
 
-                        <div id="callListeningOutlookSection" class="call-panel call-panel-action" style="display: none;">
+                        <div id="callListeningOutlookSection" class="call-panel call-panel-action">
                             <h3>📧 Generate Outlook Email</h3>
-                            <p>Paste Copilot's drafted message below, then generate an Outlook email.</p>
+                            <p>Paste Copilot's drafted message below, then generate an Outlook email. This panel is the last step: generate a prompt above, run it in Copilot, then bring the message back here.</p>
+                            <div class="call-field">
+                                <label class="label-bold" for="callListeningRecipient">To</label>
+                                <input type="email" id="callListeningRecipient" placeholder="Set an address pattern in Settings > Team Members, or type one here">
+                                <div id="callListeningRecipientNote" class="text-muted-sm" style="margin-top: 4px;"></div>
+                            </div>
                             <textarea id="callListeningOutlookBody" class="call-mono" style="height: 200px;" placeholder="Paste the Copilot-generated call feedback email here..."></textarea>
                             <div class="flex-row" style="margin-top: var(--space-4);">
-                                <button type="button" id="generateCallListeningOutlookBtn" class="btn-primary" style="opacity: 0.6;">📧 Generate Outlook Email</button>
+                                <button type="button" id="generateCallListeningOutlookBtn" class="btn-primary" style="opacity: 0.6;" disabled>📧 Generate Outlook Email</button>
                             </div>
                         </div>
 
@@ -1114,6 +1119,7 @@ Box 2 - Future Improvement Areas:
                     <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                         <button type="button" id="subNavTeamMembers" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Members</button>
                         <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
+                        <button type="button" id="subNavSentimentKeywords" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗣️ Scored Phrases</button>
                         <button type="button" id="subNavSyncBackup" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🔄 Sync & Backup</button>
                         <button type="button" id="subNavDeleteData" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗑️ Delete Data</button>
                     </div>
@@ -1245,6 +1251,15 @@ Box 2 - Future Improvement Areas:
                             <button type="button" id="saveCoachingCcEmail" class="btn-secondary" style="background: #1976d2; color: white;">Save</button>
                         </div>
                         <div id="coachingCcEmailStatus" style="margin-top: 8px; font-size: 0.85em; color: var(--text-tertiary);"></div>
+                    </div>
+                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">
+                        <h3 style="margin-top: 0;">📨 Associate address pattern</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 12px;">Fills the To: field on coaching drafts so you are not typing an address every time. Use <code>{first}</code>, <code>{last}</code>, <code>{f}</code> and <code>{l}</code>, where the last two are initials. Example: <code>{first}.{last}@aps.com</code>. Where the pattern is wrong for someone, correct the To: field on the draft and it is remembered for them.</p>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="associateEmailPattern" placeholder="{first}.{last}@aps.com" style="flex: 1; min-width: 240px; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-surface-raised); color: var(--text-primary);">
+                            <button type="button" id="saveAssociateEmailPattern" class="btn-secondary" style="background: #1976d2; color: white;">Save</button>
+                        </div>
+                        <div id="associateEmailPatternStatus" style="margin-top: 8px; font-size: 0.85em; color: var(--text-tertiary);"></div>
                     </div>
                     </div>
                     <!-- End Team Members Sub-section -->

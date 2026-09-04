@@ -152,15 +152,21 @@ Requirements:
         }
 
         const subject = buildOutlookSubject(employeeName, callDate, options.getEmployeeNickname);
+        const to = String(options.to || '').trim();
 
         try {
             const openDraft = window.DevCoachModules?.sharedUtils?.openMailtoDraft;
             if (typeof openDraft !== 'function') {
                 throw new Error('Shared mailto utility unavailable');
             }
-            openDraft(subject, bodyText);
-            showToast('📧 Outlook draft opened', 2500);
-            return { ok: true, subject };
+            openDraft(subject, bodyText, { to });
+            // An address typed over the resolved one is remembered for that
+            // associate, so a pattern that is wrong for somebody is wrong once.
+            if (to && employeeName) {
+                window.DevCoachModules?.sharedUtils?.setAssociateEmailOverride?.(employeeName, to);
+            }
+            showToast(to ? `📧 Outlook draft opened for ${to}` : '📧 Outlook draft opened', 2500);
+            return { ok: true, subject, to };
         } catch (error) {
             if (typeof options.onError === 'function') {
                 options.onError(error);

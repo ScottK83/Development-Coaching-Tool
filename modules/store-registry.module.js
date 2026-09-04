@@ -65,6 +65,12 @@
         { name: 'metricCoachingTips', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'yoyBaseline2025', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'ccEmail', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
+        // ccEmail above is the one data store still in localStorage, because the
+        // mailto helper reads it before the storage module exists. These two are
+        // only read when a draft is built or the settings panel opens, so they
+        // belong off the 5MB wall with everything else.
+        { name: 'associateEmailPattern', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        { name: 'employeeEmails', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'complianceLog', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'weeklyFocalPoints', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'celebrationsHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },

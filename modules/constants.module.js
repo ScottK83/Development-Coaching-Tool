@@ -58,7 +58,7 @@
         'employeeSupervisors', 'executiveSummaryNotes', 'userCustomTips', 'coachingTips',
         'customMetrics', 'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips',
         'yoyBaseline2025', 'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory',
-        'oneOnOneMeetings', 'midYearMeta'
+        'oneOnOneMeetings', 'midYearMeta', 'associateEmailPattern', 'employeeEmails'
     ];
 
     window.DevCoachConstants = {

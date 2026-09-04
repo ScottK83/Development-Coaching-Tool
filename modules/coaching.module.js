@@ -113,9 +113,14 @@
             if (typeof openDraft !== 'function') {
                 throw new Error('Shared mailto utility unavailable');
             }
-            openDraft(subject, bodyText);
-            showToast('📧 Outlook draft opened', 2500);
-            return { ok: true, subject };
+            // Resolved from the address pattern rather than left blank. This
+            // panel has no To: field to correct, so an address that is wrong
+            // for someone is fixed on the call listening draft, where there is
+            // one, and the override applies here afterwards.
+            const to = window.DevCoachModules?.sharedUtils?.resolveAssociateEmail?.(options.selectedEmployee) || '';
+            openDraft(subject, bodyText, { to });
+            showToast(to ? `📧 Outlook draft opened for ${to}` : '📧 Outlook draft opened', 2500);
+            return { ok: true, subject, to };
         } catch (error) {
             if (typeof options.onError === 'function') {
                 options.onError(error);

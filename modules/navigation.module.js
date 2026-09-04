@@ -156,8 +156,12 @@
 
     // --- Settings (Manage Data) sub-sections ---
 
-    var SETTINGS_SUB_SECTIONS = ['subSectionTeamMembers', 'subSectionCoachingTips', 'subSectionSyncBackup', 'subSectionDeleteData'];
-    var SETTINGS_NAV_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSyncBackup', 'subNavDeleteData'];
+    // subSectionSentimentKeywords was built, populated on load and wired to a
+    // working save button, but was never added here and had no nav button, so
+    // it sat in a div nothing ever showed. The phrase lists were editable in
+    // every respect except reachable.
+    var SETTINGS_SUB_SECTIONS = ['subSectionTeamMembers', 'subSectionCoachingTips', 'subSectionSentimentKeywords', 'subSectionSyncBackup', 'subSectionDeleteData'];
+    var SETTINGS_NAV_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSentimentKeywords', 'subNavSyncBackup', 'subNavDeleteData'];
 
     function showManageDataSubSection(subSectionId) {
         SETTINGS_SUB_SECTIONS.forEach(function(id) {

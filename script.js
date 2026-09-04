@@ -423,6 +423,7 @@ function initializeSection(sectionId) {
             populateDeleteSentimentDropdown();
             renderEmployeesList();
             window.DevCoachModules?.sharedUtils?.bindCoachingCcEmailSetting?.(document);
+            window.DevCoachModules?.sharedUtils?.bindAssociateEmailPatternSetting?.(document);
             break;
         case 'executiveSummarySection':
             renderExecutiveSummary();
@@ -2143,6 +2144,12 @@ function bindManageDataNavigationHandlers() {
             subSectionCoachingTips.append(...tipsManagementSection.childNodes);
         }
         renderTipsManagement();
+    });
+    document.getElementById('subNavSentimentKeywords')?.addEventListener('click', () => {
+        showManageDataSubSection('subSectionSentimentKeywords');
+        // Repainted on open rather than trusted from page load, so an edit
+        // saved on another machine and pulled in by sync is what you see.
+        renderSentimentDatabasePanel();
     });
     document.getElementById('subNavSyncBackup')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionSyncBackup');
@@ -8664,15 +8671,54 @@ function generateCallListeningPromptAndCopy() {
     showToast('⚠️ Call Listening module could not open Copilot flow.', 3500);
 }
 
+/**
+ * Fills the To: field for the selected associate and says where it came from.
+ *
+ * An address the supervisor has already typed is never overwritten, because
+ * that typed value is the correction the pattern needs.
+ */
+function refreshCallListeningRecipient() {
+    const input = document.getElementById('callListeningRecipient');
+    const note = document.getElementById('callListeningRecipientNote');
+    if (!input) return;
+
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const utils = window.DevCoachModules?.sharedUtils;
+
+    if (!employeeName) {
+        if (note) note.textContent = 'Pick an associate and their address fills in here.';
+        return;
+    }
+
+    const overrides = utils?.getAssociateEmailOverrides?.() || {};
+    const resolved = utils?.resolveAssociateEmail?.(employeeName) || '';
+
+    if (!input.value.trim() || input.dataset.autofilledFor !== employeeName) {
+        input.value = resolved;
+        input.dataset.autofilledFor = employeeName;
+    }
+
+    if (!note) return;
+    if (!resolved) {
+        note.textContent = 'No address pattern set yet. Type one here, or set the pattern once in Settings > Team Members.';
+    } else if (overrides[employeeName]) {
+        note.textContent = 'Saved address for this associate.';
+    } else {
+        note.textContent = 'Built from your address pattern. Correct it here if it is wrong and it will be remembered.';
+    }
+}
+
 function generateCallListeningOutlookEmail() {
     const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const callDate = (document.getElementById('callListeningDate')?.value || '').trim();
     const bodyText = (document.getElementById('callListeningOutlookBody')?.value || '').trim();
+    const to = (document.getElementById('callListeningRecipient')?.value || '').trim();
 
     const delegatedResult = window.DevCoachModules?.callListening?.generateOutlookDraft?.({
         employeeName,
         callDate,
         bodyText,
+        to,
         getEmployeeNickname,
         showToast,
         onError: (error) => console.error('Error opening Outlook draft from call listening:', error)
@@ -8775,10 +8821,14 @@ function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
     outlookBtn.disabled = !hasContent;
     outlookBtn.style.opacity = hasContent ? '1' : '0.6';
     outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
+    // The panel is visible from the start now, so the button has to say why it
+    // is not usable yet rather than just looking dim.
+    outlookBtn.title = hasContent ? '' : 'Paste the message from Copilot first';
 }
 
 function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
+    bindElementOnce(employeeSelect, 'change', refreshCallListeningRecipient);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
@@ -8827,6 +8877,7 @@ function initializeCallListeningSection() {
     setCallListeningSectionStatus(status, employees.length);
     bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn);
     updateCallListeningOutlookButtonState(outlookBody, outlookBtn);
+    refreshCallListeningRecipient();
 
     renderCallListeningHistoryForSelectedEmployee();
 }
