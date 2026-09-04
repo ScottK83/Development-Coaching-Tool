@@ -1720,6 +1720,8 @@ function evaluateMetricsForCoaching(employeeData) {
  * @param {string} params.weekEnding - Week/period label for the coaching (e.g., "Week of 2/19")
  * @param {string[]} params.metricsCoached - Array of metric keys addressed in coaching (e.g., ['aht', 'fcr'])
  * @param {boolean} [params.aiAssisted=false] - Whether Copilot/AI was used to generate content
+ * @param {Array<{id:string,metricKey:string,text:string}>} [params.suggestions] - The specific
+ *   advice given, so coaching-outcomes can measure whether a tip lands, not just a topic
  * @returns {void} Entry is saved to localStorage via saveCoachingHistory()
  * 
  * @example
@@ -1730,7 +1732,7 @@ function evaluateMetricsForCoaching(employeeData) {
  *   aiAssisted: true
  * });
  */
-function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssisted }) {
+function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssisted, suggestions }) {
     if (!employeeId) {
         console.warn('recordCoachingEvent: Missing employeeId');
         return;
@@ -1739,6 +1741,9 @@ function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssiste
         employeeId,
         weekEnding,
         metricsCoached: metricsCoached || [],
+        // The specific advice given, so coaching-outcomes can tell whether a
+        // tip works rather than only whether a topic does.
+        suggestions: Array.isArray(suggestions) ? suggestions : [],
         aiAssisted: !!aiAssisted,
         generatedAt: new Date().toISOString()
     });
@@ -8337,6 +8342,202 @@ function copyCallListeningWordChoice() {
     copyToClipboard(text, { message: '📋 Language read copied to clipboard' });
 }
 
+/* ── The metric bridge on the Call Listening page ──
+ *
+ * Holds the briefs for the call currently on screen so clicking a metric chip
+ * is a re-render rather than a rescore of eight transcripts.
+ */
+let callMetricBriefs = [];
+let callMetricSelectedKey = '';
+
+/**
+ * The latest weekly period that actually contains this associate.
+ *
+ * Walked newest first rather than trusting the newest upload, because a rep
+ * who was out, or new, is missing from periods either side of them and the
+ * bridge would otherwise report no metrics at all for them.
+ */
+function findLatestPeriodForAssociate(employeeName) {
+    if (!employeeName || typeof weeklyData === 'undefined') return null;
+
+    const endDate = (key) => weeklyData[key]?.metadata?.endDate
+        || (key.includes('|') ? key.split('|')[1] : key);
+
+    const keys = Object.keys(weeklyData || {})
+        .filter(key => (weeklyData[key]?.metadata?.periodType || 'week') === 'week')
+        .sort((a, b) => String(endDate(b)).localeCompare(String(endDate(a))));
+
+    for (const key of keys) {
+        const period = weeklyData[key];
+        const employee = period?.employees?.find(item => item?.name === employeeName);
+        if (employee) return { weekKey: key, period, employee };
+    }
+    return null;
+}
+
+/**
+ * Which tips this associate has already been sent, so the selector can stop
+ * repeating advice that has already had its chance.
+ */
+function alreadyGivenSuggestionIds(employeeName) {
+    const history = (typeof coachingHistory !== 'undefined' ? coachingHistory : {})[employeeName] || [];
+    const ids = [];
+    history.forEach(entry => {
+        (entry?.suggestions || []).forEach(item => {
+            if (item?.id) ids.push(item.id);
+        });
+    });
+    return ids;
+}
+
+function buildCallMetricBriefs(transcript, associateName, analysis) {
+    const bridge = window.DevCoachModules?.callCoachingBridge;
+    if (!bridge?.collectFindings || !associateName) return [];
+
+    const found = findLatestPeriodForAssociate(associateName);
+    if (!found) return [];
+
+    const bundle = typeof buildTrendEmailAnalysisBundle === 'function'
+        ? buildTrendEmailAnalysisBundle(found.employee, found.weekKey, found.period)
+        : null;
+    if (!bundle?.allMetrics?.length) return [];
+
+    const wordChoice = scanCallListeningWordChoice(transcript, associateName, analysis);
+    const { findings } = bridge.collectFindings({
+        analysis,
+        wordChoice,
+        associateName,
+        callDate: (document.getElementById('callListeningDate')?.value || '').trim(),
+        history: callListeningLogs?.[associateName] || []
+    });
+
+    const effectiveness = window.DevCoachModules?.coachingOutcomes?.suggestionEffectiveness?.() || {};
+    const alreadyGiven = alreadyGivenSuggestionIds(associateName);
+
+    return bridge.metricsInFocus(bundle.allMetrics, findings)
+        .map(metric => bridge.buildMetricBrief(metric, { effectiveness, alreadyGiven }));
+}
+
+function renderCallMetricBrief() {
+    const container = document.getElementById('callMetricBrief');
+    const bridge = window.DevCoachModules?.callCoachingBridge;
+    if (!container || !bridge) return;
+
+    const brief = callMetricBriefs.find(item => item.metricKey === callMetricSelectedKey);
+    container.innerHTML = brief ? bridge.briefHtml(brief, escapeHtml) : '';
+
+    document.querySelectorAll('#callMetricChips .call-metric-chip').forEach(chip => {
+        chip.setAttribute('aria-pressed', String(chip.dataset.metricKey === callMetricSelectedKey));
+    });
+}
+
+function renderCallMetricCoachPanel(transcript, associateName, analysis) {
+    const panel = document.getElementById('callMetricCoachPanel');
+    const chips = document.getElementById('callMetricChips');
+    const status = document.getElementById('callMetricCoachStatus');
+    if (!panel || !chips) return;
+
+    callMetricBriefs = buildCallMetricBriefs(transcript, associateName, analysis);
+
+    if (!callMetricBriefs.length) {
+        panel.style.display = 'none';
+        callMetricSelectedKey = '';
+        return;
+    }
+
+    const bridge = window.DevCoachModules.callCoachingBridge;
+    chips.innerHTML = bridge.buttonsHtml(callMetricBriefs, escapeHtml);
+    callMetricSelectedKey = callMetricBriefs[0].metricKey;
+    panel.style.display = 'block';
+
+    if (status) {
+        const reviewed = callMetricBriefs[0].evidence[0]?.callsTotal || 1;
+        status.textContent = `Read across ${reviewed} call${reviewed === 1 ? '' : 's'} with a saved transcript. Generating a prompt logs the metric and the tips, so next week's upload can show whether they landed.`;
+    }
+
+    renderCallMetricBrief();
+}
+
+function handleCallMetricChipClick(event) {
+    const chip = event.target.closest('.call-metric-chip');
+    if (!chip || !chip.dataset.metricKey) return;
+    callMetricSelectedKey = chip.dataset.metricKey;
+    renderCallMetricBrief();
+}
+
+function getSelectedCallMetricBrief() {
+    const brief = callMetricBriefs.find(item => item.metricKey === callMetricSelectedKey);
+    if (!brief) {
+        showToast('⚠️ Analyze a transcript first, then pick a metric.', 3000);
+        return null;
+    }
+    return brief;
+}
+
+function copySelectedCallMetricRead() {
+    const brief = getSelectedCallMetricBrief();
+    if (!brief) return;
+
+    const lines = [
+        brief.headline,
+        '',
+        'What her calls show:',
+        ...brief.evidence.map(finding => `- ${finding.text} Came up ${finding.appearsOn}.${finding.quote ? ` "${finding.quote}"` : ''}`),
+        '',
+        'What to try:',
+        ...brief.tips.map(tip => `- ${tip.text}`)
+    ];
+
+    copyToClipboard(lines.join('\n'), { message: '📋 Metric read copied to clipboard' });
+}
+
+/**
+ * Builds the Copilot prompt for the selected metric and logs what was
+ * suggested.
+ *
+ * The logging is the point of the whole loop: coaching-outcomes joins these
+ * suggestion ids to next week's upload, so the selector can stop offering
+ * advice that never moves anything. It records on prompt generation rather
+ * than on send, because that is the moment the supervisor commits to this
+ * advice, and nothing downstream can observe the send.
+ */
+function generateCallMetricCoachPrompt() {
+    const brief = getSelectedCallMetricBrief();
+    if (!brief) return;
+
+    const bridge = window.DevCoachModules.callCoachingBridge;
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
+
+    const prompt = bridge.buildMetricPrompt(brief, { associateName: employeeName, preferredName });
+
+    const promptArea = document.getElementById('callListeningPromptArea');
+    if (promptArea) promptArea.value = prompt;
+
+    const handoff = window.DevCoachModules?.callListening?.copyPromptAndOpenCopilot?.({
+        prompt,
+        button: document.getElementById('generateMetricCoachPromptBtn'),
+        openWindow: window.open
+    });
+
+    if (!handoff?.ok) {
+        showToast('⚠️ Could not open the Copilot flow.', 3500);
+        return;
+    }
+
+    const outlookSection = document.getElementById('callListeningOutlookSection');
+    if (outlookSection) outlookSection.style.display = 'block';
+
+    const found = findLatestPeriodForAssociate(employeeName);
+    recordCoachingEvent({
+        employeeId: employeeName,
+        weekEnding: found?.period?.metadata?.endDate || '',
+        metricsCoached: [brief.metricKey],
+        aiAssisted: true,
+        suggestions: brief.tips.map(tip => ({ id: tip.id, metricKey: tip.metricKey, text: tip.text }))
+    });
+}
+
 function copyCallListeningQaAnswers() {
     const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
     if (!transcript) {
@@ -8388,6 +8589,7 @@ function analyzeCallListeningTranscript() {
 
     renderCallQaScorecard(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
     renderCallWordChoicePanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
+    renderCallMetricCoachPanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
 
     if (summary) {
         summary.textContent = analyzer.buildAnalysisSummary(analysis);
@@ -8570,6 +8772,9 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
     bindElementOnce(document.getElementById('copyCallWordChoiceBtn'), 'click', copyCallListeningWordChoice);
+    bindElementOnce(document.getElementById('callMetricChips'), 'click', handleCallMetricChipClick);
+    bindElementOnce(document.getElementById('generateMetricCoachPromptBtn'), 'click', generateCallMetricCoachPrompt);
+    bindElementOnce(document.getElementById('copyMetricCoachBtn'), 'click', copySelectedCallMetricRead);
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
     bindElementOnce(copyVerintBtn, 'click', () => copyCallListeningVerintSummary());
     bindElementOnce(exportBtn, 'click', downloadCallListeningLogsCSV);

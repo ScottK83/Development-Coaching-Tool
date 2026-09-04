@@ -675,6 +675,18 @@ Box 2 - Future Improvement Areas:
                             </div>
                         </div>
 
+                        <div id="callMetricCoachPanel" class="call-panel" style="display: none;">
+                            <h3>🎯 What Her Numbers Say, Answered From Her Calls</h3>
+                            <p>The metrics she is missing that these calls can actually speak to. Click one to see what the calls show and what to ask her to try.</p>
+                            <div id="callMetricChips" class="call-metric-chips"></div>
+                            <div id="callMetricBrief" style="margin-top: var(--space-4);"></div>
+                            <div class="flex-row" style="margin-top: var(--space-4);">
+                                <button type="button" id="generateMetricCoachPromptBtn" class="btn-primary">🤖 Copilot Prompt For This Metric</button>
+                                <button type="button" id="copyMetricCoachBtn">📋 Copy The Read</button>
+                            </div>
+                            <div id="callMetricCoachStatus" class="text-muted-sm" style="margin-top: var(--space-3);"></div>
+                        </div>
+
                         <div id="callWordChoicePanel" class="call-panel" style="display: none;">
                             <h3>🗣️ Language, Against the Scored Phrase Lists</h3>
                             <p>Read off the call using the Verint phrase lists in Settings, matched to the side that said them. Positive and negative phrases are what the associate is graded on, so these are the exact words that move those scores.</p>
@@ -1831,6 +1843,7 @@ Box 2 - Future Improvement Areas:
                 'modules/call-transcript.module.js',
                 'modules/call-qa.module.js',
                 'modules/call-word-choice.module.js',
+                'modules/call-coaching-bridge.module.js',
                 'modules/call-trends.module.js',
                 'modules/call-listening.module.js',
                 'modules/employee-list.module.js',

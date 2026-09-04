@@ -1104,6 +1104,47 @@ textarea:focus-visible {
     color: var(--text-primary);
 }
 
+/* Metric chips: one per metric the calls can speak to, picked like tabs. */
+.panel-section .call-metric-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.panel-section .call-metric-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--border-strong);
+    border-left-width: 3px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-sunken);
+    cursor: pointer;
+    text-align: left;
+}
+
+.panel-section .call-metric-warn { border-left-color: var(--red); }
+.panel-section .call-metric-watch { border-left-color: var(--yellow); }
+
+.panel-section .call-metric-chip[aria-pressed="true"] {
+    background: var(--bg-surface-raised);
+    border-color: var(--text-secondary);
+    border-left-width: 3px;
+}
+
+.panel-section .call-metric-chip-label {
+    font-weight: 650;
+    font-size: 0.92em;
+    color: var(--text-primary);
+}
+
+.panel-section .call-metric-chip-detail {
+    font-size: 0.78em;
+    color: var(--text-tertiary);
+}
+
 .panel-section .call-history {
     list-style: none;
     margin: 0;

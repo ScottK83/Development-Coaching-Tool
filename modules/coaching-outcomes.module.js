@@ -187,7 +187,15 @@
                         outcomeKey: outcomeKey,
                         outcomeEnd: outcomeKey ? _endDate(outcomeKey) : null,
                         beforeValue: before,
-                        afterValue: after
+                        afterValue: after,
+                        // The specific suggestions given for THIS metric, so the
+                        // same week-over-week verdict can be attributed to the
+                        // advice and not just the topic. An older entry has
+                        // none, which is why effectiveness is always reported
+                        // with its sample size rather than as a rate alone.
+                        suggestions: (entry.suggestions || []).filter(function (s) {
+                            return s && s.metricKey === metricKey && s.id;
+                        })
                     };
 
                     if (before === null || after === null) {
@@ -253,6 +261,93 @@
                 return r;
             })
             .sort(function (a, b) { return b.total - a.total || b.moveRate - a.moveRate; });
+    }
+
+    /* ── Which individual suggestions land ──
+     *
+     * summarizeByMetric answers "does coaching AHT work". This answers "does
+     * THIS tip work", which is the one that can change what gets sent next.
+     *
+     * Two deliberate limits, because the sample sizes here are small and will
+     * stay small for months:
+     *
+     * `beatTeam` is preferred over the raw verdict wherever it exists. A week
+     * where the whole centre improved is not evidence that a tip did anything,
+     * and AHT in particular moves for reasons nobody in this app controls.
+     *
+     * Nothing is called effective below MIN_SAMPLE_FOR_RATE. Two lucky weeks
+     * out of two is a 100% success rate and means nothing, and a selector that
+     * believed it would lock onto one tip and stop showing the rest. Below the
+     * floor `rate` is null and callers are expected to fall back to relevance.
+     */
+
+    var MIN_SAMPLE_FOR_RATE = 5;
+
+    function summarizeBySuggestion(outcomes) {
+        var rows = {};
+
+        (outcomes || []).forEach(function (o) {
+            if (o.verdict === 'pending') return;
+            (o.suggestions || []).forEach(function (s) {
+                var r = rows[s.id] || (rows[s.id] = {
+                    id: s.id,
+                    text: s.text || '',
+                    metricKey: s.metricKey,
+                    label: o.label,
+                    given: 0, moved: 0, backwards: 0, flat: 0,
+                    comparable: 0, beatTeam: 0,
+                    employees: {}
+                });
+                r.given++;
+                r.employees[o.employee] = true;
+                if (o.verdict === 'moved') r.moved++;
+                else if (o.verdict === 'went backwards') r.backwards++;
+                else r.flat++;
+                if (o.beatTeam !== null) { r.comparable++; if (o.beatTeam) r.beatTeam++; }
+            });
+        });
+
+        return Object.keys(rows)
+            .map(function (k) {
+                var r = rows[k];
+                r.people = Object.keys(r.employees).length;
+                delete r.employees;
+
+                // Beating the team is the stronger signal, so it is used when
+                // there is enough of it and the raw move rate only backfills.
+                if (r.comparable >= MIN_SAMPLE_FOR_RATE) {
+                    r.rate = r.beatTeam / r.comparable;
+                    r.rateBasis = 'beat the team';
+                    r.rateSample = r.comparable;
+                } else if (r.given >= MIN_SAMPLE_FOR_RATE) {
+                    r.rate = r.moved / r.given;
+                    r.rateBasis = 'moved the right way';
+                    r.rateSample = r.given;
+                } else {
+                    r.rate = null;
+                    r.rateBasis = 'not enough history yet';
+                    r.rateSample = r.given;
+                }
+                return r;
+            })
+            .sort(function (a, b) {
+                if (a.rate === null && b.rate === null) return b.given - a.given;
+                if (a.rate === null) return 1;
+                if (b.rate === null) return -1;
+                return b.rate - a.rate || b.rateSample - a.rateSample;
+            });
+    }
+
+    /**
+     * Suggestion effectiveness as a lookup, for the tip selector.
+     * Keyed by suggestion id, so picking a tip costs one map read.
+     */
+    function suggestionEffectiveness(employeeName) {
+        var index = {};
+        summarizeBySuggestion(buildOutcomes(employeeName)).forEach(function (r) {
+            index[r.id] = r;
+        });
+        return index;
     }
 
     /* ── Rendering ── */
@@ -363,6 +458,9 @@
     window.DevCoachModules.coachingOutcomes = {
         buildOutcomes: buildOutcomes,
         summarizeByMetric: summarizeByMetric,
+        summarizeBySuggestion: summarizeBySuggestion,
+        suggestionEffectiveness: suggestionEffectiveness,
+        MIN_SAMPLE_FOR_RATE: MIN_SAMPLE_FOR_RATE,
         renderForEmployee: renderForEmployee,
         renderTeamSummary: renderTeamSummary
     };
