@@ -927,7 +927,9 @@ Requirements:
         // of your calls" is the sentence that makes everything after it
         // evidence rather than opinion, and listing the days lets them check.
         const listened = !moments.length
-            ? `I had a proper listen to a few of your calls`
+            // No dates known, so the count is not known either. "A few" would
+            // be a guess about how many calls this is.
+            ? `I had a proper listen to your recent calls`
             : moments.length === 1
                 ? `I listened back to the ${label} you took on ${moments[0]}`
                 : `I have listened to ${moments.length} of your calls over the past few days`;
@@ -942,12 +944,32 @@ Requirements:
 
         // The pattern, where there is one. This is the part a list of findings
         // cannot say for itself.
+        //
+        // Worded by how many calls it spans. "The pattern I keep seeing" says
+        // repetition across calls, so on a single call it read as "the pattern
+        // I keep seeing is silence. It came up on 1 of them", which claims a
+        // history that does not exist. Two findings from one family on one
+        // call is still worth naming; it is a theme, not a pattern.
         const pattern = describePattern(brief.evidence, moments.length);
-        const patternLine = pattern
-            ? `The pattern I keep seeing is ${pattern.phrase}. It came up on ${pattern.calls === moments.length && moments.length > 1 ? `all ${moments.length}` : pattern.calls} of them.`
-            : (brief.evidence.length === 1
+        let patternLine = '';
+
+        if (pattern && moments.length > 1) {
+            const span = pattern.calls === moments.length ? `all ${moments.length}` : String(pattern.calls);
+            patternLine = `The pattern I keep seeing is ${pattern.phrase}. It came up on ${span} of them.`;
+        } else if (pattern) {
+            // Not "one thing: silence: stretches where...". The phrases carry
+            // their own colon, so the sentence around them cannot add another.
+            patternLine = `It all comes back to ${pattern.phrase}.`;
+        } else if (!brief.evidence.length) {
+            // Nothing stood out, so there is nothing to introduce. Reachable
+            // only by calling this directly: a metric with no evidence never
+            // gets a chip.
+            patternLine = '';
+        } else {
+            patternLine = brief.evidence.length === 1
                 ? 'Here is the one thing that stood out.'
-                : 'Here is what stood out.');
+                : 'Here is what stood out.';
+        }
 
         // Ordered so the findings that make up the stated pattern come first.
         // Announcing a pattern of silence and then leading with hedging reads
@@ -1012,8 +1034,7 @@ Requirements:
             '',
             opening,
             ...(callList ? ['', callList] : []),
-            '',
-            patternLine,
+            ...(patternLine ? ['', patternLine] : []),
             '',
             ...(observations.length ? [observations.join('\n'), ''] : []),
             ...(priorLine ? [priorLine, ''] : []),

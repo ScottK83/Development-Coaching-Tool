@@ -926,3 +926,78 @@ suite('coaching bridge: the prior result reaches the message', (t) => {
         /findPriorCoachingOutcome[\s\S]{0,1400}formatMetricDisplay\(metricKey, value\)/.test(script));
     t.check('and it is handed to the message', script.includes('priorOutcome: findPriorCoachingOutcome('));
 });
+
+suite('coaching bridge: one call reads properly too', (t) => {
+    const { callCoachingBridge: bridge } = load(t, null, { aht: ['Type notes while talking'] });
+
+    const one = 'Thursday, September 3 at 6:35 PM';
+    const finding = (key, text) => ({
+        key, text, quote: 'one moment', appearsOn: 'on this call',
+        count: 1, weight: 5, phrase: '', moments: [one]
+    });
+    const build = (evidence, options) => bridge.buildMetricMessage(
+        {
+            metricKey: 'aht', label: 'Average Handle Time', headline: 'Average Handle Time',
+            evidence,
+            tips: [{ id: 'a', metricKey: 'aht', text: 'Type notes while talking', effectiveness: null }]
+        },
+        Object.assign({
+            preferredName: 'Esther', callMoments: [one], callLabel: '8 minute call',
+            askedQuestion: 'How do I lower my AHT?'
+        }, options || {})
+    );
+
+    // "The pattern I keep seeing" claims repetition across calls. On one call
+    // it read "It came up on 1 of them", which is a history that does not
+    // exist. Two findings from one family on one call is still worth naming,
+    // as a theme rather than a pattern.
+    const themed = build([
+        finding('stalling', 'Silence fillers came up repeatedly.'),
+        finding('deadAirGap', 'Dead air: about 2m 10s at 4:30.')
+    ]);
+    t.check('no pattern is claimed across one call', !/pattern I keep seeing/.test(themed));
+    t.check('but the theme is still named', /It all comes back to silence/.test(themed));
+    t.check('and it does not say 1 of them', !/of them/.test(themed));
+
+    // The phrases carry their own colon, so the sentence cannot add another.
+    t.check('no double colon', !/thing: silence:/.test(themed));
+    t.check('exactly one colon in the theme line',
+        (themed.split('\n').find((l) => l.indexOf('It all comes back') === 0) || '').split(':').length === 2);
+
+    const single = build([finding('stalling', 'Silence fillers came up repeatedly.')]);
+    t.check('one finding says so', /Here is the one thing that stood out/.test(single));
+    t.check('the call is named once', (single.match(/September 3/g) || []).length === 1);
+    t.check('and findings are not prefixed with it', !/On the September 3 call/.test(single));
+
+    // Whether the last round worked matters just as much off one call.
+    const withPrior = build([finding('stalling', 'Silence fillers came up repeatedly.')], {
+        priorOutcome: { verdict: 'moved', beatTeam: true, beforeLabel: '8:32', afterLabel: '7:40' }
+    });
+    t.check('the prior result still appears', /moved the right way the following week/.test(withPrior));
+
+    // No date entered on the form, so the count is unknown. "A few of your
+    // calls" would be a guess about how many.
+    const noDate = bridge.buildMetricMessage(
+        {
+            metricKey: 'aht', label: 'Average Handle Time', headline: 'Average Handle Time',
+            evidence: [finding('stalling', 'Silence fillers came up repeatedly.')],
+            tips: []
+        },
+        { preferredName: 'Esther', callMoments: [], callLabel: 'call' }
+    );
+    t.check('an unknown count is not guessed at', !/a few of your calls/.test(noDate));
+    t.check('and it still reads', /listen to your recent calls/.test(noDate));
+
+    // Reachable only by calling this directly, since a metric with no evidence
+    // never gets a chip. It must not introduce a list that is not there.
+    const nothing = build([]);
+    t.check('nothing found introduces nothing', !/Here is what stood out/.test(nothing));
+    t.check('and leaves no double blank line', !/\n\n\n/.test(nothing));
+    t.check('but still greets and closes', /^Hi Esther,/.test(nothing) && /Come find me/.test(nothing));
+
+    [themed, single, withPrior, noDate, nothing].forEach((message, index) => {
+        t.check('no em dashes in case ' + index, !/[—–]/.test(message));
+        t.check('no leftover tokens in case ' + index, !/\{|\}/.test(message));
+        t.check('no dangling colon in case ' + index, !/:\s*\n\n/.test(message));
+    });
+});
