@@ -31,10 +31,25 @@ ${transcript}
         const context = window.DevCoachModules?.callTranscript?.buildCallContextLines;
         const extra = typeof context === 'function' ? context(entry.transcript) : [];
         const moment = describeCallMoment(entry);
+        const summarizer = window.DevCoachModules?.callSummary;
+        const recap = summarizer?.summarizeCall && entry.transcript
+            ? summarizer.buildSummaryText(
+                summarizer.summarizeCall(entry.transcript, {
+                    associateName: entry.employeeName,
+                    callDate: entry.listenedOn,
+                    callTime: entry.callTime
+                }),
+                { voice: 'supervisor' }
+            )
+            : '';
+
         return [
             moment ? `- Call taken: ${moment}` : `- Call date: ${entry.listenedOn}`,
             `- Call reference: ${entry.callReference || 'Not provided'}`,
-            ...extra
+            ...extra,
+            // Handed over as my own recap, so the message can open with which
+            // call this is without the model reconstructing it from 108 turns.
+            ...(recap ? ['', `My recap of the call: ${recap}`] : [])
         ].join('\n');
     }
 

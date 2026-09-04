@@ -618,9 +618,15 @@ Requirements:
 
         const closing = 'Give those a go and I will listen again soon to see how it is landing. Come find me if you want to talk any of it through.';
 
+        // The recap goes first so they know which conversation this is before
+        // they reach the feedback. Feedback about a call somebody cannot place
+        // is just an assertion.
+        const recap = String(options.summaryText || '').trim();
+
         return [
             name ? `Hi ${name},` : 'Hi,',
             '',
+            ...(recap ? [recap, ''] : []),
             opening,
             '',
             ...(observations.length ? [observations.join('\n'), ''] : []),

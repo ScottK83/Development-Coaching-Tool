@@ -8158,11 +8158,16 @@ function buildCallListeningVerintSummary(entry) {
     const qaText = buildCallListeningQaText(entry);
     const wordChoiceText = buildCallListeningWordChoiceText(entry);
     const moment = window.DevCoachModules?.callTranscript?.formatCallMoment?.(entry.listenedOn, entry.callTime);
+    const recap = window.DevCoachModules?.callSummary?.buildSummaryText?.(
+        buildCallSummary(entry.transcript, entry.employeeName, null, entry),
+        { voice: 'supervisor' }
+    ) || '';
     return [
         `Call Listening Date: ${entry.listenedOn || ''}${entry.callTime ? ` ${entry.callTime}` : ''}`,
         ...(moment ? [`Call Taken: ${moment}`] : []),
         `Associate: ${entry.employeeName || ''}`,
         `Call Reference: ${entry.callReference || 'N/A'}`,
+        ...(recap ? ['', 'Call summary:', recap] : []),
         '',
         'What went well:',
         entry.whatWentWell || 'N/A',
@@ -8321,12 +8326,52 @@ function renderCallQaScorecard(transcript, associateName, analysis) {
     return qa;
 }
 
+/**
+ * The recap of one call. Reuses an analysis where the caller already has one,
+ * since summarizing would otherwise re-run the whole rules engine.
+ */
+function buildCallSummary(transcript, associateName, analysis, entry) {
+    const summarizer = window.DevCoachModules?.callSummary;
+    if (!summarizer?.summarizeCall || !transcript) return null;
+
+    const summary = summarizer.summarizeCall(transcript, {
+        associateName,
+        analysis,
+        // The stored transcript no longer carries its Verint header, so the
+        // date and time come off the entry that does.
+        callDate: entry?.listenedOn || '',
+        callTime: entry?.callTime || ''
+    });
+    return summary?.ok ? summary : null;
+}
+
 function scanCallListeningWordChoice(transcript, associateName, analysis) {
     const scanner = window.DevCoachModules?.callWordChoice;
     if (!scanner?.scanTranscript || !transcript) return null;
 
     const scan = scanner.scanTranscript(transcript, { associateName, analysis });
     return scan?.ok ? scan : null;
+}
+
+// Rendered in the agent's own voice, because this is the recap that goes to
+// them and seeing it as they will read it is the point of showing it here.
+function renderCallSummaryPanel(transcript, associateName, analysis) {
+    const panel = document.getElementById('callSummaryPanel');
+    if (!panel) return null;
+
+    const entry = {
+        listenedOn: (document.getElementById('callListeningDate')?.value || '').trim(),
+        callTime: (document.getElementById('callListeningTime')?.value || '').trim()
+    };
+    const summary = buildCallSummary(transcript, associateName, analysis, entry);
+    const summarizer = window.DevCoachModules?.callSummary;
+    const html = summary ? summarizer?.buildSummaryHtml?.(summary, escapeHtml) : '';
+
+    callMetricSummary = summary;
+
+    panel.innerHTML = html || '';
+    panel.style.display = html ? 'block' : 'none';
+    return summary;
 }
 
 function renderCallWordChoicePanel(transcript, associateName, analysis) {
@@ -8376,6 +8421,10 @@ let callMetricBriefs = [];
 let callMetricSelectedKey = '';
 // The calls behind the current briefs, in words, so the prompt can name them.
 let callMetricCallMoments = [];
+// The recap of the call on screen. Held as the structured summary rather than
+// rendered text, because the message needs it worded differently from the
+// panel: whatever the message is about to coach in detail is left out of it.
+let callMetricSummary = null;
 
 /**
  * The latest weekly period that actually contains this associate.
@@ -8552,10 +8601,21 @@ function writeCallMetricMessage() {
     const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
 
+    // The recap orients them; the findings coach them. Where the findings are
+    // already about silence, the recap saying "there was one hold" is the same
+    // fact twice in a message of eight lines.
+    const SILENCE_KEYS = ['longHold', 'deadAirGap', 'stalling', 'holdProcess'];
+    const coachingSilence = (brief.evidence || []).some(finding => SILENCE_KEYS.includes(finding.key));
+    const summaryText = window.DevCoachModules?.callSummary?.buildSummaryText?.(
+        callMetricSummary,
+        { omitSilence: coachingSilence }
+    ) || '';
+
     const message = bridge.buildMetricMessage(brief, {
         associateName: employeeName,
         preferredName,
-        callMoments: callMetricCallMoments
+        callMoments: callMetricCallMoments,
+        summaryText
     });
 
     const body = document.getElementById('callListeningOutlookBody');
@@ -8681,6 +8741,7 @@ function analyzeCallListeningTranscript() {
     mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
     mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
 
+    renderCallSummaryPanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
     renderCallQaScorecard(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
     renderCallWordChoicePanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
     renderCallMetricCoachPanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
@@ -8955,6 +9016,7 @@ function buildSavedCallDetailHtml(employeeName, entry) {
         : '<div class="call-qa-detail">No notes were saved with this call.</div>';
 
     let readHtml = '';
+    let summaryHtml = '';
     let transcriptHtml = '<div class="call-qa-detail">No transcript was saved with this call, so it cannot be re-read.</div>';
 
     if (entry.transcript && analyzer?.analyzeTranscript) {
@@ -8964,10 +9026,18 @@ function buildSavedCallDetailHtml(employeeName, entry) {
             const issues = (analysis.allImprovements || []).length;
             readHtml = `<div class="call-qa-detail">Re-read now: ${strengths} strength${strengths === 1 ? '' : 's'}, ${issues} coaching point${issues === 1 ? '' : 's'}.</div>`;
         }
+        // Third person here, because this view is the supervisor reading about
+        // somebody else. The same recap goes to the associate as "you".
+        summaryHtml = window.DevCoachModules?.callSummary?.buildSummaryHtml?.(
+            buildCallSummary(entry.transcript, employeeName, analysis, entry),
+            escapeHtml,
+            { voice: 'supervisor' }
+        ) || '';
         transcriptHtml = `<pre class="saved-call-transcript">${escapeHtml(entry.transcript)}</pre>`;
     }
 
     return `<div class="saved-call-detail">
+        ${summaryHtml}
         ${notesHtml}
         ${readHtml}
         <div class="saved-call-note-label" style="margin-top: var(--space-3);">Transcript as saved</div>
