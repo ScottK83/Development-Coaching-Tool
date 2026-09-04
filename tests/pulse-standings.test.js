@@ -100,10 +100,10 @@ function rankingStub(rows, names) {
 // The weekly file the message itself is written from. Separate from the ranking
 // rows on purpose: the block reads placings off center-ranking and the period
 // name off the upload, and they have to agree about which week this is.
-function weeklyFile() {
+function weeklyFile(meta) {
     return {
         [WEEK_KEY]: {
-            metadata: { periodType: 'week', startDate: '2026-08-17', endDate: '2026-08-21' },
+            metadata: Object.assign({ periodType: 'week', startDate: '2026-08-17', endDate: '2026-08-21' }, meta || {}),
             employees: [{ name: 'Dana Reed', totalCalls: 250, surveyTotal: 40, aht: 422, scheduleAdherence: 93.9, fcr: 80 }]
         }
     };
@@ -118,7 +118,7 @@ const WEEK_METRICS = [
 function load(t, options) {
     const opts = options || {};
     t.installFakeBrowser();
-    global.weeklyData = weeklyFile();
+    global.weeklyData = weeklyFile(opts.weekMeta);
     global.ytdData = {};
     global.dailyData = {};
 
@@ -460,4 +460,33 @@ suite('pulse standings: the copy an associate reads', (t) => {
     const skewed = load(t, { dana: disagreeing }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a metric the table ranks differently is dropped', skewed.indexOf('Average Handle Time') === -1);
     t.check('and the rest of the block survives it', skewed.indexOf('Schedule Adherence') > -1);
+});
+
+suite('pulse standings: the period is named for what it actually was', (t) => {
+    // 2026-08-21 is a Friday, which is where this team's week stops, so a file
+    // that runs to it really is a week that ended.
+    const full = load(t).buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a Friday file is a week that ended',
+        full.indexOf('Where you stood for the week ending 08/21/2026') > -1);
+
+    // 2026-08-20 is the Thursday before it. The file stops there because that
+    // is as far as the week had got, not because the week finished.
+    const partial = load(t, { weekMeta: { periodType: 'week-in-progress', endDate: '2026-08-20' } })
+        .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a Thursday file says how far it got',
+        partial.indexOf('Where you stood for the week so far, through Thursday 08/20/2026') > -1);
+    t.check('and does not claim the week ended on a Thursday',
+        partial.indexOf('the week ending 08/20/2026') === -1);
+
+    // Monday is the same claim at its most obviously wrong.
+    const monday = load(t, { weekMeta: { periodType: 'week-in-progress', endDate: '2026-08-17' } })
+        .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('one day into the week reads as one day in',
+        monday.indexOf('the week so far, through Monday 08/17/2026') > -1);
+
+    // A daily upload is a day. Week words on top of one were never right.
+    const day = load(t, { weekMeta: { periodType: 'daily', startDate: '2026-08-20', endDate: '2026-08-20' } })
+        .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a single day is named as that day', day.indexOf('Where you stood for Thursday 08/20/2026') > -1);
+    t.check('with no week claimed around it', day.indexOf('the week') === -1);
 });

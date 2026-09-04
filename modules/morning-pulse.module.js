@@ -2334,7 +2334,35 @@
         if (type === 'quarter') return getQuarterName(key);
         const ending = period?.metadata?.endDate || (key.indexOf('|') > -1 ? key.split('|')[1] : '');
         const label = typeof formatDateMMDDYYYY === 'function' ? formatDateMMDDYYYY(ending) : ending;
-        return label ? 'the week ending ' + label : 'this period';
+        if (!label) return 'this period';
+
+        const endsOn = new Date(String(ending).slice(0, 10) + 'T12:00:00');
+        const weekday = Number.isNaN(endsOn.getTime())
+            ? ''
+            : endsOn.toLocaleDateString('default', { weekday: 'long' });
+
+        // A day is a day, not a week that ended after one of them.
+        if (type === 'daily') return weekday ? weekday + ' ' + label : label;
+
+        /* A four-day file is not a week that ended.
+         *
+         * "the week ending 09/03/2026" on a Monday-through-Thursday upload says
+         * the week finished on Thursday. It did not: nobody's week ends
+         * mid-week, and on the Friday message the reader is still standing in
+         * it. So a period that stops on a Monday through Thursday is named for
+         * how far it got rather than for an ending it does not have.
+         *
+         * Friday keeps "the week ending", because Friday is where this team's
+         * week actually stops. The calendar runs to Sunday and one person works
+         * into it, but a Friday-ending file is the whole week for everybody
+         * else, and calling that "the week so far" would understate a week that
+         * is done.
+         */
+        const dow = Number.isNaN(endsOn.getTime()) ? null : endsOn.getDay();
+        if (dow !== null && dow >= 1 && dow <= 4) {
+            return 'the week so far, through ' + weekday + ' ' + label;
+        }
+        return 'the week ending ' + label;
     }
 
     // The step in the words the metric is actually measured in. An empty string
