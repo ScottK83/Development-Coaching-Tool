@@ -168,7 +168,11 @@
 
         if (options.analysis) {
             scored.push({
-                entry: { listenedOn: options.callDate || '', employeeName: options.associateName || '' },
+                entry: {
+                    listenedOn: options.callDate || '',
+                    callTime: options.callTime || '',
+                    employeeName: options.associateName || ''
+                },
                 analysis: options.analysis,
                 scan: options.wordChoice?.ok ? options.wordChoice : null
             });
@@ -257,8 +261,19 @@
             delete rows.emotionUnanswered;
         }
 
+        // Which calls this read covers, newest first and in words the associate
+        // can place. Carried out of here because only this function knows which
+        // entries were actually scored.
+        const format = window.DevCoachModules?.callTranscript?.formatCallMoment;
+        const callMoments = scored
+            .map(({ entry }) => typeof format === 'function'
+                ? format(entry.listenedOn, entry.callTime)
+                : String(entry.listenedOn || ''))
+            .filter(Boolean);
+
         return {
             callsReviewed: total,
+            callMoments,
             findings: Object.values(rows).map(row => ({
                 ...row,
                 weight: row.weight || 5,
@@ -421,8 +436,19 @@
             ? `\nFor my reference only, do not mention this in the message: ${proven.map(tip => `"${tip.text}" has ${tip.effectiveness.rateBasis} for ${Math.round(tip.effectiveness.rate * 100)}% of the ${tip.effectiveness.rateSample} times it has been given`).join('; ')}.\n`
             : '';
 
+        // Which calls this came from, so she can go and remember them. A note
+        // about her handle time in the abstract is an opinion; one about the
+        // call she took at lunchtime on Tuesday is something she can check.
+        const moments = Array.isArray(options.callMoments) ? options.callMoments.filter(Boolean) : [];
+        const callsSection = moments.length
+            ? `\nThe calls I listened to, most recent first:\n${moments.map(moment => `- ${moment}`).join('\n')}\n`
+            : '';
+        const momentRule = moments.length
+            ? `\n- Name the calls this comes from by day and time, so she knows which ones I mean. Lead with the most recent, ${moments[0]}${moments.length > 1 ? `, and say you went back over ${moments.length} of her calls` : ''}`
+            : '';
+
         return `I'm a supervisor writing to ${name} about one metric, based on calls of hers I listened to.
-${asked}
+${asked}${callsSection}
 The metric:
 ${brief.headline}
 
@@ -441,7 +467,7 @@ Requirements:
 - Where a habit showed up across several calls, say so plainly. A pattern is more persuasive than one example, and it is also the honest framing
 - Warm and matter of fact. She asked for help, so this is help, not a correction
 - 1 short opening, 2 to 3 specific actions, 1 closing line
-- Do NOT use em dashes
+- Do NOT use em dashes${momentRule}
 - Do not mention phrase lists, scoring, keyword counts, or metric targets as jargon. Talk about calls and customers
 - Return ONLY the message body text.`;
     }

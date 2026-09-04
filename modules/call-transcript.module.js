@@ -834,6 +834,50 @@
         return `${parts.join(' • ')}. Drafts are editable, review before you send.`;
     }
 
+    /* ── Saying when the call was ──
+     *
+     * "2026-08-04" is a date an associate has to decode. The call they took at
+     * lunchtime on a Tuesday three weeks ago is a thing they can actually
+     * remember, so feedback about it should be introduced that way.
+     */
+
+    // Verint writes seconds and sometimes "P.M."; neither belongs in a sentence.
+    function tidyCallTime(value) {
+        const clean = collapse(value).toUpperCase().replace(/\./g, '');
+        const match = clean.match(/^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?\s*([AP]M)?$/);
+        if (!match) return clean;
+        return `${Number(match[1])}:${match[2]}${match[3] ? ` ${match[3]}` : ''}`;
+    }
+
+    /**
+     * "Tuesday, August 4 at 12:38 PM", dropping whichever half is missing.
+     *
+     * The date is parsed at local midnight rather than handed straight to
+     * Date(), because "2026-08-04" alone is read as UTC and renders as the 3rd
+     * for anybody west of Greenwich, which is everybody here.
+     */
+    function formatCallMoment(callDate, callTime) {
+        const time = tidyCallTime(callTime);
+        const iso = collapse(callDate);
+
+        let day = '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+            const parsed = new Date(`${iso}T00:00:00`);
+            if (!Number.isNaN(parsed.getTime())) {
+                day = parsed.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+        } else if (iso) {
+            day = iso;
+        }
+
+        if (day && time) return `${day} at ${time}`;
+        return day || time || '';
+    }
+
     function buildCallContextLines(rawText) {
         const meta = extractMetadata(rawText);
         const lines = [];
@@ -912,6 +956,8 @@
         buildImprovementsDraft,
         buildAnalysisSummary,
         buildCallContextLines,
+        tidyCallTime,
+        formatCallMoment,
         matchAssociateOption,
         clampForStorage,
         clampForPrompt,

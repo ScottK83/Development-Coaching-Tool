@@ -15,11 +15,24 @@ ${transcript}
 `;
     }
 
+    /**
+     * When the call was, in words the associate can place.
+     *
+     * Reads the stored fields rather than the transcript, because a saved entry
+     * has had its Verint header rewritten and no longer carries the time.
+     */
+    function describeCallMoment(entry) {
+        const format = window.DevCoachModules?.callTranscript?.formatCallMoment;
+        if (typeof format !== 'function') return String(entry?.listenedOn || '');
+        return format(entry?.listenedOn, entry?.callTime);
+    }
+
     function buildCallDetailLines(entry) {
         const context = window.DevCoachModules?.callTranscript?.buildCallContextLines;
         const extra = typeof context === 'function' ? context(entry.transcript) : [];
+        const moment = describeCallMoment(entry);
         return [
-            `- Call date: ${entry.listenedOn}`,
+            moment ? `- Call taken: ${moment}` : `- Call date: ${entry.listenedOn}`,
             `- Call reference: ${entry.callReference || 'Not provided'}`,
             ...extra
         ].join('\n');
@@ -67,6 +80,14 @@ ${transcript}
             ? `\n- Ground every point in the transcript. Where it helps, quote a short phrase the associate actually said\n- Do not invent details that are not in the transcript or my notes`
             : '';
 
+        // The associate takes dozens of calls a week. Feedback that does not say
+        // which one is feedback they cannot check, so naming the call is a
+        // requirement rather than something to mention if it fits.
+        const moment = describeCallMoment(entry);
+        const momentRule = moment
+            ? `\n- Say which call this is about in the opening line, by day and time: ${moment}. Word it naturally, as "the call you took on ${moment}" or similar`
+            : '';
+
         return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
 
 Call details:
@@ -97,7 +118,7 @@ Requirements:
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
-- Do NOT use em dashes (, )${transcriptRules}
+- Do NOT use em dashes (, )${momentRule}${transcriptRules}
 - The QA read is background for you, not content for the associate. Do not paste the checklist or the words "opportunity" and "cannot tell" into the email; turn what matters into normal coaching language
 - Where the language read shows a scored phrase, be concrete: name the phrase they said and give them the phrase that would have scored instead. "You said 'unfortunately' twice, and 'what I can do is' lands the same news without costing you" is coaching. "Use more positive language" is not
 - Do not mention phrase lists, scoring, or the words positive and negative as categories. The associate should read it as advice about talking to customers, not as a report on a keyword count
@@ -184,8 +205,9 @@ Requirements:
         const safeEscapeHtml = typeof escapeHtml === 'function' ? escapeHtml : (value) => String(value || '');
         const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
         const transcriptTag = entry.transcript ? ' • transcript saved' : '';
+        const moment = describeCallMoment(entry) || entry.listenedOn || '';
         return `<li class="call-history-item">
-            <div class="call-history-title">${safeEscapeHtml(entry.listenedOn || '')}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</div>
+            <div class="call-history-title">${safeEscapeHtml(moment)}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</div>
             <div style="margin-top: 4px;"><strong>✅ Went well:</strong> ${safeEscapeHtml(entry.whatWentWell || 'N/A')}</div>
             <div style="margin-top: 2px;"><strong>⚠️ Improve:</strong> ${safeEscapeHtml(entry.improvementAreas || 'N/A')}</div>
             <div class="call-history-meta">Saved: ${safeEscapeHtml(createdAt)}${transcriptTag}</div>
@@ -199,6 +221,7 @@ Requirements:
 
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.callListening = {
+        describeCallMoment,
         buildPrompt,
         copyPromptAndOpenCopilot,
         buildOutlookSubject,

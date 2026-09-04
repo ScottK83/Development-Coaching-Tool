@@ -8033,6 +8033,11 @@ function getCallListeningDraftFromForm() {
     return {
         employeeName: (document.getElementById('callListeningEmployeeSelect')?.value || '').trim(),
         listenedOn: (document.getElementById('callListeningDate')?.value || '').trim(),
+        // Persisted on the entry rather than re-read from the transcript.
+        // prepareForStorage rewrites the Verint header into a bracketed summary
+        // that extractMetadata cannot parse back, so a saved call had already
+        // lost its time and length by the time any prompt asked for them.
+        callTime: (document.getElementById('callListeningTime')?.value || '').trim(),
         callReference: (document.getElementById('callListeningReference')?.value || '').trim(),
         transcript: getCallListeningTranscriptForStorage(),
         whatWentWell: (document.getElementById('callListeningStrengths')?.value || '').trim(),
@@ -8067,6 +8072,7 @@ function getLatestCallListeningEntry(employeeName) {
 function isSameCallListeningDraftAsEntry(draft, existingEntry) {
     if (!existingEntry) return false;
     return existingEntry.listenedOn === draft.listenedOn
+        && (existingEntry.callTime || '') === draft.callTime
         && (existingEntry.callReference || '') === draft.callReference
         && (existingEntry.transcript || '') === draft.transcript
         && (existingEntry.whatWentWell || '') === draft.whatWentWell
@@ -8151,8 +8157,10 @@ function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
     const qaText = buildCallListeningQaText(entry);
     const wordChoiceText = buildCallListeningWordChoiceText(entry);
+    const moment = window.DevCoachModules?.callTranscript?.formatCallMoment?.(entry.listenedOn, entry.callTime);
     return [
-        `Call Listening Date: ${entry.listenedOn || ''}`,
+        `Call Listening Date: ${entry.listenedOn || ''}${entry.callTime ? ` ${entry.callTime}` : ''}`,
+        ...(moment ? [`Call Taken: ${moment}`] : []),
         `Associate: ${entry.employeeName || ''}`,
         `Call Reference: ${entry.callReference || 'N/A'}`,
         '',
@@ -8202,6 +8210,7 @@ function loadCallListeningEntryIntoForm(entryId) {
     };
 
     setValue('callListeningDate', entry.listenedOn);
+    setValue('callListeningTime', entry.callTime);
     setValue('callListeningReference', entry.callReference);
     setValue('callListeningTranscript', entry.transcript);
     setValue('callListeningStrengths', entry.whatWentWell);
@@ -8255,6 +8264,15 @@ function applyCallListeningTranscriptMetadata(meta) {
         if (dateInput && dateInput.value !== meta.callDate) {
             dateInput.value = meta.callDate;
             applied.push(`call date ${meta.callDate}`);
+        }
+    }
+
+    if (meta.callTime) {
+        const timeInput = document.getElementById('callListeningTime');
+        const tidy = window.DevCoachModules?.callTranscript?.tidyCallTime?.(meta.callTime) || meta.callTime;
+        if (timeInput && timeInput.value.trim() !== tidy) {
+            timeInput.value = tidy;
+            applied.push(`call time ${tidy}`);
         }
     }
 
@@ -8356,6 +8374,8 @@ function copyCallListeningWordChoice() {
  */
 let callMetricBriefs = [];
 let callMetricSelectedKey = '';
+// The calls behind the current briefs, in words, so the prompt can name them.
+let callMetricCallMoments = [];
 
 /**
  * The latest weekly period that actually contains this associate.
@@ -8410,13 +8430,15 @@ function buildCallMetricBriefs(transcript, associateName, analysis) {
     if (!bundle?.allMetrics?.length) return [];
 
     const wordChoice = scanCallListeningWordChoice(transcript, associateName, analysis);
-    const { findings } = bridge.collectFindings({
+    const { findings, callMoments } = bridge.collectFindings({
         analysis,
         wordChoice,
         associateName,
         callDate: (document.getElementById('callListeningDate')?.value || '').trim(),
+        callTime: (document.getElementById('callListeningTime')?.value || '').trim(),
         history: callListeningLogs?.[associateName] || []
     });
+    callMetricCallMoments = callMoments || [];
 
     const effectiveness = window.DevCoachModules?.coachingOutcomes?.suggestionEffectiveness?.() || {};
     const alreadyGiven = alreadyGivenSuggestionIds(associateName);
@@ -8460,6 +8482,7 @@ function renderCallMetricCoachPanel(transcript, associateName, analysis) {
     if (!callMetricBriefs.length) {
         panel.style.display = 'none';
         callMetricSelectedKey = '';
+        callMetricCallMoments = [];
         return;
     }
 
@@ -8527,7 +8550,11 @@ function generateCallMetricCoachPrompt() {
     const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
 
-    const prompt = bridge.buildMetricPrompt(brief, { associateName: employeeName, preferredName });
+    const prompt = bridge.buildMetricPrompt(brief, {
+        associateName: employeeName,
+        preferredName,
+        callMoments: callMetricCallMoments
+    });
 
     const promptArea = document.getElementById('callListeningPromptArea');
     if (promptArea) promptArea.value = prompt;
