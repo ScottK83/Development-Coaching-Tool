@@ -22,9 +22,12 @@ const POOL = {
     ]
 };
 
-function load(t, extra) {
+// `pool` overrides the shared POOL for suites that need to control exactly
+// what the selector had to choose from.
+function load(t, extra, pool) {
     t.installFakeBrowser();
-    global.getMetricTips = (key) => (POOL[key] || []).slice();
+    const tips = pool || POOL;
+    global.getMetricTips = (key) => (tips[key] || []).slice();
     global.window.METRICS_REGISTRY = {
         aht: { label: 'Average Handle Time' },
         negativeWord: { label: 'Negative Word Usage' },
@@ -177,41 +180,50 @@ suite('coaching bridge: tips follow the evidence', (t) => {
 });
 
 suite('coaching bridge: learning from what landed', (t) => {
-    const { callCoachingBridge: bridge } = load(t);
+    // Two tips of identical relevance to the evidence, so nothing but the
+    // track record can separate them. An irrelevant tip is no longer returned
+    // at all, so effectiveness can only ever reorder tips that already fit.
+    const { callCoachingBridge: bridge } = load(t, null, {
+        aht: [
+            'Fill the silence by saying what you are checking',
+            'Silence is fine as long as you tell them why it is there',
+            'Learn keyboard shortcuts for your main programs'
+        ]
+    });
 
-    const evidence = [{ key: 'stalling', count: 2, weight: 5, phrase: '', appearsOn: 'on 2 of the last 4 calls' }];
-    const relevantId = bridge.suggestionId('Tell the customer what you are checking instead of asking them to keep waiting');
-
-    // Relevance is the primary sort, so a track record can only reorder tips
-    // the evidence rates equally. These two both match the evidence not at all.
+    const evidence = [{ key: 'deadAirGap', count: 2, weight: 6, phrase: '', appearsOn: 'on 2 of the last 4 calls' }];
+    const fillId = bridge.suggestionId('Fill the silence by saying what you are checking');
+    const tellId = bridge.suggestionId('Silence is fine as long as you tell them why it is there');
     const shortcutsId = bridge.suggestionId('Learn keyboard shortcuts for your main programs');
-    const memorizeId = bridge.suggestionId('Memorize the top 5 customer questions');
+
     const tied = bridge.selectTips('aht', evidence, {
         effectiveness: {
-            [memorizeId]: { id: memorizeId, rate: 0.9, rateBasis: 'beat the team', rateSample: 8, given: 8 },
-            [shortcutsId]: { id: shortcutsId, rate: 0.1, rateBasis: 'beat the team', rateSample: 8, given: 8 }
+            [tellId]: { id: tellId, rate: 0.9, rateBasis: 'beat the team', rateSample: 8, given: 8 },
+            [fillId]: { id: fillId, rate: 0.1, rateBasis: 'beat the team', rateSample: 8, given: 8 }
         }
     });
     const order = tied.map(tip => tip.id);
-    t.check('the relevant tip still leads', order[0] === relevantId);
-    t.check('among equally irrelevant tips, the proven one makes the cut', order.includes(memorizeId));
-    t.check('and the unproven one does not', !order.includes(shortcutsId));
+
+    t.check('the better record leads among equally relevant tips', order[0] === tellId);
+    t.check('the weaker one is still offered', order.includes(fillId));
     t.check(
         'the track record travels with the tip',
-        tied.find(tip => tip.id === memorizeId).effectiveness.rateSample === 8
+        tied.find(tip => tip.id === tellId).effectiveness.rateSample === 8
     );
 
-    // But it must not promote an irrelevant tip over a relevant one.
+    // A perfect record cannot buy a place for advice that does not fit.
     const notHijacked = bridge.selectTips('aht', evidence, {
         effectiveness: {
             [shortcutsId]: { id: shortcutsId, rate: 1, rateBasis: 'beat the team', rateSample: 20, given: 20 }
         }
     });
-    t.check('relevance still beats a perfect record on an unrelated tip', notHijacked[0].id !== shortcutsId);
+    t.check('an unrelated tip stays out however well it has done',
+        !notHijacked.some(tip => tip.id === shortcutsId));
 
-    // Advice already given to this person drops down the list.
-    const repeat = bridge.selectTips('aht', evidence, { alreadyGiven: [relevantId] });
-    t.check('a tip already sent is not offered first again', repeat[0].id !== relevantId);
+    // Advice this person has already had did not need repeating.
+    const repeat = bridge.selectTips('aht', evidence, { alreadyGiven: [tellId] });
+    t.check('a tip already sent is not offered first again', repeat[0].id !== tellId);
+    t.check('and the other relevant one takes its place', repeat[0].id === fillId);
 });
 
 suite('coaching bridge: the brief and the prompt', (t) => {
@@ -636,4 +648,65 @@ suite('coaching bridge: the message reads like a person wrote it', (t) => {
 
     t.check('no em dashes', !/[—–]/.test(message));
     t.check('no double spaces', !/ {2}/.test(message.replace(/\n */g, '\n')));
+});
+
+suite('coaching bridge: weak matches are dropped, not padded', (t) => {
+    const { callCoachingBridge: bridge } = load(t, null, {
+        aht: [
+            // Only "wait", a word that turns up all over a pool about calls.
+            "Avoid over-apologizing - one genuine 'I'm sorry for the wait' is enough",
+            // "silence" and "talking" are distinctive to the finding.
+            'Type account notes WHILE talking, not in silence after',
+            'Learn keyboard shortcuts for your main programs',
+            'Memorize the top 5 customer questions'
+        ]
+    });
+
+    const deadAir = [{ key: 'deadAirGap', count: 1, weight: 6, phrase: '', appearsOn: 'on this call' }];
+    const picked = bridge.selectTips('aht', deadAir);
+
+    t.check('the distinctive match is kept', picked.some(tip => /in silence after/.test(tip.text)));
+    t.check('the one common word match is dropped', !picked.some(tip => /sorry for the wait/.test(tip.text)));
+    t.check('and the list is short rather than padded', picked.length < bridge.MAX_TIPS_PER_METRIC);
+    t.check('everything returned is marked as matched', picked.every(tip => tip.matchedEvidence === true));
+
+    // A phrase finding is always specific, because the tips are written as
+    // swaps and contain the phrase itself.
+    const phrase = [{ key: 'negativePhrase', count: 3, weight: 6, phrase: 'wait', appearsOn: 'on 3 of the last 4 calls' }];
+    const swap = bridge.selectTips('aht', phrase);
+    t.check('a scored phrase counts as specific even when short',
+        swap.some(tip => /sorry for the wait/.test(tip.text)));
+});
+
+suite('coaching bridge: nothing fits, and it says so', (t) => {
+    const { callCoachingBridge: bridge } = load(t, null, {
+        aht: [
+            'Learn keyboard shortcuts for your main programs',
+            'Memorize the top 5 customer questions',
+            'Keep your reference sheet where you can see it'
+        ]
+    });
+
+    const coldTransfer = [{ key: 'coldTransfer', count: 2, weight: 7, phrase: '', appearsOn: 'on both calls' }];
+    const picked = bridge.selectTips('aht', coldTransfer);
+
+    // An empty list leaves the supervisor with nothing to send, so general
+    // advice is offered, flagged, and given less room than a real match.
+    t.check('something is still offered', picked.length > 0);
+    t.check('but less of it', picked.length <= 2);
+    t.check('and it is flagged as unmatched', picked.every(tip => tip.matchedEvidence === false));
+
+    // The gap is in the tip pool, and the person reading can close it.
+    const html = bridge.briefHtml(
+        { metricKey: 'aht', label: 'Average Handle Time', headline: 'AHT', evidence: coldTransfer, tips: picked },
+        (value) => String(value || '')
+    );
+    t.check('the panel says the pool has a gap', /Nothing in this metric's tips speaks to what the calls showed/.test(html));
+
+    // And it must not say that when the tips did match.
+    const matched = bridge.briefHtml(
+        { metricKey: 'aht', label: 'AHT', headline: 'AHT', evidence: coldTransfer, tips: [{ id: 'x', metricKey: 'aht', text: 'Brief the receiving team', matchedEvidence: true, effectiveness: null }] },
+        (value) => String(value || '')
+    );
+    t.check('and stays quiet when they did', !/speaks to what the calls showed/.test(matched));
 });

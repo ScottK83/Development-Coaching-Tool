@@ -29,6 +29,9 @@
     const HISTORY_WINDOW = 8;
     const MAX_FINDINGS_PER_METRIC = 4;
     const MAX_TIPS_PER_METRIC = 3;
+    // How many to fall back on when nothing in the pool fits the evidence.
+    // Fewer than the cap, because unmatched advice earns less room.
+    const MAX_GENERIC_TIPS = 2;
     const MAX_METRICS = 4;
 
     /* ── Evidence to metric ──
@@ -73,14 +76,19 @@
      * checking" from "learn keyboard shortcuts" when the finding is dead air.
      */
     const FINDING_KEYWORDS = {
-        deadAirGap: ['silence', 'dead air', 'narrat', 'quiet', 'loading', 'while you', 'type', 'talking'],
+        // "while talking", not "talking": the bare word matched "handle time
+        // isn't talking fast", which has nothing to do with dead air, and it
+        // counted as a specific match because of its length.
+        deadAirGap: ['silence', 'dead air', 'narrat', 'quiet', 'loading', 'while you', 'while talking', 'type'],
         longHold: ['hold', 'wait', 'check back', 'checking'],
         holdProcess: ['hold', 'permission', 'thank', 'ask'],
         stalling: ['one moment', 'loading', 'narrat', 'silence', 'tell the customer', 'checking'],
         repeatCustomer: ['listen', 'repeat', 'recap', 'heard', 'notes', 'first time'],
         uncertainty: ['confiden', 'verify', 'plainly', 'sure', 'commit', 'hedg'],
         apologyLoop: ['apolog', 'sorry'],
-        filler: ['um', 'filler', 'pause'],
+        // Matching is on substrings, so "um" is inside "customer" and "number".
+        // "umm" is how the tips actually write the sound.
+        filler: ['umm', 'filler', 'pause'],
         airtime: ['open question', 'let the customer', 'listen', 'ask'],
         callControl: ['control', 'agenda', 'steer', 'redirect', 'rambl'],
         coldTransfer: ['transfer', 'warm', 'brief', 'right team', 'connect'],
@@ -454,40 +462,73 @@
         const effectiveness = options.effectiveness || {};
         const alreadyGiven = new Set(options.alreadyGiven || []);
 
-        const keywords = [];
+        // A keyword's specificity decides how much a match is worth. "dead
+        // air", "narrat" and "one moment" only appear in advice about silence;
+        // "wait", "ask" and "hold" turn up all over a tip pool about calls.
+        //
+        // This is why "Avoid over-apologizing, one genuine 'I'm sorry for the
+        // wait' is enough" came back as a dead air tip. It matched "wait", and
+        // one common word was enough to look relevant.
+        //
+        // Judged by length and word count rather than a hand tagged list, so
+        // adding a keyword cannot quietly forget to say how specific it is.
+        const strong = new Set();
+        const weak = new Set();
         (evidence || []).forEach(finding => {
-            (FINDING_KEYWORDS[finding.key] || []).forEach(word => keywords.push(word));
+            (FINDING_KEYWORDS[finding.key] || []).forEach(word => {
+                if (word.length >= 5 || word.includes(' ')) strong.add(word);
+                else weak.add(word);
+            });
             // For a phrase finding the phrase itself is the strongest possible
             // keyword: the tips are written as swaps and literally contain it.
-            if (finding.phrase) keywords.push(finding.phrase.toLowerCase());
+            if (finding.phrase) strong.add(finding.phrase.toLowerCase());
         });
 
         const scored = pool.map(tip => {
             const lower = String(tip).toLowerCase();
-            const hits = keywords.filter(word => lower.includes(word)).length;
+            const strongHits = [...strong].filter(word => lower.includes(word)).length;
+            const weakHits = [...weak].filter(word => lower.includes(word)).length;
             const id = suggestionId(tip);
             const record = effectiveness[id];
 
-            let score = hits * 10;
+            let score = (strongHits * 10) + (weakHits * 2);
             if (record && record.rate !== null) score += record.rate * 5;
             // Advice this person has already been given did not need repeating:
             // either it worked, or it did not, and saying it again is the one
             // thing known not to be new information.
             if (alreadyGiven.has(id)) score -= 12;
 
-            return { id, text: tip, hits, score, effectiveness: record || null };
+            return {
+                id,
+                text: tip,
+                score,
+                // One distinctive word, or several common ones agreeing.
+                relevant: strongHits > 0 || weakHits >= 3,
+                effectiveness: record || null
+            };
         });
 
-        return scored
-            .sort((a, b) => b.score - a.score || a.text.localeCompare(b.text))
-            .slice(0, MAX_TIPS_PER_METRIC)
-            .map(item => ({
-                id: item.id,
-                metricKey,
-                text: item.text,
-                matchedEvidence: item.hits > 0,
-                effectiveness: item.effectiveness
-            }));
+        const byScore = (a, b) => b.score - a.score || a.text.localeCompare(b.text);
+        const relevant = scored.filter(item => item.relevant).sort(byScore);
+
+        // Two solid tips beat three with a filler in it. Padding the list to
+        // the cap is what put an apology tip under a dead air finding, and a
+        // tip that obviously does not fit teaches the reader to skim the ones
+        // that do.
+        const chosen = relevant.length
+            ? relevant.slice(0, MAX_TIPS_PER_METRIC)
+            // Nothing in the pool addresses this evidence, which is worth
+            // knowing. General advice is still better than an empty list, and
+            // the flag tells the panel to say what it is.
+            : scored.sort(byScore).slice(0, MAX_GENERIC_TIPS);
+
+        return chosen.map(item => ({
+            id: item.id,
+            metricKey,
+            text: item.text,
+            matchedEvidence: item.relevant,
+            effectiveness: item.effectiveness
+        }));
     }
 
     /**
@@ -769,6 +810,13 @@ Requirements:
             return `<li>${safe(tip.text)} ${track}</li>`;
         }).join('');
 
+        // Said out loud rather than hidden. If nothing in the pool addresses
+        // what the calls showed, that is a gap in the tip library and the
+        // person who can close it is the one reading this.
+        const unmatched = brief.tips.length && brief.tips.every(tip => !tip.matchedEvidence)
+            ? '<div class="call-qa-detail">Nothing in this metric\'s tips speaks to what the calls showed, so these are general. Worth adding one that does.</div>'
+            : '';
+
         return `<div class="call-trend-group call-trend-warn">
                 <div class="call-trend-title">${safe(brief.headline)}</div>
                 <ul>${evidence}</ul>
@@ -776,6 +824,7 @@ Requirements:
             <div class="call-trend-group call-trend-good">
                 <div class="call-trend-title">What to ask her to try</div>
                 <ul>${tips}</ul>
+                ${unmatched}
             </div>`;
     }
 
