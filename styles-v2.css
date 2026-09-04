@@ -1145,6 +1145,54 @@ textarea:focus-visible {
     color: var(--text-tertiary);
 }
 
+/* Everything saved in memory: one row per stored call, with a way out. */
+.panel-section .saved-call-group {
+    margin-bottom: var(--space-4);
+}
+
+.panel-section .saved-call-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.panel-section .saved-call-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9em;
+}
+
+.panel-section .saved-call-duplicate {
+    background: var(--yellow-soft);
+}
+
+.panel-section .saved-call-when {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.panel-section .saved-call-remove {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    line-height: 1;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-sunken);
+    color: var(--red-text);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.panel-section .saved-call-remove:hover {
+    background: var(--red-soft);
+    border-color: var(--red);
+}
+
 .panel-section .call-history {
     list-style: none;
     margin: 0;

@@ -160,6 +160,48 @@
     }
 
     /**
+     * Identifies a call by what was said on it.
+     *
+     * The same call gets saved more than once: generating a prompt and copying
+     * the Verint note both write a log, so one transcript can end up stored
+     * under two dates. Counting those as two calls makes the message claim a
+     * habit across "both calls" when there was one call, which is the message
+     * telling the associate something untrue.
+     *
+     * Matching on the text rather than the date, because a duplicate saved on a
+     * different day is still the same conversation. The leading bracket header
+     * that prepareForStorage adds is dropped first, since the pasted copy and
+     * the stored copy of one call differ by exactly that.
+     */
+    function callFingerprint(transcript) {
+        const raw = String(transcript || '');
+        // Reduced to what was actually said, because that is what identifies a
+        // call. prepareForStorage drops the export header, the blank QA form
+        // and the legal footer and prepends a bracketed summary, so the pasted
+        // copy and the stored copy of one call are very different strings with
+        // the same conversation inside them.
+        const strip = window.DevCoachModules?.callTranscript?.stripBoilerplate;
+        const spoken = typeof strip === 'function' ? (strip(raw) || raw) : raw;
+
+        const body = spoken
+            .replace(/^\s*\[[^\]]*\]\s*/, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+        if (!body) return '';
+
+        // The opening of the call, and deliberately not its length. Storage
+        // truncates at MAX_STORED_TRANSCRIPT_CHARS, so a long call's saved copy
+        // is a shortened version of what was pasted and the two can never agree
+        // on a length. Truncation only ever removes from the end, so a prefix is
+        // the part both copies are guaranteed to share.
+        //
+        // 600 characters is well past any greeting, so two different calls
+        // colliding here would have to open identically at length.
+        return body.slice(0, 600);
+    }
+
+    /**
      * Reads the open call plus the recent saved logs and returns one row per
      * distinct problem, carrying how many calls it appeared on.
      *
@@ -168,8 +210,11 @@
      */
     function collectFindings(options = {}) {
         const scored = [];
+        const seen = new Set();
 
         if (options.analysis) {
+            const fingerprint = callFingerprint(options.transcript);
+            if (fingerprint) seen.add(fingerprint);
             scored.push({
                 entry: {
                     listenedOn: options.callDate || '',
@@ -185,9 +230,15 @@
             .slice()
             .sort((a, b) => entryTime(b) - entryTime(a))
             .filter(entry => entry?.transcript)
-            // The open call is usually already saved from an earlier pass, so
-            // counting the saved copy as well would double every finding on it.
-            .filter(entry => !options.callDate || entry.listenedOn !== options.callDate)
+            // One call counted once, however many times it was saved and under
+            // whatever dates. Without this, a transcript stored twice reads as
+            // a pattern across two calls.
+            .filter(entry => {
+                const fingerprint = callFingerprint(entry.transcript);
+                if (!fingerprint || seen.has(fingerprint)) return false;
+                seen.add(fingerprint);
+                return true;
+            })
             .slice(0, HISTORY_WINDOW - (options.analysis ? 1 : 0));
 
         history.forEach(entry => {
@@ -628,6 +679,7 @@ Requirements:
         EVIDENCE_MAP,
         FINDING_KEYWORDS,
         suggestionId,
+        callFingerprint,
         collectFindings,
         metricsInFocus,
         selectTips,

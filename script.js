@@ -8434,6 +8434,9 @@ function buildCallMetricBriefs(transcript, associateName, analysis) {
         analysis,
         wordChoice,
         associateName,
+        // Passed so a saved copy of the call on screen is recognised as the
+        // same call and not counted twice.
+        transcript,
         callDate: (document.getElementById('callListeningDate')?.value || '').trim(),
         callTime: (document.getElementById('callListeningTime')?.value || '').trim(),
         history: callListeningLogs?.[associateName] || []
@@ -8876,6 +8879,127 @@ function renderCallListeningHistoryForSelectedEmployee() {
     list.innerHTML = entries.slice(0, 50).map(buildCallListeningHistoryItemHtml).join('');
 }
 
+/* ── Everything saved, for everyone ──
+ *
+ * The per-associate history above answers "what have I logged for Esther".
+ * This answers "what is this app actually holding", which is a different and
+ * more important question, because generating a prompt and copying a Verint
+ * note both save a log without saying so. A call you do not remember saving
+ * still feeds the coaching, so it has to be visible and removable.
+ */
+
+function collectAllSavedCalls() {
+    const logs = (typeof callListeningLogs !== 'undefined' ? callListeningLogs : {}) || {};
+    const bridge = window.DevCoachModules?.callCoachingBridge;
+
+    return Object.keys(logs)
+        .sort((a, b) => a.localeCompare(b))
+        .map(employeeName => {
+            const entries = (Array.isArray(logs[employeeName]) ? logs[employeeName] : [])
+                .slice()
+                .sort((a, b) => String(b.listenedOn || '').localeCompare(String(a.listenedOn || '')));
+
+            // Flagged rather than hidden, so a duplicate that was inflating the
+            // counts is something you can see and delete.
+            const seen = new Set();
+            const rows = entries.map(entry => {
+                const fingerprint = bridge?.callFingerprint?.(entry.transcript) || '';
+                const duplicate = Boolean(fingerprint) && seen.has(fingerprint);
+                if (fingerprint) seen.add(fingerprint);
+                return { entry, duplicate };
+            });
+
+            return { employeeName, rows };
+        })
+        .filter(group => group.rows.length);
+}
+
+function renderAllSavedCalls() {
+    const container = document.getElementById('allSavedCalls');
+    const summary = document.getElementById('allSavedCallsSummary');
+    if (!container || !summary) return;
+
+    const groups = collectAllSavedCalls();
+    const total = groups.reduce((sum, group) => sum + group.rows.length, 0);
+    const duplicates = groups.reduce(
+        (sum, group) => sum + group.rows.filter(row => row.duplicate).length, 0
+    );
+
+    if (!total) {
+        summary.textContent = 'Nothing saved yet. No calls are feeding the coaching.';
+        container.innerHTML = '';
+        return;
+    }
+
+    summary.textContent = `${total} saved call${total === 1 ? '' : 's'} across ${groups.length} associate${groups.length === 1 ? '' : 's'}.`
+        + (duplicates ? ` ${duplicates} look${duplicates === 1 ? 's' : ''} like the same call saved more than once.` : '');
+
+    const describe = window.DevCoachModules?.callListening?.describeCallMoment;
+
+    container.innerHTML = groups.map(group => {
+        const rows = group.rows.map(({ entry, duplicate }) => {
+            const moment = (typeof describe === 'function' ? describe(entry) : '') || entry.listenedOn || 'date unknown';
+            const bits = [
+                entry.callReference ? `Ref ${entry.callReference}` : '',
+                entry.transcript ? 'transcript saved' : 'no transcript',
+                duplicate ? 'looks like a duplicate' : ''
+            ].filter(Boolean).join(' • ');
+
+            return `<li class="saved-call-row${duplicate ? ' saved-call-duplicate' : ''}">
+                <button type="button" class="saved-call-remove" title="Delete this call from memory"
+                    data-saved-employee="${escapeHtml(group.employeeName)}"
+                    data-saved-id="${escapeHtml(entry.id || '')}">✕</button>
+                <span class="saved-call-when">${escapeHtml(moment)}</span>
+                <span class="call-qa-detail">${escapeHtml(bits)}</span>
+            </li>`;
+        }).join('');
+
+        return `<div class="saved-call-group">
+            <div class="call-trend-title">${escapeHtml(group.employeeName)} (${group.rows.length})</div>
+            <ul class="saved-call-list">${rows}</ul>
+        </div>`;
+    }).join('');
+}
+
+function toggleAllSavedCalls() {
+    const container = document.getElementById('allSavedCalls');
+    const button = document.getElementById('showAllSavedCallsBtn');
+    if (!container) return;
+
+    const opening = container.style.display === 'none';
+    if (opening) renderAllSavedCalls();
+    container.style.display = opening ? 'block' : 'none';
+    if (button) button.textContent = opening ? '🔎 Hide Everything Saved' : '🔎 Show Everything Saved';
+}
+
+function deleteSavedCall(employeeName, entryId) {
+    if (!employeeName || !entryId) return;
+
+    const entries = Array.isArray(callListeningLogs[employeeName]) ? callListeningLogs[employeeName] : [];
+    const target = entries.find(entry => entry?.id === entryId);
+    if (!target) return;
+
+    const describe = window.DevCoachModules?.callListening?.describeCallMoment;
+    const moment = (typeof describe === 'function' ? describe(target) : '') || target.listenedOn || 'date unknown';
+    if (!confirm(`Delete the ${employeeName} call from ${moment}? This removes it from the coaching for good.`)) return;
+
+    callListeningLogs[employeeName] = entries.filter(entry => entry?.id !== entryId);
+    if (!callListeningLogs[employeeName].length) {
+        delete callListeningLogs[employeeName];
+    }
+
+    saveCallListeningLogs(true, 'saved call deleted');
+    renderAllSavedCalls();
+    renderCallListeningHistoryForSelectedEmployee();
+    showToast('✅ Call deleted from memory.', 2500);
+}
+
+function handleAllSavedCallsClick(event) {
+    const button = event.target?.closest('.saved-call-remove');
+    if (!button) return;
+    deleteSavedCall(button.dataset.savedEmployee, button.dataset.savedId);
+}
+
 function populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection) {
     window.DevCoachModules.associatePicker.populateSelect(employeeSelect, employees, {
         selected: currentSelection
@@ -8907,6 +9031,8 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
     bindElementOnce(document.getElementById('copyCallWordChoiceBtn'), 'click', copyCallListeningWordChoice);
     bindElementOnce(document.getElementById('callMetricChips'), 'click', handleCallMetricChipClick);
+    bindElementOnce(document.getElementById('showAllSavedCallsBtn'), 'click', toggleAllSavedCalls);
+    bindElementOnce(document.getElementById('allSavedCalls'), 'click', handleAllSavedCallsClick);
     bindElementOnce(document.getElementById('writeMetricMessageBtn'), 'click', writeCallMetricMessage);
     bindElementOnce(document.getElementById('generateMetricCoachPromptBtn'), 'click', generateCallMetricCoachPrompt);
     bindElementOnce(document.getElementById('copyMetricCoachBtn'), 'click', copySelectedCallMetricRead);

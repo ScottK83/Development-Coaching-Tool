@@ -49,6 +49,22 @@ const SLOW_CALL = [
     'Agent: Okay the balance is two hundred.'
 ].join('\n');
 
+const SECOND_CALL = [
+    'Agent: Thanks for calling, this is Jamie.',
+    'Customer: I was charged twice this month.',
+    'Agent: Unfortunately I cannot see anything wrong on my end.',
+    'Agent: One moment. Still loading. Bear with me. Just a second.',
+    'Agent: The charge posted on the 14th.'
+].join('\n');
+
+const THIRD_CALL = [
+    'Agent: Good afternoon, Jamie speaking.',
+    'Customer: I need my due date moved.',
+    'Agent: Unfortunately that is not something I can change today.',
+    'Agent: Bear with me. One moment. Still checking. Just a second.',
+    'Agent: Your balance is ninety dollars.'
+].join('\n');
+
 function metric(key, label, employeeValue, target, targetType, classification) {
     return {
         metricKey: key,
@@ -87,10 +103,11 @@ suite('coaching bridge: collecting evidence across calls', (t) => {
     t.check('a single call reads as "on this call"', single.findings.every(f => f.appearsOn === 'on this call'));
 
     // The same problem on three calls should count three times, not appear
-    // three times.
+    // three times. Three genuinely different calls: the same transcript three
+    // times is one call, and is deduplicated by callFingerprint.
     const history = [
-        { listenedOn: '2026-08-20', employeeName: 'Jamie', transcript: SLOW_CALL },
-        { listenedOn: '2026-08-21', employeeName: 'Jamie', transcript: SLOW_CALL }
+        { listenedOn: '2026-08-20', employeeName: 'Jamie', transcript: SECOND_CALL },
+        { listenedOn: '2026-08-21', employeeName: 'Jamie', transcript: THIRD_CALL }
     ];
     const across = bridge.collectFindings({ analysis, wordChoice, associateName: 'Jamie', history });
     t.equal('all three calls reviewed', across.callsReviewed, 3);
@@ -103,7 +120,7 @@ suite('coaching bridge: collecting evidence across calls', (t) => {
     // The open call must not be double counted when its saved copy is in the
     // history under the same date.
     const dupe = bridge.collectFindings({
-        analysis, wordChoice, associateName: 'Jamie', callDate: '2026-08-20',
+        analysis, wordChoice, transcript: SLOW_CALL, associateName: 'Jamie', callDate: '2026-08-20',
         history: [{ listenedOn: '2026-08-20', employeeName: 'Jamie', transcript: SLOW_CALL }]
     });
     t.equal('the saved copy of the open call is skipped', dupe.callsReviewed, 1);
