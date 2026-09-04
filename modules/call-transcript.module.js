@@ -904,6 +904,10 @@
         stripBoilerplate,
         parseTranscript,
         analyzeTranscript,
+        // Exported so the word-choice scan can ask "was this emotion cue
+        // acknowledged" using the same empathy definition scored here, rather
+        // than keeping a second copy of the pattern that can drift from it.
+        strengthPattern,
         buildStrengthsDraft,
         buildImprovementsDraft,
         buildAnalysisSummary,

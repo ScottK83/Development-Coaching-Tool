@@ -190,6 +190,25 @@
         sentimentPhraseDatabase.emotions.C = Array.isArray(sentimentPhraseDatabase.emotions.C) ? sentimentPhraseDatabase.emotions.C : [];
     }
 
+    /**
+     * The phrase lists, for anything that needs to match them against speech.
+     *
+     * Returns the supervisor's edited lists when there are any and the shipped
+     * defaults otherwise, so a caller never has to know which it got. The
+     * `typeof` guard is there because the live database is a script.js global:
+     * a module loaded on its own, as the tests do, would throw on the bare name.
+     */
+    function getPhraseDatabase() {
+        const live = typeof sentimentPhraseDatabase !== 'undefined' ? sentimentPhraseDatabase : null;
+        const hasLists = live && typeof live === 'object' && (
+            (live.positive?.A?.length || 0)
+            + (live.negative?.A?.length || 0)
+            + (live.emotions?.C?.length || 0)
+        ) > 0;
+
+        return hasLists ? live : JSON.parse(JSON.stringify(DEFAULT_SENTIMENT_PHRASE_DATABASE));
+    }
+
     function renderSentimentDatabasePanel() {
         ensureSentimentPhraseDatabaseDefaults();
 
@@ -1470,6 +1489,7 @@
         normalizeDateStringForStorage,
         parseDateForComparison,
         ensureSentimentPhraseDatabaseDefaults,
+        getPhraseDatabase,
         renderSentimentDatabasePanel,
         saveSentimentPhraseDatabaseFromForm,
         syncSentimentSnapshotDateInputsFromReports,

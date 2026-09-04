@@ -8126,9 +8126,19 @@ function buildCallListeningQaText(entry) {
     return window.DevCoachModules?.callQa?.buildQaText?.(qa) || '';
 }
 
+function buildCallListeningWordChoiceText(entry) {
+    if (!entry?.transcript) return '';
+    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
+        associateName: entry.employeeName
+    });
+    const scan = scanCallListeningWordChoice(entry.transcript, entry.employeeName, analysis);
+    return window.DevCoachModules?.callWordChoice?.buildWordChoiceText?.(scan) || '';
+}
+
 function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
     const qaText = buildCallListeningQaText(entry);
+    const wordChoiceText = buildCallListeningWordChoiceText(entry);
     return [
         `Call Listening Date: ${entry.listenedOn || ''}`,
         `Associate: ${entry.employeeName || ''}`,
@@ -8145,7 +8155,8 @@ function buildCallListeningVerintSummary(entry) {
         '',
         'Manager notes:',
         entry.managerNotes || 'N/A',
-        ...(qaText ? ['', qaText] : [])
+        ...(qaText ? ['', qaText] : []),
+        ...(wordChoiceText ? ['', wordChoiceText] : [])
     ].join('\n');
 }
 
@@ -8280,6 +8291,52 @@ function renderCallQaScorecard(transcript, associateName, analysis) {
     return qa;
 }
 
+function scanCallListeningWordChoice(transcript, associateName, analysis) {
+    const scanner = window.DevCoachModules?.callWordChoice;
+    if (!scanner?.scanTranscript || !transcript) return null;
+
+    const scan = scanner.scanTranscript(transcript, { associateName, analysis });
+    return scan?.ok ? scan : null;
+}
+
+function renderCallWordChoicePanel(transcript, associateName, analysis) {
+    const panel = document.getElementById('callWordChoicePanel');
+    const results = document.getElementById('callWordChoiceResults');
+    if (!panel || !results) return null;
+
+    const scan = scanCallListeningWordChoice(transcript, associateName, analysis);
+    const html = scan ? window.DevCoachModules?.callWordChoice?.buildWordChoiceHtml?.(scan, escapeHtml) : '';
+
+    if (!html) {
+        panel.style.display = 'none';
+        return null;
+    }
+
+    results.innerHTML = html;
+    panel.style.display = 'block';
+    return scan;
+}
+
+function copyCallListeningWordChoice() {
+    const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
+    if (!transcript) {
+        showToast('⚠️ Paste a call transcript first.', 3000);
+        return;
+    }
+
+    const associateName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(transcript, { associateName });
+    const scan = scanCallListeningWordChoice(transcript, associateName, analysis);
+    const text = window.DevCoachModules?.callWordChoice?.buildWordChoiceText?.(scan);
+
+    if (!text) {
+        showToast('⚠️ No scored phrases came up on this call.', 3000);
+        return;
+    }
+
+    copyToClipboard(text, { message: '📋 Language read copied to clipboard' });
+}
+
 function copyCallListeningQaAnswers() {
     const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
     if (!transcript) {
@@ -8330,6 +8387,7 @@ function analyzeCallListeningTranscript() {
     mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
 
     renderCallQaScorecard(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
+    renderCallWordChoicePanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
 
     if (summary) {
         summary.textContent = analyzer.buildAnalysisSummary(analysis);
@@ -8511,6 +8569,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
+    bindElementOnce(document.getElementById('copyCallWordChoiceBtn'), 'click', copyCallListeningWordChoice);
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
     bindElementOnce(copyVerintBtn, 'click', () => copyCallListeningVerintSummary());
     bindElementOnce(exportBtn, 'click', downloadCallListeningLogsCSV);

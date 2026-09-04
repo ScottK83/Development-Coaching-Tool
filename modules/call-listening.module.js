@@ -42,6 +42,25 @@ ${transcript}
         return text ? `${text}\n\n` : '';
     }
 
+    // The scored phrase lists are the one part of this the associate is
+    // literally graded on, so the wording matters more than usual: name the
+    // phrase they said, and offer the phrase that would have scored instead.
+    function buildWordChoiceSection(entry) {
+        const scanner = window.DevCoachModules?.callWordChoice;
+        if (!scanner?.scanTranscript || !entry.transcript) return '';
+
+        const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
+            associateName: entry.employeeName
+        });
+        const scan = scanner.scanTranscript(entry.transcript, {
+            associateName: entry.employeeName,
+            analysis
+        });
+        const text = scanner.buildWordChoiceText(scan);
+
+        return text ? `${text}\n\n` : '';
+    }
+
     function buildPrompt(entry, preferredName) {
         const transcriptSection = buildTranscriptSection(entry);
         const transcriptRules = transcriptSection
@@ -53,7 +72,7 @@ ${transcript}
 Call details:
 ${buildCallDetailLines(entry)}
 
-${transcriptSection}${buildQaSection(entry)}Feedback notes:
+${transcriptSection}${buildQaSection(entry)}${buildWordChoiceSection(entry)}Feedback notes:
 What went well:
 ${entry.whatWentWell || '- None provided'}
 
@@ -80,6 +99,9 @@ Requirements:
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
 - Do NOT use em dashes (, )${transcriptRules}
 - The QA read is background for you, not content for the associate. Do not paste the checklist or the words "opportunity" and "cannot tell" into the email; turn what matters into normal coaching language
+- Where the language read shows a scored phrase, be concrete: name the phrase they said and give them the phrase that would have scored instead. "You said 'unfortunately' twice, and 'what I can do is' lands the same news without costing you" is coaching. "Use more positive language" is not
+- Do not mention phrase lists, scoring, or the words positive and negative as categories. The associate should read it as advice about talking to customers, not as a report on a keyword count
+- Pick at most two language points, the ones that came up most. A list of every phrase is not usable
 - Return ONLY the final email body text.`;
     }
 

@@ -306,7 +306,7 @@ positiveWord,Say 'I can' instead of 'I can't' - focus on what you CAN do
 positiveWord,Say 'Let me get that handled for you' instead of 'Let me fix that problem'
 positiveWord,Replace 'Your account shows' with 'I see here that' - sounds more collaborative
 positiveWord,Say 'moving forward' instead of 'from now on' - sounds more optimistic
-positiveWord,Say 'You're welcome - glad I could help' instead of 'no problem'
+positiveWord,Say 'You're welcome - glad I could help' at the close
 positiveWord,Use 'right away' instead of 'as soon as possible'
 positiveWord,Say 'We will' instead of 'We'll try' - commitment over hedging
 positiveWord,Use 'here's what I found' instead of 'it says here' - you're the expert not the screen
@@ -331,7 +331,7 @@ positiveWord,Use 'we can' for anything you can start during the call
 positiveWord,'Already done' beats 'I have gone ahead and processed that'
 positiveWord,'You're all set' is worth saying out loud at the end
 positiveWord,'Happy to look' beats 'let me check'
-positiveWord,'Sure thing' lands warmer than 'no problem'
+positiveWord,'My pleasure' and 'you bet' both land warm, and they keep every close from sounding the same
 positiveWord,'Here's what that means for your next bill' turns a number into a plan
 positiveWord,Use 'for you' often, it makes the action personal
 positiveWord,'I've got the details right here' sounds prepared
@@ -359,7 +359,7 @@ negativeWord,Avoid 'to be fair' - it signals you're about to argue
 negativeWord,Don't say 'our policy states' - say 'here's what we can do' - same info less cold
 negativeWord,Never say 'no one else has complained' - invalidates their experience
 negativeWord,Avoid 'I'll try' - say 'I will' - commitment builds trust
-negativeWord,Stop saying 'no problem' - implies there COULD have been a problem
+negativeWord,Avoid 'there are no notes on this' - say what you can see and what you're doing next
 negativeWord,Avoid 'as I already said' - repeating info isn't customer's fault
 negativeWord,Don't say 'I can't' without immediately saying 'here's what I CAN do'
 negativeWord,Replace 'you misunderstood' with 'let me say that more clearly'
