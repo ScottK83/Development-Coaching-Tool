@@ -2,94 +2,19 @@
     'use strict';
 
     /**
-     * Reads an associate's saved call logs as a set rather than one at a time.
+     * Wording and rendering for what repeats across an associate's calls.
      *
-     * A single call gives you a conversation. Six calls give you a pattern, and
-     * "the hold ran long on four of your last six" is a different coaching
-     * conversation from "the hold ran long today". The logs already hold the
-     * transcripts, so this rescores them and counts what keeps coming back.
+     * The counting used to live here too, and it was a second independent pass
+     * over the same eight transcripts: this module ran callTranscript and
+     * callQa over them for its own tallies while callCoachingBridge ran both
+     * over the same set for the metric chips. The same work twice, and two
+     * tallies that agree only while somebody maintains both. The bridge counts
+     * now, in one pass, and this module says what the counts mean.
+     *
+     * The labels stay here because they are this panel's voice. The bridge
+     * deals in rule keys; a person reading a panel wants "no recap at the
+     * close".
      */
-
-    const DEFAULT_WINDOW = 8;
-    // Two of anything is a coincidence worth noticing; one is just a call.
-    const MIN_OCCURRENCES = 2;
-
-    function entryTime(entry) {
-        const stamp = Date.parse(entry?.listenedOn || '') || Date.parse(entry?.createdAt || '');
-        return Number.isNaN(stamp) ? 0 : (stamp || 0);
-    }
-
-    function scoreEntry(entry) {
-        const analyzer = window.DevCoachModules?.callTranscript;
-        const scorer = window.DevCoachModules?.callQa;
-        if (!entry?.transcript || !analyzer?.analyzeTranscript || !scorer?.scoreCall) return null;
-
-        const analysis = analyzer.analyzeTranscript(entry.transcript, { associateName: entry.employeeName });
-        const qa = scorer.scoreCall(entry.transcript, {
-            associateName: entry.employeeName,
-            context: { silenceGaps: analysis.silenceGaps || [] }
-        });
-
-        return { entry, analysis, qa };
-    }
-
-    function bump(counter, key, listenedOn) {
-        if (!counter[key]) counter[key] = { label: key, count: 0, dates: [] };
-        counter[key].count += 1;
-        if (listenedOn) counter[key].dates.push(listenedOn);
-    }
-
-    function sortByCount(counter) {
-        return Object.values(counter).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-    }
-
-    /**
-     * Rescores the most recent logs that carry a transcript and reports what
-     * repeats. Entries saved before transcripts existed are counted separately
-     * rather than silently ignored.
-     */
-    function summarizeHistory(entries, options = {}) {
-        const list = Array.isArray(entries) ? entries : [];
-        const windowSize = options.windowSize || DEFAULT_WINDOW;
-        const score = typeof options.scoreEntry === 'function' ? options.scoreEntry : scoreEntry;
-
-        // Callers hand this list over in whichever order suits them, so sort on
-        // the entries themselves rather than trusting the order they arrive in.
-        const recent = list
-            .slice()
-            .sort((a, b) => entryTime(b) - entryTime(a))
-            .slice(0, windowSize);
-        const scored = recent.map(score).filter(Boolean);
-
-        const opportunities = {};
-        const coaching = {};
-        const strengths = {};
-
-        scored.forEach(({ entry, analysis, qa }) => {
-            const on = entry.listenedOn || '';
-
-            (qa.callOpportunities || []).forEach(item => bump(opportunities, item.label, on));
-            (qa.techOpportunities || []).forEach(item => bump(opportunities, item.label, on));
-            (qa.checks || [])
-                .filter(check => check.verdict === 'opportunity')
-                .forEach(check => bump(opportunities, check.question.replace(/\?$/, ''), on));
-
-            (analysis.allImprovements || []).forEach(item => bump(coaching, item.key, on));
-            (analysis.allStrengths || []).forEach(item => bump(strengths, item.key, on));
-        });
-
-        const repeating = (counter) => sortByCount(counter).filter(item => item.count >= MIN_OCCURRENCES);
-
-        return {
-            ok: scored.length > 0,
-            callsReviewed: scored.length,
-            callsWithoutTranscript: recent.length - scored.length,
-            windowSize,
-            repeatOpportunities: repeating(opportunities),
-            repeatCoaching: repeating(coaching),
-            consistentStrengths: repeating(strengths)
-        };
-    }
 
     const COACHING_LABELS = {
         empathy: 'empathy not acknowledged',
@@ -189,10 +114,9 @@
 
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.callTrends = {
-        summarizeHistory,
         buildTrendText,
         buildTrendHtml,
-        DEFAULT_WINDOW,
-        MIN_OCCURRENCES
+        COACHING_LABELS,
+        STRENGTH_LABELS
     };
 })();

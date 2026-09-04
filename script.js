@@ -9041,21 +9041,31 @@ function dispatchCallListeningHistoryAction(action, entryId) {
 
 // Rescoring every stored transcript is not free, so it only runs when the
 // history for one associate is on screen.
+/**
+ * What repeats across this associate's calls.
+ *
+ * The counting comes from callCoachingBridge, which already scores this exact
+ * set of transcripts for the metric chips. call-trends used to score them
+ * again for its own tallies, so one render ran both engines over eight
+ * transcripts twice and produced two sets of numbers that agreed only while
+ * both were maintained.
+ */
 function renderCallListeningTrends(employeeName) {
     const container = document.getElementById('callListeningTrends');
     if (!container) return;
 
     const trends = window.DevCoachModules?.callTrends;
+    const bridge = window.DevCoachModules?.callCoachingBridge;
     const entries = employeeName ? getCallListeningEntriesForEmployee(employeeName) : [];
     const withTranscript = entries.filter(entry => entry?.transcript);
 
-    if (!trends?.summarizeHistory || withTranscript.length < 2) {
+    if (!trends?.buildTrendHtml || !bridge?.collectFindings || withTranscript.length < 2) {
         container.style.display = 'none';
         container.innerHTML = '';
         return;
     }
 
-    const summary = trends.summarizeHistory(entries);
+    const summary = bridge.collectFindings({ associateName: employeeName, history: entries });
     const html = trends.buildTrendHtml(summary, escapeHtml);
     container.innerHTML = html;
     container.style.display = html ? 'block' : 'none';

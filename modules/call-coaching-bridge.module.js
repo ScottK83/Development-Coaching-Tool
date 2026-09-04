@@ -33,6 +33,8 @@
     // Fewer than the cap, because unmatched advice earns less room.
     const MAX_GENERIC_TIPS = 2;
     const MAX_METRICS = 4;
+    // Two of anything is a coincidence worth noticing; one is just a call.
+    const MIN_REPEAT_OCCURRENCES = 2;
 
     /* ── Evidence to metric ──
      *
@@ -176,6 +178,7 @@
     function scoreOneCall(entry) {
         const analyzer = window.DevCoachModules?.callTranscript;
         const wordChoice = window.DevCoachModules?.callWordChoice;
+        const scorer = window.DevCoachModules?.callQa;
         if (!entry?.transcript || !analyzer?.analyzeTranscript) return null;
 
         const analysis = analyzer.analyzeTranscript(entry.transcript, { associateName: entry.employeeName });
@@ -183,8 +186,14 @@
             associateName: entry.employeeName,
             analysis
         });
+        // Scored here too, so the repeat QA opportunities come out of the same
+        // pass rather than a second one somewhere else.
+        const qa = scorer?.scoreCall?.(entry.transcript, {
+            associateName: entry.employeeName,
+            context: { silenceGaps: analysis.silenceGaps || [] }
+        });
 
-        return { entry, analysis, scan: scan?.ok ? scan : null };
+        return { entry, analysis, scan: scan?.ok ? scan : null, qa: qa || null };
     }
 
     function entryTime(entry) {
@@ -308,7 +317,14 @@
             }
         };
 
-        scored.forEach(({ entry, analysis, scan }) => {
+        // Counted alongside the findings so nothing has to rescore this history
+        // a second time. call-trends used to run both engines over the same
+        // eight transcripts for its own repeat counts, which was the same work
+        // twice and two tallies that only agree while both are maintained.
+        const strengthRows = {};
+        const opportunityRows = {};
+
+        scored.forEach(({ entry, analysis, scan, qa }) => {
             const date = entry.listenedOn || '';
 
             (analysis.allImprovements || []).forEach(item => {
@@ -316,6 +332,24 @@
                     date, quote: item.quote, weight: item.weight
                 });
             });
+
+            (analysis.allStrengths || []).forEach(item => {
+                const row = strengthRows[item.key] || (strengthRows[item.key] = { label: item.key, count: 0, dates: [] });
+                row.count += 1;
+                if (date) row.dates.push(date);
+            });
+
+            const noteOpportunity = (label) => {
+                if (!label) return;
+                const row = opportunityRows[label] || (opportunityRows[label] = { label, count: 0, dates: [] });
+                row.count += 1;
+                if (date) row.dates.push(date);
+            };
+            (qa?.callOpportunities || []).forEach(item => noteOpportunity(item.label));
+            (qa?.techOpportunities || []).forEach(item => noteOpportunity(item.label));
+            (qa?.checks || [])
+                .filter(check => check.verdict === 'opportunity')
+                .forEach(check => noteOpportunity(String(check.question || '').replace(/\?$/, '')));
 
             if (!scan) return;
 
@@ -358,9 +392,29 @@
                 : String(entry.listenedOn || ''))
             .filter(Boolean);
 
+        // Two of anything is a coincidence worth noticing; one is just a call.
+        const repeating = (map) => Object.values(map)
+            .filter(row => row.count >= MIN_REPEAT_OCCURRENCES)
+            .sort((a, b) => b.count - a.count || String(a.label).localeCompare(String(b.label)));
+
+        // The trends panel counts behaviours by rule key and puts its own
+        // wording on them, so it needs the key as the label.
+        const coachingRows = {};
+        Object.values(rows)
+            .filter(row => row.kind === 'behaviour')
+            .forEach(row => { coachingRows[row.key] = { label: row.key, count: row.count, dates: row.dates }; });
+
         return {
+            ok: total > 0,
             callsReviewed: total,
+            callsWithoutTranscript: Math.max(0, (Array.isArray(options.history) ? options.history : [])
+                .filter(entry => !entry?.transcript).length),
             callMoments,
+            // What repeats across the set, for the trends panel. Same pass,
+            // same numbers as the findings above.
+            consistentStrengths: repeating(strengthRows),
+            repeatOpportunities: repeating(opportunityRows),
+            repeatCoaching: repeating(coachingRows),
             findings: Object.values(rows).map(row => ({
                 ...row,
                 weight: row.weight || 5,
