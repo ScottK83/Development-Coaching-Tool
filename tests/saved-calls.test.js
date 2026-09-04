@@ -218,3 +218,36 @@ suite('saved calls: reading an old call', (t) => {
     t.check('the transcript box scrolls rather than stretching the page',
         /\.saved-call-transcript[\s\S]{0,200}overflow: auto/.test(css));
 });
+
+suite('saved calls: nothing is saved without being asked', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    // Copying a Verint note and generating a prompt both used to write a log
+    // on the way past. Nothing said so, which is how one call ended up stored
+    // twice under different dates and Scott could not account for what was in
+    // memory. Reading the form is not a decision to keep it.
+    const saveCalls = script.match(/upsertCallListeningEntryFromForm\(/g) || [];
+    t.equal('only the definition and the Save button reference the saver', saveCalls.length, 2);
+    t.check('the Save button is the one that calls it',
+        /bindElementOnce\(saveBtn, 'click', \(\) => upsertCallListeningEntryFromForm\(true\)\)/.test(script));
+
+    t.check('copying a Verint note builds an unsaved entry',
+        /function copyCallListeningVerintSummary[\s\S]{0,700}buildUnsavedCallListeningEntry\(\)/.test(script));
+    t.check('generating a prompt builds an unsaved entry',
+        /function generateCallListeningPromptAndCopy[\s\S]{0,300}buildUnsavedCallListeningEntry\(\)/.test(script));
+    t.check('and the unsaved entry never reaches the log',
+        /function buildUnsavedCallListeningEntry[\s\S]{0,500}return \{ id: '', \.\.\.draft/.test(script));
+});
+
+suite('saved calls: the outcome of the last coaching is on this page', (t) => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    // It was measured all along and only rendered on the Coaching page, two
+    // clicks from where you decide what to say next.
+    t.check('there is a panel for it', html.includes('id="callOutcomesPanel"'));
+    t.check('it renders for the selected associate',
+        /function renderCallListeningOutcomes[\s\S]{0,400}renderForEmployee\?\.\(/.test(script));
+    t.check('and repaints when the associate changes',
+        /renderCallListeningHistoryForSelectedEmployee[\s\S]{0,600}renderCallListeningOutcomes\(employeeName\)/.test(script));
+});

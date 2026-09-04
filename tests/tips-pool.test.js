@@ -21,9 +21,14 @@ function rows(csv) {
     return String(csv).replace(/^﻿/, '').trim().split(/\r?\n/);
 }
 
+function readModule() {
+    return fs.readFileSync(path.join(ROOT, 'modules/tips.module.js'), 'utf8').replace(/\r\n/g, '\n');
+}
+
 function defaultMapKeys() {
-    const src = fs.readFileSync(path.join(ROOT, 'modules/tips.module.js'), 'utf8').replace(/\r\n/g, '\n');
+    const src = readModule();
     const start = src.indexOf('const DEFAULT_METRIC_TIPS = {');
+    if (start === -1) return [];
     const block = src.slice(start, src.indexOf('\n};', start));
     return (block.match(/^    ([A-Za-z"][^:]*):\s*\[/gm) || [])
         .map((line) => line.trim().replace(/:\s*\[$/, ''));
@@ -53,17 +58,18 @@ suite('tips pool: one shape, two copies in step', (t) => {
     const strayCsv = csvKeys.filter((k) => !keys.has(k));
     t.equal('every CSV metric is a real registry key', strayCsv.join(',') || '(none)', '(none)');
 
-    const mapKeys = defaultMapKeys();
-    const strayMap = mapKeys.filter((k) => !keys.has(k));
-    t.equal('the fallback map is keyed by metric key, not display label',
-        strayMap.join(',') || '(none)', '(none)');
-    t.check('the fallback map is not empty', mapKeys.length > 0);
+    // There used to be a second pool, DEFAULT_METRIC_TIPS, about five tips per
+    // metric, reachable only when the store was empty or unreadable. Because
+    // it appeared exactly when nobody was looking, the app could serve advice
+    // that was not in the library everyone was editing, and it made relevance
+    // matching look broken while it was quietly searching the wrong 60 tips.
+    // One pool now, and the CSV is it.
+    t.equal('there is no second tip pool', defaultMapKeys().length, 0);
+    t.check('and nothing falls back to one', !readModule().includes('DEFAULT_METRIC_TIPS'));
 
-    // Every metric the fallback map covers should also exist in the CSV, or the
-    // seeded path and the un-seeded path answer differently for that metric.
-    const csvKeySet = new Set(csvKeys);
-    const onlyInMap = mapKeys.filter((k) => !csvKeySet.has(k));
-    t.equal('no metric has tips only on the fallback path', onlyInMap.join(',') || '(none)', '(none)');
+    // A CSV that parses to nothing has to be loud rather than silently serving
+    // something else.
+    t.check('an unparseable pool is reported', /console\.error\('\[tips\]/.test(readModule()));
 });
 
 suite('tips pool: hold time never offers a callback', (t) => {
@@ -73,11 +79,11 @@ suite('tips pool: hold time never offers a callback', (t) => {
     const src = fs.readFileSync(path.join(ROOT, 'modules/tips.module.js'), 'utf8').replace(/\r\n/g, '\n');
     const csvFile = fs.readFileSync(path.join(ROOT, 'tips.csv'), 'utf8').replace(/\r\n/g, '\n');
 
-    const holdBlockMatch = src.match(/\n    holdTime: \[([\s\S]*?)\n    \],/);
-    const holdBlock = holdBlockMatch ? holdBlockMatch[1] : '';
+    const offersCallback = /offer a callback|call you back|callback:/i;
+    const embeddedHold = src.split('\n').filter((l) => l.indexOf('holdTime,') === 0).join('\n');
     const csvHold = csvFile.split('\n').filter((l) => l.indexOf('holdTime,') === 0).join('\n');
 
-    const offersCallback = /offer a callback|call you back|callback:/i;
-    t.check('the fallback hold-time tips do not offer a callback', !offersCallback.test(holdBlock));
+    t.check('the embedded hold-time tips do not offer a callback', !offersCallback.test(embeddedHold));
     t.check('the hold-time tips in tips.csv do not offer a callback', !offersCallback.test(csvHold));
+    t.check('and there are some to check', csvHold.length > 0);
 });

@@ -8082,6 +8082,20 @@ function isSameCallListeningDraftAsEntry(draft, existingEntry) {
         && (existingEntry.managerNotes || '') === draft.managerNotes;
 }
 
+/**
+ * The form's contents as an entry, without saving it.
+ *
+ * Copying a Verint note and generating a prompt both used to save a log on the
+ * way past. Nothing said so, which is how the same call ended up stored twice
+ * under different dates and a supervisor could not account for what was in
+ * memory. Reading the form is not a decision to keep it; pressing Save is.
+ */
+function buildUnsavedCallListeningEntry() {
+    const draft = getCallListeningDraftFromForm();
+    if (!validateCallListeningDraft(draft)) return null;
+    return { id: '', ...draft, createdAt: new Date().toISOString() };
+}
+
 function createCallListeningEntry(draft) {
     return {
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -8193,7 +8207,7 @@ function copyCallListeningVerintSummary(entryId = null) {
         entry = findCallListeningEntryById(employeeName, entryId);
     }
     if (!entry) {
-        entry = upsertCallListeningEntryFromForm(false);
+        entry = buildUnsavedCallListeningEntry();
     }
     if (!entry) return;
 
@@ -8906,7 +8920,7 @@ function buildCallListeningPrompt(entry) {
 }
 
 function generateCallListeningPromptAndCopy() {
-    const entry = upsertCallListeningEntryFromForm(false);
+    const entry = buildUnsavedCallListeningEntry();
     if (!entry) return;
 
     const promptArea = document.getElementById('callListeningPromptArea');
@@ -9047,11 +9061,27 @@ function renderCallListeningTrends(employeeName) {
     container.style.display = html ? 'block' : 'none';
 }
 
+/**
+ * Whether the last coaching moved anything, shown where the coaching happens.
+ *
+ * coaching-outcomes has measured this since it was written and only ever
+ * rendered it on the Coaching page. So the answer to "did what I said last
+ * time work" was two clicks away from the place you decide what to say next,
+ * which is the one moment it is worth knowing.
+ */
+function renderCallListeningOutcomes(employeeName) {
+    window.DevCoachModules?.coachingOutcomes?.renderForEmployee?.(
+        document.getElementById('callOutcomesPanel'),
+        employeeName
+    );
+}
+
 function renderCallListeningHistoryForSelectedEmployee() {
     const { employeeName, summary, list } = resolveCallListeningHistoryContext();
     if (!summary || !list) return;
 
     renderCallListeningTrends(employeeName);
+    renderCallListeningOutcomes(employeeName);
 
     if (!employeeName) {
         summary.textContent = 'Select an associate to view call listening history.';
