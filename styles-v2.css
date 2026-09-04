@@ -991,6 +991,13 @@ textarea:focus-visible {
     background: var(--green-soft);
 }
 
+/* For a note about something already lost or wrong, rather than something to
+   do next: a transcript trimmed by the old cap, say. */
+.panel-section .call-note-warn {
+    border-left-color: var(--yellow);
+    background: var(--yellow-soft);
+}
+
 .panel-section .call-panel-action {
     border: 1px solid var(--yellow);
     background: var(--yellow-soft);

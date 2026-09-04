@@ -207,12 +207,25 @@ suite('saved calls: reading an old call', (t) => {
     t.check('the detail is only built when open',
         /\$\{open \? buildSavedCallDetailHtml\(group\.employeeName, entry\) : ''\}/.test(script));
 
-    // Viewing must not quietly replace unsent work in the form.
-    t.check('loading into the form is a separate action', script.includes('data-saved-load-id'));
-    t.check('and asks before overwriting work',
+    // Clicking a call means "work on this call", so one click loads the form
+    // and every panel with it. It used to only expand a read-only view with a
+    // Load button underneath, which was two clicks and a hunt for the second.
+    t.check('clicking a row loads it',
+        /function handleAllSavedCallsClick[\s\S]{0,1400}loadSavedCallIntoForm\(employeeName, entryId\)/.test(script));
+    t.check('and the separate button is gone', !script.includes('data-saved-load-id'));
+
+    // The confirm is the only reason the two steps existed, and losing a draft
+    // is not undoable.
+    t.check('it asks before overwriting work',
         /function loadSavedCallIntoForm[\s\S]{0,900}hasWork && !confirm\(/.test(script));
+    t.check('a declined confirm does not expand the row either',
+        /hasWork && !confirm\([^)]*\)\) return false/.test(script));
     t.check('loading switches to that associate',
         /function loadSavedCallIntoForm[\s\S]{0,1200}select\.value = employeeName/.test(script));
+
+    // Closing an open row is just closing it, and must not reload anything.
+    t.check('collapsing an open row only collapses it',
+        /expandedSavedCalls\.has\(savedCallKey\(employeeName, entryId\)\)[\s\S]{0,200}toggleSavedCall\(employeeName, entryId\);\s*return;/.test(script));
 
     t.check('the panel says a call can be opened', html.includes('Click a call to read the transcript'));
     t.check('the transcript box scrolls rather than stretching the page',
@@ -265,4 +278,19 @@ suite('saved calls: the store says how big it is getting', (t) => {
     t.check('it survives a measuring failure',
         /describeSavedCallsSize[\s\S]{0,600}catch \(error\) \{\s*return '';/.test(script));
     t.check('and reaches the summary line', /\$\{stored \? `, \$\{stored\}` : ''\}/.test(script));
+});
+
+suite('saved calls: a transcript the old cap cut short says so', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const css = fs.readFileSync(path.join(ROOT, 'styles-v2.css'), 'utf8');
+
+    // A call saved under the old 8000 character cap lost its ending
+    // permanently. Raising the cap does not bring it back, so a 39 minute call
+    // that stops at 15:46 needs to say why rather than look like a bug.
+    t.check('the trimming is detected', /\[transcript truncated/.test(script));
+    t.check('it says the end cannot be recovered',
+        script.includes('cannot be recovered'));
+    t.check('and what to do about it',
+        script.includes('Paste the original into the form and save it again'));
+    t.check('the note has a style to render in', css.includes('.call-note-warn'));
 });

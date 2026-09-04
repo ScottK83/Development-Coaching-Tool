@@ -9243,7 +9243,18 @@ function buildSavedCallDetailHtml(employeeName, entry) {
 
     let readHtml = '';
     let summaryHtml = '';
+    let trimmedHtml = '';
     let transcriptHtml = '<div class="call-qa-detail">No transcript was saved with this call, so it cannot be re-read.</div>';
+
+    // A call saved under the old 8000 character cap lost its ending
+    // permanently, and no change to the cap brings it back. Saying so beats
+    // letting a supervisor wonder why a 39 minute call stops at 15:46.
+    if (/\[transcript truncated/.test(String(entry.transcript || ''))) {
+        trimmedHtml = '<div class="call-note call-note-warn" style="margin-bottom: var(--space-2);">'
+            + 'This transcript was cut short by an older storage limit, so the end of the call is not here and cannot be recovered. '
+            + 'Paste the original into the form and save it again to keep the whole call.'
+            + '</div>';
+    }
 
     if (entry.transcript && analyzer?.analyzeTranscript) {
         const analysis = analyzer.analyzeTranscript(entry.transcript, { associateName: employeeName });
@@ -9267,10 +9278,8 @@ function buildSavedCallDetailHtml(employeeName, entry) {
         ${notesHtml}
         ${readHtml}
         <div class="saved-call-note-label" style="margin-top: var(--space-3);">Transcript as saved</div>
+        ${trimmedHtml}
         ${transcriptHtml}
-        <div class="flex-row" style="margin-top: var(--space-3);">
-            <button type="button" data-saved-load-employee="${escapeHtml(employeeName)}" data-saved-load-id="${escapeHtml(entry.id || '')}">📂 Load Into The Form</button>
-        </div>
     </div>`;
 }
 
@@ -9407,7 +9416,7 @@ function toggleSavedCall(employeeName, entryId) {
  */
 function loadSavedCallIntoForm(employeeName, entryId) {
     const entry = findSavedCall(employeeName, entryId);
-    if (!entry) return;
+    if (!entry) return false;
 
     const select = document.getElementById('callListeningEmployeeSelect');
     const transcriptField = document.getElementById('callListeningTranscript');
@@ -9415,7 +9424,7 @@ function loadSavedCallIntoForm(employeeName, entryId) {
         || String(document.getElementById('callListeningStrengths')?.value || '').trim()
         || String(document.getElementById('callListeningImprovements')?.value || '').trim();
 
-    if (hasWork && !confirm('Load this call into the form? What is in the form now will be replaced.')) return;
+    if (hasWork && !confirm('Load this call into the form? What is in the form now will be replaced.')) return false;
 
     if (select && select.value !== employeeName) {
         select.value = employeeName;
@@ -9425,8 +9434,21 @@ function loadSavedCallIntoForm(employeeName, entryId) {
 
     loadCallListeningEntryIntoForm(entryId);
     document.getElementById('callListeningTranscript')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return true;
 }
 
+/**
+ * Clicking a saved call loads it.
+ *
+ * It used to only expand a read-only view, with a Load button underneath, so
+ * getting an old call back took two clicks and a hunt for the second one.
+ * Clicking a call means "work on this call", so it loads the form and every
+ * panel with it, and the detail opens at the same time because that is where
+ * the transcript is.
+ *
+ * The confirm before overwriting unsent work stays. That is the only reason
+ * the two steps existed, and it is cheaper to ask than to lose a draft.
+ */
 function handleAllSavedCallsClick(event) {
     const remove = event.target?.closest('.saved-call-remove');
     if (remove) {
@@ -9434,16 +9456,21 @@ function handleAllSavedCallsClick(event) {
         return;
     }
 
-    const load = event.target?.closest('[data-saved-load-id]');
-    if (load) {
-        loadSavedCallIntoForm(load.dataset.savedLoadEmployee, load.dataset.savedLoadId);
+    const open = event.target?.closest('.saved-call-open');
+    if (!open) return;
+
+    const employeeName = open.dataset.savedOpenEmployee;
+    const entryId = open.dataset.savedOpenId;
+
+    // Collapsing an already open row is just closing it, and should not
+    // reload anything.
+    if (expandedSavedCalls.has(savedCallKey(employeeName, entryId))) {
+        toggleSavedCall(employeeName, entryId);
         return;
     }
 
-    const open = event.target?.closest('.saved-call-open');
-    if (open) {
-        toggleSavedCall(open.dataset.savedOpenEmployee, open.dataset.savedOpenId);
-    }
+    if (!loadSavedCallIntoForm(employeeName, entryId)) return;
+    toggleSavedCall(employeeName, entryId);
 }
 
 function populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection) {
