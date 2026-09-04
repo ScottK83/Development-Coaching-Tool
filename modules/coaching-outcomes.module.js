@@ -228,9 +228,55 @@
             });
         });
 
-        return out.sort(function (a, b) {
+        return dedupe(out).sort(function (a, b) {
             return String(b.coachedAt || '').localeCompare(String(a.coachedAt || ''));
         });
+    }
+
+    /**
+     * One outcome per metric per baseline week.
+     *
+     * Two things made this necessary. Regenerating a message used to log
+     * another coaching event each time, so one associate had seven identical
+     * "AHT coached Sep 4" rows. And even without that bug, coaching the same
+     * metric twice in one week produces two rows with the same before, the
+     * same after and the same verdict, because the measurement is week over
+     * week. They are not two results; they are one result counted twice.
+     *
+     * Counted twice is not cosmetic here. summarizeBySuggestion adds a use for
+     * every outcome carrying a tip, and those uses are the denominator of every
+     * effectiveness rate the selector reads back.
+     *
+     * The newest event wins, since that is the wording that actually went out,
+     * but the suggestions are unioned: a tip that was offered should count as
+     * offered even if a later pass dropped it.
+     */
+    function dedupe(outcomes) {
+        var byKey = {};
+        var order = [];
+
+        (outcomes || []).forEach(function (outcome) {
+            var key = outcome.employee + '|' + outcome.metricKey + '|' + (outcome.baselineKey || '');
+            var seen = byKey[key];
+
+            if (!seen) {
+                byKey[key] = Object.assign({}, outcome);
+                order.push(key);
+                return;
+            }
+
+            var suggestions = (seen.suggestions || []).slice();
+            (outcome.suggestions || []).forEach(function (suggestion) {
+                if (!suggestions.some(function (item) { return item.id === suggestion.id; })) {
+                    suggestions.push(suggestion);
+                }
+            });
+
+            var newer = String(outcome.coachedAt || '') > String(seen.coachedAt || '');
+            byKey[key] = Object.assign({}, newer ? outcome : seen, { suggestions: suggestions });
+        });
+
+        return order.map(function (key) { return byKey[key]; });
     }
 
     /**

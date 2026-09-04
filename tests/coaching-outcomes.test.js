@@ -217,3 +217,97 @@ suite('coachingOutcomes — degrades safely', (t) => {
     const o = setup(t, s).buildOutcomes('Alice')[0];
     t.equal('a label weekEnding falls back to generatedAt', o.baselineEnd, '2026-07-12');
 });
+
+suite('coachingOutcomes: the same coaching is not counted seven times', (t) => {
+    t.installFakeBrowser();
+    global.window.METRICS_REGISTRY = {
+        aht: { label: 'Average Handle Time', isReverse: true, unit: 'sec', target: { type: 'max', value: 426 } }
+    };
+
+    global.weeklyData = {
+        w1: {
+            metadata: { periodType: 'week', endDate: '2026-08-14' },
+            employees: [{ name: 'Esther', aht: 520 }, { name: 'A', aht: 400 }, { name: 'B', aht: 410 }, { name: 'C', aht: 420 }]
+        },
+        w2: {
+            metadata: { periodType: 'week', endDate: '2026-08-21' },
+            employees: [{ name: 'Esther', aht: 470 }, { name: 'A', aht: 401 }, { name: 'B', aht: 409 }, { name: 'C', aht: 421 }]
+        }
+    };
+
+    // Seven passes at the wording of one message, which is what regenerating
+    // used to produce: seven identical rows on screen, and seven uses of the
+    // same tip in the numbers the effectiveness rates are built from.
+    const attempt = (minute, suggestions) => ({
+        employeeId: 'Esther',
+        weekEnding: '2026-08-14',
+        generatedAt: '2026-08-15T12:0' + minute + ':00.000Z',
+        metricsCoached: ['aht'],
+        suggestions
+    });
+
+    global.coachingHistory = {
+        Esther: [
+            attempt(0, [{ id: 'tip-narrate', metricKey: 'aht', text: 'Narrate what you are checking' }]),
+            attempt(1, [{ id: 'tip-narrate', metricKey: 'aht', text: 'Narrate what you are checking' }]),
+            attempt(2, [{ id: 'tip-narrate', metricKey: 'aht', text: 'Narrate what you are checking' }]),
+            attempt(3, [{ id: 'tip-narrate', metricKey: 'aht', text: 'Narrate what you are checking' }]),
+            attempt(4, [{ id: 'tip-narrate', metricKey: 'aht', text: 'Narrate what you are checking' }]),
+            attempt(5, [{ id: 'tip-narrate', metricKey: 'aht', text: 'Narrate what you are checking' }]),
+            // The last pass dropped a tip an earlier one had offered. It was
+            // still offered, so it still counts as offered.
+            attempt(6, [{ id: 'tip-notes', metricKey: 'aht', text: 'Type notes while talking' }])
+        ]
+    };
+
+    t.loadModule('modules/metric-movement.module.js');
+    t.loadModule('modules/coaching-outcomes.module.js');
+    const { coachingOutcomes } = global.window.DevCoachModules;
+
+    const outcomes = coachingOutcomes.buildOutcomes('Esther');
+    t.equal('seven attempts are one outcome', outcomes.length, 1);
+    t.equal('and it still reads the metric correctly', outcomes[0].verdict, 'moved');
+
+    // The newest wording is the one that went out.
+    t.check('the newest attempt wins', /12:06/.test(outcomes[0].coachedAt));
+
+    // But every tip offered along the way is still on the record.
+    const ids = outcomes[0].suggestions.map((s) => s.id).sort();
+    t.equal('the suggestions are unioned', ids.join(','), 'tip-narrate,tip-notes');
+
+    // The number that matters: a tip offered seven times in one sitting is one
+    // use, not seven, or every effectiveness rate is built on a miscount.
+    const rows = coachingOutcomes.summarizeBySuggestion(outcomes);
+    const narrate = rows.find((row) => row.id === 'tip-narrate');
+    t.equal('the tip counts as given once', narrate.given, 1);
+    t.equal('to one person', narrate.people, 1);
+
+    // Coaching the same metric in a different week is a genuinely separate
+    // result and must survive.
+    global.coachingHistory.Esther.push({
+        employeeId: 'Esther', weekEnding: '2026-08-21',
+        generatedAt: '2026-08-22T12:00:00.000Z', metricsCoached: ['aht'],
+        suggestions: [{ id: 'tip-notes', metricKey: 'aht', text: 'Type notes while talking' }]
+    });
+    t.equal('a different week is a different outcome',
+        coachingOutcomes.buildOutcomes('Esther').length, 2);
+});
+
+suite('coachingOutcomes: regenerating replaces rather than appends', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+    // Stopping it at source, so history does not fill up with attempts.
+    t.check('the log replaces the same day and metrics',
+        /function appendCoachingLogEntry[\s\S]{0,1400}entries\[existing\] = entry/.test(script));
+    t.check('matched on the day', /function appendCoachingLogEntry[\s\S]{0,1200}generatedAt \|\| ''\)\.slice\(0, 10\)/.test(script));
+    t.check('and on the metrics', /function appendCoachingLogEntry[\s\S]{0,1200}metricsCoached[\s\S]{0,40}sort\(\)\.join/.test(script));
+
+    // The panel draws its own header, so a title above it said it twice.
+    t.check('the outcome panel has no duplicate heading',
+        !/Did The Last Coaching Land\?/.test(html));
+    t.check('but the panel is still there', html.includes('id="callOutcomesPanel"'));
+});

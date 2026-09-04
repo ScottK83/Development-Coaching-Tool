@@ -664,12 +664,36 @@ const COLUMN_MAPPING = window.DevCoachModules?.dataParsing?.COLUMN_MAPPING ?? {}
 // COACHING LOG HELPERS
 // ============================================
 
+/**
+ * Records a coaching event, replacing today's for the same metrics.
+ *
+ * It used to append unconditionally, so regenerating a message logged another
+ * event every time. Seven passes at the wording produced seven identical "AHT
+ * coached Sep 4" rows, and worse, coaching-outcomes counted the tips in them as
+ * seven separate uses, which is exactly the number the effectiveness rates are
+ * built from.
+ *
+ * Same person, same metrics, same day is the same coaching. Whichever
+ * generation was last is the one that went out, so it replaces the earlier
+ * attempts rather than sitting alongside them.
+ */
 function appendCoachingLogEntry(entry) {
     if (!entry || !entry.employeeId) return;
     if (!coachingHistory[entry.employeeId]) {
         coachingHistory[entry.employeeId] = [];
     }
-    coachingHistory[entry.employeeId].push(entry);
+
+    const day = String(entry.generatedAt || '').slice(0, 10);
+    const metrics = [...(entry.metricsCoached || [])].sort().join(',');
+    const entries = coachingHistory[entry.employeeId];
+    const existing = day && metrics
+        ? entries.findIndex(item => String(item?.generatedAt || '').slice(0, 10) === day
+            && [...(item?.metricsCoached || [])].sort().join(',') === metrics)
+        : -1;
+
+    if (existing >= 0) entries[existing] = entry;
+    else entries.push(entry);
+
     saveCoachingHistory();
 }
 

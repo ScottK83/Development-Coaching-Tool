@@ -818,10 +818,10 @@
             improvements.push({
                 key: 'longHold',
                 weight: 7,
-                // Second person, like every other line here. "The hold was
-                // announced" describes her own action back to her as though
-                // somebody else did it.
-                text: `Long hold: about ${formatDuration(longestHold.silence)} of silence starting at ${formatClock(longestHold.at)}. You did announce it, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
+                // "The hold" rather than "it". The label prefix used to supply
+                // the antecedent, and the message strips labels, so "you did
+                // announce it" arrived referring to nothing.
+                text: `Long hold: about ${formatDuration(longestHold.silence)} of silence starting at ${formatClock(longestHold.at)}. You did announce the hold, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
                 quote: ''
             });
         }

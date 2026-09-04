@@ -326,7 +326,10 @@ suite('call transcript: silence measured from timestamps', (t) => {
     t.check('says how long it ran', /2m 21s/.test(hold.text));
     t.check('says when it started', /at 4:30/.test(hold.text));
     // Second person, like every other line here: it is her own action.
-    t.check('credits that she announced it', /You did announce it/.test(hold.text));
+    // Named rather than pronouned: the message strips the "Long hold:" label
+    // that was supplying the antecedent, so "you did announce it" arrived
+    // referring to nothing.
+    t.check('credits that she announced the hold', /You did announce the hold/.test(hold.text));
 
     const deadAir = analysis.allImprovements.find((item) => item.key === 'deadAirGap');
     t.check('flags the unannounced gap', Boolean(deadAir));

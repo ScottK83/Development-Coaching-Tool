@@ -178,7 +178,13 @@ suite('coaching bridge: tips follow the evidence', (t) => {
     const swap = bridge.selectTips('negativeWord', phrase);
     t.check('the swap for the exact phrase is first', /unfortunately/i.test(swap[0].text));
 
-    t.equal('a metric with no pool returns nothing', bridge.selectTips('nonexistent', stalling).length, 0);
+    // The pool now widens to whatever the evidence maps to, so an unknown
+    // metric key still finds tips when the finding itself points somewhere.
+    t.check('an unknown metric still serves the evidence',
+        bridge.selectTips('nonexistent', stalling).length > 0);
+    // Genuinely nothing to search: no metric, and a finding mapped nowhere.
+    t.equal('nothing anywhere returns nothing',
+        bridge.selectTips('nonexistent', [{ key: 'notAFinding', count: 1, weight: 5, phrase: '', appearsOn: 'on this call' }]).length, 0);
 });
 
 suite('coaching bridge: learning from what landed', (t) => {
@@ -332,14 +338,28 @@ suite('coaching outcomes: suggestion level learning', (t) => {
     const index = coachingOutcomes.suggestionEffectiveness('Esther');
     t.check('the lookup is keyed by suggestion id', Boolean(index['tip-narrate']));
 
-    // An older entry with no suggestions must not break the join.
+    // An older entry with no suggestions must not break the join. It is the
+    // same metric in the same week, so it merges into the outcome above rather
+    // than becoming a second result: the measurement is week over week, and
+    // two rows with the same before and after are one result counted twice.
     global.coachingHistory.Esther.push({
         employeeId: 'Esther', weekEnding: '2026-08-14',
         generatedAt: '2026-08-15T13:00:00.000Z', metricsCoached: ['aht']
     });
     const mixed = coachingOutcomes.buildOutcomes('Esther');
-    t.check('a legacy entry still produces an outcome', mixed.length === 2);
-    t.check('with an empty suggestion list', mixed.some(o => o.suggestions.length === 0));
+    t.equal('a legacy entry merges rather than duplicating', mixed.length, 1);
+    t.check('and does not wipe the suggestions it had no record of',
+        mixed[0].suggestions.length === 2);
+
+    // A legacy entry on its own still yields an outcome, with nothing to
+    // attribute it to.
+    global.coachingHistory.Legacy = [{
+        employeeId: 'Legacy', weekEnding: '2026-08-14',
+        generatedAt: '2026-08-15T12:00:00.000Z', metricsCoached: ['aht']
+    }];
+    const legacyOnly = coachingOutcomes.buildOutcomes('Legacy');
+    t.equal('a legacy only history still produces an outcome', legacyOnly.length, 1);
+    t.equal('with an empty suggestion list', legacyOnly[0].suggestions.length, 0);
 });
 
 suite('coaching bridge: wiring', (t) => {
@@ -1000,4 +1020,84 @@ suite('coaching bridge: one call reads properly too', (t) => {
         t.check('no leftover tokens in case ' + index, !/\{|\}/.test(message));
         t.check('no dangling colon in case ' + index, !/:\s*\n\n/.test(message));
     });
+});
+
+suite('coaching bridge: a hold finding reaches the hold tips', (t) => {
+    // The hold tips live in the hold time pool. A long hold is handle time AND
+    // hold time, so a hold finding shown under the handle time chip could not
+    // reach them and fell through to generic advice about slow tasks and
+    // rambling customers.
+    const { callCoachingBridge: bridge } = load(t, null, {
+        aht: ['Identify your 2 slowest tasks and find a faster way', 'If the customer is rambling, gently redirect'],
+        holdTime: ['Ask for everything you need before the hold starts', 'Check back every 45 seconds on a hold']
+    });
+
+    const evidence = [{
+        key: 'longHold',
+        text: 'Long hold: about 4m 05s of silence starting at 5:54.',
+        quote: '', appearsOn: 'on this call', count: 1, weight: 7, phrase: '',
+        moments: ['Thursday, September 3 at 6:35 PM']
+    }];
+
+    const picked = bridge.selectTips('aht', evidence);
+    t.check('it reaches the other pool', picked.some(tip => /before the hold starts/.test(tip.text)));
+    t.check('and the unrelated tips stay out', !picked.some(tip => /slowest tasks|rambling/.test(tip.text)));
+    t.check('everything returned is a real match', picked.every(tip => tip.matchedEvidence === true));
+
+    // Widening the pool is only safe because relevance still decides. A
+    // finding nothing addresses must not start pulling in another metric's
+    // tips wholesale.
+    const unrelated = bridge.selectTips('aht', [{
+        key: 'coldTransfer', text: 'Transfers: brief the receiving team.',
+        quote: '', appearsOn: 'on this call', count: 1, weight: 7, phrase: '', moments: []
+    }]);
+    t.check('an unmatched finding still falls back rather than flooding',
+        unrelated.every(tip => tip.matchedEvidence === false));
+    t.check('and only two of them', unrelated.length <= 2);
+
+    // Duplicated tips across pools are not offered twice.
+    const overlapping = load(t, null, {
+        aht: ['Check back every 45 seconds on a hold'],
+        holdTime: ['Check back every 45 seconds on a hold']
+    }).callCoachingBridge.selectTips('aht', evidence);
+    t.equal('a tip in both pools appears once', overlapping.length, 1);
+});
+
+suite('coaching bridge: short words that are specific anyway', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+
+    // Specificity is judged by length, which works for "narrat" and fails for
+    // domain nouns. "hold" is four characters and is the most on-topic word a
+    // hold tip can contain.
+    t.check('hold counts as specific', bridge.SPECIFIC_SHORT_WORDS.has('hold'));
+
+    // The exception must stay an exception. Every entry has to be a word the
+    // length rule would otherwise have called weak, or this becomes a way to
+    // promote vague long words.
+    const notShort = [...bridge.SPECIFIC_SHORT_WORDS].filter(word => word.length >= 5 || word.includes(' '));
+    t.equal(`the override only holds short words (${notShort.join(', ') || 'it does'})`, notShort.length, 0);
+
+    // And small enough to read. A long list means the length rule is wrong
+    // rather than incomplete.
+    t.check('and stays small', bridge.SPECIFIC_SHORT_WORDS.size <= 6);
+
+    // Every override has to be a keyword something actually uses, or it is
+    // dead configuration.
+    const allKeywords = new Set();
+    Object.values(bridge.FINDING_KEYWORDS).forEach(words => words.forEach(word => allKeywords.add(word)));
+    const orphaned = [...bridge.SPECIFIC_SHORT_WORDS].filter(word => !allKeywords.has(word));
+    t.equal(`no override is dead configuration (${orphaned.join(', ') || 'none'})`, orphaned.length, 0);
+});
+
+suite('coaching bridge: pronouns have something to refer to', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const transcript = fs.readFileSync(path.join(ROOT, 'modules/call-transcript.module.js'), 'utf8');
+
+    // The message strips a leading "Long hold:" label, and that label was
+    // supplying the antecedent, so "you did announce it" arrived referring to
+    // nothing at all.
+    t.check('the hold is named, not pronouned', /You did announce the hold/.test(transcript));
+    t.check('and the bare pronoun is gone', !/You did announce it/.test(transcript));
 });

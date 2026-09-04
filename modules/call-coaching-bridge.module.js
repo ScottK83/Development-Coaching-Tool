@@ -36,6 +36,20 @@
     // Two of anything is a coincidence worth noticing; one is just a call.
     const MIN_REPEAT_OCCURRENCES = 2;
 
+    /* ── Short words that are specific anyway ──
+     *
+     * Specificity is judged by length, which works for "narrat" and "dead air"
+     * and fails for domain nouns. "hold" is four characters and is the single
+     * most on-topic word a hold tip can contain, so a long hold finding was
+     * rating every hold tip as a weak match and falling through to generic
+     * advice about slow tasks and rambling customers.
+     *
+     * Deliberately tiny, and only ever short words: the length rule is the
+     * default and this is the exception to it, not a way to promote a vague
+     * long one. A test enforces that.
+     */
+    const SPECIFIC_SHORT_WORDS = new Set(['hold', 'umm', 'type']);
+
     /* ── Evidence to metric ──
      *
      * One finding can drive several metrics, and that is the point: a long
@@ -542,8 +556,42 @@
      * with no relevance hit can still be picked, but only to fill the last
      * slots when the evidence matched nothing in the pool.
      */
+    /**
+     * The tips worth searching for this evidence.
+     *
+     * The metric's own pool first, then the pools of whatever else the evidence
+     * drives. A long hold is handle time AND hold time, and the tips about
+     * checking back on a hold live in the hold time pool, so a hold finding
+     * shown under the handle time chip could not reach them and fell through
+     * to generic advice about slow tasks and rambling customers.
+     *
+     * Widening the search is safe because the relevance filter still decides:
+     * a tip from another pool only survives if it matches this evidence.
+     * Deduplicated by text, since the pools overlap.
+     */
+    function poolForEvidence(metricKey, evidence) {
+        const metrics = [metricKey];
+        (evidence || []).forEach(finding => {
+            metricsForFinding(finding.key).forEach(key => {
+                if (!metrics.includes(key)) metrics.push(key);
+            });
+        });
+
+        const seen = new Set();
+        const pool = [];
+        metrics.forEach(key => {
+            tipsForMetric(key).forEach(tip => {
+                const text = String(tip);
+                if (seen.has(text)) return;
+                seen.add(text);
+                pool.push(text);
+            });
+        });
+        return pool;
+    }
+
     function selectTips(metricKey, evidence, options = {}) {
-        const pool = tipsForMetric(metricKey);
+        const pool = poolForEvidence(metricKey, evidence);
         if (!pool.length) return [];
 
         const effectiveness = options.effectiveness || {};
@@ -559,11 +607,14 @@
         //
         // Judged by length and word count rather than a hand tagged list, so
         // adding a keyword cannot quietly forget to say how specific it is.
+        // SPECIFIC_SHORT_WORDS is the exception, for the handful of domain
+        // nouns the length rule gets wrong.
         const strong = new Set();
         const weak = new Set();
         (evidence || []).forEach(finding => {
             (FINDING_KEYWORDS[finding.key] || []).forEach(word => {
-                if (word.length >= 5 || word.includes(' ')) strong.add(word);
+                const specific = word.length >= 5 || word.includes(' ') || SPECIFIC_SHORT_WORDS.has(word);
+                if (specific) strong.add(word);
                 else weak.add(word);
             });
             // For a phrase finding the phrase itself is the strongest possible
@@ -1135,6 +1186,7 @@ Requirements:
         FINDING_KEYWORDS,
         suggestionId,
         matchesStem,
+        SPECIFIC_SHORT_WORDS,
         callFingerprint,
         collectFindings,
         metricsInFocus,
