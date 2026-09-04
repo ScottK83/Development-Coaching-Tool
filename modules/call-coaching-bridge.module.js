@@ -631,38 +631,89 @@ Requirements:
     }
 
     /**
+    /**
+     * Turns a supervisor's bullet into something you would say out loud.
+     *
+     * The findings are written for the supervisor's own notes and read like
+     * report fields when sent on: "Long hold: about 4m 05s of silence starting
+     * at 5:54". The label prefix and the stopwatch formatting are what make a
+     * message look machine written, so both go.
+     *
+     * Only formatting is touched. The advice itself is left exactly as written,
+     * because rewording it here would put a second voice next to the one the
+     * drafts and the QA notes already use.
+     */
+    function humanizeFinding(text) {
+        const WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+        let sentence = String(text || '')
+            // "Long hold:", "Confidence:", "Hold process:" and friends.
+            .replace(/^[A-Z][A-Za-z]*(?: [a-z]+){0,2}:\s*/, '');
+
+        sentence = sentence
+            // "4m 05s" is a stopwatch reading. Nobody says that.
+            .replace(/\b(\d+)m\s*(\d{1,2})s\b/g, (whole, minutes, seconds) => {
+                const m = Number(minutes);
+                const rounded = Number(seconds) >= 30 ? m + 1 : m;
+                const word = WORDS[rounded] || String(rounded);
+                return rounded ? `${word} minute${rounded === 1 ? '' : 's'}` : `${seconds} seconds`;
+            })
+            .replace(/\b(\d+)s\b/g, '$1 seconds');
+
+        return sentence.charAt(0).toUpperCase() + sentence.slice(1);
+    }
+
+    /**
      * Writes the message here, with no model involved.
      *
-     * Everything a coaching note needs is already on the brief: which calls,
-     * what came up on them, the line that triggered it, and the actions. The
-     * only thing Copilot was adding was prose, and a refusal from it should not
-     * be able to stop a supervisor answering a question their associate asked.
+     * Everything a coaching note needs is already on the brief, and the only
+     * thing Copilot was adding was prose, so a refusal from it should not be
+     * able to stop a supervisor answering a question their associate asked.
      *
-     * The observation text is reused verbatim rather than rephrased. It is
-     * already written in the second person and already says what to do about
-     * it, and rewording it here would be a second voice drifting from the one
-     * the drafts and the QA notes use.
+     * On what this deliberately does NOT include, having tried it: a recap of
+     * the call. Scott read the version that opened with one and it was plainly
+     * wrong. The associate was on the call. Telling her a 39 minute call
+     * happened, reciting the four things she did on it, and quoting the
+     * customer's opening line back at her from raw speech-to-text, "i ask you i
+     * got an apartment i sign - lease today", is a case file with second person
+     * pronouns dropped into it. She does not need to be told what happened on
+     * her own call; she needs to know which call it was and what to change.
+     *
+     * So the call is identified in the opening sentence and that is all. The
+     * full recap still exists, for the panel and the Verint note, where the
+     * person reading it was not on the call.
      */
     function buildMetricMessage(brief, options = {}) {
         const name = options.preferredName || options.associateName || '';
         const moments = Array.isArray(options.callMoments) ? options.callMoments.filter(Boolean) : [];
         const topic = topicFor(brief, 'self');
+        // "the 39 minute call" places it better than "the call" and costs four
+        // words. The subject is left out: it is already in the topic above.
+        const label = String(options.callLabel || '').trim() || 'call';
 
-        const callsPhrase = !moments.length
-            ? ' I had a proper listen to a few of your calls.'
+        const listened = !moments.length
+            ? `I had a proper listen to a few of your ${label}s`
             : moments.length === 1
-                ? ` I listened back to the call you took on ${moments[0]}.`
-                : ` I went back over ${moments.length} of your recent calls, most recently ${moments[0]}.`;
+                ? `I listened back to the ${label} you took on ${moments[0]}`
+                : `I went back over ${moments.length} of your recent calls, most recently the one on ${moments[0]}`;
+
+        const leadIn = brief.evidence.length === 1
+            ? 'Here is the one thing that stood out.'
+            : 'Here is what stood out.';
 
         const opening = options.askedQuestion
-            ? `You asked me about ${topic}, so${callsPhrase} Here is what stood out.`
-            : `I wanted to share a couple of things about ${topic}.${callsPhrase} Here is what stood out.`;
+            ? `You asked me about ${topic}, so ${listened}. ${leadIn}`
+            : `I had a look at ${topic}. ${listened}. ${leadIn}`;
 
         const observations = brief.evidence.map(finding => {
-            const quoted = String(finding.quote || '').replace(/\s*\.+$/, '');
+            // The quote is dropped when there is only one call in play: she was
+            // there, and on an unlabelled transcript it is the line the parser
+            // guessed at. It stays for a pattern across calls, where quoting
+            // the moment is what makes the pattern findable.
+            const quoted = moments.length > 1 ? String(finding.quote || '').replace(/\s*\.+$/, '') : '';
             const heard = quoted ? `\n  You said: "${quoted}"` : '';
             const where = moments.length > 1 ? ` Came up ${finding.appearsOn}.` : '';
-            return `- ${finding.text}${where}${heard}`;
+            return `- ${humanizeFinding(finding.text)}${where}${heard}`;
         });
 
         const actions = brief.tips.map(tip => `- ${tip.text}`);
@@ -672,15 +723,9 @@ Requirements:
 
         const closing = 'Give those a go and I will listen again soon to see how it is landing. Come find me if you want to talk any of it through.';
 
-        // The recap goes first so they know which conversation this is before
-        // they reach the feedback. Feedback about a call somebody cannot place
-        // is just an assertion.
-        const recap = String(options.summaryText || '').trim();
-
         return [
             name ? `Hi ${name},` : 'Hi,',
             '',
-            ...(recap ? [recap, ''] : []),
             opening,
             '',
             ...(observations.length ? [observations.join('\n'), ''] : []),
@@ -749,6 +794,7 @@ Requirements:
         buildMetricBrief,
         buildMetricPrompt,
         buildMetricMessage,
+        humanizeFinding,
         TOPIC_PHRASES,
         buttonsHtml,
         briefHtml,

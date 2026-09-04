@@ -463,7 +463,7 @@ suite('coaching bridge: the app can write the message itself', (t) => {
 
     // With no question asked the opening still has to make sense.
     const unprompted = bridge.buildMetricMessage(brief, { preferredName: 'Esther', callMoments: moments });
-    t.check('an unprompted note opens differently', /I wanted to share a couple of things/.test(unprompted));
+    t.check('an unprompted note opens differently', /I had a look at/.test(unprompted));
     t.check('and still names the call', unprompted.includes('Thursday, September 3'));
 
     // No name and no calls must still produce something sendable.
@@ -558,4 +558,82 @@ suite('coaching bridge: feedback ordered for this associate', (t) => {
     t.check('and not ones it does not', !covered.includes('transfers'));
     t.equal('a finding mapping nowhere covers nothing',
         bridge.missedMetricsCovered([{ key: 'notAMetric' }], ['aht']).length, 0);
+});
+
+suite('coaching bridge: the message reads like a person wrote it', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+
+    // Report fields with a colon prefix and a stopwatch reading are what made
+    // the sent version look machine written.
+    const h = bridge.humanizeFinding;
+    t.equal('a label prefix is dropped',
+        h('Long hold: about 4m 05s of silence starting at 5:54.'),
+        'About four minutes of silence starting at 5:54.');
+    t.equal('a two word label goes too',
+        h('Hold process: ask permission before the hold.'),
+        'Ask permission before the hold.');
+    t.equal('seconds round up to the minute',
+        h('Dead air: about 1m 40s with nothing said.'),
+        'About two minutes with nothing said.');
+    t.equal('one minute stays singular',
+        h('Dead air: about 1m 04s with nothing said.'),
+        'About one minute with nothing said.');
+    t.equal('bare seconds are spelled out', h('About 45s of silence.'), 'About 45 seconds of silence.');
+    t.check('text with no label is left alone',
+        h('Tell the customer what you are checking.') === 'Tell the customer what you are checking.');
+    t.equal('nothing in, nothing out', h(''), '');
+
+    const brief = {
+        metricKey: 'aht',
+        label: 'Average Handle Time',
+        headline: 'Average Handle Time: 512 against a target of 426',
+        evidence: [{
+            key: 'longHold',
+            text: 'Long hold: about 4m 05s of silence starting at 5:54.',
+            quote: 'i do need to place you on hold',
+            appearsOn: 'on this call',
+            count: 1, weight: 7, phrase: ''
+        }],
+        tips: [{ id: 'a', metricKey: 'aht', text: 'Type notes while talking', effectiveness: null }]
+    };
+
+    const message = bridge.buildMetricMessage(brief, {
+        preferredName: 'Esther',
+        callMoments: ['Thursday, September 3 at 6:35 PM'],
+        callLabel: '39 minute call',
+        askedQuestion: 'How do I lower my AHT?'
+    });
+
+    // She was on the call. She does not need it recapped, her own actions
+    // recited, or the customer's opening line quoted back from raw
+    // speech-to-text.
+    t.check('the call is identified in the opening', /the 39 minute call you took on Thursday, September 3 at 6:35 PM/.test(message));
+    t.equal('and the date is said once', (message.match(/September 3/g) || []).length, 1);
+    t.check('no recap paragraph', !/The customer opened with/.test(message));
+    t.check('no recital of her own actions', !/You took the customer through verification/.test(message));
+
+    // One finding is not "a couple of things".
+    t.check('one finding says so', /Here is the one thing that stood out/.test(message));
+    const two = bridge.buildMetricMessage(
+        { ...brief, evidence: [brief.evidence[0], { key: 'filler', text: 'Filler words.', quote: '', appearsOn: 'on this call', count: 1, weight: 3, phrase: '' }] },
+        { preferredName: 'Esther', callMoments: ['Thursday, September 3 at 6:35 PM'], callLabel: '39 minute call' }
+    );
+    t.check('two findings do not', !/the one thing/.test(two));
+
+    t.check('the stopwatch reading is gone', !/4m 05s/.test(message));
+    t.check('and reads as speech', /About four minutes of silence/.test(message));
+
+    // On a single call the quote adds nothing she does not know, and on an
+    // unlabelled transcript it is a line the parser guessed at.
+    t.check('no quote for a single call', !/You said:/.test(message));
+    const across = bridge.buildMetricMessage(brief, {
+        preferredName: 'Esther',
+        callMoments: ['Thursday, September 3 at 6:35 PM', 'Friday, August 28 at 9:15 AM'],
+        callLabel: '39 minute call'
+    });
+    t.check('but a pattern across calls quotes the moment', /You said:/.test(across));
+    t.check('and says how often', /Came up on this call/.test(across));
+
+    t.check('no em dashes', !/[—–]/.test(message));
+    t.check('no double spaces', !/ {2}/.test(message.replace(/\n */g, '\n')));
 });

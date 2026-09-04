@@ -8618,21 +8618,15 @@ function writeCallMetricMessage() {
     const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
 
-    // The recap orients them; the findings coach them. Where the findings are
-    // already about silence, the recap saying "there was one hold" is the same
-    // fact twice in a message of eight lines.
-    const SILENCE_KEYS = ['longHold', 'deadAirGap', 'stalling', 'holdProcess'];
-    const coachingSilence = (brief.evidence || []).some(finding => SILENCE_KEYS.includes(finding.key));
-    const summaryText = window.DevCoachModules?.callSummary?.buildSummaryText?.(
-        callMetricSummary,
-        { omitSilence: coachingSilence }
-    ) || '';
+    // Only enough of the recap to place the call. The associate was on it, so
+    // a full recap read as a case file with second person pronouns in it.
+    const callLabel = window.DevCoachModules?.callSummary?.buildCallLabel?.(callMetricSummary) || 'call';
 
     const message = bridge.buildMetricMessage(brief, {
         associateName: employeeName,
         preferredName,
         callMoments: callMetricCallMoments,
-        summaryText
+        callLabel
     });
 
     const body = document.getElementById('callListeningOutlookBody');

@@ -179,14 +179,20 @@ suite('call summary: wiring', (t) => {
     t.check('the saved call view uses the supervisor voice',
         /function buildSavedCallDetailHtml[\s\S]{0,3000}voice: 'supervisor'/.test(script));
 
-    t.check('the recap opens the written message', bridge.includes('options.summaryText'));
-    t.check('and the message puts it before the feedback',
-        /recap \? \[recap, ''\] : \[\]/.test(bridge));
-    t.check('the written message is given the recap', script.includes('summaryText'));
-    // Saying "there was one hold" and then coaching that hold in detail is one
-    // fact twice in a message of eight lines.
-    t.check('the recap drops silence the findings already cover',
-        /coachingSilence[\s\S]{0,300}omitSilence: coachingSilence/.test(script));
+    // The recap is deliberately NOT in the message to the associate. She was
+    // on the call: telling her a 39 minute call happened, reciting her own
+    // actions, and quoting the customer's opening back from raw speech-to-text
+    // is a case file with second person pronouns dropped into it. The opening
+    // sentence identifies the call and that is all.
+    t.check('the message identifies the call rather than recapping it',
+        bridge.includes('options.callLabel'));
+    t.check('and no full recap is passed to it', !bridge.includes('options.summaryText'));
+    t.check('the message is given just the label', script.includes('callLabel'));
+
+    // The recap still exists for the people who were not on the call.
+    t.check('the panel shows it', script.includes('renderCallSummaryPanel(transcript'));
+    t.check('the saved call view shows it', /buildSavedCallDetailHtml[\s\S]{0,3000}buildSummaryHtml/.test(script));
+    t.check('and the Verint note carries it', script.includes("'Call summary:'"));
 
     t.check('the Copilot prompt carries a recap', listening.includes('My recap of the call:'));
     t.check('the Verint note carries one too', script.includes("'Call summary:'"));

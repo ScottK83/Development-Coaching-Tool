@@ -325,7 +325,8 @@ suite('call transcript: silence measured from timestamps', (t) => {
     t.check('flags the long hold', Boolean(hold));
     t.check('says how long it ran', /2m 21s/.test(hold.text));
     t.check('says when it started', /at 4:30/.test(hold.text));
-    t.check('credits that the hold was announced', /announced/.test(hold.text));
+    // Second person, like every other line here: it is her own action.
+    t.check('credits that she announced it', /You did announce it/.test(hold.text));
 
     const deadAir = analysis.allImprovements.find((item) => item.key === 'deadAirGap');
     t.check('flags the unannounced gap', Boolean(deadAir));

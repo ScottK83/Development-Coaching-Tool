@@ -398,6 +398,17 @@
         return `${sentences.join(' ')}${caveat}`.replace(/\s+/g, ' ').trim();
     }
 
+    /**
+     * A few words that place the call: "39 minute call".
+     *
+     * For a message to the associate, which needs to identify the call and
+     * nothing more. The full recap is for whoever was not on it.
+     */
+    function buildCallLabel(summary) {
+        if (!summary?.ok || !summary.lengthPhrase) return 'call';
+        return `${summary.lengthPhrase} call`;
+    }
+
     function buildSummaryHtml(summary, escapeHtml, options = {}) {
         const safe = typeof escapeHtml === 'function' ? escapeHtml : (value) => String(value || '');
         const text = buildSummaryText(summary, options);
@@ -411,6 +422,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.callSummary = {
         summarizeCall,
+        buildCallLabel,
         buildSummaryText,
         buildSummaryHtml,
         CATEGORY_TOPICS,

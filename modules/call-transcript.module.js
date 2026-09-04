@@ -818,7 +818,10 @@
             improvements.push({
                 key: 'longHold',
                 weight: 7,
-                text: `Long hold: about ${formatDuration(longestHold.silence)} of silence starting at ${formatClock(longestHold.at)}. The hold was announced, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
+                // Second person, like every other line here. "The hold was
+                // announced" describes her own action back to her as though
+                // somebody else did it.
+                text: `Long hold: about ${formatDuration(longestHold.silence)} of silence starting at ${formatClock(longestHold.at)}. You did announce it, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
                 quote: ''
             });
         }
