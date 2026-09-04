@@ -8487,12 +8487,7 @@ function buildCallMetricBriefs(transcript, associateName, analysis) {
     const bridge = window.DevCoachModules?.callCoachingBridge;
     if (!bridge?.collectFindings || !associateName) return [];
 
-    const found = findLatestPeriodForAssociate(associateName);
-    if (!found) return [];
-
-    const bundle = typeof buildTrendEmailAnalysisBundle === 'function'
-        ? buildTrendEmailAnalysisBundle(found.employee, found.weekKey, found.period)
-        : null;
+    const bundle = getAssociateMetricBundle(associateName);
     if (!bundle?.allMetrics?.length) return [];
 
     const wordChoice = scanCallListeningWordChoice(transcript, associateName, analysis);
@@ -8735,27 +8730,63 @@ function copyCallListeningQaAnswers() {
  * top of the ones that were saved.
  */
 /**
+ * The associate's metric bundle, computed once per read of a call.
+ *
+ * Three separate things want it: the KPI ordering, the summary line that says
+ * which KPIs it ordered around, and the metric chips. Each was calling
+ * buildTrendEmailAnalysisBundle for itself, so analyzing one transcript ran
+ * analyzeTrendMetrics over every metric three times, volatility lookups
+ * included, and three answers that only agree by luck.
+ *
+ * Cached against the associate and the week it came from, so selecting a
+ * different person or uploading a new week gets a fresh read rather than a
+ * stale one.
+ */
+let callMetricBundleCache = null;
+
+function getAssociateMetricBundle(associateName) {
+    if (!associateName) return null;
+
+    const found = findLatestPeriodForAssociate(associateName);
+    if (!found) return null;
+
+    if (callMetricBundleCache
+        && callMetricBundleCache.associateName === associateName
+        && callMetricBundleCache.weekKey === found.weekKey) {
+        return callMetricBundleCache;
+    }
+
+    try {
+        const bundle = typeof buildTrendEmailAnalysisBundle === 'function'
+            ? buildTrendEmailAnalysisBundle(found.employee, found.weekKey, found.period)
+            : null;
+        if (!bundle) return null;
+
+        callMetricBundleCache = {
+            associateName,
+            weekKey: found.weekKey,
+            period: found.period,
+            allMetrics: bundle.allMetrics || [],
+            missedMetricKeys: (bundle.allMetrics || [])
+                .filter(metric => !metric.meetsTarget)
+                .map(metric => metric.metricKey)
+        };
+        return callMetricBundleCache;
+    } catch (error) {
+        logAppError('Could not read KPIs for call feedback', error, {
+            source: 'callListening.kpiOrder',
+            associateName
+        });
+        return null;
+    }
+}
+
+/**
  * The KPIs this associate is currently missing, or an empty list when there is
  * no weekly data for them to be missing anything in.
  */
 function missedMetricKeysForAssociate(associateName) {
-    if (!associateName) return [];
-    try {
-        const found = findLatestPeriodForAssociate(associateName);
-        if (!found) return [];
-        const bundle = typeof buildTrendEmailAnalysisBundle === 'function'
-            ? buildTrendEmailAnalysisBundle(found.employee, found.weekKey, found.period)
-            : null;
-        return (bundle?.allMetrics || [])
-            .filter(metric => !metric.meetsTarget)
-            .map(metric => metric.metricKey);
-    } catch (error) {
-        logAppError('Could not read missed KPIs for call feedback', error, {
-            source: 'callListening.kpiOrder',
-            associateName
-        });
-        return [];
-    }
+    return getAssociateMetricBundle(associateName)?.missedMetricKeys || [];
 }
 
 /**

@@ -710,3 +710,60 @@ suite('coaching bridge: nothing fits, and it says so', (t) => {
     );
     t.check('and stays quiet when they did', !/speaks to what the calls showed/.test(matched));
 });
+
+suite('coaching bridge: every mapped finding can find a tip', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+
+    // A finding mapped to a metric but with no keywords can only ever return
+    // generic advice, which looks like the tip pool is thin when the real
+    // problem is that nothing was told how to search it. `verification` sat
+    // like that. The two synthetic keys are exempt: they carry the phrase
+    // itself, which is a stronger keyword than any list.
+    const carriesItsOwnPhrase = ['negativePhrase', 'positiveUnused'];
+    const unsearchable = Object.keys(bridge.EVIDENCE_MAP)
+        .filter(key => !carriesItsOwnPhrase.includes(key))
+        .filter(key => !(bridge.FINDING_KEYWORDS[key] || []).length);
+
+    t.equal(`every mapped finding has keywords (${unsearchable.join(', ') || 'all do'})`, unsearchable.length, 0);
+
+    // And nothing in the keyword list is for a finding no metric maps, which
+    // would be a rule quietly doing nothing.
+    const orphaned = Object.keys(bridge.FINDING_KEYWORDS)
+        .filter(key => !bridge.EVIDENCE_MAP[key]);
+    t.equal(`no keywords for an unmapped finding (${orphaned.join(', ') || 'none'})`, orphaned.length, 0);
+
+    // The keywords are stems, so they have to match any ending, and must not
+    // match a word that merely contains them. Plain substring matching gave
+    // the first and cost the second: "um" was inside customer and number,
+    // "umm" inside summary, "app" inside happy, "end" inside recommend.
+    const stem = bridge.matchesStem;
+
+    t.check('a stem matches its own endings', stem('narrate what you are doing', 'narrat'));
+    t.check('and a longer ending', stem('verification is required', 'verif'));
+    t.check('and a recap tip via summary', stem('to summarize what we did', 'summar'));
+
+    t.check('but not hidden inside customer', !stem('ask the customer politely', 'um'));
+    t.check('nor inside summary', !stem('to summarize what we did', 'umm'));
+    t.check('nor inside happy', !stem('happy to help with that', 'app'));
+    t.check('nor inside recommend', !stem('i would recommend the plan', 'end'));
+    t.check('nor inside task', !stem('finish the task first', 'ask'));
+    t.check('nor inside known', !stem('a known issue on the account', 'own'));
+
+    t.check('multi word keywords still work', stem('type notes while talking', 'while talking'));
+    t.check('and do not match out of order', !stem('talking while you type', 'while talking'));
+    t.equal('an empty keyword matches nothing', stem('anything', ''), false);
+
+    // Now the sweep is meaningful: no keyword may fire on a word that only
+    // contains it.
+    const hiddenIn = ['customer', 'number', 'account', 'happy', 'balance', 'summary', 'recommend', 'task', 'known'];
+    const risky = [];
+    Object.entries(bridge.FINDING_KEYWORDS).forEach(([key, words]) => {
+        words.forEach(word => {
+            hiddenIn
+                .filter(common => common.includes(word) && !common.startsWith(word))
+                .filter(common => stem(common, word))
+                .forEach(common => risky.push(`${key}:"${word}" fired inside "${common}"`));
+        });
+    });
+    t.equal(`no keyword fires inside a common call word (${risky.join(', ') || 'none'})`, risky.length, 0);
+});

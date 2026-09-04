@@ -101,6 +101,9 @@
         education: ['app', 'website', 'online', 'self serv', 'future'],
         empathy: ['empath', 'acknowledge', 'hear', 'frustrat', 'understand'],
         supervisorRequest: ['escalat', 'supervisor', 'manager', 'own'],
+        // Was mapped to a metric with no keywords, so a verification finding
+        // could only ever return generic advice.
+        verification: ['verif', 'identity', 'date of birth', 'last four', 'security question'],
         emotionUnanswered: ['acknowledge', 'empath', 'frustrat', 'hear', 'calm', 'upset']
     };
 
@@ -135,6 +138,28 @@
             hash = (((hash << 5) + hash) ^ normalized.charCodeAt(index)) >>> 0;
         }
         return `t${hash.toString(36)}`;
+    }
+
+    /**
+     * Does this tip contain the keyword, as a word rather than as letters?
+     *
+     * The keywords are stems on purpose: "narrat" is meant to catch narrate and
+     * narrating, "verif" to catch verify and verification. Plain substring
+     * matching gave that for free and gave a great deal else with it, because
+     * a short stem hides inside ordinary words. "um" was inside customer and
+     * number. "umm" is inside summary. "app" is inside happy. "end" is inside
+     * recommend. Every one of those was a keyword silently matching tips it had
+     * nothing to do with.
+     *
+     * Anchoring to the start of a word keeps the stemming and loses the
+     * accidents: a stem still matches any ending, and no longer matches a word
+     * that merely contains it.
+     */
+    function matchesStem(text, keyword) {
+        const stem = String(keyword || '').trim();
+        if (!stem) return false;
+        const escaped = stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`\\b${escaped}`, 'i').test(text);
     }
 
     function callLabel(count, total) {
@@ -486,8 +511,8 @@
 
         const scored = pool.map(tip => {
             const lower = String(tip).toLowerCase();
-            const strongHits = [...strong].filter(word => lower.includes(word)).length;
-            const weakHits = [...weak].filter(word => lower.includes(word)).length;
+            const strongHits = [...strong].filter(word => matchesStem(lower, word)).length;
+            const weakHits = [...weak].filter(word => matchesStem(lower, word)).length;
             const id = suggestionId(tip);
             const record = effectiveness[id];
 
@@ -833,6 +858,7 @@ Requirements:
         EVIDENCE_MAP,
         FINDING_KEYWORDS,
         suggestionId,
+        matchesStem,
         callFingerprint,
         collectFindings,
         metricsInFocus,
