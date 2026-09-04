@@ -2601,10 +2601,15 @@
          * together instead of a paragraph apart.
          */
         const lines = chosen.map(c => {
+            // The placing without the size of the field behind it. Both fields
+            // are still what the rank was counted over, and the minimums above
+            // still decide whether a placing is worth stating at all, but "28th
+            // of 111" reads as a headcount the reader then has to interpret,
+            // and the place they finished is the part they asked for.
             const where = c.teamRank
-                ? standingsOrdinal(c.centerRank) + ' of ' + c.centerField + ' in the call center, '
-                    + standingsOrdinal(c.teamRank) + ' of ' + c.teamField + ' on our team'
-                : standingsOrdinal(c.centerRank) + ' of ' + c.centerField + ' in the call center';
+                ? standingsOrdinal(c.centerRank) + ' in the call center, '
+                    + standingsOrdinal(c.teamRank) + ' on our team'
+                : standingsOrdinal(c.centerRank) + ' in the call center';
             const bullet = '  • ' + c.label + ': ' + fmtVal(c.registryKey, c.current)
                 + '\n      ' + where + '.';
             return c.milestone ? bullet + '\n      ' + c.milestone.text : bullet;

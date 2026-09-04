@@ -267,7 +267,7 @@ suite('survey zero: a substituted number gets no placing under a borrowed label'
         values: { aht: 422, adherence: 93.9, sentiment: 90.1, associateOverall: 88 }
     }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a real rep sat figure is placed',
-        genuine.indexOf('Rep Satisfaction: 88.0%\n      15th of 30') > -1);
+        genuine.indexOf('Rep Satisfaction: 88.0%\n      15th in the call center') > -1);
 
     // An older row that predates the flag carries no source at all, and must
     // not be read as a substitution and silently dropped.
