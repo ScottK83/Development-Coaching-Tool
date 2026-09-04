@@ -8437,7 +8437,18 @@ function renderCallMetricCoachPanel(transcript, associateName, analysis) {
     const status = document.getElementById('callMetricCoachStatus');
     if (!panel || !chips) return;
 
-    callMetricBriefs = buildCallMetricBriefs(transcript, associateName, analysis);
+    // This panel reads the weekly metric data, which the rest of the transcript
+    // analysis does not need. A surprise in that data must cost the supervisor
+    // the chips, not the QA answers and the drafted feedback they came for.
+    try {
+        callMetricBriefs = buildCallMetricBriefs(transcript, associateName, analysis);
+    } catch (error) {
+        logAppError('Metric coach panel failed to build', error, {
+            source: 'callListening.metricCoach',
+            associateName
+        });
+        callMetricBriefs = [];
+    }
 
     if (!callMetricBriefs.length) {
         panel.style.display = 'none';
