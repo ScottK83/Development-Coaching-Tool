@@ -251,3 +251,18 @@ suite('saved calls: the outcome of the last coaching is on this page', (t) => {
     t.check('and repaints when the associate changes',
         /renderCallListeningHistoryForSelectedEmployee[\s\S]{0,600}renderCallListeningOutcomes\(employeeName\)/.test(script));
 });
+
+suite('saved calls: the store says how big it is getting', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    // It only ever grows, and every sync ships the whole of it whatever
+    // changed. A number on the screen is one that can be watched.
+    t.check('the size is measured', script.includes('function describeSavedCallsSize'));
+    t.check('measured rather than estimated',
+        /describeSavedCallsSize[\s\S]{0,400}new Blob\(\[JSON\.stringify\(callListeningLogs/.test(script));
+    t.check('it reads in KB below a megabyte', /KB stored/.test(script));
+    t.check('and MB above one', /MB stored/.test(script));
+    t.check('it survives a measuring failure',
+        /describeSavedCallsSize[\s\S]{0,600}catch \(error\) \{\s*return '';/.test(script));
+    t.check('and reaches the summary line', /\$\{stored \? `, \$\{stored\}` : ''\}/.test(script));
+});

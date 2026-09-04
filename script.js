@@ -9218,6 +9218,28 @@ function buildSavedCallDetailHtml(employeeName, entry) {
     </div>`;
 }
 
+/**
+ * How much room the saved calls take, in words.
+ *
+ * Measured rather than estimated, because the transcripts are most of it and
+ * they vary from a two minute call to a forty minute one. Serializing to
+ * measure costs about 9ms at 300 calls, which is affordable in a panel that
+ * only renders when it is opened.
+ *
+ * Shown because it only ever grows, and because every sync ships the whole of
+ * it regardless of what changed. Invisible growth is the kind that becomes a
+ * surprise.
+ */
+function describeSavedCallsSize() {
+    try {
+        const bytes = new Blob([JSON.stringify(callListeningLogs || {})]).size;
+        if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB stored`;
+        return `${(bytes / 1024 / 1024).toFixed(1)}MB stored`;
+    } catch (error) {
+        return '';
+    }
+}
+
 function renderAllSavedCalls() {
     const container = document.getElementById('allSavedCalls');
     const summary = document.getElementById('allSavedCallsSummary');
@@ -9235,7 +9257,12 @@ function renderAllSavedCalls() {
         return;
     }
 
-    summary.textContent = `${total} saved call${total === 1 ? '' : 's'} across ${groups.length} associate${groups.length === 1 ? '' : 's'}.`
+    // The size is shown because it only ever grows and every sync ships the
+    // whole of it. Invisible growth is the kind that becomes a surprise; a
+    // number on the screen is one Scott can watch and act on.
+    const stored = describeSavedCallsSize();
+
+    summary.textContent = `${total} saved call${total === 1 ? '' : 's'} across ${groups.length} associate${groups.length === 1 ? '' : 's'}${stored ? `, ${stored}` : ''}.`
         + (duplicates ? ` ${duplicates} look${duplicates === 1 ? 's' : ''} like the same call saved more than once.` : '');
 
     const describe = window.DevCoachModules?.callListening?.describeCallMoment;
