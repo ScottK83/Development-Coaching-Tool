@@ -386,10 +386,15 @@
         // can place. Carried out of here because only this function knows which
         // entries were actually scored.
         const format = window.DevCoachModules?.callTranscript?.formatCallMoment;
+        const momentFor = {};
         const callMoments = scored
-            .map(({ entry }) => typeof format === 'function'
-                ? format(entry.listenedOn, entry.callTime)
-                : String(entry.listenedOn || ''))
+            .map(({ entry }) => {
+                const moment = typeof format === 'function'
+                    ? format(entry.listenedOn, entry.callTime)
+                    : String(entry.listenedOn || '');
+                if (entry.listenedOn && moment) momentFor[entry.listenedOn] = moment;
+                return moment;
+            })
             .filter(Boolean);
 
         // Two of anything is a coincidence worth noticing; one is just a call.
@@ -419,7 +424,10 @@
                 ...row,
                 weight: row.weight || 5,
                 callsTotal: total,
-                appearsOn: callLabel(row.count, total)
+                appearsOn: callLabel(row.count, total),
+                // Which calls, in words. "On the September 3 call you did X"
+                // is checkable in a way "this came up twice" is not.
+                moments: row.dates.map(date => momentFor[date]).filter(Boolean)
             }))
         };
     }
@@ -751,6 +759,110 @@ Requirements:
     }
 
     /**
+    /* ── Naming the pattern ──
+     *
+     * A list of separate findings is a list. Saying what they have in common
+     * is the thing a supervisor does that a rules engine does not, and it is
+     * what makes several calls worth more than one: "the pattern I keep seeing
+     * is silence" lands where "dead air on two calls, long hold on one" does
+     * not.
+     *
+     * Grouped by what the associate would actually change, not by which rule
+     * fired, which is why holdProcess and deadAirGap sit together.
+     */
+    const PATTERN_FAMILIES = [
+        {
+            key: 'silence',
+            keys: ['deadAirGap', 'longHold', 'stalling', 'holdProcess'],
+            phrase: 'silence: stretches where the customer is waiting and does not know what you are doing'
+        },
+        {
+            key: 'closing',
+            keys: ['recap', 'nextSteps', 'courtesyClose', 'checkUnderstanding'],
+            phrase: 'the close: the call ending without a recap or a clear next step'
+        },
+        {
+            key: 'wording',
+            keys: ['negativePhrase', 'deflection', 'positiveUnused'],
+            phrase: 'wording that closes a door rather than opening one'
+        },
+        {
+            key: 'emotion',
+            keys: ['empathy', 'emotionUnanswered', 'supervisorRequest'],
+            phrase: 'moments where the customer was upset and it went past unacknowledged'
+        },
+        {
+            key: 'confidence',
+            keys: ['uncertainty', 'apologyLoop', 'filler'],
+            phrase: 'answers that sound unsure even when they are right'
+        },
+        {
+            key: 'listening',
+            keys: ['repeatCustomer', 'airtime', 'callControl'],
+            phrase: 'the customer having to say things twice'
+        },
+        {
+            key: 'process',
+            keys: ['verification', 'coldTransfer', 'greeting', 'education'],
+            phrase: 'the steps around the call rather than the conversation itself'
+        }
+    ];
+
+    /**
+     * The pattern across the evidence, or nothing when there is not one.
+     *
+     * Requires the family to account for more than one finding or to have hit
+     * more than one call. A single finding on a single call is an incident, and
+     * calling it a pattern is the kind of overstatement that costs a message
+     * its credibility.
+     */
+    function describePattern(evidence, callsTotal) {
+        const items = Array.isArray(evidence) ? evidence : [];
+        if (!items.length) return null;
+
+        const tallies = PATTERN_FAMILIES.map(family => {
+            const matched = items.filter(finding => family.keys.includes(finding.key));
+            const calls = new Set();
+            matched.forEach(finding => (finding.moments || []).forEach(moment => calls.add(moment)));
+            return { family, findings: matched.length, calls: calls.size };
+        }).filter(row => row.findings > 0);
+
+        if (!tallies.length) return null;
+
+        tallies.sort((a, b) => b.calls - a.calls || b.findings - a.findings);
+        const best = tallies[0];
+        if (best.findings < 2 && best.calls < 2) return null;
+
+        return {
+            key: best.family.key,
+            phrase: best.family.phrase,
+            findings: best.findings,
+            calls: best.calls,
+            callsTotal: callsTotal || 0
+        };
+    }
+
+    /**
+     * "September 3", for referring to one call inside a sentence.
+     *
+     * The full "Thursday, September 3 at 6:35 PM" is right for a list and far
+     * too heavy to repeat in every line of a paragraph.
+     */
+    // "a, b and c". Repeating "and" between every item is the tell that a
+    // machine built the sentence.
+    function joinList(items) {
+        const values = (items || []).filter(Boolean);
+        if (values.length <= 1) return values[0] || '';
+        if (values.length === 2) return `${values[0]} and ${values[1]}`;
+        return `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
+    }
+
+    function shortMoment(moment) {
+        const text = String(moment || '').trim();
+        if (!text) return '';
+        return text.replace(/^[A-Za-z]+day,\s*/, '').replace(/\s+at\s+.*$/, '').trim() || text;
+    }
+
     /**
      * Turns a supervisor's bullet into something you would say out loud.
      *
@@ -811,30 +923,82 @@ Requirements:
         // words. The subject is left out: it is already in the topic above.
         const label = String(options.callLabel || '').trim() || 'call';
 
+        // How many calls, and which ones, said up front. "I listened to four
+        // of your calls" is the sentence that makes everything after it
+        // evidence rather than opinion, and listing the days lets them check.
         const listened = !moments.length
-            ? `I had a proper listen to a few of your ${label}s`
+            ? `I had a proper listen to a few of your calls`
             : moments.length === 1
                 ? `I listened back to the ${label} you took on ${moments[0]}`
-                : `I went back over ${moments.length} of your recent calls, most recently the one on ${moments[0]}`;
-
-        const leadIn = brief.evidence.length === 1
-            ? 'Here is the one thing that stood out.'
-            : 'Here is what stood out.';
+                : `I have listened to ${moments.length} of your calls over the past few days`;
 
         const opening = options.askedQuestion
-            ? `You asked me about ${topic}, so ${listened}. ${leadIn}`
-            : `I had a look at ${topic}. ${listened}. ${leadIn}`;
+            ? `You asked me about ${topic}, so ${listened}.`
+            : `I had a look at ${topic}, so ${listened}.`;
 
-        const observations = brief.evidence.map(finding => {
-            // The quote is dropped when there is only one call in play: she was
-            // there, and on an unlabelled transcript it is the line the parser
-            // guessed at. It stays for a pattern across calls, where quoting
-            // the moment is what makes the pattern findable.
+        const callList = moments.length > 1
+            ? moments.map(moment => `  ${moment}`).join('\n')
+            : '';
+
+        // The pattern, where there is one. This is the part a list of findings
+        // cannot say for itself.
+        const pattern = describePattern(brief.evidence, moments.length);
+        const patternLine = pattern
+            ? `The pattern I keep seeing is ${pattern.phrase}. It came up on ${pattern.calls === moments.length && moments.length > 1 ? `all ${moments.length}` : pattern.calls} of them.`
+            : (brief.evidence.length === 1
+                ? 'Here is the one thing that stood out.'
+                : 'Here is what stood out.');
+
+        // Ordered so the findings that make up the stated pattern come first.
+        // Announcing a pattern of silence and then leading with hedging reads
+        // as though the two paragraphs were written by different people.
+        const family = pattern
+            ? (PATTERN_FAMILIES.find(item => item.key === pattern.key)?.keys || [])
+            : [];
+        const ordered = brief.evidence
+            .map((finding, index) => ({ finding, index, inPattern: family.includes(finding.key) ? 0 : 1 }))
+            .sort((a, b) => a.inPattern - b.inPattern || a.index - b.index)
+            .map(row => row.finding);
+
+        // Attributed to the call it happened on, so each point is checkable
+        // against a conversation they can actually remember.
+        const observations = ordered.map(finding => {
+            // Only worth naming when there is more than one call to tell
+            // apart. With a single call the opening already said which one,
+            // and "On the September 3 call" under it says it twice.
+            const where = moments.length > 1
+                ? (finding.moments || []).map(shortMoment).filter(Boolean)
+                : [];
+            let prefix = '';
+
+            if (where.length && where.length === moments.length) {
+                // Naming four days when the answer is "all of them" is longer
+                // and says less.
+                prefix = `On all ${moments.length} calls, `;
+            } else if (where.length === 1) {
+                prefix = `On the ${where[0]} call, `;
+            } else if (where.length > 1) {
+                const shown = where.slice(0, 3);
+                const rest = where.length - shown.length;
+                prefix = `On the ${joinList(shown)} call${where.length > 1 ? 's' : ''}${rest ? ` and ${rest} other${rest === 1 ? '' : 's'}` : ''}, `;
+            }
+
+            const text = humanizeFinding(finding.text);
+            const sentence = prefix
+                ? `${prefix}${text.charAt(0).toLowerCase()}${text.slice(1)}`
+                : text;
+
+            // The quote earns its place when there are several calls: it is
+            // what lets them find the moment being described.
             const quoted = moments.length > 1 ? String(finding.quote || '').replace(/\s*\.+$/, '') : '';
             const heard = quoted ? `\n  You said: "${quoted}"` : '';
-            const where = moments.length > 1 ? ` Came up ${finding.appearsOn}.` : '';
-            return `- ${humanizeFinding(finding.text)}${where}${heard}`;
+            return `- ${sentence}${heard}`;
         });
+
+        // Whether the last round worked. The whole point of tracking it is to
+        // say so out loud: it tells them the effort registered, and it tells
+        // them whether this is a continuation or a change of approach.
+        const priorLine = describePriorCoaching(options.priorOutcome, topic);
 
         const actions = brief.tips.map(tip => `- ${tip.text}`);
         const actionsHeader = actions.length === 1
@@ -847,11 +1011,48 @@ Requirements:
             name ? `Hi ${name},` : 'Hi,',
             '',
             opening,
+            ...(callList ? ['', callList] : []),
+            '',
+            patternLine,
             '',
             ...(observations.length ? [observations.join('\n'), ''] : []),
+            ...(priorLine ? [priorLine, ''] : []),
             ...(actions.length ? [actionsHeader, actions.join('\n'), ''] : []),
             closing
         ].join('\n');
+    }
+
+    /**
+     * What happened after the last time this was coached.
+     *
+     * Reads an outcome coaching-outcomes already computed rather than
+     * recomputing anything, and says nothing at all when the verdict is
+     * pending, because "we are still waiting on data" is a sentence for the
+     * supervisor and not for the associate.
+     *
+     * Credit where it moved, honesty where it did not. A message that only
+     * ever says "here is another thing to fix" teaches people that improving
+     * goes unnoticed.
+     */
+    function describePriorCoaching(outcome, topic) {
+        if (!outcome || outcome.verdict === 'pending') return '';
+
+        const before = outcome.beforeLabel;
+        const after = outcome.afterLabel;
+        const move = (before && after) ? ` It went from ${before} to ${after}.` : '';
+
+        if (outcome.verdict === 'moved') {
+            const beat = outcome.beatTeam === true
+                ? ' That was better than the centre managed over the same week, so it was you rather than the week.'
+                : '';
+            return `Last time we talked about ${topic}, it moved the right way the following week.${move}${beat} Worth knowing the change you made registered.`;
+        }
+
+        if (outcome.verdict === 'went backwards') {
+            return `Last time we talked about ${topic} it went the other way the following week.${move} That usually means the advice did not fit the problem, so I have picked something different below.`;
+        }
+
+        return `Last time we talked about ${topic} it held about where it was.${move} So rather than repeat myself, the suggestions below are a different angle on it.`;
     }
 
     function buttonsHtml(briefs, escapeHtml) {
@@ -924,6 +1125,10 @@ Requirements:
         buildMetricPrompt,
         buildMetricMessage,
         humanizeFinding,
+        describePattern,
+        describePriorCoaching,
+        shortMoment,
+        PATTERN_FAMILIES,
         TOPIC_PHRASES,
         buttonsHtml,
         briefHtml,

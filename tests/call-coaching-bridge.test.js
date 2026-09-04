@@ -1,6 +1,8 @@
 'use strict';
 
-const { suite } = require('./harness');
+const fs = require('fs');
+const path = require('path');
+const { suite, ROOT } = require('./harness');
 
 // A small tip pool so the selector's choices are checkable rather than
 // dependent on which of 44 real tips happened to match.
@@ -343,7 +345,6 @@ suite('coaching outcomes: suggestion level learning', (t) => {
 suite('coaching bridge: wiring', (t) => {
     const fs = require('fs');
     const path = require('path');
-    const { ROOT } = require('./harness');
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
     const css = fs.readFileSync(path.join(ROOT, 'styles-v2.css'), 'utf8');
@@ -460,7 +461,7 @@ suite('coaching bridge: the app can write the message itself', (t) => {
     t.check('it greets her by name', message.startsWith('Hi Esther,'));
     t.check('it answers the question she asked', /You asked me about how long your calls are running/.test(message));
     t.check('it names the most recent call', message.includes('Thursday, September 3 at 12:38 PM'));
-    t.check('it says how many it read', message.includes('went back over 2 of your recent calls'));
+    t.check('it says how many it read', message.includes('I have listened to 2 of your calls over the past few days'));
     t.check('it quotes her own words back', message.includes('You said: "One moment. Just a second"'));
     t.check('it carries the suggestions', message.includes('A confident answer is shorter than a hedged one'));
     t.check('it closes with an offer to talk', /Come find me/.test(message));
@@ -604,7 +605,8 @@ suite('coaching bridge: the message reads like a person wrote it', (t) => {
             text: 'Long hold: about 4m 05s of silence starting at 5:54.',
             quote: 'i do need to place you on hold',
             appearsOn: 'on this call',
-            count: 1, weight: 7, phrase: ''
+            count: 1, weight: 7, phrase: '',
+            moments: ['Thursday, September 3 at 6:35 PM']
         }],
         tips: [{ id: 'a', metricKey: 'aht', text: 'Type notes while talking', effectiveness: null }]
     };
@@ -644,7 +646,9 @@ suite('coaching bridge: the message reads like a person wrote it', (t) => {
         callLabel: '39 minute call'
     });
     t.check('but a pattern across calls quotes the moment', /You said:/.test(across));
-    t.check('and says how often', /Came up on this call/.test(across));
+    // Attributed to the call it happened on rather than counted in a
+    // trailing clause, which is what makes it checkable.
+    t.check('and says which call', /On the September 3 call,/.test(across));
 
     t.check('no em dashes', !/[—–]/.test(message));
     t.check('no double spaces', !/ {2}/.test(message.replace(/\n */g, '\n')));
@@ -766,4 +770,159 @@ suite('coaching bridge: every mapped finding can find a tip', (t) => {
         });
     });
     t.equal(`no keyword fires inside a common call word (${risky.join(', ') || 'none'})`, risky.length, 0);
+});
+
+suite('coaching bridge: the message names the calls and the pattern', (t) => {
+    const { callCoachingBridge: bridge } = load(t, null, { aht: ['Type notes while talking'] });
+
+    const moments = [
+        'Thursday, September 3 at 6:35 PM',
+        'Tuesday, September 1 at 2:04 PM',
+        'Friday, August 28 at 9:15 AM'
+    ];
+
+    const brief = {
+        metricKey: 'aht',
+        label: 'Average Handle Time',
+        headline: 'Average Handle Time',
+        evidence: [
+            // Deliberately first and NOT part of the silence pattern, to prove
+            // the ordering puts the pattern's own findings up front.
+            { key: 'uncertainty', text: 'Confidence: hedging language showed up.', quote: 'i think', appearsOn: 'on all 3 calls', count: 3, weight: 6, phrase: '', moments },
+            { key: 'stalling', text: 'Silence fillers came up repeatedly.', quote: 'one moment', appearsOn: 'on all 3 calls', count: 3, weight: 5, phrase: '', moments },
+            { key: 'deadAirGap', text: 'Dead air: about 2m 10s at 4:30.', quote: '', appearsOn: 'on 1 of the last 3 calls', count: 1, weight: 6, phrase: '', moments: [moments[1]] }
+        ],
+        tips: [{ id: 'a', metricKey: 'aht', text: 'Type notes while talking', effectiveness: null }]
+    };
+
+    const message = bridge.buildMetricMessage(brief, {
+        preferredName: 'Esther', callMoments: moments, callLabel: '8 minute call',
+        askedQuestion: 'How do I lower my AHT?'
+    });
+
+    // How many, and which ones, so everything after it is evidence.
+    t.check('it says how many calls were listened to', /I have listened to 3 of your calls over the past few days/.test(message));
+    moments.forEach((moment) => {
+        t.check('it lists ' + moment.split(',')[0], message.includes('  ' + moment));
+    });
+
+    // The thing a list of findings cannot say for itself.
+    t.check('it names the pattern', /The pattern I keep seeing is silence/.test(message));
+    t.check('and how many calls it was on', /It came up on all 3 of them/.test(message));
+
+    // Announcing a pattern of silence and then leading with hedging reads as
+    // two paragraphs by different authors.
+    const silenceAt = message.indexOf('silence fillers came up');
+    const hedgingAt = message.indexOf('hedging language showed up');
+    t.check('the pattern findings lead', silenceAt > 0 && silenceAt < hedgingAt);
+
+    // Every point attributed to a call they can remember.
+    t.check('a finding on every call says so', /On all 3 calls, silence fillers/.test(message));
+    t.check('a finding on one call names it', /On the September 1 call, about two minutes at 4:30/.test(message));
+    t.check('and quotes the moment', /You said: "one moment"/.test(message));
+
+    t.check('no repeated ands in a list', !/ and .* and .* calls,/.test(message));
+    t.check('no em dashes', !/[—–]/.test(message));
+    t.check('no leftover tokens', !/\{|\}/.test(message));
+
+    // A finding on two of three calls lists both rather than claiming all.
+    const two = bridge.buildMetricMessage({
+        ...brief,
+        evidence: [{ key: 'stalling', text: 'Silence fillers came up.', quote: '', appearsOn: 'on 2 of the last 3 calls', count: 2, weight: 5, phrase: '', moments: [moments[0], moments[2]] }]
+    }, { preferredName: 'Esther', callMoments: moments, callLabel: '8 minute call' });
+    t.check('two of three names both', /On the September 3 and August 28 calls,/.test(two));
+    t.check('and does not claim all of them', !/On all 3 calls/.test(two));
+});
+
+suite('coaching bridge: naming a pattern only when there is one', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+    const moments = ['Thursday, September 3 at 6:35 PM', 'Friday, August 28 at 9:15 AM'];
+
+    // One finding, one call, is an incident. Calling it a pattern is the kind
+    // of overstatement that costs a message its credibility.
+    const single = bridge.describePattern([{ key: 'stalling', moments: [moments[0]] }], 2);
+    t.equal('one finding on one call is not a pattern', single, null);
+
+    // Two findings from the same family is.
+    const family = bridge.describePattern([
+        { key: 'stalling', moments: [moments[0]] },
+        { key: 'deadAirGap', moments: [moments[0]] }
+    ], 2);
+    t.check('two findings from one family is', Boolean(family));
+    t.equal('and it is named', family.key, 'silence');
+
+    // So is one finding across two calls.
+    const across = bridge.describePattern([{ key: 'stalling', moments }], 2);
+    t.check('one finding on two calls is', Boolean(across));
+    t.equal('counted by calls, not findings', across.calls, 2);
+
+    // The family with the widest reach wins, not the one with most rules.
+    const competing = bridge.describePattern([
+        { key: 'recap', moments: [moments[0]] },
+        { key: 'nextSteps', moments: [moments[0]] },
+        { key: 'stalling', moments }
+    ], 2);
+    t.equal('the family on the most calls wins', competing.key, 'silence');
+
+    t.equal('no evidence is no pattern', bridge.describePattern([], 2), null);
+    t.equal('and neither is a finding in no family',
+        bridge.describePattern([{ key: 'somethingElse', moments }], 2), null);
+
+    t.equal('a short moment drops the weekday and time',
+        bridge.shortMoment('Thursday, September 3 at 6:35 PM'), 'September 3');
+    t.equal('and copes with a bare value', bridge.shortMoment('2026-09-03'), '2026-09-03');
+});
+
+suite('coaching bridge: saying whether the last coaching worked', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+    const topic = 'how long your calls are running';
+
+    const moved = bridge.describePriorCoaching(
+        { verdict: 'moved', beatTeam: true, beforeLabel: '8:32', afterLabel: '7:40' }, topic);
+    t.check('a win is credited', /moved the right way the following week/.test(moved));
+    t.check('with the numbers', /from 8:32 to 7:40/.test(moved));
+    t.check('and the team comparison when there is one',
+        /better than the centre managed over the same week/.test(moved));
+    t.check('and it tells them the effort registered', /the change you made registered/.test(moved));
+
+    // A week where the whole centre improved is not evidence they did anything.
+    const movedWithTeam = bridge.describePriorCoaching(
+        { verdict: 'moved', beatTeam: false, beforeLabel: '8:32', afterLabel: '7:40' }, topic);
+    t.check('no team claim when the team did better', !/better than the centre/.test(movedWithTeam));
+
+    const backwards = bridge.describePriorCoaching(
+        { verdict: 'went backwards', beatTeam: null, beforeLabel: '7:40', afterLabel: '8:10' }, topic);
+    t.check('a loss is said plainly', /went the other way the following week/.test(backwards));
+    t.check('and blames the advice, not the person',
+        /the advice did not fit the problem/.test(backwards));
+
+    const flat = bridge.describePriorCoaching(
+        { verdict: 'held flat', beatTeam: null, beforeLabel: '7:40', afterLabel: '7:38' }, topic);
+    t.check('no change says so', /held about where it was/.test(flat));
+    t.check('and promises a different angle', /a different angle/.test(flat));
+
+    // Waiting on the next upload is a sentence for the supervisor, not the
+    // associate.
+    t.equal('a pending verdict says nothing',
+        bridge.describePriorCoaching({ verdict: 'pending' }, topic), '');
+    t.equal('and neither does no history', bridge.describePriorCoaching(null, topic), '');
+
+    // Missing values must not leave a dangling sentence.
+    const noNumbers = bridge.describePriorCoaching({ verdict: 'moved', beatTeam: null }, topic);
+    t.check('it reads without the numbers', /moved the right way/.test(noNumbers));
+    t.check('with no empty movement clause', !/It went from  to /.test(noNumbers));
+});
+
+suite('coaching bridge: the prior result reaches the message', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    t.check('the last settled outcome is looked up',
+        /function findPriorCoachingOutcome[\s\S]{0,900}buildOutcomes\?\.\(employeeName\)/.test(script));
+    t.check('pending verdicts are skipped',
+        /findPriorCoachingOutcome[\s\S]{0,900}verdict !== 'pending'/.test(script));
+    t.check('the most recent one wins',
+        /findPriorCoachingOutcome[\s\S]{0,1100}coachedAt.*localeCompare/.test(script));
+    t.check('the values are formatted for a person',
+        /findPriorCoachingOutcome[\s\S]{0,1400}formatMetricDisplay\(metricKey, value\)/.test(script));
+    t.check('and it is handed to the message', script.includes('priorOutcome: findPriorCoachingOutcome('));
 });

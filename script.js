@@ -8611,6 +8611,37 @@ function copySelectedCallMetricRead() {
 }
 
 /**
+ * What happened the last time this metric was coached for this associate.
+ *
+ * The most recent settled verdict, so the message can say whether the last
+ * round worked. A pending one is skipped: "we are still waiting on next
+ * week's upload" is a sentence for the supervisor, not the associate.
+ *
+ * The values are formatted here because coaching-outcomes stores raw numbers
+ * and the message needs "8:32", not 512.
+ */
+function findPriorCoachingOutcome(employeeName, metricKey) {
+    const outcomes = window.DevCoachModules?.coachingOutcomes?.buildOutcomes?.(employeeName) || [];
+    const settled = outcomes
+        .filter(outcome => outcome.metricKey === metricKey && outcome.verdict !== 'pending')
+        .sort((a, b) => String(b.coachedAt || '').localeCompare(String(a.coachedAt || '')));
+
+    if (!settled.length) return null;
+
+    const outcome = settled[0];
+    const label = (value) => (value === null || value === undefined)
+        ? ''
+        : (typeof formatMetricDisplay === 'function' ? formatMetricDisplay(metricKey, value) : String(value));
+
+    return {
+        verdict: outcome.verdict,
+        beatTeam: outcome.beatTeam,
+        beforeLabel: label(outcome.beforeValue),
+        afterLabel: label(outcome.afterValue)
+    };
+}
+
+/**
  * Writes the message here and drops it straight into the send box.
  *
  * Copilot refuses this sometimes, reading a supervisor coaching their own
@@ -8635,7 +8666,8 @@ function writeCallMetricMessage() {
         associateName: employeeName,
         preferredName,
         callMoments: callMetricCallMoments,
-        callLabel
+        callLabel,
+        priorOutcome: findPriorCoachingOutcome(employeeName, brief.metricKey)
     });
 
     const body = document.getElementById('callListeningOutlookBody');
