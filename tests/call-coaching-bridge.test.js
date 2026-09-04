@@ -507,3 +507,55 @@ suite('coaching bridge: the prompt asks for wording, not judgement', (t) => {
     t.check('no gendered pronouns in the prompt', !/\b(she|her|hers|he|him|his)\b/i.test(prompt));
     t.check('no em dashes', !/[—–]/.test(prompt));
 });
+
+suite('coaching bridge: feedback ordered for this associate', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+
+    // The engine's own order: severity in general. Empathy and recap outrank
+    // filler words everywhere.
+    // In the engine's own order, heaviest first, because that is the order
+    // prioritizeByMetrics is documented to preserve within a group.
+    const drafted = [
+        { key: 'empathy', text: 'Empathy went unacknowledged.', weight: 12 },
+        { key: 'verification', text: 'Verification not heard.', weight: 8 },
+        { key: 'deadAirGap', text: 'Dead air.', weight: 6 },
+        { key: 'recap', text: 'No recap at the close.', weight: 5 },
+        { key: 'filler', text: 'Filler words.', weight: 3 }
+    ];
+
+    // For somebody whose only problem is handle time, the filler words and the
+    // dead air are the ones that move a number they are judged on.
+    const forAht = bridge.prioritizeByMetrics(drafted, ['aht']);
+    const keys = forAht.map(item => item.key);
+    t.check('handle time findings lead', keys.indexOf('deadAirGap') < keys.indexOf('empathy'));
+    t.check('even the small ones', keys.indexOf('filler') < keys.indexOf('empathy'));
+    t.equal('nothing is dropped', forAht.length, drafted.length);
+
+    // Severity still decides between two equally relevant findings, so dead
+    // air keeps its lead over filler words.
+    t.check('severity breaks the tie', keys.indexOf('deadAirGap') < keys.indexOf('filler'));
+
+    // A different associate, a different order, from the same call.
+    const forEmotions = bridge.prioritizeByMetrics(drafted, ['managingEmotions']);
+    t.equal('empathy leads for a sentiment problem', forEmotions[0].key, 'empathy');
+
+    // No weekly data to be missing anything in means no reordering at all,
+    // rather than an arbitrary one.
+    const untouched = bridge.prioritizeByMetrics(drafted, []);
+    t.equal('with no KPIs known the engine order stands', untouched.map(i => i.key).join(','), drafted.map(i => i.key).join(','));
+
+    // A behaviour that moves nothing measured is still worth saying, it just
+    // stops going first.
+    const noMetric = bridge.prioritizeByMetrics(
+        [{ key: 'notAMetric', text: 'Something else.', weight: 9 }, { key: 'filler', text: 'Filler.', weight: 3 }],
+        ['aht']
+    );
+    t.equal('an unmeasured finding survives', noMetric.length, 2);
+    t.equal('behind the measured one', noMetric[0].key, 'filler');
+
+    const covered = bridge.missedMetricsCovered(drafted, ['aht', 'transfers']);
+    t.check('it reports which KPIs the feedback speaks to', covered.includes('aht'));
+    t.check('and not ones it does not', !covered.includes('transfers'));
+    t.equal('a finding mapping nowhere covers nothing',
+        bridge.missedMetricsCovered([{ key: 'notAMetric' }], ['aht']).length, 0);
+});

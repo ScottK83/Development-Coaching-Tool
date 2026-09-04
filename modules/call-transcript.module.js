@@ -27,6 +27,10 @@
     const WORDS_PER_SECOND = 2.5;
     const DEAD_AIR_SECONDS = 45;
     const LONG_HOLD_SECONDS = 90;
+    // How far back to look for the hold a silence belongs to. Three turns
+    // covers "I need to put you on hold", the customer's "okay", and the
+    // advisor's "thanks for your patience" on the way back.
+    const HOLD_LOOKBACK_TURNS = 3;
 
     const AGENT_LABEL = /\b(agent|advisor|associate|rep|representative|csr|tsr|employee|specialist|operator)\b/i;
     const CUSTOMER_LABEL = /\b(customer|caller|client|member|cust|subscriber|guest|patient)\b/i;
@@ -131,6 +135,51 @@
      * Pulls the header facts out of a Verint export. Returns empty fields for
      * a plain transcript, which is the normal case for a hand-typed paste.
      */
+    /**
+     * Reads back the header prepareForStorage writes.
+     *
+     * A saved transcript begins "[Call 2026-09-03 • 6:35 PM • Esther Ramos •
+     * length 39:07]" and then the body. That header exists precisely so the
+     * facts survive the boilerplate being stripped, and nothing read it, so
+     * every saved call lost its time, its length and the advisor's name the
+     * moment it was stored. The recap said "A call, taken Thursday" for a 39
+     * minute call whose length was sitting in the first line of its own
+     * transcript.
+     */
+    const STORED_HEADER = /^\s*\[Call\s+(\d{4}-\d{2}-\d{2})((?:\s*•[^\]]*)*)\]/;
+
+    function readStoredHeader(text, meta) {
+        const match = String(text || '').match(STORED_HEADER);
+        if (!match) return false;
+
+        meta.callDate = match[1];
+
+        const parts = String(match[2] || '')
+            .split('•')
+            .map(part => collapse(part))
+            .filter(Boolean);
+
+        parts.forEach(part => {
+            const length = part.match(/^length\s+(\d{1,3}:[0-5]\d)$/i);
+            if (length) {
+                meta.durationLabel = length[1];
+                meta.durationSeconds = clockToSeconds(length[1]);
+                return;
+            }
+            if (/^\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?$/.test(part)) {
+                meta.callTime = part.toUpperCase();
+                return;
+            }
+            // Whatever is left is the advisor, already in display order.
+            if (!meta.advisorDisplayName && /[A-Za-z]/.test(part)) {
+                meta.advisorDisplayName = part;
+                meta.advisorName = part;
+            }
+        });
+
+        return true;
+    }
+
     function extractMetadata(rawText) {
         const text = String(rawText || '');
         const meta = {
@@ -143,6 +192,10 @@
             categories: [],
             isVerintExport: false
         };
+
+        // A stored transcript carries its facts in a header of our own making,
+        // and none of the Verint patterns below can see it.
+        if (readStoredHeader(text, meta)) return meta;
 
         const dateMatch = text.match(DATE_TIME);
         if (dateMatch) {
@@ -180,7 +233,13 @@
      * rules only ever read what was actually said on the call.
      */
     function stripBoilerplate(rawText) {
-        let text = String(rawText || '');
+        // The header prepareForStorage writes goes first, before anything
+        // else looks at this. Left in, it is parsed as the opening turn of the
+        // call and attributed to the advisor, so every scan of a saved
+        // transcript read "Call 2026-09-03 Esther Ramos length 39:07" as
+        // something she said, and the recap's idea of the first two turns was
+        // off by one.
+        let text = String(rawText || '').replace(STORED_HEADER, '');
 
         let startIndex = 0;
         BODY_START_MARKERS.forEach(marker => {
@@ -431,7 +490,7 @@
         {
             key: 'holdEtiquette',
             praise: 6,
-            pattern: /(?:may|can|could|would it be ok(?:ay)? if) i (?:please )?(?:place|put) you on(?: a (?:brief|short|quick))? hold|i'?m just gonna place you on a (?:brief|short|quick) hold|do you mind (?:if i|holding)|thank(?:s| you) for holding|appreciate (?:you|your) (?:holding|patience)/i,
+            pattern: /(?:may|can|could|would it be ok(?:ay)? if) i (?:please )?(?:place|put) you on(?: a (?:brief|short|quick))? hold|i'?m just gonna place you on a (?:brief|short|quick) hold|i (?:do )?need to (?:place|put) you on hold|do you mind (?:if i|holding)|thank(?:s| you) for holding|thank(?:s| you) for (?:your )?patience|appreciate (?:you|your) (?:holding|patience)/i,
             made: 'Textbook hold. You flagged it before it happened and thanked them on the way back.'
         },
         {
@@ -583,10 +642,26 @@
             const silence = gap - spokenFor;
             if (silence < DEAD_AIR_SECONDS) continue;
 
+            // Announced is judged across a short lookback, not just the turn
+            // the gap follows.
+            //
+            // On a real call the advisor said "i do need to place you on hold
+            // so i can create an account" at 5:08, said it again at 5:37, came
+            // back with "thanks for your patience" at 5:54, and then the next
+            // stamp was 10:21. Reading only the 5:54 turn, that four minutes
+            // was reported as unannounced dead air and the associate was
+            // coached for it, having announced the hold twice in the preceding
+            // forty five seconds. The transcript stamps speech, not holds, so
+            // the announcement and the silence it refers to routinely sit in
+            // different turns.
+            const window = timed.slice(Math.max(0, index - HOLD_LOOKBACK_TURNS), index + 1)
+                .map(turn => turn.text)
+                .join(' ');
+
             gaps.push({
                 at: current.at,
                 silence,
-                announced: strengthPattern('holdEtiquette').test(current.text) || HOLD_MENTION.test(current.text)
+                announced: strengthPattern('holdEtiquette').test(window) || HOLD_MENTION.test(window)
             });
         }
 

@@ -373,6 +373,60 @@
             .slice(0, MAX_METRICS);
     }
 
+    /**
+     * The KPIs a finding speaks to. Empty for a behaviour that is worth
+     * coaching but does not move anything the associate is measured on.
+     */
+    function metricsForFinding(key) {
+        return EVIDENCE_MAP[key] || [];
+    }
+
+    /**
+     * Reorders drafted feedback so what matters to this associate's KPIs comes
+     * first.
+     *
+     * The transcript engine ranks by how serious a behaviour is in general,
+     * which is the right default and the wrong answer for a specific person. A
+     * missing recap outranks filler words everywhere, but for somebody whose
+     * only problem is handle time the filler words are the ones that move a
+     * number they are judged on.
+     *
+     * Stable within each group, so the engine's own severity ordering still
+     * decides between two findings that are equally relevant. Nothing is
+     * dropped: a finding that touches no KPI is still worth saying, it just
+     * stops going first.
+     */
+    function prioritizeByMetrics(items, missedMetricKeys) {
+        const missed = new Set(missedMetricKeys || []);
+        if (!missed.size) return (items || []).slice();
+
+        const relevance = (item) => {
+            const metrics = metricsForFinding(item.key);
+            if (!metrics.length) return 2;
+            return metrics.some(metricKey => missed.has(metricKey)) ? 0 : 1;
+        };
+
+        return (items || [])
+            .map((item, index) => ({ item, index, rank: relevance(item) }))
+            .sort((a, b) => a.rank - b.rank || a.index - b.index)
+            .map(entry => entry.item);
+    }
+
+    /**
+     * Which of this associate's missed KPIs the feedback actually speaks to,
+     * for telling the supervisor what the ordering was based on.
+     */
+    function missedMetricsCovered(items, missedMetricKeys) {
+        const missed = new Set(missedMetricKeys || []);
+        const covered = new Set();
+        (items || []).forEach(item => {
+            metricsForFinding(item.key).forEach(metricKey => {
+                if (missed.has(metricKey)) covered.add(metricKey);
+            });
+        });
+        return [...covered];
+    }
+
     /* ── Choosing the tips ── */
 
     function tipsForMetric(metricKey) {
@@ -688,6 +742,9 @@ Requirements:
         callFingerprint,
         collectFindings,
         metricsInFocus,
+        metricsForFinding,
+        prioritizeByMetrics,
+        missedMetricsCovered,
         selectTips,
         buildMetricBrief,
         buildMetricPrompt,

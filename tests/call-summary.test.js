@@ -209,3 +209,69 @@ suite('call summary: not saying the same thing twice', (t) => {
     t.check('the customer opening survives', /The customer opened with/.test(trimmed));
     t.check('the outcome survives', /It ended sorted/.test(trimmed));
 });
+
+/**
+ * A real 39 minute new service call, stored the way the app stores one.
+ *
+ * The recap it produced was the reason this suite exists: "A call, taken
+ * Thursday, September 3 at 6:35 PM. The customer opened with: 'yeah i'll need
+ * the full address'. You laid out the plan options." No length on a 39 minute
+ * call, the advisor's own line quoted as the customer's, and one action on a
+ * call with six in it.
+ */
+const STORED_CALL = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'stored-call.txt'), 'utf8');
+
+suite('call summary: the call that was getting it wrong', (t) => {
+    const { callTranscript, callSummary } = load(t);
+
+    // The header the app writes has to be readable by the app.
+    const meta = callTranscript.extractMetadata(STORED_CALL);
+    t.equal('the stored length is recovered', meta.durationLabel, '39:07');
+    t.equal('and the time', meta.callTime, '06:35:35 PM');
+    t.equal('and who took it', meta.advisorDisplayName, 'Esther Ramos');
+
+    // Left in, the header parses as the opening turn and is attributed to the
+    // advisor, which put every later turn one out of step.
+    const body = callTranscript.stripBoilerplate(STORED_CALL);
+    t.check('the header is not part of the call', !/\[Call 2026-09-03/.test(body));
+
+    const analysis = callTranscript.analyzeTranscript(STORED_CALL, { associateName: 'Esther Ramos' });
+    const summary = callSummary.summarizeCall(STORED_CALL, { associateName: 'Esther Ramos', analysis });
+    const recap = callSummary.buildSummaryText(summary);
+
+    t.check('the length is in the recap', /39 minute call/.test(recap));
+    t.equal('the subject is read off the opening', summary.topic, 'starting new service');
+
+    // The advisor's own line must never come back as the customer's.
+    t.check('the customer opening is the customer', /got an apartment/.test(summary.openingAsk));
+    t.check('and not the advisor asking for the address', !/i will need the full address/.test(summary.openingAsk));
+
+    // Six things happened on this call, not one.
+    const keys = summary.actions.map(action => action.key);
+    t.check('verification is recognised in the words used', keys.includes('verified'));
+    t.check('setting up the account is recognised', keys.includes('createdAccount'));
+    t.check('the rate plan disclosures are recognised', keys.includes('disclosed'));
+    t.check('offering the plans is recognised', keys.includes('options'));
+    t.check('so the recap describes more than one thing', summary.actions.length >= 4);
+});
+
+suite('call summary: a hold announced a moment earlier still counts', (t) => {
+    const { callTranscript } = load(t);
+
+    // She said "i do need to place you on hold" at 5:08, again at 5:37, came
+    // back with "thanks for your patience" at 5:54, and the next stamp was
+    // 10:22. Reading only the 5:54 turn, that gap was reported as unannounced
+    // dead air and she was coached for it.
+    const analysis = callTranscript.analyzeTranscript(STORED_CALL, { associateName: 'Esther Ramos' });
+    const gaps = analysis.silenceGaps || [];
+    const afterTheHold = gaps.find(gap => gap.at === 354);
+
+    t.check('the gap is still detected', Boolean(afterTheHold));
+    t.check('but it is not called unannounced', afterTheHold.announced === true);
+
+    // The coaching that followed from it must be gone too.
+    const keys = (analysis.allImprovements || []).map(item => item.key);
+    const deadAir = (analysis.allImprovements || []).find(item => item.key === 'deadAirGap');
+    t.check('so no dead air is coached at that moment', !deadAir || !/5:54/.test(deadAir.text));
+    t.check('a long hold is still coached, which is the honest finding', keys.includes('longHold'));
+});

@@ -65,10 +65,18 @@ suite('call moment: it survives being saved', (t) => {
     const meta = callTranscript.extractMetadata(VERINT_EXPORT);
     t.equal('the export carries a time', meta.callTime, '12:38:26 PM');
 
-    // The regression: after prepareForStorage the header no longer parses, so
-    // nothing downstream can recover the time from the transcript.
+    // prepareForStorage rewrites the metadata into a header of its own,
+    // "[Call 2026-08-04 • 12:38:26 PM • Alyssa Dimes • length 18:24]", and for
+    // a while nothing read that back, so a saved call lost its time, its
+    // length and the advisor's name the moment it was stored. The recap said
+    // "A call, taken Thursday" for a 39 minute call whose length was sitting
+    // in the first line of its own transcript.
     const stored = callTranscript.prepareForStorage(VERINT_EXPORT);
-    t.equal('a stored transcript no longer carries it', callTranscript.extractMetadata(stored).callTime, '');
+    const restored = callTranscript.extractMetadata(stored);
+    t.equal('a stored transcript still knows the time', restored.callTime, '12:38:26 PM');
+    t.equal('and the length', restored.durationLabel, '18:24');
+    t.equal('and who took the call', restored.advisorDisplayName, 'Alyssa Dimes');
+    t.equal('and the date', restored.callDate, '2026-08-04');
 
     // Which is why the entry has to hold it as a field of its own.
     const entry = {

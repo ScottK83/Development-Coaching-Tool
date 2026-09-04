@@ -8224,6 +8224,23 @@ function loadCallListeningEntryIntoForm(entryId) {
     setValue('callListeningRelevantInfo', entry.relevantInfo);
     setValue('callListeningManagerNotes', entry.managerNotes);
 
+    // Re-read the call so the recap, the QA answers, the language scan and the
+    // metric chips come back with it. The notes are already in the boxes, so
+    // the drafting step is deliberately skipped: running it would append a
+    // second copy of bullets that were saved with the log.
+    const associateName = employeeName || entry.employeeName;
+    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript || '', {
+        associateName
+    });
+    if (analysis?.ok) {
+        renderCallListeningReadPanels(entry.transcript, associateName, analysis);
+        const summary = document.getElementById('callTranscriptAnalysisSummary');
+        if (summary) {
+            summary.textContent = buildCallListeningAnalysisSummary(analysis, associateName);
+            summary.style.display = 'block';
+        }
+    }
+
     showToast('✅ Loaded saved call log into form.', 2500);
 }
 
@@ -8713,6 +8730,91 @@ function copyCallListeningQaAnswers() {
     copyToClipboard(text, { message: '📋 QA answers copied to clipboard' });
 }
 
+/**
+ * Every read of the call on screen: the recap, the QA answers, the language
+ * scan and the metric chips.
+ *
+ * Split out because loading a saved call needs all of it and must not touch
+ * the feedback boxes. Loading used to restore the fields and stop, so the AHT
+ * chips and everything else vanished and the only way back was to press
+ * Analyze again, which then appended a second copy of the drafted bullets on
+ * top of the ones that were saved.
+ */
+/**
+ * The KPIs this associate is currently missing, or an empty list when there is
+ * no weekly data for them to be missing anything in.
+ */
+function missedMetricKeysForAssociate(associateName) {
+    if (!associateName) return [];
+    try {
+        const found = findLatestPeriodForAssociate(associateName);
+        if (!found) return [];
+        const bundle = typeof buildTrendEmailAnalysisBundle === 'function'
+            ? buildTrendEmailAnalysisBundle(found.employee, found.weekKey, found.period)
+            : null;
+        return (bundle?.allMetrics || [])
+            .filter(metric => !metric.meetsTarget)
+            .map(metric => metric.metricKey);
+    } catch (error) {
+        logAppError('Could not read missed KPIs for call feedback', error, {
+            source: 'callListening.kpiOrder',
+            associateName
+        });
+        return [];
+    }
+}
+
+/**
+ * Reorders the drafted feedback in place so KPI relevant points lead.
+ *
+ * In place because buildStrengthsDraft and buildImprovementsDraft read the
+ * arrays straight off the analysis, and because the capped lists and the full
+ * ones both have to move together or the email and the panels disagree about
+ * what mattered.
+ */
+function prioritizeCallAnalysisForAssociate(analysis, associateName) {
+    const bridge = window.DevCoachModules?.callCoachingBridge;
+    if (!bridge?.prioritizeByMetrics || !analysis?.ok) return [];
+
+    const missed = missedMetricKeysForAssociate(associateName);
+    if (!missed.length) return [];
+
+    analysis.allImprovements = bridge.prioritizeByMetrics(analysis.allImprovements, missed);
+    analysis.improvements = analysis.allImprovements.slice(0, analysis.improvements.length);
+
+    return bridge.missedMetricsCovered(analysis.improvements, missed);
+}
+
+/**
+ * The one line summary, plus which of the associate's KPIs the feedback was
+ * ordered around. Said out loud because a reordering nobody can see is
+ * indistinguishable from a random one.
+ */
+function buildCallListeningAnalysisSummary(analysis, associateName) {
+    const analyzer = window.DevCoachModules?.callTranscript;
+    const base = analyzer?.buildAnalysisSummary?.(analysis) || '';
+    const bridge = window.DevCoachModules?.callCoachingBridge;
+    if (!bridge?.missedMetricsCovered) return base;
+
+    const covered = bridge.missedMetricsCovered(
+        analysis?.improvements,
+        missedMetricKeysForAssociate(associateName)
+    );
+    if (!covered.length) return base;
+
+    const labels = covered
+        .map(key => (window.METRICS_REGISTRY || {})[key]?.label || key)
+        .join(', ');
+    return `${base} Ordered for the KPIs ${associateName} is missing: ${labels}.`;
+}
+
+function renderCallListeningReadPanels(transcript, associateName, analysis) {
+    renderCallSummaryPanel(transcript, associateName, analysis);
+    renderCallQaScorecard(transcript, associateName, analysis);
+    renderCallWordChoicePanel(transcript, associateName, analysis);
+    renderCallMetricCoachPanel(transcript, associateName, analysis);
+}
+
 function analyzeCallListeningTranscript() {
     const transcriptField = document.getElementById('callListeningTranscript');
     const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -8737,17 +8839,20 @@ function analyzeCallListeningTranscript() {
     }
 
     const applied = applyCallListeningTranscriptMetadata(analysis.meta);
+    const forName = associateName || analysis.meta?.advisorDisplayName;
+
+    // Ordered for this associate before the bullets are drafted, so the
+    // feedback leads with what moves the KPIs they are actually missing rather
+    // than with whatever is most serious in general.
+    prioritizeCallAnalysisForAssociate(analysis, forName);
 
     mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
     mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
 
-    renderCallSummaryPanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
-    renderCallQaScorecard(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
-    renderCallWordChoicePanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
-    renderCallMetricCoachPanel(transcript, associateName || analysis.meta?.advisorDisplayName, analysis);
+    renderCallListeningReadPanels(transcript, forName, analysis);
 
     if (summary) {
-        summary.textContent = analyzer.buildAnalysisSummary(analysis);
+        summary.textContent = buildCallListeningAnalysisSummary(analysis, forName);
         summary.style.display = 'block';
     }
 

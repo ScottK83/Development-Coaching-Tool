@@ -47,7 +47,10 @@
     ];
 
     const KEYWORD_TOPICS = [
-        { key: 'newService', topic: 'starting new service', pattern: /start(?:ing)? service|set up service|new (?:apartment|address|place)|moving in|move in|turn on (?:my |the )?(?:power|service|electric)/i },
+        // "i got an apartment i signed a lease today, i have to look it up
+        // before i grab the keys tomorrow" is how somebody says this. None of
+        // it contains the words "new service".
+        { key: 'newService', topic: 'starting new service', pattern: /start(?:ing)? service|set up service|new (?:apartment|address|place|house)|mov(?:ing|ed) in|move in|got an apartment|sign(?:ed|ing)? (?:a |the )?lease|grab the keys|get the keys|turn on (?:my |the )?(?:power|service|electric)/i },
         // "power has been out since this morning" is how somebody actually
         // reports it, so the tense has to be allowed for.
         { key: 'outage', topic: 'an outage', pattern: /no power|power (?:is |has been |been |went )?out\b|outage|lights (?:are |have been )?out\b|nothing is working/i },
@@ -68,7 +71,13 @@
      * rather than the order of this list.
      */
     const AGENT_ACTIONS = [
-        { key: 'verified', label: 'verified the account', pattern: /verif(?:y|ication|ying)|identity check|date of birth|last four|confirm(?:ing)? your (?:name|address|identity)/i },
+        // Widened to how the floor actually asks. A real 39 minute call took
+        // a name, a social, a phone number and a previous address and none of
+        // it was recognised, so the recap reported one action on a call with
+        // six in it. Verint's own words are not the ones anybody says.
+        { key: 'verified', label: 'took the customer through verification', pattern: /verif(?:y|ication|ying)|identity check|date of birth|last four|confirm(?:ing)? your (?:name|address|identity)|(?:may|can|could) i (?:please )?(?:get|have) your(?: full)?(?: first and last)? (?:name|social|address|phone|cell)|full social|social security/i },
+        { key: 'createdAccount', label: 'set the account up', pattern: /create an account|creat(?:ed|ing) (?:your|the|an) account|start(?:ed)? (?:your|the) service|set (?:you|your account) up/i },
+        { key: 'disclosed', label: 'went through the rate plan disclosures', pattern: /fixed energy charge plan|time of use|off peak|super off peak|demand charge|kilowatt hour|comparison tool|change your rate plan/i },
         { key: 'explained', label: 'walked through what was on the bill', pattern: /the reason (?:is|for that)|what that means|the way (?:it|that) works|this (?:charge|amount) is|that is why your/i },
         { key: 'options', label: 'laid out the plan options', pattern: /(?:we have|there are) (?:two|three|four|\d+) [a-z ]*plans|plans available|the (?:first|second|third) plan/i },
         { key: 'recommended', label: 'made a recommendation', pattern: /i(?:'?d| would) recommend|my recommendation|you might want to go with/i },
@@ -167,9 +176,64 @@
             .map(turn => turn.text);
     }
 
-    function findOpeningAsk(turns) {
-        const opening = openingCustomerTurns(turns, 1);
-        return opening.length ? clip(opening[0]) : '';
+    // How an advisor opens or asks, used to keep the structural guess below
+    // from mistaking their line for the customer's.
+    const AGENT_OPENING = /thank you (?:so much )?for (?:being|calling|choosing)|my name is|how m(?:ay|ight) i help|how can i help|(?:can|may|could) i (?:please )?(?:get|have|go ahead)|i'?ll need|allow me one moment/i;
+
+    /**
+     * The reason for the call, taken from the opening of it.
+     *
+     * Attribution is the problem here. On an unlabelled Verint export the
+     * parser assumes a long turn after the advisor is also the advisor, so the
+     * customer's opening statement, which is nearly always long, lands on the
+     * wrong side. The real call began "i got an apartment i sign lease today"
+     * and that went down as the advisor's, leaving the recap with no subject
+     * at all.
+     *
+     * Reading the first few turns regardless of who the parser thinks said
+     * them fixes it safely, because these patterns are things only a customer
+     * says. An advisor's greeting does not contain "I got an apartment" or "my
+     * bill went up", so widening the search cannot invent a subject; it can
+     * only find one that was already there.
+     */
+    function findTopicSource(turns, labeled) {
+        if (labeled) {
+            return turns.filter(turn => turn.role === 'customer').map(turn => turn.text);
+        }
+        return turns.slice(0, 8).map(turn => turn.text);
+    }
+
+    /**
+     * The line the customer opened with, quoted only when it is certainly
+     * theirs.
+     *
+     * A Verint export has no speaker labels, so sides are inferred from the
+     * flow of the call, and the inference is wrong often enough to matter. It
+     * put "yeah i'll need the full address" in the customer's mouth on a real
+     * call, which is the advisor asking for it, and the recap then quoted the
+     * associate's own line back to her as the customer's.
+     *
+     * On an unlabelled transcript only a cued turn is used, meaning one that
+     * matched a phrase nobody but a customer says. Nothing is quoted otherwise:
+     * a recap missing one sentence is a small loss, and a recap that puts words
+     * in the wrong person's mouth costs the whole message its credibility.
+     */
+    function findOpeningAsk(turns, labeled) {
+        const longEnough = (turn) => String(turn.text || '').split(' ').filter(Boolean).length >= 6;
+
+        const certain = turns.filter(turn => turn.role === 'customer' && (labeled || turn.cued) && longEnough(turn));
+        if (certain.length) return clip(certain[0].text);
+        if (labeled) return '';
+
+        // Nothing was cued, so fall back on the one thing about an unlabelled
+        // call that is structurally reliable: it opens with the advisor, and
+        // the substantive turn after that greeting is the customer saying why
+        // they rang. Guarded against the advisor still holding the floor,
+        // which is the only way this goes wrong.
+        const substantive = turns.filter(longEnough);
+        const second = substantive[1];
+        if (second && !AGENT_OPENING.test(second.text)) return clip(second.text);
+        return '';
     }
 
     function findActions(turns) {
@@ -238,8 +302,8 @@
                 : '',
             durationLabel: meta.durationLabel || '',
             lengthPhrase: minutesLabel(meta.durationLabel),
-            topic: findTopic(meta, customerText, openingCustomerTurns(turns, 3)),
-            openingAsk: findOpeningAsk(turns),
+            topic: findTopic(meta, customerText, findTopicSource(turns, parsed.labeled)),
+            openingAsk: findOpeningAsk(turns, parsed.labeled),
             actions: findActions(turns),
             silence: describeSilence(analysis?.silenceGaps),
             resolved: RESOLVED.test(agentText),
