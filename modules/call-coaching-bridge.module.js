@@ -131,6 +131,9 @@
 
     function callLabel(count, total) {
         if (total <= 1) return 'on this call';
+        // "on 2 of the last 2 calls" is a clumsy way to say "on both", and the
+        // clumsiness reads as generated text in a message somebody receives.
+        if (count >= total) return total === 2 ? 'on both calls' : `on all ${total} calls`;
         if (count <= 1) return `on 1 of the last ${total} calls`;
         return `on ${count} of the last ${total} calls`;
     }
@@ -417,59 +420,162 @@
      * about those, because the whole point is that the associate asked a
      * specific question and the calls contain a specific answer.
      */
+    /* ── What the topic is called out loud ──
+     *
+     * The internal metric name is what a scorecard calls it, not what a person
+     * would. "How long your calls are running" is the same subject in language
+     * an associate uses, and it keeps the message from reading like a report.
+     */
+    // Two forms, because the message talks to the associate and the prompt
+    // talks about them. `self` is second person for the message; `other` is
+    // third person for the prompt, and uses they/their, since the roster is 127
+    // people whose pronouns this app has never been told.
+    const TOPIC_PHRASES = {
+        aht: { self: 'how long your calls are running', other: 'how long their calls are running' },
+        acw: { self: 'the time you spend wrapping up after a call', other: 'the time they spend wrapping up after a call' },
+        holdTime: { self: 'how long customers wait on hold', other: 'how long customers wait on hold' },
+        transfers: { self: 'how often calls get passed to another team', other: 'how often calls get passed to another team' },
+        fcr: { self: 'getting things sorted on the first call', other: 'getting things sorted on the first call' },
+        negativeWord: { self: 'some of the wording that comes up on your calls', other: 'some of the wording that comes up on their calls' },
+        positiveWord: { self: 'the wording that lands well with customers', other: 'the wording that lands well with customers' },
+        managingEmotions: { self: 'handling calls where the customer is upset', other: 'handling calls where the customer is upset' },
+        cxRepOverall: { self: 'how customers are rating your calls', other: 'how customers are rating their calls' },
+        overallSentiment: { self: 'the overall tone of your calls', other: 'the overall tone of their calls' },
+        scheduleAdherence: { self: 'sticking to the schedule', other: 'sticking to the schedule' }
+    };
+
+    function topicFor(brief, voice) {
+        const phrases = TOPIC_PHRASES[brief.metricKey];
+        if (phrases) return voice === 'self' ? phrases.self : phrases.other;
+        return String(brief.label || '').toLowerCase();
+    }
+
+    /**
+     * The Copilot prompt for one metric.
+     *
+     * Written to say what is actually happening, because the earlier version
+     * did not and got refused. It opened "I'm a supervisor writing to Esther
+     * about one metric", handed over her figure against target, and asked for
+     * coaching, which reads exactly like asking a model to evaluate a named
+     * employee's performance. That is not what this is: the supervisor did the
+     * listening, the app matched the evidence, and the actions are already
+     * chosen. The only job left is the wording.
+     *
+     * So the prompt says so, gives the observations as the supervisor's own,
+     * asks for no assessment, and leaves out the figure against target, which
+     * was the most evaluation-shaped thing in it and was never meant to appear
+     * in the message anyway.
+     */
     function buildMetricPrompt(brief, options = {}) {
-        const name = options.preferredName || options.associateName || 'the associate';
+        const name = options.preferredName || options.associateName || 'my teammate';
         const asked = options.askedQuestion
-            ? `\nShe asked me directly: "${options.askedQuestion}"\n`
+            ? `\nThey asked me: "${options.askedQuestion}"\n`
             : '';
 
         const evidence = brief.evidence.length
             ? brief.evidence.map(evidenceLine).join('\n')
-            : '- No specific evidence found in the calls.';
+            : '- Nothing specific stood out.';
 
         const tips = brief.tips.length
             ? brief.tips.map(tip => `- ${tip.text}`).join('\n')
-            : '- No tip available for this metric.';
+            : '- Nothing to suggest yet.';
 
         const proven = brief.tips.filter(tip => tip.effectiveness && tip.effectiveness.rate !== null);
         const provenNote = proven.length
-            ? `\nFor my reference only, do not mention this in the message: ${proven.map(tip => `"${tip.text}" has ${tip.effectiveness.rateBasis} for ${Math.round(tip.effectiveness.rate * 100)}% of the ${tip.effectiveness.rateSample} times it has been given`).join('; ')}.\n`
+            ? `\nMy own note, leave it out of the message: ${proven.map(tip => `"${tip.text}" has worked for ${Math.round(tip.effectiveness.rate * 100)}% of the ${tip.effectiveness.rateSample} people I have suggested it to`).join('; ')}.\n`
             : '';
 
+        const momentsPlural = (count) => count > 1 ? `, and mention I went back over ${count} of them` : '';
+
         // Which calls this came from, so she can go and remember them. A note
-        // about her handle time in the abstract is an opinion; one about the
+        // about her call handling in the abstract is an opinion; one about the
         // call she took at lunchtime on Tuesday is something she can check.
         const moments = Array.isArray(options.callMoments) ? options.callMoments.filter(Boolean) : [];
         const callsSection = moments.length
-            ? `\nThe calls I listened to, most recent first:\n${moments.map(moment => `- ${moment}`).join('\n')}\n`
+            ? `\nThe calls I sat in on, most recent first:\n${moments.map(moment => `- ${moment}`).join('\n')}\n`
             : '';
         const momentRule = moments.length
-            ? `\n- Name the calls this comes from by day and time, so she knows which ones I mean. Lead with the most recent, ${moments[0]}${moments.length > 1 ? `, and say you went back over ${moments.length} of her calls` : ''}`
+            ? `\n- Name the calls by day and time so they know which ones I mean. Lead with ${moments[0]}${momentsPlural(moments.length)}`
             : '';
 
-        return `I'm a supervisor writing to ${name} about one metric, based on calls of hers I listened to.
-${asked}${callsSection}
-The metric:
-${brief.headline}
+        return `I have already listened to some of my teammate ${name}'s calls and written down what I want to say to them. I am not asking you to assess them, rate them, or work out what they should improve. I have done that part. Everything below is my own observation and my own choice of what to suggest.
 
-What her calls actually show:
+What I need is the wording: turn my notes into a short, friendly message in my voice, written to ${name} directly as "you".
+
+The subject is ${topicFor(brief, 'other')}.
+${asked}${callsSection}
+What I noticed, in my words:
 ${evidence}
 
-The specific things I want her to try:
+What I want to suggest they try:
 ${tips}
 ${provenNote}
-Write a short, personal message to ${name}.
+Write the message.
 
 Requirements:
-- Open by answering the question directly. She wants to know what to change, so lead with that rather than restating her numbers back at her
-- Ground every point in the calls. Quote the short phrase where it helps, so she can hear the moment you mean
-- Be specific about the fix. "Tell the customer what you are checking instead of asking them to keep waiting" is coaching; "work on your handle time" is not
-- Where a habit showed up across several calls, say so plainly. A pattern is more persuasive than one example, and it is also the honest framing
-- Warm and matter of fact. She asked for help, so this is help, not a correction
-- 1 short opening, 2 to 3 specific actions, 1 closing line
+- Use only the notes above. Do not add observations of your own, do not judge or rate anything, and do not introduce anything I have not said
+- Open by answering their question directly, leading with what to change
+- Quote the short phrase from a call where it helps, so they can hear the moment I mean
+- Keep the suggestions concrete and practical, in the words I used
+- Where something came up on several calls, say so plainly. That is more useful than one example and it is the honest framing
+- Warm and matter of fact. They asked me for help, so this is help
+- 1 short opening, 2 to 3 suggestions, 1 friendly closing line
 - Do NOT use em dashes${momentRule}
-- Do not mention phrase lists, scoring, keyword counts, or metric targets as jargon. Talk about calls and customers
+- No jargon. Talk about calls and customers, not scores, targets or word counts
 - Return ONLY the message body text.`;
+    }
+
+    /**
+     * Writes the message here, with no model involved.
+     *
+     * Everything a coaching note needs is already on the brief: which calls,
+     * what came up on them, the line that triggered it, and the actions. The
+     * only thing Copilot was adding was prose, and a refusal from it should not
+     * be able to stop a supervisor answering a question their associate asked.
+     *
+     * The observation text is reused verbatim rather than rephrased. It is
+     * already written in the second person and already says what to do about
+     * it, and rewording it here would be a second voice drifting from the one
+     * the drafts and the QA notes use.
+     */
+    function buildMetricMessage(brief, options = {}) {
+        const name = options.preferredName || options.associateName || '';
+        const moments = Array.isArray(options.callMoments) ? options.callMoments.filter(Boolean) : [];
+        const topic = topicFor(brief, 'self');
+
+        const callsPhrase = !moments.length
+            ? ' I had a proper listen to a few of your calls.'
+            : moments.length === 1
+                ? ` I listened back to the call you took on ${moments[0]}.`
+                : ` I went back over ${moments.length} of your recent calls, most recently ${moments[0]}.`;
+
+        const opening = options.askedQuestion
+            ? `You asked me about ${topic}, so${callsPhrase} Here is what stood out.`
+            : `I wanted to share a couple of things about ${topic}.${callsPhrase} Here is what stood out.`;
+
+        const observations = brief.evidence.map(finding => {
+            const quoted = String(finding.quote || '').replace(/\s*\.+$/, '');
+            const heard = quoted ? `\n  You said: "${quoted}"` : '';
+            const where = moments.length > 1 ? ` Came up ${finding.appearsOn}.` : '';
+            return `- ${finding.text}${where}${heard}`;
+        });
+
+        const actions = brief.tips.map(tip => `- ${tip.text}`);
+        const actionsHeader = actions.length === 1
+            ? 'One thing worth trying:'
+            : `${actions.length === 2 ? 'Two' : 'A few'} things worth trying:`;
+
+        const closing = 'Give those a go and I will listen again soon to see how it is landing. Come find me if you want to talk any of it through.';
+
+        return [
+            name ? `Hi ${name},` : 'Hi,',
+            '',
+            opening,
+            '',
+            ...(observations.length ? [observations.join('\n'), ''] : []),
+            ...(actions.length ? [actionsHeader, actions.join('\n'), ''] : []),
+            closing
+        ].join('\n');
     }
 
     function buttonsHtml(briefs, escapeHtml) {
@@ -527,6 +633,8 @@ Requirements:
         selectTips,
         buildMetricBrief,
         buildMetricPrompt,
+        buildMetricMessage,
+        TOPIC_PHRASES,
         buttonsHtml,
         briefHtml,
         HISTORY_WINDOW,

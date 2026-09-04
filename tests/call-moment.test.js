@@ -140,17 +140,17 @@ suite('call moment: the metric prompt names its calls', (t) => {
 
     t.check('every call is listed', moments.every(moment => prompt.includes(`- ${moment}`)));
     t.check('the list says which order it is in', prompt.includes('most recent first'));
-    t.check('naming them is a requirement', prompt.includes('Name the calls this comes from by day and time'));
-    t.check('the most recent leads', prompt.includes('Lead with the most recent, Tuesday, August 4 at 12:38 PM'));
-    t.check('and it says how many were reviewed', prompt.includes('went back over 3 of her calls'));
+    t.check('naming them is a requirement', prompt.includes('Name the calls by day and time'));
+    t.check('the most recent leads', prompt.includes('Lead with Tuesday, August 4 at 12:38 PM'));
+    t.check('and it says how many were reviewed', prompt.includes('went back over 3 of them'));
 
     // One call should not claim a pattern across several.
     const single = bridge.buildMetricPrompt(brief, { preferredName: 'Esther', callMoments: [moments[0]] });
-    t.check('a single call is still named', single.includes('Lead with the most recent, Tuesday, August 4 at 12:38 PM'));
+    t.check('a single call is still named', single.includes('Lead with Tuesday, August 4 at 12:38 PM'));
     t.check('but no plural claim is made', !single.includes('went back over'));
 
     const none = bridge.buildMetricPrompt(brief, { preferredName: 'Esther' });
-    t.check('no moments means no dangling instruction', !none.includes('Name the calls this comes from'));
+    t.check('no moments means no dangling instruction', !none.includes('Name the calls by day and time'));
 });
 
 suite('call moment: wiring', (t) => {

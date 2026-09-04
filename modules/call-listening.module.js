@@ -88,7 +88,12 @@ ${transcript}
             ? `\n- Say which call this is about in the opening line, by day and time: ${moment}. Word it naturally, as "the call you took on ${moment}" or similar`
             : '';
 
-        return `I'm a supervisor preparing call listening feedback for ${preferredName} (${entry.employeeName}).
+        // Says plainly that the review is already done and only the wording is
+        // outstanding. Without this the prompt reads as a request to assess a
+        // named employee's performance, which gets refused: the supervisor did
+        // the listening, the notes below are theirs, and nothing here is asking
+        // a model to form a judgement about anybody.
+        return `I have already listened to this call and written my notes. I am not asking you to assess ${preferredName}, rate the call, or decide what she should improve. I have done that part. What I need is the wording: turn my notes into a message in my voice.
 
 Call details:
 ${buildCallDetailLines(entry)}
@@ -109,9 +114,10 @@ ${entry.relevantInfo || '- Not provided'}
 Manager context:
 ${entry.managerNotes || '- Not provided'}
 
-Write an email-ready coaching message to the associate.
+Write the message.
 
 Requirements:
+- Use only my notes above. Do not add observations of your own, do not rate the call, and do not introduce anything I have not said
 - Professional, supportive, and specific
 - Open with genuine, specific recognition. Where the notes show the call went well, say so plainly and warmly rather than rushing past it to the coaching. Praise the behaviour and why it mattered to the customer, not just "good job"
 - Match the tone to the call: if the strengths clearly outweigh the coaching points, this should read as a well earned pat on the back with a couple of refinements, not a correction

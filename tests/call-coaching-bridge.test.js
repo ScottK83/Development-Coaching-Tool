@@ -98,7 +98,7 @@ suite('coaching bridge: collecting evidence across calls', (t) => {
     const unfortunately = across.findings.find(f => f.key === 'negativePhrase' && /unfortunately/i.test(f.phrase));
     t.check('a repeated phrase is one finding', Boolean(unfortunately));
     t.equal('counted once per call', unfortunately.count, 3);
-    t.check('and says so in words', /3 of the last 3 calls/.test(unfortunately.appearsOn));
+    t.check('and says so in words', /on all 3 calls/.test(unfortunately.appearsOn));
 
     // The open call must not be double counted when its saved copy is in the
     // history under the same date.
@@ -214,7 +214,7 @@ suite('coaching bridge: the brief and the prompt', (t) => {
 
     const prompt = bridge.buildMetricPrompt(brief, { associateName: 'Esther Smith', preferredName: 'Esther' });
     t.check('the prompt names her', /Esther/.test(prompt));
-    t.check('the prompt carries the metric', /Average Handle Time/.test(prompt));
+    t.check('the prompt names the subject in plain language', /how long their calls are running/.test(prompt));
     t.check('the prompt carries the evidence', /Came up on this call/.test(prompt));
     t.check('the prompt forbids em dashes', /Do NOT use em dashes/.test(prompt));
     t.check('the prompt itself has none', !/[—–]/.test(prompt));
@@ -231,7 +231,7 @@ suite('coaching bridge: the brief and the prompt', (t) => {
         tips: [{ id: 'x', metricKey: 'aht', text: 'Narrate what you are checking', effectiveness: { rate: 0.75, rateBasis: 'beat the team', rateSample: 8 } }]
     };
     const noted = bridge.buildMetricPrompt(withRecord, { preferredName: 'Esther' });
-    t.check('the record is marked as reference only', /do not mention this in the message/.test(noted));
+    t.check('the record is marked as reference only', /leave it out of the message/.test(noted));
 
     const html = bridge.briefHtml(brief, (value) => String(value || ''));
     t.check('the brief renders', /call-trend-group/.test(html));
@@ -337,10 +337,16 @@ suite('coaching bridge: wiring', (t) => {
         script.includes('renderCallMetricCoachPanel(transcript'));
     t.check('the chips are wired to a click handler',
         script.includes("bindElementOnce(document.getElementById('callMetricChips')"));
-    t.check('generating a prompt records the coaching event',
-        /function generateCallMetricCoachPrompt[\s\S]{0,3000}recordCoachingEvent\(/.test(script));
-    t.check('and records the suggestions with it',
-        /function generateCallMetricCoachPrompt[\s\S]{0,3000}suggestions: brief\.tips\.map/.test(script));
+    t.check('one recorder logs the metric and the suggestions',
+        /function recordSelectedCallMetricCoaching[\s\S]{0,900}suggestions: brief\.tips\.map/.test(script));
+    t.check('the Copilot path records',
+        /function generateCallMetricCoachPrompt[\s\S]{0,3000}recordSelectedCallMetricCoaching\(/.test(script));
+    // The written path is the one a Copilot refusal falls back to, so it has
+    // to log too or the learning loop quietly stops seeing half the coaching.
+    t.check('the written path records as well',
+        /function writeCallMetricMessage[\s\S]{0,1600}recordSelectedCallMetricCoaching\(/.test(script));
+    t.check('and is marked as not AI assisted',
+        /recordSelectedCallMetricCoaching\(brief, employeeName, false\)/.test(script));
 
     t.check('the chip styles exist', css.includes('.call-metric-chip'));
     t.check('the selected chip has a visible state', css.includes('aria-pressed="true"'));
@@ -397,4 +403,90 @@ suite('coaching bridge: prompt punctuation', (t) => {
     // ends exactly once.
     t.check('the quote still closes properly', /Just a second"\./.test(prompt));
     t.check('a finding with no quote reads cleanly', /She carried the talk time\. Came up on this call\.\n?/.test(prompt));
+});
+
+suite('coaching bridge: the app can write the message itself', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+
+    const brief = {
+        metricKey: 'aht',
+        label: 'Average Handle Time',
+        headline: 'Average Handle Time: 512 against a target of 426',
+        evidence: [
+            { key: 'stalling', text: 'Silence fillers came up repeatedly.', quote: 'One moment. Just a second.', appearsOn: 'on both calls', count: 2, callsTotal: 2, weight: 5, phrase: '' }
+        ],
+        tips: [
+            { id: 'a', metricKey: 'aht', text: 'A confident answer is shorter than a hedged one', effectiveness: null },
+            { id: 'b', metricKey: 'aht', text: 'Type notes while talking', effectiveness: null }
+        ]
+    };
+
+    const moments = ['Thursday, September 3 at 12:38 PM', 'Friday, August 28 at 9:15 AM'];
+    const message = bridge.buildMetricMessage(brief, {
+        preferredName: 'Esther',
+        callMoments: moments,
+        askedQuestion: 'How do I lower my AHT?'
+    });
+
+    t.check('it greets her by name', message.startsWith('Hi Esther,'));
+    t.check('it answers the question she asked', /You asked me about how long your calls are running/.test(message));
+    t.check('it names the most recent call', message.includes('Thursday, September 3 at 12:38 PM'));
+    t.check('it says how many it read', message.includes('went back over 2 of your recent calls'));
+    t.check('it quotes her own words back', message.includes('You said: "One moment. Just a second"'));
+    t.check('it carries the suggestions', message.includes('A confident answer is shorter than a hedged one'));
+    t.check('it closes with an offer to talk', /Come find me/.test(message));
+    t.check('no em dashes', !/[—–]/.test(message));
+    t.check('no leftover template tokens', !/\{|\}/.test(message));
+    t.check('the topic is in second person, not third', !/their calls are running/.test(message));
+
+    // A single call must not claim a pattern across several.
+    const single = bridge.buildMetricMessage(brief, { preferredName: 'Esther', callMoments: [moments[0]] });
+    t.check('one call is described as one', /listened back to the call you took on Thursday/.test(single));
+    t.check('and makes no plural claim', !single.includes('went back over'));
+
+    // With no question asked the opening still has to make sense.
+    const unprompted = bridge.buildMetricMessage(brief, { preferredName: 'Esther', callMoments: moments });
+    t.check('an unprompted note opens differently', /I wanted to share a couple of things/.test(unprompted));
+    t.check('and still names the call', unprompted.includes('Thursday, September 3'));
+
+    // No name and no calls must still produce something sendable.
+    const bare = bridge.buildMetricMessage(brief, {});
+    t.check('a nameless message still greets', bare.startsWith('Hi,'));
+    t.check('and does not dangle an empty call reference', !/most recently\s*\./.test(bare));
+
+    const oneTip = bridge.buildMetricMessage({ ...brief, tips: [brief.tips[0]] }, { preferredName: 'Esther' });
+    t.check('one suggestion reads as one', oneTip.includes('One thing worth trying:'));
+    const twoTips = bridge.buildMetricMessage(brief, { preferredName: 'Esther' });
+    t.check('two suggestions read as two', twoTips.includes('Two things worth trying:'));
+});
+
+suite('coaching bridge: the prompt asks for wording, not judgement', (t) => {
+    const { callCoachingBridge: bridge } = load(t);
+
+    const brief = {
+        metricKey: 'aht',
+        label: 'Average Handle Time',
+        headline: 'Average Handle Time: 512 against a target of 426',
+        evidence: [{ key: 'stalling', text: 'Silence fillers.', quote: 'One moment', appearsOn: 'on both calls', count: 2, weight: 5, phrase: '' }],
+        tips: []
+    };
+
+    const prompt = bridge.buildMetricPrompt(brief, { preferredName: 'Esther', callMoments: ['Thursday, September 3 at 12:38 PM'] });
+
+    // Copilot refused the earlier version, reading it as a request to evaluate
+    // a named employee. The supervisor did the review; only the wording is left.
+    t.check('it says the review is already done', /I have already listened/.test(prompt));
+    t.check('it asks for no assessment', /not asking you to assess them, rate them/.test(prompt));
+    t.check('it asks only for wording', /What I need is the wording/.test(prompt));
+    t.check('and forbids added observations', /Do not add observations of your own/.test(prompt));
+
+    // The figure against target was the most evaluation-shaped part of it, and
+    // was never meant to reach the message anyway.
+    t.check('the raw figure is gone', !prompt.includes('512'));
+    t.check('the target is gone', !prompt.includes('426'));
+    t.check('the topic survives in plain language', /how long their calls are running/.test(prompt));
+
+    // 127 associates whose pronouns this app has never been told.
+    t.check('no gendered pronouns in the prompt', !/\b(she|her|hers|he|him|his)\b/i.test(prompt));
+    t.check('no em dashes', !/[—–]/.test(prompt));
 });

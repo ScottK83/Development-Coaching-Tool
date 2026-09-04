@@ -8533,6 +8533,59 @@ function copySelectedCallMetricRead() {
 }
 
 /**
+ * Writes the message here and drops it straight into the send box.
+ *
+ * Copilot refuses this sometimes, reading a supervisor coaching their own
+ * associate as a request to evaluate a named employee. The app already holds
+ * every part of the message, so a refusal should not be able to stop the
+ * conversation happening. Same logging as the Copilot path, because the
+ * coaching is just as real.
+ */
+function writeCallMetricMessage() {
+    const brief = getSelectedCallMetricBrief();
+    if (!brief) return;
+
+    const bridge = window.DevCoachModules.callCoachingBridge;
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const preferredName = getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
+
+    const message = bridge.buildMetricMessage(brief, {
+        associateName: employeeName,
+        preferredName,
+        callMoments: callMetricCallMoments
+    });
+
+    const body = document.getElementById('callListeningOutlookBody');
+    const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
+    if (body) {
+        body.value = message;
+        if (outlookBtn) updateCallListeningOutlookButtonState(body, outlookBtn);
+        body.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    recordSelectedCallMetricCoaching(brief, employeeName, false);
+    showToast('✍️ Message written. Read it over, edit anything, then generate the email.', 4000);
+}
+
+/**
+ * Logs that this metric and these suggestions were coached.
+ *
+ * Called from both the written and the Copilot path, because coaching-outcomes
+ * measures what was suggested and it makes no difference to next week's numbers
+ * which one drafted the words.
+ */
+function recordSelectedCallMetricCoaching(brief, employeeName, aiAssisted) {
+    const found = findLatestPeriodForAssociate(employeeName);
+    recordCoachingEvent({
+        employeeId: employeeName,
+        weekEnding: found?.period?.metadata?.endDate || '',
+        metricsCoached: [brief.metricKey],
+        aiAssisted: !!aiAssisted,
+        suggestions: brief.tips.map(tip => ({ id: tip.id, metricKey: tip.metricKey, text: tip.text }))
+    });
+}
+
+/**
  * Builds the Copilot prompt for the selected metric and logs what was
  * suggested.
  *
@@ -8573,14 +8626,7 @@ function generateCallMetricCoachPrompt() {
     const outlookSection = document.getElementById('callListeningOutlookSection');
     if (outlookSection) outlookSection.style.display = 'block';
 
-    const found = findLatestPeriodForAssociate(employeeName);
-    recordCoachingEvent({
-        employeeId: employeeName,
-        weekEnding: found?.period?.metadata?.endDate || '',
-        metricsCoached: [brief.metricKey],
-        aiAssisted: true,
-        suggestions: brief.tips.map(tip => ({ id: tip.id, metricKey: tip.metricKey, text: tip.text }))
-    });
+    recordSelectedCallMetricCoaching(brief, employeeName, true);
 }
 
 function copyCallListeningQaAnswers() {
@@ -8861,6 +8907,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
     bindElementOnce(document.getElementById('copyCallWordChoiceBtn'), 'click', copyCallListeningWordChoice);
     bindElementOnce(document.getElementById('callMetricChips'), 'click', handleCallMetricChipClick);
+    bindElementOnce(document.getElementById('writeMetricMessageBtn'), 'click', writeCallMetricMessage);
     bindElementOnce(document.getElementById('generateMetricCoachPromptBtn'), 'click', generateCallMetricCoachPrompt);
     bindElementOnce(document.getElementById('copyMetricCoachBtn'), 'click', copySelectedCallMetricRead);
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
