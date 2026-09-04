@@ -1010,19 +1010,129 @@
     // it has to sit on the same chokepoint as the rest before the backing store
     // can move. Pure relocation: same key, same shape, same behavior.
 
+    /* ── Call logs and their transcripts ──
+     *
+     * Stored apart, joined in memory, so that nothing above this line has to
+     * know. A sync shard is a whole store, so with transcripts inline a
+     * one-word edit to a note re-uploaded every transcript in the log: 19MB at
+     * six hundred calls, every time. Separated, that edit ships the metadata
+     * alone and the transcripts move only when a transcript actually changes.
+     *
+     * The split is confined to these two functions on purpose. Thirty-nine
+     * places read `entry.transcript` and all of them still can, because an
+     * entry handed out of here always carries its transcript. A bug in the
+     * seam loses the record of what was said on a call, so the seam is small
+     * enough to read in one sitting and pinned by a round trip test.
+     *
+     * Entries written before the split keep their transcript inline. Those are
+     * read as they are and rewritten into the new shape the next time they are
+     * saved, so nothing needs migrating on a schedule.
+     */
+
+    function readTranscriptStore() {
+        try {
+            const stored = readStore('callTranscripts') ?? {};
+            return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+        } catch (error) {
+            console.error('Error loading call transcripts:', error);
+            return {};
+        }
+    }
+
     function loadCallListeningLogs() {
         try {
             const parsed = readStore('callListeningLogs') ?? {};
-            return parsed && typeof parsed === 'object' ? parsed : {};
+            if (!parsed || typeof parsed !== 'object') return {};
+
+            const transcripts = readTranscriptStore();
+            const joined = {};
+
+            Object.keys(parsed).forEach((employeeName) => {
+                const entries = Array.isArray(parsed[employeeName]) ? parsed[employeeName] : [];
+                joined[employeeName] = entries.map((entry) => {
+                    if (!entry || typeof entry !== 'object') return entry;
+                    // An inline transcript is an entry from before the split
+                    // and is left exactly as it is.
+                    if (typeof entry.transcript === 'string' && entry.transcript) return entry;
+                    if (!entry.transcriptId) return entry;
+
+                    const text = transcripts[entry.transcriptId];
+                    // A missing transcript is reported rather than papered
+                    // over: an entry that silently loses its transcript looks
+                    // like a call nobody recorded.
+                    if (typeof text !== 'string') {
+                        console.warn(`[storage] call log ${entry.id} references transcript ${entry.transcriptId}, which is not in the store.`);
+                        return entry;
+                    }
+                    return { ...entry, transcript: text };
+                });
+            });
+
+            return joined;
         } catch (error) {
             console.error('Error loading call listening logs:', error);
             return {};
         }
     }
 
+    /**
+     * Writes the logs and their transcripts to their own stores.
+     *
+     * Order matters. Transcripts go first, so a failure between the two writes
+     * leaves transcripts with nothing pointing at them rather than entries
+     * pointing at transcripts that were never saved. Orphaned text is
+     * recoverable; a dangling reference is a lost call.
+     *
+     * Transcripts are only written when one has actually changed, which is the
+     * whole point: editing a note leaves the transcript store untouched, so it
+     * stays clean and the next sync does not ship it.
+     */
     function saveCallListeningLogs(callListeningLogsRef) {
         try {
-            const ok = saveWithSizeCheck('callListeningLogs', callListeningLogsRef || {});
+            const logs = callListeningLogsRef || {};
+            const existing = readTranscriptStore();
+            const transcripts = { ...existing };
+            const slim = {};
+            let transcriptsChanged = false;
+
+            Object.keys(logs).forEach((employeeName) => {
+                const entries = Array.isArray(logs[employeeName]) ? logs[employeeName] : [];
+                slim[employeeName] = entries.map((entry) => {
+                    if (!entry || typeof entry !== 'object') return entry;
+
+                    const text = entry.transcript;
+                    if (typeof text !== 'string' || !text) {
+                        // Nothing to lift out. A pre-split entry with no
+                        // transcript, or one that never had a transcript.
+                        return entry;
+                    }
+
+                    // Keyed on the entry, so re-saving the same call overwrites
+                    // its own transcript instead of accumulating copies.
+                    const transcriptId = entry.transcriptId || entry.id;
+                    if (!transcriptId) return entry;
+
+                    if (transcripts[transcriptId] !== text) {
+                        transcripts[transcriptId] = text;
+                        transcriptsChanged = true;
+                    }
+
+                    const { transcript, ...rest } = entry;
+                    return { ...rest, transcriptId };
+                });
+            });
+
+            if (transcriptsChanged) {
+                const transcriptsOk = saveWithSizeCheck('callTranscripts', transcripts);
+                if (!transcriptsOk) {
+                    // The logs are not written, so nothing ends up referencing
+                    // a transcript that was never stored.
+                    console.error('Failed to save call transcripts; the logs were left unchanged.');
+                    return false;
+                }
+            }
+
+            const ok = saveWithSizeCheck('callListeningLogs', slim);
             if (!ok) console.error('Failed to save call listening logs due to size');
             return ok;
         } catch (error) {

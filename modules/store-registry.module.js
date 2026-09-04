@@ -39,6 +39,16 @@
         { name: 'dailyArchive', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'coachingHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'callListeningLogs', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
+        // Transcripts live apart from the logs that reference them because a
+        // sync shard is a whole store. With them inline, correcting a typo in
+        // one note re-uploaded every transcript: 19MB at six hundred calls, on
+        // every edit. Split, that edit ships the metadata alone.
+        //
+        // unionByEntryHash is the right strategy and not a compromise: a map
+        // of id to transcript merges key by key, so every transcript either
+        // machine holds survives. Losing one is losing the record of what was
+        // said on a call, which cannot be reconstructed.
+        { name: 'callTranscripts', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'associateSentimentSnapshots', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'sentimentPhraseDatabase', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'reliabilityTracker', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },

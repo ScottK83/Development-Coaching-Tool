@@ -825,7 +825,7 @@
     // employeeSupervisors, dailyData, complianceLog and metricCoachingTips came
     // to have no remote copy at all.
     const EXPLICITLY_SYNCED_STORES = new Set([
-        'weeklyData', 'ytdData', 'coachingHistory', 'callListeningLogs',
+        'weeklyData', 'ytdData', 'coachingHistory', 'callListeningLogs', 'callTranscripts',
         'sentimentPhraseDatabase', 'associateSentimentSnapshots', 'myTeamMembers',
         'callCenterAverages', 'ptoTracker', 'reliabilityTracker', 'attendanceTracker',
         'followUpHistory', 'hotTipHistory', 'yearEndAnnualGoals', 'yearEndDraftEntries',
@@ -1091,6 +1091,10 @@
             ytdData: storage?.loadYtdData?.() || {},
             coachingHistory: storage?.loadCoachingHistory?.() || {},
             callListeningLogs: safeLoadJson('callListeningLogs') || {},
+            // Sent alongside the logs that reference them. A backup with the
+            // logs but not the transcripts restores a set of calls with
+            // nothing in them.
+            callTranscripts: safeLoadJson('callTranscripts') || {},
             sentimentPhraseDatabase: storage?.loadSentimentPhraseDatabase?.() || null,
             associateSentimentSnapshots: storage?.loadAssociateSentimentSnapshots?.() || {},
             myTeamMembers: storage?.loadTeamMembers?.() || {},
@@ -1409,6 +1413,11 @@
             ytdData: coerceObject(payload?.ytdData),
             coachingHistory: coerceObject(payload?.coachingHistory),
             callListeningLogs: coerceObject(payload?.callListeningLogs),
+            // Nullable on purpose. A backup taken before transcripts had their
+            // own store carries this absent, and absent has to mean leave
+            // alone: coercing it to {} would erase every transcript on this
+            // machine while restoring the logs that point at them.
+            callTranscripts: coerceNullableObject(payload?.callTranscripts),
             sentimentPhraseDatabase: coerceNullableObject(payload?.sentimentPhraseDatabase),
             associateSentimentSnapshots: coerceObject(payload?.associateSentimentSnapshots),
             myTeamMembers: coerceObject(payload?.myTeamMembers),
