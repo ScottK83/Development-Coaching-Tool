@@ -2796,6 +2796,9 @@
             daysIn: Number.isFinite(options.daysIn) ? options.daysIn : 0,
             hasBaseline,
             thisWeek: options.latestIsThisWeek !== false,
+            // The same fact the standings block reads, so the message and the
+            // block under it cannot end up one in each tense.
+            weekOpen: options.weekOpen === true,
             standings: fallbackStandings,
             improved,
             slipped,
@@ -3806,7 +3809,8 @@
                 daysIn: latestIsThisWeek
                     ? (daysOfThisWeekInPeriod(outreach, latestKey) || dailyEntry?.dates?.size || 0)
                     : 0,
-                latestIsThisWeek
+                latestIsThisWeek,
+                weekOpen: latestIsThisWeek && standingsPeriodIsOpen(latestKey)
             });
             // If the week-vs-week read came back empty, the older nudge is
             // still better than sending nothing at all.

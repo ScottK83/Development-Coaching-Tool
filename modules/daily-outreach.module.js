@@ -311,6 +311,7 @@
      *   tone         'midweek' (Wed/Thu) or 'closing' (Fri)
      *   sourceLabel  what "this week" is built from, for the standings line
      *   daysIn       days of data behind it, 0 if unknown
+     *   weekOpen     true when the week described still has a day left to work
      *   standings    [{ label, latestText, baseText }] — current vs last week
      *   improved     [{ label, deltaText }] — moved the right way past noise
      *   slipped      [{ label, deltaText }] — moved the wrong way past noise
@@ -329,9 +330,20 @@
         // no week-in-progress file the newest weekly upload is last week, and
         // calling that "this week" would be a plain misstatement.
         const thisWeek = d.thisWeek !== false;
+        /* Whether the week being described still has a day left in it.
+         *
+         * The Friday message is written off whatever file is on hand, and that
+         * file usually stops on Thursday. "Where you landed" and "how it went"
+         * hand back a finished result on a week the reader is still standing
+         * in, and the standings block under this now offers them places they
+         * can still take. The two have to agree, so the same fact decides both.
+         */
+        const open = d.weekOpen === true && thisWeek;
         const opener = closing
             ? (thisWeek
-                ? `Hey ${name}! Closing out the week, so here is how it went next to last week.`
+                ? (open
+                    ? `Hey ${name}! Closing out the week, so here is how it is going next to last week.`
+                    : `Hey ${name}! Closing out the week, so here is how it went next to last week.`)
                 : `Hey ${name}! Closing out the week. Your newest full week is still the one before this, so here it is against the week before that.`)
             : (thisWeek
                 ? `Hey ${name}! Quick look at where this week stands next to last week.`
@@ -341,7 +353,9 @@
 
         if (standings.length) {
             const dayText = d.daysIn > 0 ? ` (${d.daysIn} day${d.daysIn === 1 ? '' : 's'} in)` : '';
-            const heading = closing ? 'Where you landed' : (thisWeek ? 'Where you are' : 'Most recent full week');
+            const heading = closing
+                ? (open ? 'Where you stand' : 'Where you landed')
+                : (thisWeek ? 'Where you are' : 'Most recent full week');
             const parts = standings.map(s => (d.hasBaseline && s.baseText
                 ? `${s.label} ${s.latestText}, was ${s.baseText}`
                 : `${s.label} ${s.latestText}`));
@@ -359,7 +373,8 @@
         }
 
         if (d.focus) {
-            const push = closing ? 'Worth a push next week' : 'Worth a push';
+            // Next week, unless there is still a day of this one to spend on it.
+            const push = closing && !open ? 'Worth a push next week' : 'Worth a push';
             blocks.push(`🎯 ${push}: ${d.focus.label} is ${d.focus.valueText} against a ${d.focus.targetText} target.`);
         }
 

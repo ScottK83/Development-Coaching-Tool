@@ -54,6 +54,34 @@ suite('week progress: Friday closes the week out', (t) => {
     t.check('the growth note points at next week', friday.indexOf('Worth a push next week') > -1);
     t.check('and it signs off for the weekend', friday.indexOf('Have a good weekend') > -1);
 
+    // The Friday message is usually written off a file that stops on Thursday,
+    // so the week it describes still has a day in it. Every finished-week claim
+    // in the copy has to give way, or the message contradicts the standings
+    // block under it, which by then is offering places that are still there to
+    // take.
+    const stillOpen = outreach.buildWeekProgressText({
+        firstName: 'Alyssa', tone: 'closing', daysIn: 4, hasBaseline: true, weekOpen: true,
+        standings: STANDINGS, improved: [{ label: 'AHT', deltaText: '31s faster' }], slipped: [],
+        focus: { label: 'FCR', valueText: '68.0%', targetText: '73.0%' }
+    });
+
+    t.check('an open week is not something that went', stillOpen.indexOf('how it is going') > -1);
+    t.check('and nothing in it already went', stillOpen.indexOf('how it went') === -1);
+    t.check('nobody has landed yet', stillOpen.indexOf('Where you landed') === -1);
+    t.check('they are standing in it', stillOpen.indexOf('Where you stand (4 days in)') > -1);
+    t.check('and the push is for the day that is left', stillOpen.indexOf('Worth a push:') > -1);
+    t.check('rather than for next week', stillOpen.indexOf('Worth a push next week') === -1);
+    t.check('it still closes the week out', stillOpen.indexOf('Closing out the week') > -1);
+    t.check('and still sends them into the weekend', stillOpen.indexOf('Have a good weekend') > -1);
+
+    // A week with no days left in it keeps the finished wording, which is the
+    // half of the rule a later edit is most likely to drop.
+    t.check('the flag is what moved it, not the tone',
+        outreach.buildWeekProgressText({
+            firstName: 'Alyssa', tone: 'closing', daysIn: 5, hasBaseline: true, weekOpen: false,
+            standings: STANDINGS, improved: [], slipped: [], focus: null
+        }).indexOf('Where you landed') > -1);
+
     const midweek = outreach.buildWeekProgressText({
         firstName: 'Alyssa', tone: 'midweek', daysIn: 3, hasBaseline: true,
         standings: STANDINGS, improved: [], slipped: [], focus: null
