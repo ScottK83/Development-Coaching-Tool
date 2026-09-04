@@ -2392,6 +2392,47 @@
     }
 
     /**
+     * Is the week this block describes still being worked?
+     *
+     * It decides the tense of everything below. A file that stops on a Monday
+     * through Thursday inside the current week is a week with days left in it,
+     * so "you would have finished two places higher" is the wrong sentence: it
+     * hands back a result on a week the reader can still change, which is the
+     * opposite of what a Friday message is for.
+     *
+     * Both halves are required. Thursday alone is not enough, because a
+     * four-day file from three weeks ago is every bit as finished as a full
+     * one, and telling someone they can still move up in it would be a plain
+     * falsehood. Friday on is a week that stopped whatever the date, since
+     * Friday is where this team's week ends.
+     */
+    function standingsPeriodIsOpen(periodKey) {
+        const key = String(periodKey || '');
+        if (key.indexOf('month:') === 0) return false;
+
+        const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const period = getPeriodData(key) || ytd[key] || null;
+        const type = period?.metadata?.periodType || (ytd[key] ? 'ytd' : 'week');
+        if (type !== 'week' && type !== 'week-in-progress') return false;
+
+        const ending = String(period?.metadata?.endDate
+            || (key.indexOf('|') > -1 ? key.split('|')[1] : '')).slice(0, 10);
+        const endsOn = new Date(ending + 'T12:00:00');
+        if (Number.isNaN(endsOn.getTime())) return false;
+        const dow = endsOn.getDay();
+        if (dow < 1 || dow > 4) return false;
+
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        const monday = new Date(today);
+        monday.setDate(monday.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+        const mondayIso = monday.getFullYear() + '-'
+            + String(monday.getMonth() + 1).padStart(2, '0') + '-'
+            + String(monday.getDate()).padStart(2, '0');
+        return ending >= mondayIso;
+    }
+
+    /**
      * One step off their number, and what it would have been worth in places.
      *
      * Walks the ladder from the smallest rung upward and takes the first one
@@ -2439,11 +2480,16 @@
             // for. Naming the number they would land on turns it into a target
             // they can hold in their head on a call.
             const verb = options.reverse ? 'Take ' + stepText + ' off' : 'Add ' + stepText;
+            // A week with days left in it gets an ask, not a post mortem. Same
+            // arithmetic either way; the difference is whether the reader is
+            // being told what they missed or what is still there to take.
+            const outcome = options.open
+                ? ' you could still move up about ' + gain + ' places this week.'
+                : ' you would have finished about ' + gain + ' places higher.';
             return {
                 step,
                 gain,
-                text: verb + '. At ' + fmtVal(registryKey, improved)
-                    + ' you would have finished about ' + gain + ' places higher.'
+                text: verb + '. At ' + fmtVal(registryKey, improved) + outcome
             };
         }
         return null;
@@ -2484,6 +2530,9 @@
             : [];
 
         const candidates = [];
+        // Asked once for the whole block, because every milestone in it and the
+        // caveat under them all have to be in the same tense.
+        const periodIsOpen = standingsPeriodIsOpen(periodKey);
         // The scorecard four, not everything rank-projection can project. See
         // STANDINGS_METRICS for why the two lists are deliberately different.
         STANDINGS_METRICS.forEach(rankKey => {
@@ -2588,7 +2637,7 @@
                 teamField: teamMeasured.length,
                 milestone: standingsMilestone({
                     rp, rows, rankKey, registryKey, employeeName,
-                    current, reverse, fieldBest, baseRank: centerRank
+                    current, reverse, fieldBest, baseRank: centerRank, open: periodIsOpen
                 })
             });
         });
@@ -2648,7 +2697,9 @@
         // second one; at the bottom, because it is about the milestones rather
         // than the placings, and the placings are simply what happened.
         const caveat = chosen.some(c => c.milestone)
-            ? '\n\n  Those position gains assume everybody else stays exactly where they finished.'
+            ? (periodIsOpen
+                ? '\n\n  Those position gains assume everybody else stays exactly where they are now.'
+                : '\n\n  Those position gains assume everybody else stays exactly where they finished.')
             : '';
 
         // Which metrics this block spoke for, so the near-miss tail after it can

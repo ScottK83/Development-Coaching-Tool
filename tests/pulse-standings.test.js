@@ -490,3 +490,36 @@ suite('pulse standings: the period is named for what it actually was', (t) => {
     t.check('a single day is named as that day', day.indexOf('Where you stood for Thursday 08/20/2026') > -1);
     t.check('with no week claimed around it', day.indexOf('the week') === -1);
 });
+
+suite('pulse standings: a week still being worked is not spoken of in the past', (t) => {
+    // The suite clock sits on Tuesday 2026-08-18, so 08-17 through 08-20 are
+    // this week and 08-21 is the Friday that closes it.
+
+    // A file that stops on Thursday of the current week is a week with a day
+    // left in it. Telling somebody what they "would have finished" hands back a
+    // result on a week they can still change.
+    const open = load(t, { weekMeta: { periodType: 'week-in-progress', endDate: '2026-08-20' } })
+        .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('the ask points forward',
+        open.indexOf('Add 1 point. At 94.9% you could still move up about 4 places this week.') > -1);
+    t.check('and nothing in it is already over', open.indexOf('would have finished') === -1);
+    t.check('the caveat is in the same tense',
+        open.indexOf('stays exactly where they are now') > -1);
+    t.check('and not the finished one', open.indexOf('where they finished') === -1);
+
+    // The Friday file is a week that stopped, and the past tense is the honest
+    // one there: the reader cannot go back and take those places.
+    const closed = load(t).buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a finished week still reports what was missed',
+        closed.indexOf('Add 1 point. At 94.9% you would have finished about 4 places higher.') > -1);
+    t.check('with no offer to change it', closed.indexOf('could still move up') === -1);
+    t.check('and the caveat matches', closed.indexOf('stays exactly where they finished') > -1);
+
+    // The half of the rule that is easy to lose: a four-day file from a week
+    // gone by is every bit as finished as a full one, whatever weekday it
+    // stopped on. Offering places in it would be a plain falsehood.
+    const stale = load(t, { weekMeta: { periodType: 'week-in-progress', startDate: '2026-07-27', endDate: '2026-07-30' } })
+        .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a Thursday from a past week is over too', stale.indexOf('could still move up') === -1);
+    t.check('and reads in the past tense', stale.indexOf('you would have finished about') > -1);
+});
