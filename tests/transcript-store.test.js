@@ -168,3 +168,96 @@ suite('transcript storage: wiring', (t) => {
     t.check('and restoring treats absent as leave alone',
         sync.includes('callTranscripts: coerceNullableObject(payload?.callTranscripts)'));
 });
+
+suite('transcript storage: it repairs itself', (t) => {
+    const storage = load(t);
+
+    // Exactly the state Scott's home PC was in once the transcript store had
+    // caught up: the entry references a transcript, the text is there, and
+    // nothing had ever persisted the join.
+    storage.saveWithSizeCheck('callListeningLogs', logsWith([{
+        id: 'call-1', listenedOn: '2026-09-03', employeeName: 'Esther Ramos',
+        transcriptId: 'call-1'
+    }]));
+    storage.saveWithSizeCheck('callTranscripts', { 'call-1': TRANSCRIPT });
+    storage.clearDirtyStores();
+
+    const result = storage.repairInlineTranscripts();
+    t.equal('it repairs the stranded transcript', result.repaired, 1);
+    t.equal('and nothing is left waiting', result.pending, 0);
+
+    const raw = storage.readStore('callListeningLogs');
+    t.equal('the transcript is inline', raw['Esther Ramos'][0].transcript, TRANSCRIPT);
+    t.check('the pointer is dropped', !('transcriptId' in raw['Esther Ramos'][0]));
+
+    // Marking the store dirty is what carries the repair to the other machine
+    // on the next push. Without it the fix is local only and he does the
+    // three step dance by hand.
+    t.check('and it is queued for the next sync', storage.isStoreDirty('callListeningLogs') === true);
+});
+
+suite('transcript storage: a clean load writes nothing', (t) => {
+    const storage = load(t);
+
+    storage.saveCallListeningLogs(logsWith([{
+        id: 'call-1', listenedOn: '2026-09-03', employeeName: 'Esther Ramos',
+        transcript: TRANSCRIPT
+    }]));
+    storage.clearDirtyStores();
+
+    const result = storage.repairInlineTranscripts();
+    t.equal('nothing to repair', result.repaired, 0);
+
+    // This is the part that matters. An unconditional save at boot marks the
+    // store dirty every load, and a store that is always dirty pushes over
+    // the other machine's work every time a tab is opened.
+    t.check('so the store is left clean', storage.isStoreDirty('callListeningLogs') === false);
+    t.equal('and the transcript is untouched',
+        storage.loadCallListeningLogs()['Esther Ramos'][0].transcript, TRANSCRIPT);
+});
+
+suite('transcript storage: a transcript that has not arrived yet waits', (t) => {
+    const storage = load(t);
+
+    storage.saveWithSizeCheck('callListeningLogs', logsWith([{
+        id: 'call-9', listenedOn: '2026-09-03', employeeName: 'Esther Ramos',
+        transcriptId: 'call-9'
+    }]));
+    storage.clearDirtyStores();
+
+    const warnings = [];
+    const realWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(' '));
+    const result = storage.repairInlineTranscripts();
+    console.warn = realWarn;
+
+    t.equal('there is nothing to repair yet', result.repaired, 0);
+    t.equal('but it is counted as waiting', result.pending, 1);
+    t.check('and said out loud', warnings.some(line => /repaired once it syncs/.test(line)));
+
+    // Nothing is written, so the pointer survives for the next attempt and
+    // the store is not pushed in a half-repaired state.
+    t.check('the store is left clean', storage.isStoreDirty('callListeningLogs') === false);
+    t.check('and the pointer survives',
+        'transcriptId' in storage.readStore('callListeningLogs')['Esther Ramos'][0]);
+});
+
+suite('transcript storage: the repair actually runs', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    // At boot, and again after a sync pull, because the pull is what may have
+    // just delivered the store this machine was missing.
+    const calls = script.match(/repairInlineTranscriptsIfNeeded\(\)/g) || [];
+    t.check('it is called at least twice', calls.length >= 2);
+    t.check('once at boot',
+        /callListeningLogs = loadCallListeningLogs\(\);\n    \/\/[\s\S]{0,300}repairInlineTranscriptsIfNeeded\(\)/.test(script));
+    t.check('and once after a restore',
+        /callListeningLogs = loadCallListeningLogs\(\);\n        \/\/[\s\S]{0,300}repairInlineTranscriptsIfNeeded\(\)/.test(script));
+
+    // The in-memory copy has to be refreshed, or the transcript reads as
+    // missing until the next reload despite being repaired on disk.
+    t.check('the in-memory copy is refreshed after a repair',
+        /function repairInlineTranscriptsIfNeeded[\s\S]{0,500}callListeningLogs = loadCallListeningLogs\(\)/.test(script));
+    t.check('and the sync is queued',
+        /function repairInlineTranscriptsIfNeeded[\s\S]{0,600}queueCallListeningRepoSync\(/.test(script));
+});

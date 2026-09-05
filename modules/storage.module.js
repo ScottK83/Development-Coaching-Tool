@@ -1084,6 +1084,58 @@
     }
 
     /**
+     * Pulls any stranded transcript back onto its entry and writes it inline.
+     *
+     * The join in loadCallListeningLogs already repairs this in memory on
+     * every read, but a repair that is never persisted has to be redone
+     * forever, and until it is persisted the transcript is still in a second
+     * store that may not reach the other machine. Which is how Scott ended up
+     * with the notes at home and the transcript at work.
+     *
+     * So this runs at boot and again after a sync pull, and saves once when it
+     * finds something. Saving is what marks the store dirty, which is what
+     * gets the transcript across inline on the next push. Nothing for him to
+     * do but sync.
+     *
+     * Writes only when it actually repaired something. An unconditional save
+     * at boot would mark the store dirty on every load, and a store that is
+     * always dirty is a store that pushes over the other machine's work every
+     * time a tab is opened.
+     */
+    function repairInlineTranscripts() {
+        try {
+            const logs = loadCallListeningLogs();
+            let repaired = 0;
+            let pending = 0;
+
+            Object.keys(logs).forEach((employeeName) => {
+                (logs[employeeName] || []).forEach((entry) => {
+                    if (!entry || !entry.transcriptId) return;
+                    if (typeof entry.transcript === 'string' && entry.transcript) repaired += 1;
+                    else pending += 1;
+                });
+            });
+
+            if (repaired) {
+                const ok = saveCallListeningLogs(logs);
+                if (!ok) {
+                    console.error('[storage] Could not write the repaired transcripts back.');
+                    return { repaired: 0, pending: pending + repaired };
+                }
+                console.log(`[storage] Moved ${repaired} transcript(s) back onto their call logs.`);
+            }
+            if (pending) {
+                console.warn(`[storage] ${pending} call log(s) reference a transcript this machine does not have yet. They will be repaired once it syncs.`);
+            }
+
+            return { repaired, pending };
+        } catch (error) {
+            console.error('[storage] Transcript repair failed:', error);
+            return { repaired: 0, pending: 0 };
+        }
+    }
+
+    /**
      * Writes the logs, transcripts included.
      *
      * `transcriptId` is dropped on the way out: an entry that carries its own
@@ -1157,6 +1209,7 @@
         // Call listening logs
         loadCallListeningLogs,
         saveCallListeningLogs,
+        repairInlineTranscripts,
         appendCoachingLogEntry,
         getCoachingHistoryForEmployee,
         // Sentiment data

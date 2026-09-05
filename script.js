@@ -4028,6 +4028,22 @@ function loadCallListeningLogs() {
     return window.DevCoachModules?.storage?.loadCallListeningLogs?.() || {};
 }
 
+/**
+ * Moves any stranded transcript back onto its call log.
+ *
+ * Delegated so the in-memory copy is refreshed too: the repair rewrites the
+ * store, and leaving the global pointing at the pre-repair objects would show
+ * the transcript as missing until the next reload.
+ */
+function repairInlineTranscriptsIfNeeded() {
+    const result = window.DevCoachModules?.storage?.repairInlineTranscripts?.();
+    if (result?.repaired) {
+        callListeningLogs = loadCallListeningLogs();
+        queueCallListeningRepoSync('transcripts moved back onto their logs');
+    }
+    return result;
+}
+
 function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
     try {
         const ok = window.DevCoachModules?.storage?.saveCallListeningLogs?.(callListeningLogs || {});
@@ -7754,6 +7770,10 @@ async function initApp() {
     dailyData = loadDailyData();
     coachingHistory = loadCoachingHistory();
     callListeningLogs = loadCallListeningLogs();
+    // A transcript stranded in the old side store is moved back onto its entry
+    // and written inline, so it travels with the log from here on. Silent when
+    // there is nothing to repair.
+    repairInlineTranscriptsIfNeeded();
     sentimentPhraseDatabase = loadSentimentPhraseDatabase();
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
     ensureSentimentPhraseDatabaseDefaults();
@@ -7783,6 +7803,9 @@ async function initApp() {
         dailyData = loadDailyData();
         coachingHistory = loadCoachingHistory();
         callListeningLogs = loadCallListeningLogs();
+        // The pull may have just delivered the transcript store this machine
+        // was missing, which is the moment the repair can finally run.
+        repairInlineTranscriptsIfNeeded();
         sentimentPhraseDatabase = loadSentimentPhraseDatabase();
         associateSentimentSnapshots = loadAssociateSentimentSnapshots();
         loadTeamMembers();
