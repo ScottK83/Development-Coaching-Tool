@@ -496,7 +496,10 @@ suite('coaching bridge: the app can write the message itself', (t) => {
 
     // With no question asked the opening still has to make sense.
     const unprompted = bridge.buildMetricMessage(brief, { preferredName: 'Esther', callMoments: moments });
-    t.check('an unprompted note opens differently', /I had a look at/.test(unprompted));
+    // "I had a look at X, so I listened back to Y" runs the causality the
+    // wrong way. Without a question the listening comes first.
+    t.check('an unprompted note opens differently', /and had a look at/.test(unprompted));
+    t.check('and does not put the cart first', !/^I had a look at/m.test(unprompted));
     t.check('and still names the call', unprompted.includes('Thursday, September 3'));
 
     // No name and no calls must still produce something sendable.

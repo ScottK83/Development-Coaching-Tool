@@ -987,7 +987,10 @@ Requirements:
 
         const opening = options.askedQuestion
             ? `You asked me about ${topic}, so ${listened}.`
-            : `I had a look at ${topic}, so ${listened}.`;
+            // Not "I had a look at X, so I listened back to Y": the causality
+            // runs the wrong way. With a question the "so" earns its place;
+            // without one the listening comes first and the subject follows.
+            : `${listened.charAt(0).toUpperCase()}${listened.slice(1)}, and had a look at ${topic}.`;
 
         const callList = moments.length > 1
             ? moments.map(moment => `  ${moment}`).join('\n')
