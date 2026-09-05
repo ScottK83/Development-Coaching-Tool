@@ -82,7 +82,138 @@
         // behaviour rules.
         negativePhrase: ['negativeWord', 'overallSentiment', 'cxRepOverall'],
         positiveUnused: ['positiveWord', 'overallSentiment'],
-        emotionUnanswered: ['managingEmotions', 'cxRepOverall', 'overallSentiment']
+        emotionUnanswered: ['managingEmotions', 'cxRepOverall', 'overallSentiment'],
+        // From the QA form. Same treatment as everything else: they rank by
+        // which KPI the associate is actually missing.
+        qaDisclosures: ['cxRepOverall', 'fcr'],
+        qaVerification: ['cxRepOverall'],
+        qaProcess: ['fcr', 'cxRepOverall'],
+        qaResolved: ['fcr', 'cxRepOverall'],
+        qaOffering: ['fcr', 'cxRepOverall'],
+        qaAssistance: ['positiveWord', 'cxRepOverall'],
+        qaPayment: ['fcr', 'cxRepOverall']
+    };
+
+    /* ── The QA form's own findings, said out loud ──
+     *
+     * The QA read was supervisor-only: the panel showed it, the prompt was
+     * told to keep it out of the email, and the written message never touched
+     * it. So a new service call where six of the nine required disclosures
+     * never came up produced a message about hold length and nothing else.
+     * That is the most concrete, most checkable coaching on the whole call and
+     * it was being withheld.
+     *
+     * Mapped to the KPIs each one actually moves, so they rank with everything
+     * else rather than being bolted on.
+     *
+     * `coachable: false` is the important column. An audio problem, a system
+     * error or a dropped call is on the QA form because it explains the call,
+     * not because she did anything. Telling her to fix a system error is worse
+     * than saying nothing: it is feedback she cannot act on, attached to
+     * something that was not her fault.
+     */
+    const QA_POINTS = {
+        disclosures: { coachable: true, metrics: ['cxRepOverall', 'fcr'] },
+        verification: { coachable: true, metrics: ['cxRepOverall'] },
+        process: { coachable: true, metrics: ['fcr', 'cxRepOverall'] },
+        resolved: { coachable: true, metrics: ['fcr', 'cxRepOverall'] },
+        'Long Hold': { coachable: true, metrics: ['holdTime', 'aht'] },
+        'Solution/Program Offering Missed': {
+            coachable: true,
+            metrics: ['fcr', 'cxRepOverall'],
+            text: 'There was a plan or a program that would have fitted here and it did not get offered. Worth mentioning even when they have not asked.'
+        },
+        'Offering Assistance': {
+            coachable: true,
+            metrics: ['positiveWord', 'cxRepOverall'],
+            text: 'The call wrapped up without asking whether there was anything else. It only takes a second and it is the line customers remember.'
+        },
+        'Did not Negotiate Payment': {
+            coachable: true,
+            metrics: ['fcr', 'cxRepOverall'],
+            text: 'The customer said money was tight and no arrangement was offered. Where they raise it, put the options in front of them.'
+        },
+        // Not hers. Context for the supervisor, never coaching for her.
+        'Audio Issues': { coachable: false },
+        'System Errors': { coachable: false },
+        'Call Dropped': { coachable: false }
+    };
+
+    // Lower case, because most uses are mid-sentence. The one that leads a
+    // sentence capitalises it: "Four of the Six things" was the alternative.
+    const COUNT_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+    function countWord(value) {
+        const n = Number(value) || 0;
+        return COUNT_WORDS[n] || String(n);
+    }
+
+    function sentenceCase(value) {
+        const text = String(value || '');
+        return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+    }
+
+    /**
+     * The disclosures that did not come up, named.
+     *
+     * Built from the check's own `missed` labels rather than its `detail`
+     * string, which reads "Heard 3 of 9. Not heard: ..." and is a form field.
+     * The labels themselves are already plain English, so naming them is both
+     * the casual wording and the specific one.
+     */
+    function describeMissedDisclosures(check) {
+        const missed = Array.isArray(check.missed) ? check.missed : [];
+        if (!missed.length) return '';
+
+        const total = missed.length + (Array.isArray(check.heard) ? check.heard.length : 0);
+        const labels = missed.map(label => String(label).charAt(0).toLowerCase() + String(label).slice(1));
+
+        // Semicolons when a label carries its own comma, which one of them
+        // does: "plan can be changed, and when a change takes effect" reads as
+        // two separate items in a comma list.
+        const named = labels.some(label => label.includes(','))
+            ? labels.join('; ')
+            : joinList(labels);
+
+        const scale = total > missed.length
+            ? sentenceCase(`${countWord(missed.length)} of the ${countWord(total)} things we have to cover on a call like this did not come up`)
+            : 'The things we have to cover on a call like this did not come up';
+
+        return `${scale}: ${named}.`;
+    }
+
+    /**
+     * One QA finding, worded for her, or null when it is not hers to fix.
+     */
+    function describeQaPoint(kind, key, detail, check) {
+        const rule = QA_POINTS[key];
+        if (!rule || !rule.coachable) return null;
+        if (rule.text) return rule.text;
+
+        if (key === 'disclosures') return describeMissedDisclosures(check || {});
+
+        // The check's own detail, with the form label stripped off the front.
+        const said = humanizeFinding(String(detail || ''));
+        return said || null;
+    }
+
+    function qaMetricsFor(key) {
+        return QA_POINTS[key]?.metrics || [];
+    }
+
+    // QA's own ids and labels, to the finding keys EVIDENCE_MAP knows.
+    const QA_CHECK_KEYS = {
+        disclosures: 'qaDisclosures',
+        verification: 'qaVerification',
+        process: 'qaProcess',
+        resolved: 'qaResolved'
+    };
+
+    const QA_LABEL_KEYS = {
+        'Long Hold': 'longHold',
+        'Solution/Program Offering Missed': 'qaOffering',
+        'Offering Assistance': 'qaAssistance',
+        'Did not Negotiate Payment': 'qaPayment'
     };
 
     /* ── Which words in a tip mean it addresses this finding ──
@@ -120,7 +251,14 @@
         // Was mapped to a metric with no keywords, so a verification finding
         // could only ever return generic advice.
         verification: ['verif', 'identity', 'date of birth', 'last four', 'security question'],
-        emotionUnanswered: ['acknowledge', 'empath', 'frustrat', 'hear', 'calm', 'upset']
+        emotionUnanswered: ['acknowledge', 'empath', 'frustrat', 'hear', 'calm', 'upset'],
+        qaDisclosures: ['disclos', 'rate plan', 'deposit', 'quote', 'explain', 'cover'],
+        qaVerification: ['verif', 'identity', 'date of birth', 'last four'],
+        qaProcess: ['explain', 'next step', 'what happens', 'time frame'],
+        qaResolved: ['resolv', 'first call', 'call back', 'follow through'],
+        qaOffering: ['offer', 'plan', 'program', 'self serv', 'options'],
+        qaAssistance: ['anything else', 'close', 'before you'],
+        qaPayment: ['payment', 'arrangement', 'afford', 'past due', 'budget billing']
     };
 
     /* ── Helpers ── */
@@ -271,6 +409,19 @@
         if (options.analysis) {
             const fingerprint = callFingerprint(options.transcript);
             if (fingerprint) seen.add(fingerprint);
+
+            // The open call needs its QA read scored here. It used to be
+            // pushed without one, so every QA finding on the call actually in
+            // front of the supervisor was dropped and only the saved history
+            // could contribute any. Which is the call they care about most.
+            const scorer = window.DevCoachModules?.callQa;
+            const openQa = (scorer?.scoreCall && options.transcript)
+                ? scorer.scoreCall(options.transcript, {
+                    associateName: options.associateName,
+                    context: { silenceGaps: options.analysis.silenceGaps || [] }
+                })
+                : null;
+
             scored.push({
                 entry: {
                     listenedOn: options.callDate || '',
@@ -278,7 +429,8 @@
                     employeeName: options.associateName || ''
                 },
                 analysis: options.analysis,
-                scan: options.wordChoice?.ok ? options.wordChoice : null
+                scan: options.wordChoice?.ok ? options.wordChoice : null,
+                qa: openQa
             });
         }
 
@@ -306,6 +458,9 @@
         const rows = {};
 
         const bump = (key, kind, text, extra = {}) => {
+            // A finding no metric maps cannot be ranked or shown, so dropping
+            // it here beats carrying it to a panel that will ignore it.
+            if (!key) return;
             const id = extra.phrase ? `${key}:${extra.phrase}` : key;
             const row = rows[id] || (rows[id] = {
                 id,
@@ -364,6 +519,31 @@
             (qa?.checks || [])
                 .filter(check => check.verdict === 'opportunity')
                 .forEach(check => noteOpportunity(String(check.question || '').replace(/\?$/, '')));
+
+            // The QA findings become coaching, not just a tally for the trends
+            // panel. They were the most concrete thing on the call and the only
+            // part the message never mentioned.
+            const addQaFinding = (findingKey, qaKey, detail, check, quote) => {
+                const said = describeQaPoint('qa', qaKey, detail, check);
+                if (!said) return;
+                bump(findingKey, 'qa', said, { date, quote: quote || '', weight: 8 });
+            };
+
+            (qa?.checks || [])
+                .filter(check => check.verdict === 'opportunity')
+                .forEach(check => addQaFinding(QA_CHECK_KEYS[check.id], check.id, check.detail, check, check.evidence));
+
+            (qa?.callOpportunities || []).forEach(item => {
+                // The engine already reports a long hold, with the measured
+                // duration and the moment it started. Saying it twice from two
+                // sources reads as two problems.
+                if (item.label === 'Long Hold' && rows.longHold) return;
+                addQaFinding(QA_LABEL_KEYS[item.label], item.label, item.evidence, null, item.evidence);
+            });
+
+            // techOpportunities are deliberately not here. An audio problem or
+            // a system error is context for the supervisor, not something she
+            // can act on.
 
             if (!scan) return;
 

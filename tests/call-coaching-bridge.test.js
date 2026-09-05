@@ -45,6 +45,27 @@ function load(t, extra, pool) {
     return global.window.DevCoachModules;
 }
 
+
+// The QA scorer has to be loaded for the QA findings to exist at all.
+function loadWithQa(t) {
+    t.installFakeBrowser();
+    global.getMetricTips = (key) => (POOL[key] || []).slice();
+    global.window.METRICS_REGISTRY = {
+        aht: { label: 'Average Handle Time' },
+        cxRepOverall: { label: 'Rep Satisfaction' },
+        fcr: { label: 'First Call Resolution' },
+        positiveWord: { label: 'Positive Word Usage' },
+        holdTime: { label: 'Hold Time' }
+    };
+    global.window.formatMetricDisplay = (key, value) => String(value);
+    t.loadModule('modules/sentiment.module.js');
+    t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-qa.module.js');
+    t.loadModule('modules/call-word-choice.module.js');
+    t.loadModule('modules/call-coaching-bridge.module.js');
+    return global.window.DevCoachModules;
+}
+
 const SLOW_CALL = [
     'Agent: Thank you for calling, my name is Jamie.',
     'Customer: My bill is wrong again.',
@@ -1103,4 +1124,111 @@ suite('coaching bridge: pronouns have something to refer to', (t) => {
     // nothing at all.
     t.check('the hold is named, not pronouned', /You did announce the hold/.test(transcript));
     t.check('and the bare pronoun is gone', !/You did announce it/.test(transcript));
+});
+
+suite('coaching bridge: the QA findings reach the message', (t) => {
+    const { callTranscript, callWordChoice, callCoachingBridge: bridge } = loadWithQa(t);
+
+    // A new service call that skips most of the required disclosures, does not
+    // verify, and closes without offering more help. All of it was on the QA
+    // panel and none of it reached her.
+    const CALL = [
+        'Agent: Thank you for calling APS, my name is Esther.',
+        'Customer: I just moved into a new apartment and I need to set up service.',
+        'Agent: We have three plans available. The first plan is the fixed energy charge plan.',
+        'Agent: On this plan your energy rate is the same no matter the time of day.',
+        'Agent: You will receive an email to set up your account.',
+        'Agent: Okay, that is done.'
+    ].join('\n');
+
+    const analysis = callTranscript.analyzeTranscript(CALL, { associateName: 'Esther Ramos' });
+    const wordChoice = callWordChoice.scanTranscript(CALL, { associateName: 'Esther Ramos', analysis });
+    const { findings } = bridge.collectFindings({
+        analysis, wordChoice, transcript: CALL,
+        associateName: 'Esther Ramos', callDate: '2026-09-03', callTime: '6:35 PM'
+    });
+
+    const qaFindings = findings.filter((f) => f.kind === 'qa');
+    t.check('QA findings are in the set at all', qaFindings.length > 0);
+
+    // The open call is the one the supervisor is looking at. It used to be
+    // pushed into the set without its QA read, so every QA finding on it was
+    // dropped and only saved history could contribute any.
+    const disclosures = qaFindings.find((f) => f.key === 'qaDisclosures');
+    t.check('the missed disclosures are reported', Boolean(disclosures));
+    t.check('and named, not counted', /rates quoted for the plans discussed/.test(disclosures.text));
+    t.check('with a plain count', /of the \w+ things we have to cover/.test(disclosures.text));
+
+    // "Four of the Six things" was the first attempt.
+    t.check('the count is not capitalised mid sentence', !/of the [A-Z]/.test(disclosures.text));
+    // One label carries its own comma, so a comma list reads as two items.
+    t.check('labels with commas are separated by semicolons', disclosures.text.includes('; '));
+
+    // No QA vocabulary survived into her copy.
+    qaFindings.forEach((f, i) => {
+        t.check('QA finding ' + i + ' has no form label', !/^[A-Z][A-Za-z]*(?: [a-z]+){0,2}:\s/.test(f.text));
+        t.check('QA finding ' + i + ' says nothing about disclosures', !/disclosure/i.test(f.text));
+        t.check('QA finding ' + i + ' has no verdict word', !/opportunity|cannot tell|not heard/i.test(f.text));
+    });
+});
+
+suite('coaching bridge: what the QA form does NOT say to her', (t) => {
+    const { callTranscript, callWordChoice, callCoachingBridge: bridge } = loadWithQa(t);
+
+    // A system error is on the QA form because it explains the call, not
+    // because she did anything. Telling her to fix one is feedback she cannot
+    // act on, attached to something that was not her fault.
+    const CALL = [
+        'Agent: Thank you for calling APS, my name is Esther.',
+        'Customer: My bill doubled and I want to know why.',
+        'Agent: My system is being slow, it is not letting me in, bear with me.',
+        'Agent: Sorry, it kicked me out again.',
+        'Agent: Okay, you are all set. Is there anything else I can help with?'
+    ].join('\n');
+
+    const analysis = callTranscript.analyzeTranscript(CALL, { associateName: 'Esther Ramos' });
+    const wordChoice = callWordChoice.scanTranscript(CALL, { associateName: 'Esther Ramos', analysis });
+    const { findings } = bridge.collectFindings({
+        analysis, wordChoice, transcript: CALL,
+        associateName: 'Esther Ramos', callDate: '2026-09-03'
+    });
+
+    const text = findings.map((f) => f.text).join(' ');
+    t.check('a system error is not coached to her', !/system error/i.test(text));
+    t.check('nor an audio problem', !/audio issue/i.test(text));
+    t.check('nor a dropped call', !/call dropped/i.test(text));
+
+    // It is still counted for the supervisor, which is where it belongs.
+    const withHistory = bridge.collectFindings({
+        analysis, wordChoice, transcript: CALL, associateName: 'Esther Ramos',
+        history: [{ listenedOn: '2026-08-01', employeeName: 'Esther Ramos', transcript: CALL + '\nAgent: reference two.' }]
+    });
+    t.check('but the supervisor still sees it',
+        withHistory.repeatOpportunities.some((row) => /System Errors/.test(row.label)));
+});
+
+suite('coaching bridge: one long hold, not two', (t) => {
+    const { callTranscript, callWordChoice, callCoachingBridge: bridge } = loadWithQa(t);
+
+    // The transcript engine measures the hold and the QA form flags it. Both
+    // are right, and saying it twice from two sources reads as two problems.
+    const CALL = [
+        '00:05',
+        'thank you for calling APS my name is esther',
+        '00:20',
+        'let me place you on a brief hold while i look at that',
+        '04:30',
+        'thank you for holding, you are all set, anything else i can help with'
+    ].join('\n');
+
+    const analysis = callTranscript.analyzeTranscript(CALL, { associateName: 'Esther Ramos' });
+    const wordChoice = callWordChoice.scanTranscript(CALL, { associateName: 'Esther Ramos', analysis });
+    const { findings } = bridge.collectFindings({
+        analysis, wordChoice, transcript: CALL, associateName: 'Esther Ramos', callDate: '2026-09-03'
+    });
+
+    const holdFindings = findings.filter((f) => f.key === 'longHold');
+    t.check('the hold is reported once at most', holdFindings.length <= 1);
+    t.check('and the QA copy did not add a second',
+        findings.filter((f) => /long hold/i.test(f.text)).length <= 1);
 });
