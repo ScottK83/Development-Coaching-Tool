@@ -1012,21 +1012,29 @@
 
     /* ── Call logs and their transcripts ──
      *
-     * Stored apart, joined in memory, so that nothing above this line has to
-     * know. A sync shard is a whole store, so with transcripts inline a
-     * one-word edit to a note re-uploaded every transcript in the log: 19MB at
-     * six hundred calls, every time. Separated, that edit ships the metadata
-     * alone and the transcripts move only when a transcript actually changes.
+     * Transcripts live inline on the entry. They were split into their own
+     * store to save sync bandwidth, and that was the wrong trade.
      *
-     * The split is confined to these two functions on purpose. Thirty-nine
-     * places read `entry.transcript` and all of them still can, because an
-     * entry handed out of here always carries its transcript. A bug in the
-     * seam loses the record of what was said on a call, so the seam is small
-     * enough to read in one sitting and pinned by a round trip test.
+     * The reasoning was sound as far as it went: a sync shard is a whole
+     * store, so with transcripts inline a one-word edit to a note re-uploaded
+     * every transcript in the log. Splitting them meant a note edit shipped
+     * the metadata alone.
      *
-     * Entries written before the split keep their transcript inline. Those are
-     * read as they are and rewritten into the new shape the next time they are
-     * saved, so nothing needs migrating on a schedule.
+     * What it missed is that two stores are two independent shards. Scott
+     * saved a call on the work PC and opened it at home to find the notes
+     * there and the transcript gone: the entry crossed, the transcript store
+     * did not, and the reference dangled. The in-machine write ordering I put
+     * in guarded the wrong failure. Both writes had succeeded; only one of
+     * them travelled.
+     *
+     * Bandwidth on a note edit is worth nothing next to a transcript. He can
+     * retype a note. He cannot re-listen to a call from three weeks ago. So
+     * the transcript travels with the entry that references it, always, and
+     * there is nothing to arrive out of step.
+     *
+     * The rejoin below stays as a repair: `callTranscripts` is still
+     * registered and still syncs, so a transcript already stranded in it is
+     * pulled back onto its entry on load and written inline from then on.
      */
 
     function readTranscriptStore() {
@@ -1076,63 +1084,36 @@
     }
 
     /**
-     * Writes the logs and their transcripts to their own stores.
+     * Writes the logs, transcripts included.
      *
-     * Order matters. Transcripts go first, so a failure between the two writes
-     * leaves transcripts with nothing pointing at them rather than entries
-     * pointing at transcripts that were never saved. Orphaned text is
-     * recoverable; a dangling reference is a lost call.
-     *
-     * Transcripts are only written when one has actually changed, which is the
-     * whole point: editing a note leaves the transcript store untouched, so it
-     * stays clean and the next sync does not ship it.
+     * `transcriptId` is dropped on the way out: an entry that carries its own
+     * transcript has no use for a pointer to a second copy, and leaving one
+     * behind would let a future reader think the inline text was the stale
+     * half. The load path still honours the pointer, so a transcript stranded
+     * in the old store by an earlier version is recovered rather than lost.
      */
     function saveCallListeningLogs(callListeningLogsRef) {
         try {
             const logs = callListeningLogsRef || {};
-            const existing = readTranscriptStore();
-            const transcripts = { ...existing };
-            const slim = {};
-            let transcriptsChanged = false;
+            const inlined = {};
 
             Object.keys(logs).forEach((employeeName) => {
                 const entries = Array.isArray(logs[employeeName]) ? logs[employeeName] : [];
-                slim[employeeName] = entries.map((entry) => {
+                inlined[employeeName] = entries.map((entry) => {
                     if (!entry || typeof entry !== 'object') return entry;
-
-                    const text = entry.transcript;
-                    if (typeof text !== 'string' || !text) {
-                        // Nothing to lift out. A pre-split entry with no
-                        // transcript, or one that never had a transcript.
+                    if (!entry.transcriptId) return entry;
+                    if (typeof entry.transcript !== 'string' || !entry.transcript) {
+                        // The pointer is all there is. Keep it, so the
+                        // transcript can still be recovered if its store
+                        // arrives later.
                         return entry;
                     }
-
-                    // Keyed on the entry, so re-saving the same call overwrites
-                    // its own transcript instead of accumulating copies.
-                    const transcriptId = entry.transcriptId || entry.id;
-                    if (!transcriptId) return entry;
-
-                    if (transcripts[transcriptId] !== text) {
-                        transcripts[transcriptId] = text;
-                        transcriptsChanged = true;
-                    }
-
-                    const { transcript, ...rest } = entry;
-                    return { ...rest, transcriptId };
+                    const { transcriptId, ...rest } = entry;
+                    return rest;
                 });
             });
 
-            if (transcriptsChanged) {
-                const transcriptsOk = saveWithSizeCheck('callTranscripts', transcripts);
-                if (!transcriptsOk) {
-                    // The logs are not written, so nothing ends up referencing
-                    // a transcript that was never stored.
-                    console.error('Failed to save call transcripts; the logs were left unchanged.');
-                    return false;
-                }
-            }
-
-            const ok = saveWithSizeCheck('callListeningLogs', slim);
+            const ok = saveWithSizeCheck('callListeningLogs', inlined);
             if (!ok) console.error('Failed to save call listening logs due to size');
             return ok;
         } catch (error) {
