@@ -661,7 +661,7 @@ Box 2 - Future Improvement Areas:
 
                         <div class="call-panel">
                             <h3>🗒️ Call Transcript</h3>
-                            <p>Paste the transcript, then let it draft your feedback. Speaker labels like <code>Agent:</code> / <code>Customer:</code> give the best read. Everything it writes is editable.</p>
+                            <p>Paste the transcript, then let it draft your feedback. Paste straight from Verint and the colour coding is read for you, so it knows who was talking. Everything it writes is editable.</p>
                             <textarea id="callListeningTranscript" class="call-mono" style="min-height: 180px;" placeholder="Agent: Thank you for calling, my name is Jamie. How can I help?&#10;Customer: I've been charged twice and this is the third time I've called..."></textarea>
                             <div class="flex-row" style="margin-top: var(--space-3);">
                                 <button type="button" id="analyzeCallTranscriptBtn" class="btn-primary">🔍 Analyze Transcript &amp; Draft Feedback</button>
@@ -1876,6 +1876,7 @@ Box 2 - Future Improvement Areas:
                 'modules/sentiment.module.js',
                 'modules/year-end.module.js',
                 'modules/coaching.module.js',
+                'modules/verint-paste.module.js',
                 'modules/call-transcript.module.js',
                 'modules/call-qa.module.js',
                 'modules/call-word-choice.module.js',

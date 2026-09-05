@@ -230,7 +230,7 @@ holdTime,Practice navigation - the faster you move through screens the less cust
 holdTime,Never place a customer on hold to check personal notifications or messages
 holdTime,Set a mental timer: 90 seconds on hold feels like 5 minutes to the customer
 holdTime,If customer declines hold - talk them through what you're doing
-holdTime,For short pauses under 30 seconds - keep talking through what you're doing rather than dropping into silence - dead air feels longer than the actual time
+holdTime,For short pauses under 30 seconds - keep talking through what you're doing rather than dropping into silence - quiet feels longer than the actual time
 holdTime,Come back with what you found - 'Thanks for holding - here's what I've got' beats a second apology
 holdTime,Pull customer info during greeting verification so you don't need to hold later
 holdTime,If customer asks a second question while you're already searching - note it and address both
@@ -266,7 +266,7 @@ overallSentiment,Sound genuinely interested - not robotic - vary your tone
 overallSentiment,Use their words back: If they say 'bill is confusing' say 'Let me clarify that confusing bill'
 overallSentiment,End on positive note even if you couldn't do everything: 'I'm glad I could at least help with X'
 overallSentiment,Acknowledge their effort: 'I appreciate you calling in about this instead of letting it slide'
-overallSentiment,Avoid dead air - if you're thinking say 'Let me think about best way to help you here'
+overallSentiment,Don't go quiet - if you're thinking say 'Let me think about the best way to help you here'
 overallSentiment,Thank them for patience if call took longer: 'Thanks for bearing with me on that'
 overallSentiment,Greet the customer with genuine energy - your first 5 seconds set the tone
 overallSentiment,Mirror back emotions: 'You sound really frustrated - I get it - let's fix this'
@@ -312,7 +312,7 @@ positiveWord,Replace 'Your account shows' with 'I see here that' - sounds more c
 positiveWord,Say 'moving forward' instead of 'from now on' - sounds more optimistic
 positiveWord,Say 'You're welcome - glad I could help' at the close
 positiveWord,Use 'right away' instead of 'as soon as possible'
-positiveWord,Say 'We will' instead of 'We'll try' - commitment over hedging
+positiveWord,Say 'We will' instead of 'We'll try' - it sounds like a promise instead of a maybe
 positiveWord,Use 'here's what I found' instead of 'it says here' - you're the expert not the screen
 positiveWord,Say 'I'll take care of this' instead of 'I can put in a request'
 positiveWord,Replace 'no worries' with 'completely understandable' - more sincere
@@ -388,7 +388,7 @@ negativeWord,Don't say 'that's your responsibility' unless you've already offere
 negativeWord,Skip 'obviously' and 'clearly', both tell them they should have known
 managingEmotions,Take a 3-second breath before responding to frustrated customers
 managingEmotions,Validate by naming the specific issue back to them - 'That double charge would frustrate me too' beats generic 'I understand your frustration'
-managingEmotions,Lower your voice volume slightly when customer raises theirs - it naturally de-escalates
+managingEmotions,Lower your voice slightly when the customer raises theirs - it brings the temperature down
 managingEmotions,Don't take angry words personally - they're frustrated with situation not you
 managingEmotions,Stay solution-focused: 'I hear you - let me see what I can do to help'
 managingEmotions,Acknowledge their feelings: 'I can tell this has been really frustrating for you'
@@ -419,7 +419,7 @@ managingEmotions,Your voice is the only thing they have, keep it steady even whe
 managingEmotions,If your heart rate is up, slow the sentence down and the rest follows
 managingEmotions,Two hard calls back to back, take the thirty seconds in between
 managingEmotions,It isn't personal even when the words are personal
-managingEmotions,Say the hard part plainly, hedging makes people more anxious
+managingEmotions,Say the hard part plainly, talking around it makes people more anxious
 managingEmotions,If you're dreading the next call, that's the moment to stand up
 managingEmotions,Don't carry the last call into this one, this customer didn't do it
 managingEmotions,When someone cries, quiet is fine, then one steady sentence
@@ -509,7 +509,7 @@ cxRepOverall,Don't oversell the fix, say exactly what it does
 cxRepOverall,Ask what would make this easier for them, then do that if you can
 overallExperience,Open the call with 'I'd be happy to help you with that' instead of jumping straight into verification. It sets a welcoming tone.
 overallExperience,When there's bad news, lead with what you CAN do: 'Here's what I can do for you right now' before explaining any limitations.
-overallExperience,Avoid dead air. If you're researching, narrate: 'I'm pulling up your account now' or 'Let me check the latest notes here.'
+overallExperience,Don't leave them in silence. If you're looking something up, say so: 'I'm pulling up your account now' or 'Let me check the latest notes here.'
 overallExperience,Before ending, summarize clearly: 'So here's what we did today and what happens next.' Customers remember the ending most.
 overallExperience,Match the customer's energy. If they're chatty, take a moment to connect. If they're in a hurry, get to the point quickly.`;
 

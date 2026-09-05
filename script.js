@@ -8933,6 +8933,46 @@ function renderCallListeningReadPanels(transcript, associateName, analysis) {
     renderCallMetricCoachPanel(transcript, associateName, analysis);
 }
 
+/**
+ * Reads the speaker colours out of a Verint paste.
+ *
+ * Verint cannot export speaker labels, but its transcript is colour coded and
+ * that is how the two sides are told apart on screen. A textarea keeps only
+ * the plain text, so that information was being discarded at the door: every
+ * downstream guess about who said what came from throwing it away here.
+ *
+ * The clipboard carries an HTML flavour alongside the plain one, colours
+ * intact. This reads it, works out which colour is the advisor, and puts a
+ * labelled transcript in the box instead.
+ *
+ * Declines quietly whenever it cannot be sure, and lets the normal paste
+ * happen. A wrong label is worse than no label: it is what quoted a
+ * customer's line back to the associate as her own.
+ */
+function handleTranscriptPaste(event) {
+    const field = event?.target;
+    const clipboard = event?.clipboardData;
+    if (!field || !clipboard) return;
+
+    const html = (() => {
+        try { return clipboard.getData('text/html') || ''; }
+        catch (error) { return ''; }
+    })();
+    if (!html) return;
+
+    const converter = window.DevCoachModules?.verintPaste?.toLabelledTranscript;
+    if (typeof converter !== 'function') return;
+
+    const advisorName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const converted = converter(html, { advisorName });
+    if (!converted?.text) return;
+
+    // Only now take the paste over, so a decline costs nothing.
+    event.preventDefault();
+    field.value = converted.text;
+    showToast(`✅ Read the colour coding: ${converted.labelled} lines labelled, so it knows who was talking.`, 4000);
+}
+
 function analyzeCallListeningTranscript() {
     const transcriptField = document.getElementById('callListeningTranscript');
     const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -9525,6 +9565,7 @@ function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
 function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
     bindElementOnce(employeeSelect, 'change', refreshCallListeningRecipient);
+    bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);

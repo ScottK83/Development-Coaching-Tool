@@ -336,6 +336,12 @@
     // about most, so they are matched outright rather than left to flow order.
     const CUSTOMER_TURN_CUE = /^(?:hello )?hi my name'?s|i'?m just trying to|i don'?t know what my|do you have any recommendations|i just have the address|we'?ll get that back|i have both|this is (?:ridiculous|unacceptable|the (?:second|third|fourth|\d+)(?:st|nd|rd|th)? time)|i (?:want|need) to (?:speak|talk) (?:to|with) (?:a|your) (?:supervisor|manager)|get me a (?:supervisor|manager)|like i (?:said|told you|mentioned)|as i (?:said|mentioned|explained)|i already (?:said|told|explained)|i(?:'?m| am) (?:so |really )?(?:frustrated|fed up|angry|upset)|my bill (?:is|went|doubled)|(?:i was|you) charged (?:me )?twice|(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful)|i (?:really )?appreciate (?:you|your|it)|(?:can'?t|cannot) afford|i(?:'?m| am) past due|behind on (?:my|the) bill/i;
 
+    // "Agent:" or "Customer:" at the front of a timestamped line. Verint's
+    // plain text export has no labels, but its transcript is colour coded, and
+    // the paste handler turns those colours into exactly these labels. When
+    // they are present there is nothing left to infer.
+    const TIMESTAMPED_LABEL = /^\s*(agent|advisor|associate|rep|customer|caller|client)\s*:\s*(.+)$/i;
+
     function parseTimestampedTurns(text) {
         const lines = String(text || '').split(/\r?\n/);
         const turns = [];
@@ -354,10 +360,35 @@
                 current = { label: '', text: '', at: null };
                 turns.push(current);
             }
+
+            const labelled = content.match(TIMESTAMPED_LABEL);
+            if (labelled && !current.label) {
+                current.label = collapse(labelled[1]);
+                current.text = collapse(`${current.text} ${labelled[2]}`);
+                return;
+            }
+
             current.text = collapse(`${current.text} ${content}`);
         });
 
         return turns.filter(turn => turn.text);
+    }
+
+    /**
+     * Roles straight off the labels, when the paste carried them.
+     *
+     * Everything the unlabelled path does is a guess: which side said a
+     * scored phrase, whose emotion cue it was, who was talking for 80% of the
+     * call, and which line the customer opened with. Getting one of those
+     * wrong quoted the advisor's own words back to her as the customer's.
+     * With labels present, none of it is inferred.
+     */
+    function rolesFromTimestampedLabels(turns) {
+        return turns.map(turn => ({
+            ...turn,
+            role: CUSTOMER_LABEL.test(turn.label) ? 'customer' : 'agent',
+            cued: true
+        }));
     }
 
     function attributeByCue(turns) {
@@ -425,7 +456,16 @@
 
         const timestampCount = rawLines.filter(line => TIMESTAMP_ONLY_LINE.test(line)).length;
         if (timestampCount >= 3) {
-            return buildParseResult(inferRolesByFlow(attributeByCue(parseTimestampedTurns(text))), false);
+            const timestamped = parseTimestampedTurns(text);
+
+            // Labels beat inference outright. A colour coded paste carries
+            // them, and once it does every hedge downstream can come off.
+            const labelledTurns = timestamped.filter(turn => turn.label).length;
+            if (labelledTurns >= Math.max(3, timestamped.length * 0.5)) {
+                return buildParseResult(rolesFromTimestampedLabels(timestamped), true);
+            }
+
+            return buildParseResult(inferRolesByFlow(attributeByCue(timestamped)), false);
         }
 
         const turns = [];
