@@ -8233,7 +8233,7 @@ function buildCallListeningVerintSummary(entry) {
         'What went well:',
         entry.whatWentWell || 'N/A',
         '',
-        'Improvement opportunities:',
+        'What to work on next time:',
         entry.improvementAreas || 'N/A',
         '',
         'Relevant info shared:',
@@ -9254,7 +9254,7 @@ function buildSavedCallDetailHtml(employeeName, entry) {
     const analyzer = window.DevCoachModules?.callTranscript;
     const notes = [
         ['What went well', entry.whatWentWell],
-        ['Improvement opportunities', entry.improvementAreas],
+        ['What to work on next time', entry.improvementAreas],
         ['Relevant info shared', entry.relevantInfo],
         ['Manager notes', entry.managerNotes],
         ['Oscar / knowledge base', entry.oscarUrl]
