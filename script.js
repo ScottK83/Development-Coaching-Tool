@@ -8499,6 +8499,10 @@ let callMetricBriefs = [];
 let callMetricSelectedKey = '';
 // The calls behind the current briefs, in words, so the prompt can name them.
 let callMetricCallMoments = [];
+// Which call the time ledger measured, in the same short words the findings
+// use. A message can cover four calls and the ledger only ever measures the one
+// on screen, so it has to be able to say which.
+let callMetricLedgerCallName = '';
 // The recap of the call on screen. Held as the structured summary rather than
 // rendered text, because the message needs it worded differently from the
 // panel: whatever the message is about to coach in detail is left out of it.
@@ -8544,6 +8548,58 @@ function alreadyGivenSuggestionIds(employeeName) {
     return ids;
 }
 
+/**
+ * Where the call's time went, measured against this year's handle time goal.
+ *
+ * The findings could name a four minute silence and never say the call ran 39
+ * minutes against a seven minute target, which leaves the associate to work out
+ * on her own whether that silence is the problem or a tenth of it.
+ *
+ * The target is read off the metric bundle rather than hardcoded, because it
+ * moves year to year and a budget measured against last year's goal is worse
+ * than none. Where handle time is not in the bundle at all there is nothing to
+ * measure against and this returns nothing.
+ */
+function buildCallTimeLedger(transcript, associateName, analysis, bundle) {
+    const ledger = window.DevCoachModules?.callTimeLedger;
+    if (!ledger?.buildLedger) return null;
+
+    const aht = (bundle?.allMetrics || []).find(metric => metric.metricKey === 'aht');
+    if (!aht) return null;
+
+    try {
+        const built = ledger.buildLedger(transcript, {
+            associateName,
+            // Already computed for the panel above, so the silence is measured
+            // once and both readings of the call agree.
+            analysis,
+            target: aht.target
+        });
+        return built?.ok ? built : null;
+    } catch (error) {
+        logAppError('Call time ledger failed to build', error, { associateName });
+        return null;
+    }
+}
+
+/**
+ * How to name the call the ledger measured, in the words the findings use.
+ *
+ * Empty when the call has no date on it: an unnamed stopwatch reading under a
+ * paragraph about four calls reads as a claim about all four, and the bridge
+ * drops the sentence rather than hedge it.
+ */
+function callMetricLedgerName() {
+    const bridge = window.DevCoachModules?.callCoachingBridge;
+    const format = window.DevCoachModules?.callTranscript?.formatCallMoment;
+    const date = (document.getElementById('callListeningDate')?.value || '').trim();
+    if (!date || typeof format !== 'function') return '';
+
+    const moment = format(date, (document.getElementById('callListeningTime')?.value || '').trim());
+    const short = bridge?.shortMoment ? bridge.shortMoment(moment) : moment;
+    return short ? `the ${short} call` : '';
+}
+
 function buildCallMetricBriefs(transcript, associateName, analysis) {
     const bridge = window.DevCoachModules?.callCoachingBridge;
     if (!bridge?.collectFindings || !associateName) return [];
@@ -8564,12 +8620,14 @@ function buildCallMetricBriefs(transcript, associateName, analysis) {
         history: callListeningLogs?.[associateName] || []
     });
     callMetricCallMoments = callMoments || [];
+    callMetricLedgerCallName = callMetricLedgerName();
 
     const effectiveness = window.DevCoachModules?.coachingOutcomes?.suggestionEffectiveness?.() || {};
     const alreadyGiven = alreadyGivenSuggestionIds(associateName);
+    const timeLedger = buildCallTimeLedger(transcript, associateName, analysis, bundle);
 
     return bridge.metricsInFocus(bundle.allMetrics, findings)
-        .map(metric => bridge.buildMetricBrief(metric, { effectiveness, alreadyGiven }));
+        .map(metric => bridge.buildMetricBrief(metric, { effectiveness, alreadyGiven, timeLedger }));
 }
 
 function renderCallMetricBrief() {
@@ -8608,6 +8666,7 @@ function renderCallMetricCoachPanel(transcript, associateName, analysis) {
         panel.style.display = 'none';
         callMetricSelectedKey = '';
         callMetricCallMoments = [];
+        callMetricLedgerCallName = '';
         return;
     }
 
@@ -8713,6 +8772,7 @@ function writeCallMetricMessage() {
         associateName: employeeName,
         preferredName,
         callMoments: callMetricCallMoments,
+        ledgerCallName: callMetricLedgerCallName,
         callLabel,
         priorOutcome: findPriorCoachingOutcome(employeeName, brief.metricKey)
     });
@@ -8768,7 +8828,8 @@ function generateCallMetricCoachPrompt() {
     const prompt = bridge.buildMetricPrompt(brief, {
         associateName: employeeName,
         preferredName,
-        callMoments: callMetricCallMoments
+        callMoments: callMetricCallMoments,
+        ledgerCallName: callMetricLedgerCallName
     });
 
     const promptArea = document.getElementById('callListeningPromptArea');

@@ -850,6 +850,16 @@
     }
 
     /**
+     * Handle time is the only metric a call's own length is a measure of.
+     *
+     * Wrap is measured after the customer has gone, so no transcript contains
+     * it, and the hold metric is an average across a week rather than one
+     * call's total. Putting a call length budget under either chip would be
+     * comparing two different quantities and calling the difference a gap.
+     */
+    const LEDGER_METRIC = 'aht';
+
+    /**
      * Everything needed to coach one metric off the calls.
      */
     function buildMetricBrief(metric, options = {}) {
@@ -863,7 +873,12 @@
             headline: `${name}: ${formatValue(metric.metricKey, metric.employeeValue)} against a target of ${formatValue(metric.metricKey, metric.target)}`,
             classification: metric.classification,
             evidence,
-            tips
+            tips,
+            // Where the call's time went. Only ever on handle time, and only
+            // when the transcript was stamped well enough to measure it.
+            timeLedger: (metric.metricKey === LEDGER_METRIC && options.timeLedger?.ok)
+                ? options.timeLedger
+                : null
         };
     }
 
@@ -951,6 +966,26 @@
 
         const momentsPlural = (count) => count > 1 ? `, and mention I went back over ${count} of them` : '';
 
+        // The one number the associate needs and the model must not invent.
+        // Handed over already written so it comes back with the same figures
+        // in it, rather than paraphrased into something that is nearly true.
+        const promptMoments = Array.isArray(options.callMoments) ? options.callMoments.filter(Boolean) : [];
+        const scaleLine = (promptMoments.length > 1 && !options.ledgerCallName)
+            ? ''
+            : (window.DevCoachModules?.callTimeLedger?.buildLedgerSentence?.(brief.timeLedger, {
+                callName: options.ledgerCallName
+            }) || '');
+        const scaleSection = scaleLine
+            ? `
+One line I have already written, which I want in the message word for word:
+${scaleLine}
+`
+            : '';
+        const scaleRule = scaleLine
+            ? `
+- Include my line about the call length exactly as I wrote it. Do not change the numbers, round them, or work anything out from them`
+            : '';
+
         // Which calls this came from, so she can go and remember them. A note
         // about her call handling in the abstract is an opinion; one about the
         // call she took at lunchtime on Tuesday is something she can check.
@@ -970,6 +1005,7 @@ The subject is ${topicFor(brief, 'other')}.
 ${asked}${callsSection}
 What I noticed, in my words:
 ${evidence}
+${scaleSection}
 
 What I want to suggest they try:
 ${tips}
@@ -985,7 +1021,7 @@ Requirements:
 - Warm and matter of fact. They asked me for help, so this is help
 - 1 short opening, 2 to 3 suggestions, 1 friendly closing line
 - Do NOT use em dashes${momentRule}
-- No jargon. Talk about calls and customers, not scores, targets or word counts
+- No jargon. Talk about calls and customers, not scores, targets or word counts. The call length line above is the exception: it is mine and it goes in as written${scaleRule}
 - Return ONLY the message body text.`;
     }
 
@@ -1205,6 +1241,23 @@ Requirements:
                 : 'Here is what stood out.';
         }
 
+        // How big the problem is, before the list of what makes it up.
+        //
+        // The findings could say "about four minutes of silence starting at
+        // 5:54" and never say the call ran 39 minutes against a seven minute
+        // target. Naming a moment without naming the scale leaves her to work
+        // out on her own whether four minutes is the problem or a tenth of it.
+        //
+        // Dropped where the message covers several calls and the caller has
+        // not said which one these numbers came from, since one call's
+        // stopwatch presented under a paragraph about four of them is a claim
+        // about all four.
+        const ledgerSentence = (moments.length > 1 && !options.ledgerCallName)
+            ? ''
+            : (window.DevCoachModules?.callTimeLedger?.buildLedgerSentence?.(brief.timeLedger, {
+                callName: options.ledgerCallName
+            }) || '');
+
         // Ordered so the findings that make up the stated pattern come first.
         // Announcing a pattern of silence and then leading with hedging reads
         // as though the two paragraphs were written by different people.
@@ -1269,6 +1322,7 @@ Requirements:
             opening,
             ...(callList ? ['', callList] : []),
             ...(patternLine ? ['', patternLine] : []),
+            ...(ledgerSentence ? ['', ledgerSentence] : []),
             '',
             ...(observations.length ? [observations.join('\n'), ''] : []),
             ...(priorLine ? [priorLine, ''] : []),
@@ -1352,10 +1406,13 @@ Requirements:
             ? '<div class="call-qa-detail">Nothing in this metric\'s tips speaks to what the calls showed, so these are general. Worth adding one that does.</div>'
             : '';
 
+        const ledger = window.DevCoachModules?.callTimeLedger?.buildLedgerHtml?.(brief.timeLedger, safe) || '';
+
         return `<div class="call-trend-group call-trend-warn">
                 <div class="call-trend-title">${safe(brief.headline)}</div>
                 <ul>${evidence}</ul>
             </div>
+            ${ledger}
             <div class="call-trend-group call-trend-good">
                 <div class="call-trend-title">What to ask her to try</div>
                 <ul>${tips}</ul>
@@ -1378,6 +1435,7 @@ Requirements:
         missedMetricsCovered,
         selectTips,
         buildMetricBrief,
+        LEDGER_METRIC,
         buildMetricPrompt,
         buildMetricMessage,
         humanizeFinding,
