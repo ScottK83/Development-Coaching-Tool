@@ -499,8 +499,8 @@
             key: 'greeting',
             praise: 3,
             pattern: /thank(?:s| you) for (?:calling|being a valued customer)|my name is|this is \w+ (?:speaking|how)|how (?:can|may) i help you/i,
-            made: 'Clean open. You branded the call and gave your name straight away, which sets the tone for everything after it.',
-            missing: 'Opening: lead with the branded greeting and your name so the customer knows exactly who they are working with.',
+            made: 'Clean open. You named APS and gave your own name straight away, which sets the tone for everything after it.',
+            missing: 'The greeting and your name did not make it in up front. Worth leading with both so the customer knows right away who they are working with.',
             missingWeight: 4
         },
         {
@@ -523,8 +523,8 @@
             key: 'verification',
             praise: 7,
             pattern: /verif(?:y|ication|ying)|identity check|confirm(?:ing)? your (?:name|address|account|identity)|date of birth|last four|security question|account number or the address/i,
-            made: 'Verification done properly before anything on the account was discussed. That is the one that protects everybody.',
-            missing: 'Verification: confirm identity up front before you discuss anything on the account.',
+            made: 'You confirmed who you were talking to before anything on the account came up. That is the one that protects everybody.',
+            missing: 'Confirm who you are talking to before anything on the account comes up.',
             missingWeight: 8
         },
         {
@@ -537,7 +537,7 @@
             key: 'optionsOffered',
             praise: 7,
             pattern: /(?:we have|there are) (?:two|three|four|\d+) [a-z ]*plans|plans available|the (?:first|second|third) plan (?:is|that we offer)|compar(?:e|ison) (?:of |the )?(?:plans|options)|options available to you/i,
-            made: 'You laid out the full set of options rather than defaulting to one, which is exactly the offering the QA form looks for.'
+            made: 'You laid out the full set of options instead of defaulting to one, and that is exactly what we want customers to hear.'
         },
         {
             key: 'recommendation',
@@ -562,7 +562,7 @@
             praise: 8,
             pattern: /to recap|just to recap|i'?d like to recap|to summari[sz]e|to sum (?:up|it up)|so to confirm|let me confirm what|(?:here'?s|what) we (?:did|covered) today/i,
             made: 'Excellent recap. They came off the call knowing exactly what was decided and why.',
-            missing: 'Recap: close by restating what you did and what it means for the customer.',
+            missing: 'Worth closing by saying back what you did and what it means for them.',
             missingWeight: 5
         },
         {
@@ -570,7 +570,7 @@
             praise: 6,
             pattern: /next step|you (?:will|'ll) (?:receive|see|get|be)|within (?:\d+|twenty.four|forty.eight) (?:hours|business days|days)|i'?ll follow up|follow up with you|in \d+ (?:to \d+ )?(?:business )?days|by (?:monday|tuesday|wednesday|thursday|friday|the end of)|what happens is/i,
             made: 'Clear next steps with a time frame attached. That is what stops the second call.',
-            missing: 'Next steps: tell the customer exactly what happens next and by when, even when the answer is not what they wanted.',
+            missing: 'Tell the customer exactly what happens next and by when, even when the answer is not the one they wanted.',
             missingWeight: 7
         },
         {
@@ -578,7 +578,7 @@
             praise: 4,
             pattern: /anything else (?:i can (?:help|do|assist)|you need)|is there anything else|any questions anything i can answer|before (?:i let you go|we (?:hang up|wrap up|finish))/i,
             made: 'Solid close. You offered more help before wrapping up rather than rushing off the line.',
-            missing: 'Close: ask if there is anything else before you wrap up.',
+            missing: 'Ask if there is anything else before you wrap up.',
             missingWeight: 3
         }
     ];
@@ -589,55 +589,55 @@
             key: 'deflection',
             weight: 10,
             pattern: /there(?:'?s| is) nothing i can do|i (?:can'?t|cannot) do anything|that(?:'?s| is) (?:just )?(?:our|the) policy|that(?:'?s| is) policy|you(?:'?ll| will) have to (?:call|contact|go)|you need to call|not my department|i don'?t handle (?:that|those)/i,
-            text: 'Dead end language: this landed as "no" with nowhere to go. Say what you can do and why, then offer the next best option.'
+            text: 'That landed on the customer as a flat no with nowhere to go. Tell them what you can do and why, then offer the next best option.'
         },
         {
             key: 'repeatCustomer',
             weight: 8,
             side: 'customer',
             pattern: /like i (?:said|told you|mentioned)|as i (?:said|mentioned|explained)|i already (?:said|told|explained)|i just (?:said|told)/i,
-            text: 'Active listening: the customer had to repeat themselves. Recap what you heard before you ask the next question.'
+            text: 'The customer ended up repeating themselves. Say back what you heard before you ask the next question.'
         },
         {
             key: 'supervisorRequest',
             weight: 8,
             side: 'customer',
             pattern: /(?:speak|talk) (?:to|with) (?:a|your) (?:supervisor|manager)|get me a (?:supervisor|manager)|escalate this/i,
-            text: 'Escalation request: acknowledge it directly, make one clear ownership attempt, then follow the escalation path without making the customer ask twice.'
+            text: 'The customer asked for a supervisor. Say you heard it, have one honest go at sorting it yourself, then get them over before they have to ask again.'
         },
         {
             key: 'deadAir',
             weight: 6,
             pattern: /\[(?:silence|pause|dead air|no response)[^\]]*\]/i,
-            text: 'Dead air: narrate what you are doing while systems load so the silence does not stack up.'
+            text: 'While the system is loading, tell the customer what you are doing so the quiet does not pile up on them.'
         },
         {
             key: 'stalling',
             weight: 5,
             threshold: 3,
             pattern: /one moment|just a (?:moment|second|sec)|bear with me|give me (?:one|a) (?:second|moment)|still (?:there|checking|loading)|it'?s just loading/i,
-            text: 'Silence fillers came up repeatedly. Tell the customer what you are checking rather than asking them to keep waiting.'
+            text: 'There were a few "one moment, bear with me" stretches. Tell the customer what you are actually checking instead of asking them to keep waiting.'
         },
         {
             key: 'uncertainty',
             weight: 6,
             threshold: 3,
             pattern: /\bi think\b|\bi(?:'?m| am) not (?:really )?sure\b|\bi guess\b|\bhopefully\b|\bit should\b/i,
-            text: 'Confidence: hedging language showed up several times. Verify it, then state the answer plainly so the customer trusts it.'
+            text: 'You sounded unsure a few times. Go check, then give the answer straight so the customer trusts it.'
         },
         {
             key: 'apologyLoop',
             weight: 4,
             threshold: 5,
             pattern: /i(?:'?m| am) (?:so |very |really )?sorry|i apologi[sz]e/i,
-            text: 'Over apologising: after the first genuine apology, move to what you are doing about it.'
+            text: 'You apologised a lot. One you mean is plenty, then move to what you are doing about it.'
         },
         {
             key: 'filler',
             weight: 3,
             threshold: 6,
             pattern: /\b(?:um+|uh+|erm|er)\b/i,
-            text: 'Filler words: a short pause reads as more confident than "um" while you think.'
+            text: 'A quiet second while you think sounds more sure of yourself than an "um".'
         }
     ];
 
@@ -771,7 +771,7 @@
         } else if (empathyGapIndex >= 0 && frustrated) {
             const empathyGap = improvements[empathyGapIndex];
             empathyGap.weight = 12;
-            empathyGap.text = 'Empathy: the customer signalled real frustration and it went unacknowledged. Name what they are dealing with before you move to the fix.';
+            empathyGap.text = 'The customer was clearly frustrated and you went straight past it. Say out loud what they are dealing with before you move to the fix.';
             empathyGap.quote = findQuote(turns, FRUSTRATION, 'customer');
         }
 
@@ -798,7 +798,7 @@
             improvements.push({
                 key: 'holdProcess',
                 weight: 7,
-                text: 'Hold process: ask permission before the hold, give a time frame, and thank the customer when you come back.',
+                text: 'The hold got a bit loose. Ask first, give them a rough idea how long, and thank them when you pick back up.',
                 quote: findQuote(turns, HOLD_MENTION)
             });
         }
@@ -807,7 +807,7 @@
             improvements.push({
                 key: 'coldTransfer',
                 weight: 7,
-                text: 'Transfers: brief the receiving team while the customer is still with you so they do not start over.',
+                text: 'When you transfer, fill the other team in while the customer is still on with you so they are not starting over.',
                 quote: findQuote(turns, TRANSFER)
             });
         }
@@ -846,7 +846,7 @@
             improvements.push({
                 key: 'airtime',
                 weight: 4,
-                text: `Airtime: you carried about ${Math.round(agentShare * 100)}% of the talk time. Ask an open question and let the customer fill in the gaps.`,
+                text: `You did about ${Math.round(agentShare * 100)}% of the talking. Ask an open question and give the customer room to fill in the rest.`,
                 quote: ''
             });
         } else if (agentShare !== null && agentShare <= 0.3) {
@@ -911,10 +911,10 @@
             return `Outstanding call. You hit nearly every behaviour we coach to${lengthNote}, and the notes below are polish rather than problems. This is the call I would use to show someone else what good looks like.`;
         }
         if (strengthCount >= 5 && !heavyIssues) {
-            return `Really strong call${lengthNote}. The fundamentals were all there and nothing needed rescuing. Well done.`;
+            return `Really strong call${lengthNote}. You had all the basics covered and nothing went sideways, nice work.`;
         }
         if (strengthCount >= 3 && heavyIssues <= 1) {
-            return 'Solid call with real strengths to build on.';
+            return 'Solid call, and there are a few things in here you should keep doing.';
         }
         return '';
     }
@@ -937,7 +937,7 @@
     function buildImprovementsDraft(analysis) {
         return toBulletText(
             analysis?.improvements,
-            '- No coaching flags surfaced. Reinforce what worked and set one stretch goal for the next call.'
+            '- Nothing here needs fixing, so keep doing what you did and we will pick one thing to push on next call.'
         );
     }
 

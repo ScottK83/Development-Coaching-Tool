@@ -1067,7 +1067,7 @@ Requirements:
             // The quote earns its place when there are several calls: it is
             // what lets them find the moment being described.
             const quoted = moments.length > 1 ? String(finding.quote || '').replace(/\s*\.+$/, '') : '';
-            const heard = quoted ? `\n  You said: "${quoted}"` : '';
+            const heard = quoted ? `\n  I heard you say "${quoted}"` : '';
             return `- ${sentence}${heard}`;
         });
 
@@ -1127,7 +1127,7 @@ Requirements:
             return `Last time we talked about ${topic} it went the other way the following week.${move} That usually means the advice did not fit the problem, so I have picked something different below.`;
         }
 
-        return `Last time we talked about ${topic} it held about where it was.${move} So rather than repeat myself, the suggestions below are a different angle on it.`;
+        return `Last time we talked about ${topic} it held about where it was.${move} So instead of saying the same thing again, here is a different angle.`;
     }
 
     function buttonsHtml(briefs, escapeHtml) {

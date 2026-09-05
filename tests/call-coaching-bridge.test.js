@@ -482,7 +482,7 @@ suite('coaching bridge: the app can write the message itself', (t) => {
     t.check('it answers the question she asked', /You asked me about how long your calls are running/.test(message));
     t.check('it names the most recent call', message.includes('Thursday, September 3 at 12:38 PM'));
     t.check('it says how many it read', message.includes('I have listened to 2 of your calls over the past few days'));
-    t.check('it quotes her own words back', message.includes('You said: "One moment. Just a second"'));
+    t.check('it quotes her own words back', message.includes('I heard you say "One moment. Just a second"'));
     t.check('it carries the suggestions', message.includes('A confident answer is shorter than a hedged one'));
     t.check('it closes with an offer to talk', /Come find me/.test(message));
     t.check('no em dashes', !/[—–]/.test(message));
@@ -662,13 +662,13 @@ suite('coaching bridge: the message reads like a person wrote it', (t) => {
 
     // On a single call the quote adds nothing she does not know, and on an
     // unlabelled transcript it is a line the parser guessed at.
-    t.check('no quote for a single call', !/You said:/.test(message));
+    t.check('no quote for a single call', !/I heard you say/.test(message));
     const across = bridge.buildMetricMessage(brief, {
         preferredName: 'Esther',
         callMoments: ['Thursday, September 3 at 6:35 PM', 'Friday, August 28 at 9:15 AM'],
         callLabel: '39 minute call'
     });
-    t.check('but a pattern across calls quotes the moment', /You said:/.test(across));
+    t.check('but a pattern across calls quotes the moment', /I heard you say/.test(across));
     // Attributed to the call it happened on rather than counted in a
     // trailing clause, which is what makes it checkable.
     t.check('and says which call', /On the September 3 call,/.test(across));
@@ -842,7 +842,7 @@ suite('coaching bridge: the message names the calls and the pattern', (t) => {
     // Every point attributed to a call they can remember.
     t.check('a finding on every call says so', /On all 3 calls, silence fillers/.test(message));
     t.check('a finding on one call names it', /On the September 1 call, about two minutes at 4:30/.test(message));
-    t.check('and quotes the moment', /You said: "one moment"/.test(message));
+    t.check('and quotes the moment', /I heard you say "one moment"/.test(message));
 
     t.check('no repeated ands in a list', !/ and .* and .* calls,/.test(message));
     t.check('no em dashes', !/[—–]/.test(message));

@@ -77,7 +77,7 @@
         // six in it. Verint's own words are not the ones anybody says.
         { key: 'verified', label: 'took the customer through verification', pattern: /verif(?:y|ication|ying)|identity check|date of birth|last four|confirm(?:ing)? your (?:name|address|identity)|(?:may|can|could) i (?:please )?(?:get|have) your(?: full)?(?: first and last)? (?:name|social|address|phone|cell)|full social|social security/i },
         { key: 'createdAccount', label: 'set the account up', pattern: /create an account|creat(?:ed|ing) (?:your|the|an) account|start(?:ed)? (?:your|the) service|set (?:you|your account) up/i },
-        { key: 'disclosed', label: 'went through the rate plan disclosures', pattern: /fixed energy charge plan|time of use|off peak|super off peak|demand charge|kilowatt hour|comparison tool|change your rate plan/i },
+        { key: 'disclosed', label: 'went over the rate plan details', pattern: /fixed energy charge plan|time of use|off peak|super off peak|demand charge|kilowatt hour|comparison tool|change your rate plan/i },
         { key: 'explained', label: 'walked through what was on the bill', pattern: /the reason (?:is|for that)|what that means|the way (?:it|that) works|this (?:charge|amount) is|that is why your/i },
         { key: 'options', label: 'laid out the plan options', pattern: /(?:we have|there are) (?:two|three|four|\d+) [a-z ]*plans|plans available|the (?:first|second|third) plan/i },
         { key: 'recommended', label: 'made a recommendation', pattern: /i(?:'?d| would) recommend|my recommendation|you might want to go with/i },

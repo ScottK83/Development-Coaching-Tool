@@ -147,7 +147,7 @@ suite('call transcript: frustration raises the empathy call', (t) => {
 
     const empathy = analysis.improvements.find((item) => item.key === 'empathy');
     t.check('empathy gap is raised to the top', analysis.improvements[0].key === 'empathy');
-    t.check('wording names the unacknowledged frustration', /frustration/.test(empathy.text));
+    t.check('wording names the unacknowledged frustration', /clearly frustrated/.test(empathy.text));
     t.check('quotes the customer, not the agent', /unacceptable|fed up/.test(empathy.quote));
     t.check('stats record the frustration', analysis.stats.customerFrustrated === true);
 });

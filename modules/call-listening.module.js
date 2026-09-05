@@ -117,7 +117,7 @@ ${transcriptSection}${buildQaSection(entry)}${buildWordChoiceSection(entry)}Feed
 What went well:
 ${entry.whatWentWell || '- None provided'}
 
-Improvement opportunities:
+What to work on next time:
 ${entry.improvementAreas || '- None provided'}
 
 Oscar / Knowledge Base URL:
