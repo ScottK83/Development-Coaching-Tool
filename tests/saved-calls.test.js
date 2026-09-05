@@ -294,3 +294,35 @@ suite('saved calls: a transcript the old cap cut short says so', (t) => {
         script.includes('Paste the original into the form and save it again'));
     t.check('the note has a style to render in', css.includes('.call-note-warn'));
 });
+
+suite('saved calls: one gesture loads a call, in both panels', (t) => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const listening = fs.readFileSync(path.join(ROOT, 'modules/call-listening.module.js'), 'utf8');
+    const css = fs.readFileSync(path.join(ROOT, 'styles-v2.css'), 'utf8');
+
+    // Two mechanisms for one intention is what had Scott click a call, watch
+    // it not carry everything over, and press a button to try again.
+    t.check('the history row is the control', listening.includes('class="call-history-open"'));
+    t.check('and carries the load action', /call-history-open[^>]*data-call-action="load"/.test(listening));
+    t.check('the standalone Load button is gone',
+        !/>Load<\/button>/.test(listening));
+    t.check('Copy Verint stays, it is a different intention', listening.includes('Copy Verint'));
+    t.check('so does Delete', listening.includes('Delete'));
+
+    // Both panels go through the guarded loader, so neither can replace unsent
+    // work without asking.
+    t.check('the history load is guarded',
+        /action === 'load'[\s\S]{0,400}loadSavedCallIntoForm\(employeeName, entryId\)/.test(script));
+    t.check('and the memory panel uses the same function',
+        /function handleAllSavedCallsClick[\s\S]{0,1400}loadSavedCallIntoForm\(employeeName, entryId\)/.test(script));
+
+    // A row that loads on click has to look like it will.
+    t.check('the row is styled as a control', css.includes('.call-history-open'));
+    t.check('with a hover state', /\.call-history-open:hover/.test(css));
+
+    // Whether a transcript came across is the thing Scott could not see, so
+    // the row says either way rather than only when there is one.
+    t.check('a row says when a transcript is missing', listening.includes("' • no transcript'"));
+    t.check('and when one is there', listening.includes("' • transcript saved'"));
+});

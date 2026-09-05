@@ -9087,7 +9087,10 @@ function resolveCallListeningHistoryContext() {
 function dispatchCallListeningHistoryAction(action, entryId) {
     if (!entryId) return;
     if (action === 'load') {
-        loadCallListeningEntryIntoForm(entryId);
+        // The guarded path, the same one the memory panel uses, so loading
+        // over unsent work asks first here too. The raw loader did not.
+        const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+        loadSavedCallIntoForm(employeeName, entryId);
     } else if (action === 'copy-verint') {
         copyCallListeningVerintSummary(entryId);
     } else if (action === 'delete') {

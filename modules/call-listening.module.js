@@ -222,20 +222,30 @@ Requirements:
         return `${entryCount} saved call listening log${entryCount === 1 ? '' : 's'} for ${employeeName}.`;
     }
 
+    /**
+     * One row, and clicking it loads the call.
+     *
+     * There used to be a Load button here as well as a clickable row in the
+     * memory panel below, so Scott clicked a call, watched it not carry
+     * everything over, and pressed a button to try again. Two mechanisms for
+     * one intention. The row is the control in both places now; Copy Verint
+     * and Delete stay, because those are different intentions.
+     */
     function buildHistoryItemHtml(entry, escapeHtml) {
         const safeEscapeHtml = typeof escapeHtml === 'function' ? escapeHtml : (value) => String(value || '');
         const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
-        const transcriptTag = entry.transcript ? ' • transcript saved' : '';
+        const transcriptTag = entry.transcript ? ' • transcript saved' : ' • no transcript';
         const moment = describeCallMoment(entry) || entry.listenedOn || '';
         return `<li class="call-history-item">
-            <div class="call-history-title">${safeEscapeHtml(moment)}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</div>
-            <div style="margin-top: 4px;"><strong>✅ Went well:</strong> ${safeEscapeHtml(entry.whatWentWell || 'N/A')}</div>
-            <div style="margin-top: 2px;"><strong>⚠️ Improve:</strong> ${safeEscapeHtml(entry.improvementAreas || 'N/A')}</div>
-            <div class="call-history-meta">Saved: ${safeEscapeHtml(createdAt)}${transcriptTag}</div>
+            <button type="button" class="call-history-open" data-call-action="load" data-entry-id="${safeEscapeHtml(entry.id)}" title="Load this call into the form">
+                <span class="call-history-title">${safeEscapeHtml(moment)}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</span>
+                <span style="display: block; margin-top: 4px;"><strong>✅ Went well:</strong> ${safeEscapeHtml(entry.whatWentWell || 'N/A')}</span>
+                <span style="display: block; margin-top: 2px;"><strong>⚠️ Improve:</strong> ${safeEscapeHtml(entry.improvementAreas || 'N/A')}</span>
+                <span class="call-history-meta" style="display: block;">Saved: ${safeEscapeHtml(createdAt)}${transcriptTag}</span>
+            </button>
             <div class="flex-row" style="margin-top: 8px;">
-                <button type="button" data-call-action="load" data-entry-id="${safeEscapeHtml(entry.id)}">Load</button>
-                <button type="button" data-call-action="copy-verint" data-entry-id="${safeEscapeHtml(entry.id)}">Copy Verint</button>
-                <button type="button" data-call-action="delete" data-entry-id="${safeEscapeHtml(entry.id)}">Delete</button>
+                <button type="button" data-call-action="copy-verint" data-entry-id="${safeEscapeHtml(entry.id)}">📝 Copy Verint</button>
+                <button type="button" data-call-action="delete" data-entry-id="${safeEscapeHtml(entry.id)}">✕ Delete</button>
             </div>
         </li>`;
     }

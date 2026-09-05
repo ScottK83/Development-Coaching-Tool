@@ -1268,6 +1268,25 @@ textarea:focus-visible {
     padding: 0;
 }
 
+/* The history row is a control, like the memory panel row. */
+.panel-section .call-history-open {
+    display: block;
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}
+
+.panel-section .call-history-open:hover {
+    background: var(--bg-surface-sunken);
+    border-color: var(--border);
+}
+
 .panel-section .call-history-item {
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--border);
