@@ -349,8 +349,11 @@
             `Last Sync: ${syncedAt}`,
             `Team Filter Week: ${teamContext.weekKey || 'none'}`,
             `Team Filter Mode: ${teamContext.isFiltering ? `${teamContext.selectedMembers.length} selected` : 'all associates'}`,
-            `Current Period Type: ${safeLoadJson('currentPeriodType') || window.currentPeriodType || 'unknown'}`,
-            `Current Period: ${window.currentPeriod || 'none'}`,
+            // currentPeriodType and currentPeriod used to live here and were
+            // removed. Both lines printed 'unknown' and 'none' in every report
+            // ever pasted, which reads as a fault rather than as a dead field.
+            `Storage Backend: ${window.DevCoachModules?.storage?.getBackendMode?.() || 'unknown'}`,
+            `Latest Weekly: ${typeof window.getLatestWeeklyKey === 'function' ? (window.getLatestWeeklyKey() || 'none') : 'none'}`,
             `Weekly Periods Loaded: ${Object.keys(window.DevCoachModules?.storage?.loadWeeklyData?.() || {}).length}`,
             `YTD Periods Loaded: ${Object.keys(window.DevCoachModules?.storage?.loadYtdData?.() || {}).length}`
         ].join('\n');

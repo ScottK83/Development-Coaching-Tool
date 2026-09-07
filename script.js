@@ -31,6 +31,12 @@
 // GLOBAL STATE
 // ============================================
 const APP_VERSION = '2026.09.07.3'; // Version: YYYY.MM.DD.NN
+// A top-level const is not a window property, and every reader of the version
+// asks window for it: the diagnostics summary, the crash reports, the sync
+// metadata. All three had been recording 'unknown' since the version moved to a
+// const. Function declarations above are on window already, which is why they
+// kept working and this did not.
+window.APP_VERSION = APP_VERSION;
 const DEBUG = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || new URLSearchParams(window.location.search).has('debug'); // Auto-enable on localhost or ?debug param
 // Sourced from modules/constants.module.js (loaded first).
 const STORAGE_PREFIX = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
