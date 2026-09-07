@@ -204,6 +204,23 @@
         { key: 'reliability',      label: 'Reliability',     lowerIsBetter: true,  formatKey: 'reliability', isTopLevel: true, weightBy: 'sum' }
     ];
 
+    /* ── What it takes to be placed ──
+       Two floors, both asking whether there is enough behind a number to place a
+       team on it.
+
+       MIN_MEASURED_FOR_STANDING mirrors center-ranking's MIN_MEASURED_FOR_SCALED.
+       A member scored on fewer than four KPIs is left out of their team's
+       standing, because their KPI score is a mean over whatever happened to be
+       populated and rises as KPIs go missing.
+
+       MIN_SCORED_FOR_RANK is the team-level version of the same question. The
+       rosters here run twelve to nineteen, so a team down to a handful of
+       complete scorecards is being placed on a sample that swings on one person.
+       Those teams keep their numbers and are shown with the reason, below the
+       placed teams, without a place. */
+    var MIN_MEASURED_FOR_STANDING = 4;
+    var MIN_SCORED_FOR_RANK = 8;
+
     /**
      * Build matchup data: groups all ranked employees by supervisor,
      * computes team averages, and determines wins per metric.
@@ -303,17 +320,43 @@
                 stats.averages[m.key] = wTotal > 0 ? wSum / wTotal : null;
             });
 
+            /* ── What counts toward a team's standing ──
+               A member's KPI score is their point total over the KPIs they were
+               actually measured on, so a member measured on two KPIs, both
+               Exceeds, scores 3.00, exactly like a member who hit all five. The
+               scale floor is 1, so losing a KPI you were about to fail raises
+               your score. Averaged by head, that hands the standing to whichever
+               team has the least data.
+
+               center-ranking already refuses to let a thin record set an
+               individual placing: MIN_MEASURED_FOR_SCALED leaves anything under
+               four measured KPIs on raw counts, which sinks it. The same floor
+               belongs here, because a record too thin to place one person is too
+               thin to place their whole team.
+
+               Only the standing is gated. The metric columns are left over every
+               member, because someone with no surveys still has a real AHT and
+               dropping it would make those columns wrong to fix a different
+               problem. */
+            var scored = members.filter(function (r) {
+                return (r.measuredCount || 0) >= MIN_MEASURED_FOR_STANDING;
+            });
+            stats.scoredCount = scored.length;
+            stats.thinCount = members.length - scored.length;
+
             // Average composite rank
-            var composites = members.map(function (r) { return r.compositeScore; }).filter(function (v) { return v !== Infinity; });
+            var composites = scored.map(function (r) { return r.compositeScore; }).filter(function (v) { return v !== Infinity; });
             stats.totalComposite = composites.length > 0
                 ? composites.reduce(function (a, b) { return a + b; }, 0) / composites.length
                 : Infinity;
 
             // Average rating
-            var ratings = members.map(function (r) { return r.ratingAverage; }).filter(function (v) { return v != null; });
+            var ratings = scored.map(function (r) { return r.ratingAverage; }).filter(function (v) { return v != null; });
             stats.avgRating = ratings.length > 0
                 ? ratings.reduce(function (a, b) { return a + b; }, 0) / ratings.length
                 : 0;
+
+            stats.rankable = stats.scoredCount >= MIN_SCORED_FOR_RANK;
 
             teamStats[name] = stats;
         });
@@ -736,17 +779,67 @@
     // Whether the arithmetic behind Avg Score is showing.
     var _showRankingDiagnostic = false;
 
+    /* Everything the table leaves out, said before the table rather than after
+       it. Each of these changes who is on top, so a reader taking the order at
+       face value is being misled by an omission rather than by a number. */
+    function _renderRankingCaveats(data, allTeams) {
+        var notes = [];
+
+        var unassigned = (data.teams && data.teams.Unassigned) || [];
+        if (unassigned.length) {
+            var names = unassigned.map(function (r) { return _escapeHtml(r.name); });
+            var shown = names.slice(0, 12).join(', ') + (names.length > 12 ? ', and ' + (names.length - 12) + ' more' : '');
+            notes.push('<strong>' + unassigned.length + ' scored associate' + (unassigned.length === 1 ? '' : 's') +
+                ' matched no supervisor</strong>, so ' + (unassigned.length === 1 ? 'their number is' : 'their numbers are') +
+                ' in none of the teams below: ' + shown + '. ' +
+                'A team is being placed on the members that did match. Assign them under Settings, Team Members.');
+        }
+
+        var thin = allTeams.reduce(function (a, t) { return a + (t.thinCount || 0); }, 0);
+        if (thin) {
+            notes.push('<strong>' + thin + ' associate' + (thin === 1 ? ' was' : 's were') +
+                ' scored on fewer than ' + MIN_MEASURED_FOR_STANDING + ' of the 5 KPIs</strong>, so ' +
+                (thin === 1 ? 'it is' : 'they are') + ' left out of the standings. ' +
+                'A KPI with no data is dropped rather than failed, which lifts a partial scorecard above a complete one. ' +
+                'The Agents column says what each team was placed on.');
+        }
+
+        var unranked = allTeams.filter(function (t) { return !t.rankable; });
+        if (unranked.length) {
+            notes.push('<strong>' + unranked.length + ' team' + (unranked.length === 1 ? ' has' : 's have') +
+                ' fewer than ' + MIN_SCORED_FOR_RANK + ' complete scorecards</strong>, so ' +
+                (unranked.length === 1 ? 'it is' : 'they are') + ' shown without a placing: ' +
+                unranked.map(function (t) { return _escapeHtml(t.name); }).join(', ') + '.');
+        }
+
+        if (!notes.length) return '';
+
+        var html = '<div style="margin: 0 0 14px 0; padding: 10px 12px; border-left: 4px solid #e65100;' +
+            ' background: rgba(230,81,0,0.08); border-radius: 0 6px 6px 0;">';
+        notes.forEach(function (n, i) {
+            html += '<p style="margin: ' + (i ? '8px' : '0') + ' 0 0 0; color: var(--text-secondary);' +
+                ' font-size: 0.82em; line-height: 1.5;">' + n + '</p>';
+        });
+        return html + '</div>';
+    }
+
     function _renderTeamRankings(data) {
         // Ordered on Avg Score, highest first. Not on avg composite rank, which
         // is what this sorted on until 55a604bc and what the column beside it
         // still reports.
-        var sortedTeams = data.teamNames
+        var allTeams = data.teamNames
             .filter(function (n) { return n !== 'Unassigned'; })
             .map(function (n) { return data.teamStats[n]; })
             .sort(function (a, b) { return (b.avgRating || 0) - (a.avgRating || 0); });
 
+        // Placed teams first, then the ones with too few complete scorecards to
+        // place. Both keep their Avg Score order inside their own group.
+        var rankedTeams = allTeams.filter(function (t) { return t.rankable; });
+        var sortedTeams = rankedTeams.concat(allTeams.filter(function (t) { return !t.rankable; }));
+
         var html = '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Power Rankings</h4>';
+        html += _renderRankingCaveats(data, allTeams);
 
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';
         html += '<thead><tr style="background: var(--bg-surface-raised); border-bottom: 2px solid var(--border);">';
@@ -768,10 +861,26 @@
             var rowBg = isMyTeam ? '#e8eaf6' : (idx % 2 === 0 ? '#fff' : '#fafafa');
             var fontWeight = isMyTeam ? 'bold' : 'normal';
 
-            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border); font-weight: ' + fontWeight + ';">';
-            html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
+            // Placed teams number from one. A team below the scorecard floor is
+            // shown in Avg Score order but never given a number, because a place
+            // is the one thing its sample cannot support.
+            var placeCell = team.rankable
+                ? '<span style="font-weight: bold;">' + (idx + 1) + '</span>'
+                : '<span style="color: var(--text-tertiary); font-size: 0.8em; font-weight: normal;">not ranked</span>';
+
+            // What the standing was actually built on, wherever that is not
+            // everybody. Left as a bare headcount when nothing was left out.
+            var agentsCell = team.thinCount
+                ? team.scoredCount + ' of ' + team.count +
+                  '<br><span style="font-size: 0.78em; color: #c62828; font-weight: normal;">' +
+                  team.thinCount + ' too thin</span>'
+                : String(team.count);
+
+            html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border); font-weight: ' + fontWeight +
+                (team.rankable ? '' : '; opacity: 0.72') + ';">';
+            html += '<td style="padding: 8px; text-align: center;">' + placeCell + '</td>';
             html += '<td style="padding: 8px;">' + (isMyTeam ? '<span style="color: #1565c0;">★ </span>' : '') + _escapeHtml(team.name) + '</td>';
-            html += '<td style="padding: 8px; text-align: center;">' + team.count + '</td>';
+            html += '<td style="padding: 8px; text-align: center;">' + agentsCell + '</td>';
             html += '<td style="padding: 8px; text-align: center;">' + (team.avgRating ? team.avgRating.toFixed(2) : '--') + '</td>';
             html += '<td style="padding: 8px; text-align: center;">' + (team.totalComposite !== Infinity ? team.totalComposite.toFixed(1) : '--') + '</td>';
 
@@ -810,10 +919,6 @@
        to the console, because the machine that needs the answer is usually the
        one without dev tools open on it. Read-only, and it recomputes nothing
        the table did not already compute. */
-
-    // Below this many measured KPIs a record is too thin to stand in for a full
-    // scorecard. Same figure center-ranking uses for the individual sort.
-    var DIAG_MEASURED_FLOOR = 4;
 
     function _diagTable(headers, rows, highlightIdx) {
         var html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.8em; margin: 0 0 16px 0;">';
@@ -857,7 +962,7 @@
                 var mc = mem.map(function (r) { return r.measuredCount || 0; });
                 var avgMc = mc.length ? mc.reduce(function (a, b) { return a + b; }, 0) / mc.length : 0;
                 var full = mc.filter(function (v) { return v >= 5; }).length;
-                var thin = mem.filter(function (r) { return (r.measuredCount || 0) < DIAG_MEASURED_FLOOR; });
+                var thin = mem.filter(function (r) { return (r.measuredCount || 0) < MIN_MEASURED_FOR_STANDING; });
                 var thinPerfect = thin.filter(function (r) { return r.ratingAverage >= 2.999; });
 
                 // The same members averaged by call volume instead of by head.
@@ -883,7 +988,7 @@
 
         html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">1. What each Avg Score is built from</h5>';
         html += _diagTable(
-            ['Team', 'Scored', 'Avg Score', 'By call volume', 'Avg Rank', 'Avg KPIs measured', 'Under ' + DIAG_MEASURED_FLOOR, 'Thin and perfect'],
+            ['Team', 'Scored', 'Avg Score', 'By call volume', 'Avg Rank', 'Avg KPIs measured', 'Under ' + MIN_MEASURED_FOR_STANDING, 'Thin and perfect'],
             teamRows.map(function (t) {
                 var thinColor = t.thinPerfect > 0 ? '#c62828' : 'var(--text-tertiary)';
 
@@ -913,7 +1018,7 @@
             }),
             0
         );
-        html += _diagNote('"Thin and perfect" counts members scoring 3.00 on fewer than ' + DIAG_MEASURED_FLOOR +
+        html += _diagNote('"Thin and perfect" counts members scoring 3.00 on fewer than ' + MIN_MEASURED_FOR_STANDING +
             ' measured KPIs. Every one of those pulls its team average to the ceiling on partial evidence. ' +
             '"By call volume" reweights the same members by the calls they actually took, the way every metric column in the table above is weighted. ' +
             'Avg Rank is built on the guarded basis that already discounts thin records, so Avg Score and Avg Rank ordering the teams differently is the two bases disagreeing out loud.');
@@ -931,7 +1036,7 @@
             html += _diagTable(
                 ['Name', 'KPI score', 'KPIs measured', 'Centre rank', 'Calls', 'Surveys'],
                 members.map(function (r) {
-                    var isThin = (r.measuredCount || 0) < DIAG_MEASURED_FLOOR;
+                    var isThin = (r.measuredCount || 0) < MIN_MEASURED_FOR_STANDING;
                     var mcCell = isThin
                         ? '<span style="color: #c62828; font-weight: bold;">' + (r.measuredCount || 0) + ' of 5</span>'
                         : (r.measuredCount || 0) + ' of 5';
@@ -1071,6 +1176,9 @@
         buildMatchupData: buildMatchupData,
         // Built without touching the DOM, so what the diagnostic reports can be
         // asserted rather than eyeballed.
-        renderRankingDiagnostic: _renderRankingDiagnostic
+        renderRankingDiagnostic: _renderRankingDiagnostic,
+        // Same reason: the placings, the coverage cells and the caveats above
+        // them are the output worth asserting, and none of it needs a document.
+        renderTeamRankings: _renderTeamRankings
     };
 })();
