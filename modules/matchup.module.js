@@ -640,6 +640,12 @@
         if (sel) sel.addEventListener('change', _onPeriodChange);
         _bindMatchupPeriodChips();
         _bindScopeButtons(container);
+
+        var diagBtn = document.getElementById('matchupDiagBtn');
+        if (diagBtn) diagBtn.addEventListener('click', function () {
+            _showRankingDiagnostic = !_showRankingDiagnostic;
+            renderMatchup();
+        });
     }
 
     function _bindScopeButtons(container) {
@@ -727,8 +733,13 @@
         return html;
     }
 
+    // Whether the arithmetic behind Avg Score is showing.
+    var _showRankingDiagnostic = false;
+
     function _renderTeamRankings(data) {
-        // Sort teams by avg composite score (lower = better), skip Unassigned
+        // Ordered on Avg Score, highest first. Not on avg composite rank, which
+        // is what this sorted on until 55a604bc and what the column beside it
+        // still reports.
         var sortedTeams = data.teamNames
             .filter(function (n) { return n !== 'Unassigned'; })
             .map(function (n) { return data.teamStats[n]; })
@@ -776,7 +787,193 @@
             html += '</tr>';
         });
 
-        html += '</tbody></table></div>';
+        html += '</tbody></table>';
+
+        html += '<div style="margin-top: 12px;">';
+        html += '<button type="button" id="matchupDiagBtn" style="padding: 5px 12px; border-radius: 6px;' +
+            ' font-size: 0.82em; cursor: pointer; border: 1px solid var(--border);' +
+            ' background: var(--bg-surface-raised); color: var(--text-secondary);">' +
+            (_showRankingDiagnostic ? 'Hide' : 'Show') + ' ranking diagnostic</button>';
+        html += '</div>';
+
+        if (_showRankingDiagnostic) html += _renderRankingDiagnostic(data);
+
+        html += '</div>';
+        return html;
+    }
+
+    /* ── Ranking diagnostic ──
+       Avg Score decides the order, and the two things that move it most are
+       invisible in the table: how many KPIs each member was actually measured
+       on, and who never matched the roster and so left their supervisor's
+       average altogether. This lays both out on the page rather than leaving it
+       to the console, because the machine that needs the answer is usually the
+       one without dev tools open on it. Read-only, and it recomputes nothing
+       the table did not already compute. */
+
+    // Below this many measured KPIs a record is too thin to stand in for a full
+    // scorecard. Same figure center-ranking uses for the individual sort.
+    var DIAG_MEASURED_FLOOR = 4;
+
+    function _diagTable(headers, rows, highlightIdx) {
+        var html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.8em; margin: 0 0 16px 0;">';
+        html += '<thead><tr style="background: var(--bg-surface);">';
+        headers.forEach(function (h, i) {
+            html += '<th style="padding: 5px 8px; border-bottom: 2px solid var(--border); text-align: ' +
+                (i === 0 ? 'left' : 'center') + '; font-weight: 600;">' + _escapeHtml(h) + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+        rows.forEach(function (cells, idx) {
+            var isHi = highlightIdx === idx;
+            html += '<tr style="background: ' + (isHi ? 'rgba(230,81,0,0.12)' : (idx % 2 === 0 ? 'transparent' : 'var(--bg-surface)')) +
+                '; border-bottom: 1px solid var(--border);' + (isHi ? ' font-weight: 600;' : '') + '">';
+            cells.forEach(function (c, i) {
+                html += '<td style="padding: 5px 8px; text-align: ' + (i === 0 ? 'left' : 'center') + ';">' + c + '</td>';
+            });
+            html += '</tr>';
+        });
+        return html + '</tbody></table>';
+    }
+
+    function _diagNote(text) {
+        return '<p style="margin: -8px 0 16px 0; color: var(--text-tertiary); font-size: 0.78em; line-height: 1.5;">' + text + '</p>';
+    }
+
+    function _renderRankingDiagnostic(data) {
+        var html = '<div style="margin-top: 12px; padding: 14px; border: 1px dashed var(--border); border-radius: 8px; background: var(--bg-surface-raised);">';
+
+        html += '<p style="margin: 0 0 14px 0; color: var(--text-secondary); font-size: 0.82em; line-height: 1.5;">' +
+            'Avg Score is a plain average of every member\'s KPI score, and a member\'s KPI score is their point total divided by the number of KPIs they were actually measured on. ' +
+            'A member measured on two KPIs, both Exceeds, scores 3.00, the same as a member who hit all five. ' +
+            'So a team can lead on Avg Score by having less data rather than better numbers. These are the inputs behind it.' +
+            '</p>';
+
+        // 1. What each team's Avg Score is actually built from.
+        var teamRows = data.teamNames
+            .filter(function (n) { return n !== 'Unassigned'; })
+            .map(function (n) {
+                var s = data.teamStats[n] || {};
+                var mem = data.teams[n] || [];
+                var mc = mem.map(function (r) { return r.measuredCount || 0; });
+                var avgMc = mc.length ? mc.reduce(function (a, b) { return a + b; }, 0) / mc.length : 0;
+                var full = mc.filter(function (v) { return v >= 5; }).length;
+                var thin = mem.filter(function (r) { return (r.measuredCount || 0) < DIAG_MEASURED_FLOOR; });
+                var thinPerfect = thin.filter(function (r) { return r.ratingAverage >= 2.999; });
+                return {
+                    name: n, avg: s.avgRating || 0, count: mem.length,
+                    avgMc: avgMc, full: full, thin: thin.length, thinPerfect: thinPerfect.length
+                };
+            })
+            .sort(function (a, b) { return b.avg - a.avg; });
+
+        html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">1. What each Avg Score is built from</h5>';
+        html += _diagTable(
+            ['Team', 'Avg Score', 'Scored', 'Avg KPIs measured', 'All 5 measured', 'Under ' + DIAG_MEASURED_FLOOR, 'Thin and perfect'],
+            teamRows.map(function (t) {
+                var thinColor = t.thinPerfect > 0 ? '#c62828' : 'var(--text-tertiary)';
+                return [
+                    _escapeHtml(t.name),
+                    t.avg.toFixed(3),
+                    String(t.count),
+                    t.avgMc.toFixed(2),
+                    t.full + ' of ' + t.count,
+                    String(t.thin),
+                    '<span style="color: ' + thinColor + '; font-weight: bold;">' + t.thinPerfect + '</span>'
+                ];
+            }),
+            0
+        );
+        html += _diagNote('"Thin and perfect" counts members scoring 3.00 on fewer than ' + DIAG_MEASURED_FLOOR +
+            ' measured KPIs. Every one of those pulls its team average to the ceiling on partial evidence.');
+
+        // 2. The leader, member by member. A high KPI score sitting beside a poor
+        // centre rank is the contradiction worth seeing, because the individual
+        // ranking already discounts thin records and this average does not.
+        var topName = teamRows.length ? teamRows[0].name : null;
+        if (topName) {
+            var members = (data.teams[topName] || []).slice().sort(function (a, b) {
+                return (b.ratingAverage || 0) - (a.ratingAverage || 0);
+            });
+            html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">2. ' +
+                _escapeHtml(topName) + ', member by member</h5>';
+            html += _diagTable(
+                ['Name', 'KPI score', 'KPIs measured', 'Centre rank', 'Calls', 'Surveys'],
+                members.map(function (r) {
+                    var isThin = (r.measuredCount || 0) < DIAG_MEASURED_FLOOR;
+                    var mcCell = isThin
+                        ? '<span style="color: #c62828; font-weight: bold;">' + (r.measuredCount || 0) + ' of 5</span>'
+                        : (r.measuredCount || 0) + ' of 5';
+                    return [
+                        _escapeHtml(r.name),
+                        (r.ratingAverage != null ? r.ratingAverage.toFixed(2) : '-'),
+                        mcCell,
+                        '#' + r.rank + ' of ' + data.totalEmployees,
+                        String(r.totalCalls || 0),
+                        String(r.surveyTotal || 0)
+                    ];
+                })
+            );
+            html += _diagNote('Centre rank is the individual ranking, which already discounts thin records. ' +
+                'A high KPI score beside a poor centre rank is the contradiction to look for.');
+        }
+
+        // 3. Scored, but carrying no supervisor label, so counted in no average.
+        var unassigned = data.teams['Unassigned'] || [];
+        html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">3. Scored but on nobody\'s team</h5>';
+        if (!unassigned.length) {
+            html += '<p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 0.82em;">' +
+                'Every scored associate carries a supervisor label, so nothing is missing from the averages above.</p>';
+        } else {
+            html += '<p style="margin: 0 0 8px 0; color: #c62828; font-size: 0.82em; line-height: 1.5;">' +
+                unassigned.length + ' scored associate' + (unassigned.length === 1 ? '' : 's') +
+                ' matched no supervisor, so they sit in nobody\'s Avg Score. ' +
+                'If these belong to one team, that team is being scored on the members that did match.</p>';
+            html += _diagTable(
+                ['Name', 'KPI score', 'KPIs measured', 'Centre rank'],
+                unassigned.slice().sort(function (a, b) { return (a.rank || 0) - (b.rank || 0); }).map(function (r) {
+                    return [
+                        _escapeHtml(r.name),
+                        (r.ratingAverage != null ? r.ratingAverage.toFixed(2) : '-'),
+                        (r.measuredCount || 0) + ' of 5',
+                        '#' + r.rank + ' of ' + data.totalEmployees
+                    ];
+                })
+            );
+        }
+
+        // 4. The roster against what the name matcher actually managed to label.
+        // A gap here is the quiet version of section 3: those people are not even
+        // in the ranking pool under a team, so no average can see them.
+        var roster = window.SUPERVISOR_ROSTER;
+        if (Array.isArray(roster) && roster.length) {
+            var sups = _getSupervisors();
+            var labelled = {};
+            Object.keys(sups).forEach(function (name) {
+                var s = sups[name];
+                if (s) labelled[s] = (labelled[s] || 0) + 1;
+            });
+            html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">4. Roster against what got matched</h5>';
+            html += _diagTable(
+                ['Supervisor', 'On roster', 'Matched to data', 'Gap'],
+                roster.map(function (t) {
+                    var got = labelled[t.supervisor] || 0;
+                    var gap = t.agents.length - got;
+                    return [
+                        _escapeHtml(t.supervisor),
+                        String(t.agents.length),
+                        String(got),
+                        gap > 0
+                            ? '<span style="color: #c62828; font-weight: bold;">' + gap + ' unmatched</span>'
+                            : '<span style="color: var(--text-tertiary);">-</span>'
+                    ];
+                })
+            );
+            html += '<p style="margin: -8px 0 0 0; color: var(--text-tertiary); font-size: 0.78em; line-height: 1.5;">' +
+                'A gap means rostered associates whose uploaded name never matched, so they carry no supervisor ' +
+                'and sit outside their team\'s Avg Score.</p>';
+        }
+
+        html += '</div>';
         return html;
     }
 
@@ -839,6 +1036,9 @@
         MATCHUP_METRICS: MATCHUP_METRICS,
         resolveMyTeamLabel: resolveMyTeamLabel,
         renderMatchup: renderMatchup,
-        buildMatchupData: buildMatchupData
+        buildMatchupData: buildMatchupData,
+        // Built without touching the DOM, so what the diagnostic reports can be
+        // asserted rather than eyeballed.
+        renderRankingDiagnostic: _renderRankingDiagnostic
     };
 })();
