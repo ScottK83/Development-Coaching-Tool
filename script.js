@@ -7944,6 +7944,10 @@ function setAppVersionLabel(statusSuffix = '') {
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 if (data?.sha) {
+                    // Kept so the diagnostics summary can report the deployed
+                    // commit rather than resolving it again, and so "Deploy"
+                    // means the same thing in both places.
+                    window.APP_DEPLOY_COMMIT = data.sha.slice(0, 7);
                     deployMarkerEl.textContent = `Deploy: ${data.sha.slice(0, 7)}`;
                 } else {
                     deployMarkerEl.textContent = `Deploy: v${APP_VERSION}`;

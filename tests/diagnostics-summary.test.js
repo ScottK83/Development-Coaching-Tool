@@ -72,6 +72,48 @@ suite('diagnostics: every line reports something that exists', (t) => {
         summary.includes('Team Filter Mode: 1 selected'));
 });
 
+suite('diagnostics: Deploy is the deployed build, not a sync artefact', (t) => {
+    // Deploy meant the deployed commit in the version label and a sync commit
+    // here, and the sync one came from GitHub-era response fields the R2 worker
+    // stopped returning. One name, one meaning, and it has to be the live one.
+    const repoSync = load(t, { APP_DEPLOY_COMMIT: '115a6a2' });
+    const summary = repoSync.buildDiagnosticsSummary();
+
+    t.check('the deployed commit shows', summary.includes('Deploy: 115a6a2'));
+    t.check('and not the placeholder', !summary.includes('Deploy: n/a'));
+});
+
+suite('diagnostics: an unresolved deploy commit says n/a rather than guessing', (t) => {
+    const summary = load(t).buildDiagnosticsSummary();
+
+    // The commit is fetched asynchronously and the fetch can fail. Saying so is
+    // right; borrowing the version number to fill the gap is not.
+    t.check('it degrades honestly', summary.includes('Deploy: n/a'));
+    t.check('and does not substitute the version', !summary.includes('Deploy: 2026.09.07.4'));
+});
+
+suite('diagnostics: what sync last wrote gets its own line', (t) => {
+    const repoSync = load(t);
+
+    repoSync.saveRepoSyncLastSuccess({
+        syncedAt: '2026-09-07T21:15:16.000Z',
+        reason: 'upload',
+        direction: 'upload',
+        snapshot: 'state/snapshots/2026-09-07.json'
+    });
+    const summary = repoSync.buildDiagnosticsSummary();
+
+    t.check('the snapshot is reported', summary.includes('Last Snapshot: state/snapshots/2026-09-07.json'));
+    t.check('it is not conflated with Deploy', !summary.includes('Deploy: state/snapshots'));
+});
+
+suite('diagnostics: a sync that recorded no snapshot says none', (t) => {
+    const repoSync = load(t);
+    repoSync.saveRepoSyncLastSuccess({ syncedAt: '2026-09-07T21:15:16.000Z', reason: 'upload', direction: 'upload' });
+
+    t.check('it reads none', repoSync.buildDiagnosticsSummary().includes('Last Snapshot: none'));
+});
+
 suite('diagnostics: no weekly upload is a fact, not a crash', (t) => {
     const summary = load(t, { getLatestWeeklyKey: () => null }).buildDiagnosticsSummary();
 

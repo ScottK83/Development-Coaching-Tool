@@ -340,13 +340,15 @@
         const syncMeta = loadRepoSyncLastSuccess();
         const getTeamSelectionContext = window.getTeamSelectionContext || (() => ({}));
         const teamContext = getTeamSelectionContext();
-        const shortCommit = String(syncMeta?.commit || '').trim().slice(0, 7) || 'n/a';
+        const deployCommit = String(window.APP_DEPLOY_COMMIT || '').trim() || 'n/a';
+        const snapshot = String(syncMeta?.snapshot || '').trim() || 'none';
         const syncedAt = syncMeta?.syncedAt ? new Date(syncMeta.syncedAt).toLocaleString() : 'none';
 
         return [
             `Version: ${window.APP_VERSION || 'unknown'}`,
-            `Deploy: ${shortCommit}`,
+            `Deploy: ${deployCommit}`,
             `Last Sync: ${syncedAt}`,
+            `Last Snapshot: ${snapshot}`,
             `Team Filter Week: ${teamContext.weekKey || 'none'}`,
             `Team Filter Mode: ${teamContext.isFiltering ? `${teamContext.selectedMembers.length} selected` : 'all associates'}`,
             // currentPeriodType and currentPeriod used to live here and were
@@ -513,7 +515,15 @@
                         saveRepoBackupAppliedAt(new Date().toISOString());
                         clearRepoSyncAutoPause();
                         repoSyncConflictPromptMutedUntil = 0;
-                        saveRepoSyncLastSuccess({ syncedAt: new Date().toISOString(), reason: 'retrieve from git', direction: 'retrieve' });
+                        saveRepoSyncLastSuccess({
+                            syncedAt: new Date().toISOString(),
+                            reason: 'retrieve from git',
+                            direction: 'retrieve',
+                            // Named on the way in as well as on the way out. A
+                            // pull that reports no snapshot is indistinguishable
+                            // from a pull that found nothing.
+                            snapshot: payload?.snapshotKey || payload?.generatedAt || ''
+                        });
 
                         // Reads through the storage module so the count reflects
                         // where the restore actually wrote. A raw localStorage read
@@ -1609,7 +1619,11 @@
             syncedAt: new Date().toISOString(),
             reason,
             direction: direction || 'upload',
-            commit: responseData?.fullBackupCommit || responseData?.jsonCommit || responseData?.csvCommit || '',
+            // fullBackupCommit, jsonCommit and csvCommit were the names the
+            // GitHub-backed worker returned. Sync writes to R2 now and the
+            // success response carries snapshotKey and generatedAt, so those
+            // three read undefined and this recorded '' on every sync.
+            snapshot: responseData?.snapshotKey || responseData?.generatedAt || '',
             backupSummary: responseData?.incomingSummary || null
         };
     }
