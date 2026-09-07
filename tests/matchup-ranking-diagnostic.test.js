@@ -30,34 +30,40 @@ const SUPERVISORS = {
     'Full Two': 'Kathy Cruz'
 };
 
-function member(name, ratingAverage, measuredCount, rank) {
-    return { name, ratingAverage, measuredCount, rank, totalCalls: 400, surveyTotal: 6 };
+function member(name, ratingAverage, measuredCount, rank, totalCalls) {
+    return { name, ratingAverage, measuredCount, rank, totalCalls, surveyTotal: 6 };
 }
 
-// Sarah's team wins on Avg Score while holding the two worst centre ranks in it,
-// which is the whole shape of the complaint.
+/* Sarah's team wins on Avg Score while holding the three worst centre ranks in
+   it, and its two perfect scores are both on two measured KPIs and almost no
+   calls. That is the whole shape of the complaint, built small enough to do the
+   arithmetic by hand: her Avg Score is 2.533 against Kathy's 2.500, and once the
+   same members are weighted by the calls they actually took she is at 1.68. */
 const SARAH = [
-    member('Thin One', 3.00, 2, 60),
-    member('Thin Two', 3.00, 2, 58),
-    member('Solid One', 1.60, 5, 55)
+    member('Thin One', 3.00, 2, 60, 120),
+    member('Thin Two', 3.00, 2, 58, 150),
+    member('Solid One', 1.60, 5, 55, 4200)
 ];
 const KATHY = [
-    member('Full One', 2.60, 5, 3),
-    member('Full Two', 2.40, 5, 8)
+    member('Full One', 2.60, 5, 3, 2000),
+    member('Full Two', 2.40, 5, 8, 2200)
 ];
-const ORPHANS = [member('Dropped Rep', 1.20, 5, 61)];
+const ORPHANS = [member('Dropped Rep', 1.20, 5, 61, 3100)];
 
 function avg(list) {
     return list.reduce((a, r) => a + r.ratingAverage, 0) / list.length;
+}
+function avgRank(list) {
+    return list.reduce((a, r) => a + r.rank, 0) / list.length;
 }
 
 const DATA = {
     teamNames: ['Sarah Gregory', 'Kathy Cruz', 'Unassigned'],
     teams: { 'Sarah Gregory': SARAH, 'Kathy Cruz': KATHY, Unassigned: ORPHANS },
     teamStats: {
-        'Sarah Gregory': { name: 'Sarah Gregory', avgRating: avg(SARAH) },
-        'Kathy Cruz': { name: 'Kathy Cruz', avgRating: avg(KATHY) },
-        Unassigned: { name: 'Unassigned', avgRating: avg(ORPHANS) }
+        'Sarah Gregory': { name: 'Sarah Gregory', avgRating: avg(SARAH), totalComposite: avgRank(SARAH) },
+        'Kathy Cruz': { name: 'Kathy Cruz', avgRating: avg(KATHY), totalComposite: avgRank(KATHY) },
+        Unassigned: { name: 'Unassigned', avgRating: avg(ORPHANS), totalComposite: avgRank(ORPHANS) }
     },
     totalEmployees: 61
 };
@@ -91,7 +97,7 @@ suite('matchup diagnostic: thin-and-perfect is counted per team', (t) => {
     // Two members at 3.00 on two KPIs each. The count has to appear against
     // Sarah and not against a team that earned its number on full scorecards.
     const sarahRow = html.slice(html.indexOf('Sarah Gregory'), html.indexOf('Kathy Cruz'));
-    t.check('Sarah carries two thin perfect scores', sarahRow.includes('>2</span>'));
+    t.check('Sarah carries two thin perfect scores', sarahRow.includes('font-weight: bold;">2</span>'));
     t.check('the column is explained rather than left as a number',
         html.includes('Thin and perfect') && html.includes('partial evidence'));
     t.check('the floor it uses is stated', html.includes('fewer than 4'));
@@ -139,4 +145,34 @@ suite('matchup diagnostic: names are escaped', (t) => {
 
     t.check('the tag does not survive', !html.includes('<img src=x'));
     t.check('it is escaped instead', html.includes('&lt;img src=x'));
+});
+
+suite('matchup diagnostic: the call-weighted score is shown beside the headcount one', (t) => {
+    const html = load(t);
+    const sarahRow = html.slice(html.indexOf('Sarah Gregory'), html.indexOf('Kathy Cruz'));
+    const kathyRow = html.slice(html.indexOf('Kathy Cruz'));
+
+    // Sarah's two perfect scores came off 270 calls between them while her one
+    // weak member took 4,200. Weighted by the work her customers actually met,
+    // the team is at 1.685 rather than 2.533.
+    t.check('the headcount score is there', sarahRow.includes('2.533'));
+    t.check('and the call-weighted one beside it', sarahRow.includes('1.685'));
+    t.check('the gap is stated rather than left to be subtracted', sarahRow.includes('(0.85 lower)'));
+
+    // Kathy's volume is spread evenly, so hers barely moves and must not be
+    // flagged. A warning on every row is a warning on none.
+    t.check('an evenly loaded team is not flagged', !kathyRow.includes('lower)'));
+    t.check('the column is explained', html.includes('By call volume') && html.includes('the calls they actually took'));
+});
+
+suite('matchup diagnostic: the two bases are shown disagreeing', (t) => {
+    const html = load(t);
+    const sarahRow = html.slice(html.indexOf('Sarah Gregory'), html.indexOf('Kathy Cruz'));
+
+    // Top of the table on Avg Score, bottom of the centre on Avg Rank. Avg Rank
+    // is built on the guarded basis that already discounts thin records, so the
+    // two ordering the teams differently is the defect visible on screen.
+    t.check('Sarah leads on Avg Score', html.indexOf('Sarah Gregory') < html.indexOf('Kathy Cruz'));
+    t.check('while her Avg Rank is the worse of the two', sarahRow.includes('57.7'));
+    t.check('the disagreement is spelled out', html.includes('the two bases disagreeing out loud'));
 });

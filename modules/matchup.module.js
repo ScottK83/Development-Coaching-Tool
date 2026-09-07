@@ -859,24 +859,54 @@
                 var full = mc.filter(function (v) { return v >= 5; }).length;
                 var thin = mem.filter(function (r) { return (r.measuredCount || 0) < DIAG_MEASURED_FLOOR; });
                 var thinPerfect = thin.filter(function (r) { return r.ratingAverage >= 2.999; });
+
+                // The same members averaged by call volume instead of by head.
+                // Every metric column in the table above is weighted this way and
+                // the score that orders the rows is not, so the two disagreeing is
+                // the disagreement to see.
+                var calls = 0, weighted = 0;
+                mem.forEach(function (r) {
+                    var c = r.totalCalls || 0;
+                    if (c <= 0 || r.ratingAverage == null) return;
+                    calls += c;
+                    weighted += r.ratingAverage * c;
+                });
+
                 return {
                     name: n, avg: s.avgRating || 0, count: mem.length,
-                    avgMc: avgMc, full: full, thin: thin.length, thinPerfect: thinPerfect.length
+                    avgMc: avgMc, full: full, thin: thin.length, thinPerfect: thinPerfect.length,
+                    callWeighted: calls > 0 ? weighted / calls : null,
+                    avgRank: (s.totalComposite != null && isFinite(s.totalComposite)) ? s.totalComposite : null
                 };
             })
             .sort(function (a, b) { return b.avg - a.avg; });
 
         html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">1. What each Avg Score is built from</h5>';
         html += _diagTable(
-            ['Team', 'Avg Score', 'Scored', 'Avg KPIs measured', 'All 5 measured', 'Under ' + DIAG_MEASURED_FLOOR, 'Thin and perfect'],
+            ['Team', 'Scored', 'Avg Score', 'By call volume', 'Avg Rank', 'Avg KPIs measured', 'Under ' + DIAG_MEASURED_FLOOR, 'Thin and perfect'],
             teamRows.map(function (t) {
                 var thinColor = t.thinPerfect > 0 ? '#c62828' : 'var(--text-tertiary)';
+
+                // Flag the gap rather than leaving two numbers side by side for
+                // someone to subtract. A team whose score falls once its own call
+                // volume is taken into account is being carried by its quiet seats.
+                var cw = '-';
+                if (t.callWeighted != null) {
+                    var drop = t.avg - t.callWeighted;
+                    cw = t.callWeighted.toFixed(3);
+                    if (drop >= 0.1) {
+                        cw = '<span style="color: #c62828; font-weight: bold;">' + cw + '</span>' +
+                            '<span style="color: var(--text-tertiary); font-size: 0.9em;"> (' + drop.toFixed(2) + ' lower)</span>';
+                    }
+                }
+
                 return [
                     _escapeHtml(t.name),
-                    t.avg.toFixed(3),
                     String(t.count),
+                    t.avg.toFixed(3),
+                    cw,
+                    t.avgRank != null ? t.avgRank.toFixed(1) : '-',
                     t.avgMc.toFixed(2),
-                    t.full + ' of ' + t.count,
                     String(t.thin),
                     '<span style="color: ' + thinColor + '; font-weight: bold;">' + t.thinPerfect + '</span>'
                 ];
@@ -884,7 +914,9 @@
             0
         );
         html += _diagNote('"Thin and perfect" counts members scoring 3.00 on fewer than ' + DIAG_MEASURED_FLOOR +
-            ' measured KPIs. Every one of those pulls its team average to the ceiling on partial evidence.');
+            ' measured KPIs. Every one of those pulls its team average to the ceiling on partial evidence. ' +
+            '"By call volume" reweights the same members by the calls they actually took, the way every metric column in the table above is weighted. ' +
+            'Avg Rank is built on the guarded basis that already discounts thin records, so Avg Score and Avg Rank ordering the teams differently is the two bases disagreeing out loud.');
 
         // 2. The leader, member by member. A high KPI score sitting beside a poor
         // centre rank is the contradiction worth seeing, because the individual
