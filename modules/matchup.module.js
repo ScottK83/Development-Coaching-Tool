@@ -189,7 +189,89 @@
         if (!available.length) return;
         _selectedPeriodKey = available[0].key;
         _selectedPeriodSource = available[0].source;
+        // A scope with fifty weeks in it opens collapsed, or switching to
+        // Weekly dumps four lines of chips on someone who wanted the newest.
+        _scopeChipsExpanded = false;
         renderMatchup();
+    }
+
+    /* ── Which period, inside the scope ──
+       The scope buttons jump to the newest of a kind, which answers "how is this
+       month going" and not "how did June go". This is the row that answers the
+       second one: every period in the active scope, newest first, so a month or
+       a week is one click instead of a hunt through a dropdown holding every
+       upload on file.
+
+       Weeks run past fifty, so the row shows the recent ones and offers the rest
+       rather than wrapping over four lines. */
+    var SCOPE_CHIPS_VISIBLE = 10;
+    var _scopeChipsExpanded = false;
+
+    var SCOPE_PERIOD_LABEL = { ytd: 'File:', month: 'Month:', week: 'Week:' };
+
+    function _renderScopePeriods() {
+        var scopeKey = _scopeOfPeriod(_selectedPeriodKey);
+        if (!scopeKey) return '';
+
+        var periods = _periodsForScope(scopeKey);
+        // One option is not a choice, and a row holding a single chip reads like
+        // something failed to load.
+        if (periods.length < 2) return '';
+
+        var shown = periods;
+        var hidden = 0;
+        if (!_scopeChipsExpanded && periods.length > SCOPE_CHIPS_VISIBLE) {
+            shown = periods.slice(0, SCOPE_CHIPS_VISIBLE);
+            hidden = periods.length - SCOPE_CHIPS_VISIBLE;
+        }
+
+        var html = '<div style="margin-bottom: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">';
+        html += '<span style="font-weight: 600; color: var(--text-secondary); font-size: 0.85em; margin-right: 2px;">' +
+            (SCOPE_PERIOD_LABEL[scopeKey] || 'Period:') + '</span>';
+
+        shown.forEach(function (period) {
+            var on = period.key === _selectedPeriodKey;
+            // "September (rebuilt from 4 weeks)" is the dropdown's job. A chip
+            // wants the name of the month, with the rest on hover.
+            var short = String(period.label).split(' (')[0];
+            html += '<button type="button" class="mu-scope-period"' +
+                ' data-mu-period="' + _escapeHtml(period.key + '||' + (period.source || '')) + '"' +
+                ' title="' + _escapeHtml(period.label + ', ' + period.count + ' associates') + '"' +
+                ' style="padding: 4px 11px; border-radius: 999px; font-size: 0.82em; font-weight: 600; cursor: pointer;' +
+                ' border: 1px solid ' + (on ? '#e65100' : 'var(--border)') + ';' +
+                ' background: ' + (on ? 'rgba(230,81,0,0.12)' : 'var(--bg-surface-raised)') + ';' +
+                ' color: ' + (on ? '#e65100' : 'var(--text-secondary)') + ';">' +
+                _escapeHtml(short) + '</button>';
+        });
+
+        if (hidden > 0 || _scopeChipsExpanded) {
+            html += '<button type="button" id="muScopeMore"' +
+                ' style="padding: 4px 11px; border-radius: 999px; font-size: 0.82em; cursor: pointer;' +
+                ' border: 1px dashed var(--border); background: transparent; color: var(--text-tertiary);">' +
+                (hidden > 0 ? 'Show ' + hidden + ' more' : 'Show fewer') + '</button>';
+        }
+
+        return html + '</div>';
+    }
+
+    function _bindScopePeriodButtons(container) {
+        if (!container || !container.querySelectorAll) return;
+        Array.prototype.forEach.call(container.querySelectorAll('.mu-scope-period'), function (btn) {
+            btn.addEventListener('click', function () {
+                var parts = String(btn.getAttribute('data-mu-period') || '').split('||');
+                _selectedPeriodKey = parts[0];
+                _selectedPeriodSource = parts[1] || '';
+                renderMatchup();
+            });
+        });
+
+        var more = document.getElementById('muScopeMore');
+        if (more) {
+            more.addEventListener('click', function () {
+                _scopeChipsExpanded = !_scopeChipsExpanded;
+                renderMatchup();
+            });
+        }
     }
 
     // Metric definitions for matchup comparison
@@ -629,7 +711,7 @@
             var _why = _onlyMine
                 ? 'This period only has <strong>' + data.totalEmployees + ' associates</strong> in it, and they are all on one team, so there is nothing to match against. Pick a period covering the whole centre using the scope buttons above.'
                 : 'No supervisors are assigned. Go to <strong>Settings &gt; Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.';
-            container.innerHTML = _renderScopeSelector() + _renderPeriodSelector(currentSelectValue) +
+            container.innerHTML = _renderScopeSelector() + _renderScopePeriods() + _renderPeriodSelector(currentSelectValue) +
                 '<div style="padding: 30px; text-align: center;">' +
                 '<h3 style="color: #e65100;">🥊 Team Matchup</h3>' +
                 '<p style="color: var(--text-secondary); max-width: 560px; margin: 0 auto;">' + _why + '</p>' +
@@ -640,13 +722,15 @@
             _bindMatchupPeriodChips();
             // Bound here too, or the buttons the message points at do nothing.
             _bindScopeButtons(container);
+            _bindScopePeriodButtons(container);
             return;
         }
 
         var html = '';
 
-        // Scope buttons, then the full period list
+        // Scope buttons, the periods inside that scope, then the full period list
         html += _renderScopeSelector();
+        html += _renderScopePeriods();
         html += _renderPeriodSelector(currentSelectValue);
 
         // Header
@@ -683,6 +767,7 @@
         if (sel) sel.addEventListener('change', _onPeriodChange);
         _bindMatchupPeriodChips();
         _bindScopeButtons(container);
+        _bindScopePeriodButtons(container);
 
         var diagBtn = document.getElementById('matchupDiagBtn');
         if (diagBtn) diagBtn.addEventListener('click', function () {
@@ -1179,6 +1264,15 @@
         renderRankingDiagnostic: _renderRankingDiagnostic,
         // Same reason: the placings, the coverage cells and the caveats above
         // them are the output worth asserting, and none of it needs a document.
-        renderTeamRankings: _renderTeamRankings
+        renderTeamRankings: _renderTeamRankings,
+        // Same reason: which periods a scope offers, and what it does with fifty
+        // of them, is worth asserting and needs no DOM.
+        renderScopePeriods: _renderScopePeriods,
+        setSelectedPeriodForTest: function (key, source) {
+            _selectedPeriodKey = key;
+            _selectedPeriodSource = source || '';
+            _scopeChipsExpanded = false;
+        },
+        expandScopeChipsForTest: function () { _scopeChipsExpanded = true; }
     };
 })();
