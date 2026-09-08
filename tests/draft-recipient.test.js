@@ -127,7 +127,13 @@ suite('draft recipient: wiring', (t) => {
     t.check('the outlook section exists', Boolean(outlookTag));
     t.check('it is no longer hidden', !/display:\s*none/.test(outlookTag[0]));
     t.check('its button starts disabled', /id="generateCallListeningOutlookBtn"[^>]*disabled/.test(html));
-    t.check('the button explains why it is disabled', script.includes('Paste the message from Copilot first'));
+    t.check('the button explains why it is disabled',
+        /outlookBtn\.title = hasContent \? '' : '[^']+'/.test(script));
+    // It used to say "Paste the message from Copilot first", which stopped
+    // being true once the app could write the message itself. A disabled
+    // button that names the wrong way in is worse than one that says nothing.
+    t.check('and does not name Copilot as the only way in',
+        !/Paste the message from Copilot first/.test(script));
 
     // 3. The To: field.
     t.check('the recipient input exists', html.includes('id="callListeningRecipient"'));

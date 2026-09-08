@@ -8396,6 +8396,18 @@ function scoreCallListeningQa(transcript, associateName, analysis) {
     });
 }
 
+/**
+ * What a folded panel says while it is still folded.
+ *
+ * These three sit below the email now and open only when asked for, so the
+ * summary line is all most readings of them get. A fold that does not say
+ * what is inside it is a fold nobody opens.
+ */
+function setCallFoldCount(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || '';
+}
+
 function renderCallQaScorecard(transcript, associateName, analysis) {
     const panel = document.getElementById('callQaPanel');
     const results = document.getElementById('callQaResults');
@@ -8406,11 +8418,20 @@ function renderCallQaScorecard(transcript, associateName, analysis) {
 
     if (!html) {
         panel.style.display = 'none';
+        setCallFoldCount('callQaCount', '');
         return null;
     }
 
     results.innerHTML = html;
     panel.style.display = 'block';
+
+    // The opportunity count is the number worth seeing folded. "22 answered"
+    // says the form ran; "3 opportunities" says whether to open it.
+    const counts = qa?.counts || {};
+    const answered = (counts.met || 0) + (counts.opportunity || 0) + (counts.unknown || 0);
+    setCallFoldCount('callQaCount', counts.opportunity
+        ? `${answered} answered, ${counts.opportunity} opportunit${counts.opportunity === 1 ? 'y' : 'ies'}`
+        : `${answered} answered, nothing flagged`);
     return qa;
 }
 
@@ -8472,11 +8493,18 @@ function renderCallWordChoicePanel(transcript, associateName, analysis) {
 
     if (!html) {
         panel.style.display = 'none';
+        setCallFoldCount('callWordChoiceCount', '');
         return null;
     }
 
     results.innerHTML = html;
     panel.style.display = 'block';
+
+    const totals = scan?.totals || {};
+    const scored = (totals.positiveCount || 0) + (totals.negativeCount || 0);
+    setCallFoldCount('callWordChoiceCount', scored
+        ? `${scored} scored phrase${scored === 1 ? '' : 's'} she said`
+        : 'no scored phrases in this one');
     return scan;
 }
 
@@ -8674,11 +8702,14 @@ function renderCallMetricCoachPanel(transcript, associateName, analysis) {
 
     if (!callMetricBriefs.length) {
         panel.style.display = 'none';
+        setCallFoldCount('callMetricCount', '');
         callMetricSelectedKey = '';
         callMetricCallMoments = [];
         callMetricLedgerCallName = '';
         return;
     }
+
+    setCallFoldCount('callMetricCount', `${callMetricBriefs.length} metric${callMetricBriefs.length === 1 ? '' : 's'} these calls can speak to`);
 
     const bridge = window.DevCoachModules.callCoachingBridge;
     chips.innerHTML = bridge.buttonsHtml(callMetricBriefs, escapeHtml);
@@ -9317,6 +9348,54 @@ function refreshCallListeningRecipient() {
     }
 }
 
+/**
+ * Writes the email from the notes already on the form.
+ *
+ * The round trip this replaces was: generate a prompt, copy it, switch to
+ * Copilot, paste, wait, copy the answer, switch back, paste again. Four
+ * clipboard operations and an app switch to send words that were already
+ * typed into the boxes above.
+ *
+ * Same destination as the metric composer, so there is one send box and one
+ * way in and out of it.
+ */
+function writeCallFeedbackEmail() {
+    const draft = getCallListeningDraftFromForm();
+    if (!validateCallListeningDraft(draft)) return;
+
+    const compose = window.DevCoachModules?.callListening?.buildCallFeedbackMessage;
+    if (typeof compose !== 'function') {
+        showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
+
+    const message = compose(draft, { getEmployeeNickname });
+    if (!message) {
+        showToast('⚠️ Add a note in what went well or what to work on first.', 3000);
+        return;
+    }
+
+    const body = document.getElementById('callListeningOutlookBody');
+    const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
+    if (!body) return;
+
+    // Never over the top of work without asking. A supervisor who has edited
+    // the draft, or pasted one back from Copilot, should not lose it to a
+    // stray click on the button that wrote it.
+    if (body.value.trim() && body.value.trim() !== message.trim()) {
+        if (!window.confirm('There is already a message in the send box.\n\nOK to replace it with a fresh draft from your notes.\nCancel to keep what is there.')) {
+            return;
+        }
+    }
+
+    body.value = message;
+    if (outlookBtn) updateCallListeningOutlookButtonState(body, outlookBtn);
+    body.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const note = window.DevCoachModules?.callListening?.describeCallFeedbackMessage?.(draft) || '';
+    showToast(`✍️ Email written. ${note} Read it over before you send.`.trim(), 5000);
+}
+
 function generateCallListeningOutlookEmail() {
     const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const callDate = (document.getElementById('callListeningDate')?.value || '').trim();
@@ -9767,8 +9846,10 @@ function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
     outlookBtn.style.opacity = hasContent ? '1' : '0.6';
     outlookBtn.style.cursor = hasContent ? 'pointer' : 'not-allowed';
     // The panel is visible from the start now, so the button has to say why it
-    // is not usable yet rather than just looking dim.
-    outlookBtn.title = hasContent ? '' : 'Paste the message from Copilot first';
+    // is not usable yet rather than just looking dim. It used to name Copilot
+    // as the only way to fill the box, which stopped being true once the app
+    // could write the message itself.
+    outlookBtn.title = hasContent ? '' : 'Write the email from your notes, or paste one in, first';
 }
 
 function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
@@ -9785,6 +9866,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('showAllSavedCallsBtn'), 'click', toggleAllSavedCalls);
     bindElementOnce(document.getElementById('allSavedCalls'), 'click', handleAllSavedCallsClick);
     bindElementOnce(document.getElementById('writeMetricMessageBtn'), 'click', writeCallMetricMessage);
+    bindElementOnce(document.getElementById('writeCallFeedbackEmailBtn'), 'click', writeCallFeedbackEmail);
     bindElementOnce(document.getElementById('generateMetricCoachPromptBtn'), 'click', generateCallMetricCoachPrompt);
     bindElementOnce(document.getElementById('copyMetricCoachBtn'), 'click', copySelectedCallMetricRead);
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));

@@ -182,6 +182,225 @@ Requirements:
         return `Call Listening Feedback - ${preferredName}${callDate ? ` - ${callDate}` : ''}`;
     }
 
+    // ============================================
+    // WRITING THE EMAIL HERE
+    // ============================================
+    //
+    // The five feedback fields had exactly one consumer, the Copilot prompt
+    // above. So emailing an associate meant generating a prompt, copying it,
+    // leaving the app, pasting, waiting, copying the answer, coming back and
+    // pasting again. Four clipboard operations and an app switch to send words
+    // that were already typed into the form.
+    //
+    // Nothing in that round trip needed a model. The supervisor did the
+    // listening and wrote the notes. What was outstanding was an opening line,
+    // an order and a close, and those are decidable from the entry.
+    //
+    // It adds no findings of its own. Every point in the message came out of
+    // the two note fields, which is the same rule the prompt gives Copilot and
+    // the reason this can be sent without being reread against the call.
+    //
+    // Manager notes are deliberately not in it. That field asks for "tone and
+    // context notes for how you want this communicated", which is guidance to
+    // whoever writes the message rather than something the associate should
+    // read. Pasting it in would put "go easy on her, she has had a rough week"
+    // in front of her. The caller is told it was left out rather than finding
+    // out by reading the draft.
+
+    const NOTE_BULLET = /^\s*(?:[-*•·]|\d+[.)])\s+/;
+
+    /**
+     * A note field split into the line that opens it and the points under it.
+     *
+     * Analyze writes these fields as a headline followed by "- " bullets, and
+     * a supervisor typing over the top writes whatever they like, so both
+     * shapes have to come out the same way. A wrapped line under a bullet
+     * belongs to that bullet rather than starting a new one.
+     */
+    function splitNote(text) {
+        const lines = String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        const lead = [];
+        const bullets = [];
+
+        lines.forEach((line) => {
+            if (NOTE_BULLET.test(line)) {
+                bullets.push(line.replace(NOTE_BULLET, '').trim());
+                return;
+            }
+            if (bullets.length) {
+                bullets[bullets.length - 1] = `${bullets[bullets.length - 1]} ${line}`.trim();
+                return;
+            }
+            lead.push(line);
+        });
+
+        // Notes with no bullets at all are still points. One paragraph of
+        // prose is one thing said, and dropping it because it had no dash in
+        // front of it would lose the whole note.
+        if (!bullets.length && lead.length > 1) {
+            return { lead: lead[0], bullets: lead.slice(1) };
+        }
+        return { lead: lead.join(' '), bullets };
+    }
+
+    function noteCount(note) {
+        return note.bullets.length || (note.lead ? 1 : 0);
+    }
+
+    /** Ends a line the way a person would, without doubling the stop. */
+    function sentence(text) {
+        const trimmed = String(text || '').trim();
+        if (!trimmed) return '';
+        return /[.!?:]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+    }
+
+    function lowerFirst(text) {
+        const trimmed = String(text || '').trim();
+        if (!trimmed) return '';
+        // Only a plain capital. Lowering "APS" or "Oscar" would be wrong.
+        if (/^[A-Z][a-z]/.test(trimmed)) return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+        return trimmed;
+    }
+
+    /**
+     * How the message should carry, from the balance of the notes.
+     *
+     * A call where the strengths outnumber the coaching points has to read as
+     * a well earned pat on the back with a couple of refinements, not as a
+     * correction with some praise stapled to the front. Getting this backwards
+     * is the difference between a message that lands and one that stings.
+     */
+    function toneFor(wellCount, workCount) {
+        if (!workCount && wellCount) return 'clean';
+        if (!wellCount && workCount) return 'work';
+        if (wellCount > workCount) return 'strong';
+        if (workCount > wellCount) return 'mixed';
+        return 'even';
+    }
+
+    const OPENERS = {
+        clean: 'It was a good listen and there is nothing I need you to change.',
+        strong: 'It was a strong call, and there are a couple of things worth tightening.',
+        even: 'There was a lot in it I liked, and a couple of things I want to go through with you.',
+        mixed: 'There are things in there that worked, and a few I want to go through with you.',
+        work: 'There are a few things I want to go through with you.'
+    };
+
+    const CLOSERS = {
+        clean: 'Keep doing what you did on this one.',
+        strong: 'Nothing here is a concern. Keep going.',
+        even: 'Have a think about those and come and find me if you want to talk any of it through.',
+        mixed: 'Have a think about those and come and find me if you want to talk any of it through.',
+        work: 'Come and find me if you want to talk any of it through.'
+    };
+
+    /**
+     * The email, written from what is already on the form.
+     *
+     * Pure: entry in, text out, so it can be shown before it is sent and
+     * tested without a browser.
+     */
+    function buildCallFeedbackMessage(entry, options = {}) {
+        const record = entry || {};
+        const well = splitNote(record.whatWentWell);
+        const work = splitNote(record.improvementAreas);
+
+        const wellCount = noteCount(well);
+        const workCount = noteCount(work);
+        if (!wellCount && !workCount) return '';
+
+        const nickname = typeof options.getEmployeeNickname === 'function'
+            ? options.getEmployeeNickname(record.employeeName)
+            : '';
+        const fullName = String(record.employeeName || '').trim();
+        const name = String(nickname || '').trim() || fullName.split(/\s+/)[0] || '';
+
+        const tone = toneFor(wellCount, workCount);
+        const moment = describeCallMoment(record);
+        const lines = [];
+
+        lines.push(name ? `Hi ${name},` : 'Hi,');
+        lines.push('');
+
+        // Which call, in the opening line. She takes dozens a week, so
+        // feedback that does not say which one is feedback she cannot check.
+        const opening = moment
+            ? `I listened back to the call you took on ${moment}.`
+            : 'I listened back to one of your recent calls.';
+        lines.push(`${opening} ${OPENERS[tone]}`);
+
+        if (wellCount) {
+            lines.push('');
+            lines.push(well.lead
+                ? sentence(well.lead)
+                : 'Here is what stood out:');
+            if (well.bullets.length) {
+                lines.push('');
+                well.bullets.forEach((point) => lines.push(`- ${sentence(point)}`));
+            }
+        }
+
+        if (workCount) {
+            lines.push('');
+            // Framed forward. The same point reads as a verdict in the past
+            // tense and as something to try in the future tense, and only one
+            // of those is worth sending.
+            lines.push(work.lead
+                ? sentence(work.lead)
+                : (wellCount
+                    ? 'For next time:'
+                    : 'Here is what I want you to work on:'));
+            if (work.bullets.length) {
+                lines.push('');
+                work.bullets.forEach((point) => lines.push(`- ${sentence(point)}`));
+            }
+        }
+
+        // Anything the supervisor wanted included, in their own words.
+        const relevant = String(record.relevantInfo || '').trim();
+        if (relevant) {
+            lines.push('');
+            lines.push(sentence(relevant));
+        }
+
+        const oscar = String(record.oscarUrl || '').trim();
+        if (oscar) {
+            lines.push('');
+            lines.push(`There is more on this here if you want it: ${oscar}`);
+        }
+
+        lines.push('');
+        lines.push(CLOSERS[tone]);
+
+        return lines.join('\n');
+    }
+
+    /**
+     * What the caller should say about a draft it just wrote.
+     *
+     * The counts are worth saying out loud: a supervisor who typed four points
+     * and got three back should be able to see that immediately rather than
+     * by counting the draft.
+     */
+    function describeCallFeedbackMessage(entry) {
+        const record = entry || {};
+        const wellCount = noteCount(splitNote(record.whatWentWell));
+        const workCount = noteCount(splitNote(record.improvementAreas));
+        const parts = [];
+
+        if (wellCount) parts.push(`${wellCount} thing${wellCount === 1 ? '' : 's'} that went well`);
+        if (workCount) parts.push(`${workCount} to work on`);
+
+        let text = parts.length
+            ? `Written from your notes: ${parts.join(' and ')}.`
+            : 'Nothing in the notes to write from yet.';
+
+        if (String(record.managerNotes || '').trim()) {
+            text += ' Your manager notes are guidance for the wording, so they are not in the draft.';
+        }
+        return text;
+    }
+
     function generateOutlookDraft(options = {}) {
         const employeeName = String(options.employeeName || '').trim();
         const callDate = String(options.callDate || '').trim();
@@ -189,7 +408,7 @@ Requirements:
         const showToast = typeof options.showToast === 'function' ? options.showToast : () => {};
 
         if (!bodyText) {
-            showToast('⚠️ Paste the Copilot-generated email content first.', 3000);
+            showToast('⚠️ Write the email from your notes first, or paste one in.', 3000);
             return { ok: false, reason: 'missing-body' };
         }
 
@@ -257,6 +476,9 @@ Requirements:
         copyPromptAndOpenCopilot,
         buildOutlookSubject,
         generateOutlookDraft,
+        buildCallFeedbackMessage,
+        describeCallFeedbackMessage,
+        splitNote,
         buildHistorySummaryText,
         buildHistoryItemHtml
     };
