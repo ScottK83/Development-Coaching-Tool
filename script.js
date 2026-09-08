@@ -9091,14 +9091,14 @@ function showTranscriptPasteDiagnosis() {
 
     const groupList = report.groups.length
         ? '<ul style="margin: var(--space-2) 0 0 var(--space-4);">'
-            + report.groups.map((group) => '<li><code>' + safeEscapeHtml(group.key || '(none)') + '</code>, '
+            + report.groups.map((group) => '<li><code>' + escapeHtml(group.key || '(none)') + '</code>, '
                 + group.characters + ' characters</li>').join('')
             + '</ul>'
         : '';
 
     host.className = report.ok ? 'call-note call-note-success' : 'call-note';
     host.innerHTML = '<strong>' + (report.ok ? 'The speakers were labelled.' : 'The speakers were not labelled.') + '</strong>'
-        + '<p>' + safeEscapeHtml(report.reason) + '</p>'
+        + '<p>' + escapeHtml(report.reason) + '</p>'
         + '<p style="margin-top: var(--space-2);">'
         + report.bytes + ' characters of markup, ' + report.lines + ' lines, '
         + report.groups.length + ' style ' + (report.groups.length === 1 ? 'group' : 'groups') + ', '

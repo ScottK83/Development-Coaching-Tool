@@ -39,6 +39,24 @@
 
     function clearDebugEntries(options = {}) {
         debugState.entries = [];
+
+        // Clear both logs or clear neither. The panel now shows the error
+        // monitor's entries too, so wiping only this module's would leave the
+        // pane looking untouched and read as a button that does nothing.
+        // Only on an explicit clear: the day rollover below is housekeeping on
+        // this module's own log and has no business dropping the other one.
+        if (options.removeStorage) {
+            try {
+                const prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+                localStorage.removeItem(prefix + 'errorLog');
+                localStorage.removeItem(prefix + 'lastError');
+                const monitor = window.DevCoachModules?.errorMonitor || window.errorMonitor;
+                if (monitor && typeof monitor.clearLogs === 'function') monitor.clearLogs();
+            } catch (error) {
+                console.error('Failed to clear the error monitor log:', error);
+            }
+        }
+
         if (options.removeStorage) {
             try {
                 localStorage.removeItem(DEBUG_LOG_STORAGE_KEY);
@@ -245,7 +263,7 @@
         ensureFreshDebugLog();
         return {
             snapshot: buildDebugSnapshot(),
-            errors: debugState.entries
+            errors: collectAllErrors()
         };
     }
 
@@ -283,11 +301,65 @@
             localStorage: snapshot.localStorage
         }, null, 2);
 
-        if (!debugState.entries.length) {
+        const entries = collectAllErrors();
+        if (!entries.length) {
             errEl.textContent = 'No errors captured yet.';
         } else {
-            errEl.textContent = JSON.stringify(debugState.entries.slice().reverse(), null, 2);
+            errEl.textContent = JSON.stringify(entries, null, 2);
         }
+    }
+
+    /**
+     * Everything that caught an error, not just this module's own listener.
+     *
+     * There are two logs. This module keeps one, and error-monitor keeps a
+     * fuller one with the stack and the context on it, plus the lastError
+     * convenience record. The panel only ever rendered the first, while the
+     * toast that sends somebody here is raised by the second. So an error
+     * could be captured, announced, and still leave this pane reading "No
+     * errors captured yet", which is the worst of both: told to look, nothing
+     * to find, and no way to tell whether the tool or the report was wrong.
+     *
+     * Merged newest first and deduplicated on timestamp and message, since a
+     * window error is genuinely seen by both listeners and should be shown
+     * once. Reading the other log is deliberately defensive: it is somebody
+     * else's storage and a panel for diagnosing faults must not fail on one.
+     */
+    function collectAllErrors() {
+        const merged = [];
+        const seen = {};
+
+        const add = (entry, source) => {
+            if (!entry || typeof entry !== 'object') return;
+            const stamp = String(entry.timestamp || '');
+            const message = String(entry.message || '');
+            const key = stamp + '|' + message;
+            if (seen[key]) return;
+            seen[key] = true;
+            merged.push(Object.assign({ source }, entry));
+        };
+
+        debugState.entries.forEach((entry) => add(entry, 'debug'));
+
+        try {
+            const prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
+            const raw = localStorage.getItem(prefix + 'errorLog');
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (Array.isArray(parsed)) parsed.forEach((entry) => add(entry, 'monitor'));
+
+            const lastRaw = localStorage.getItem(prefix + 'lastError');
+            const last = lastRaw ? JSON.parse(lastRaw) : null;
+            if (last && typeof last === 'object') add(last, 'lastError');
+        } catch (error) {
+            merged.push({
+                source: 'debug',
+                timestamp: new Date().toISOString(),
+                type: 'error',
+                message: 'The error monitor log could not be read: ' + (error?.message || error)
+            });
+        }
+
+        return merged.sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
     }
 
     // ============================================
@@ -318,6 +390,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.debug = {
         addDebugEntry,
+        collectAllErrors,
         clearDebugEntries,
         installDebugListeners,
         getPeriodTypeCounts,
