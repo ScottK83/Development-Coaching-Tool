@@ -816,9 +816,7 @@
 
     function loadTeamMembers() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'myTeamMembers';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : {};
+            return readStore('myTeamMembers') ?? {};
         } catch (error) {
             console.error('Error loading team members:', error);
             return {};
@@ -827,8 +825,7 @@
 
     function saveTeamMembers(teamMembersRef) {
         try {
-            window.DevCoachModules?.storage?.saveWithSizeCheck?.('myTeamMembers', teamMembersRef);
-            return true;
+            return saveWithSizeCheck('myTeamMembers', teamMembersRef);
         } catch (error) {
             console.error('Error saving team members:', error);
             return false;
@@ -877,9 +874,7 @@
 
     function loadUserTips() {
         try {
-            const namespacedKey = STORAGE_PREFIX + 'coachingTips';
-            const saved = localStorage.getItem(namespacedKey);
-            return saved ? JSON.parse(saved) : [];
+            return readStore('coachingTips') ?? [];
         } catch (error) {
             console.error('Error loading user tips:', error);
             return [];
@@ -888,8 +883,7 @@
 
     function saveUserTips(tips) {
         try {
-            window.DevCoachModules?.storage?.saveWithSizeCheck?.('coachingTips', tips);
-            return true;
+            return saveWithSizeCheck('coachingTips', tips);
         } catch (error) {
             console.error('Error saving user tips:', error);
             return false;
