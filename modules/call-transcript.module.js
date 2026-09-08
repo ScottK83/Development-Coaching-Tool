@@ -404,20 +404,155 @@
     // left unattributed it would be read as something the advisor said.
     const BACKCHANNEL_WORDS = 8;
 
+    /*
+     * WORKING OUT WHO IS TALKING WHEN NOBODY SAID
+     *
+     * Speaker labels are the best case and often they are simply not there.
+     * Verint has no label export, and where the two sides are separated by an
+     * icon in a gutter rather than by the text itself, a paste carries no
+     * difference at all. That is not a broken transcript. It is the normal
+     * one, and it has to be read well rather than apologised for.
+     *
+     * What used to happen: anything over eight words was called the advisor.
+     * A customer explaining her bill for ninety seconds became the advisor
+     * talking, which then fed every downstream read of who said a scored
+     * phrase, whose emotion cue it was, and who held the call.
+     *
+     * Two things are true of these calls and neither was being used. Turns
+     * alternate, because that is what a conversation is. And plenty of lines
+     * announce their own side: nobody but the advisor says "is there anything
+     * else I can help you with", nobody but the customer says "my bill went
+     * up".
+     *
+     * So both are used together, across the whole call at once rather than one
+     * turn at a time. Every turn is scored for each side by what it says,
+     * turns are assumed to alternate unless the words argue otherwise, and the
+     * single most likely run of speakers over the call wins. A confident line
+     * late in the call can settle an ambiguous one early in it, which no left
+     * to right pass can do.
+     */
+
+    // Phrases that belong to one side of a service call. Weighted, because
+    // "let me pull that up" is the advisor beyond doubt and "of course" is
+    // barely a lean. Ordinary call centre English rather than anything from
+    // one account, which is the point: the narrow cue lists above were tuned
+    // on particular calls and go quiet on any other.
+    const AGENT_VOICE = [
+        [/\b(?:thank you|thanks) for (?:calling|choosing|being a)/i, 6],
+        [/\bmy name is\b|\bthis is \w+ speaking\b/i, 5],
+        [/\bhow (?:can|may) i (?:help|assist)\b/i, 6],
+        [/\bis there anything else\b/i, 6],
+        [/\bfor (?:security|verification) purposes\b/i, 6],
+        [/\bcan you (?:please )?(?:verify|confirm)\b/i, 5],
+        [/\b(?:let me|i'?ll) (?:pull|look|check|take a look|go ahead and)/i, 4],
+        [/\bone moment\b|\bbear with me\b|\bplace you on (?:a )?(?:brief )?hold\b/i, 5],
+        [/\bthank you for holding\b|\bthanks for (?:your patience|holding)\b/i, 5],
+        [/\byou'?re all set\b|\bis that everything\b/i, 4],
+        [/\bi (?:can|will|would) (?:certainly|absolutely|definitely) help\b/i, 4],
+        [/\bi apologi[sz]e for\b|\bi'?m sorry to hear\b/i, 3],
+        [/\bhappy to help\b|\bof course\b/i, 2],
+        [/\byour account\b|\bon your account\b/i, 2],
+        [/\bma'?am\b|\bsir\b/i, 2]
+    ];
+
+    const CUSTOMER_VOICE = [
+        [/\bi (?:got|received|opened) my bill\b|\bmy bill\b/i, 5],
+        [/\bi (?:need|want) to\b|\bi'?m (?:calling|trying) (?:about|to)\b/i, 4],
+        [/\bi don'?t understand\b|\bi'?m confused\b/i, 4],
+        [/\bthank you so much\b|\bi (?:do )?appreciate\b/i, 3],
+        [/\bmy (?:account|service|payment|house|apartment)\b/i, 3],
+        [/\bcan you (?:tell me|explain|help me)\b/i, 3],
+        [/\bdo you (?:want|need) my\b/i, 4],
+        [/\byou (?:guys|people)\b|\bwhy (?:is|was|did) (?:my|it|there)\b/i, 3],
+        [/\bthis is (?:ridiculous|unacceptable)\b|\bi'?m (?:frustrated|upset|fed up)\b/i, 5],
+        [/\bi (?:want|need) to speak (?:to|with) (?:a|your) (?:supervisor|manager)\b/i, 6],
+        [/\bhold on\b|\blet me (?:get|grab|find)\b/i, 2]
+    ];
+
+    function voiceScore(text, table) {
+        let score = 0;
+        table.forEach(function (entry) { if (entry[0].test(text)) score += entry[1]; });
+        return score;
+    }
+
+    // What it costs to have one side speak twice in a row. Real calls do it
+    // constantly, so this is a lean towards alternating rather than a rule
+    // against staying: any line that names its own side outweighs it.
+    const STAY_PENALTY = 2.2;
+
+    // The opening line is the advisor's greeting on every one of these calls.
+    // Worth saying, not worth being certain about, since a transcript can
+    // begin mid call.
+    const OPENING_BIAS = 3;
+
+    // A turn the narrow cue lists already identified is as close to certain as
+    // this gets, so it is scored past anything the alternation prior can do.
+    const CUED_CERTAINTY = 30;
+
+    /**
+     * The most likely run of speakers across the whole call.
+     *
+     * Two states, agent and customer. Each turn scores for both, the best path
+     * into each state is carried forward, and the winner is read back from the
+     * end. Every turn is decided in the light of every other one, which is
+     * what lets a clear line late in the call fix an ambiguous one early.
+     */
     function inferRolesByFlow(turns) {
-        // Calls open with the advisor, so that is where the alternation starts.
-        let previousRole = 'agent';
+        if (!turns.length) return turns;
 
-        return turns.map(turn => {
+        const emission = turns.map(function (turn, index) {
             if (turn.cued) {
-                previousRole = turn.role;
-                return turn;
+                return turn.role === 'customer'
+                    ? { agent: 0, customer: CUED_CERTAINTY }
+                    : { agent: CUED_CERTAINTY, customer: 0 };
             }
+            const scores = {
+                agent: voiceScore(turn.text, AGENT_VOICE),
+                customer: voiceScore(turn.text, CUSTOMER_VOICE)
+            };
+            if (index === 0) scores.agent += OPENING_BIAS;
+            return scores;
+        });
 
-            const short = wordCount(turn.text) <= BACKCHANNEL_WORDS;
-            const role = (short && previousRole === 'agent') ? 'customer' : 'agent';
-            previousRole = role;
-            return { ...turn, role, inferred: true };
+        const ROLES = ['agent', 'customer'];
+        let best = { agent: emission[0].agent, customer: emission[0].customer };
+        const backlinks = [];
+
+        for (let i = 1; i < turns.length; i += 1) {
+            const next = {};
+            const from = {};
+            ROLES.forEach(function (role) {
+                let bestScore = -Infinity;
+                let bestFrom = 'agent';
+                ROLES.forEach(function (previous) {
+                    const score = best[previous] + (previous === role ? -STAY_PENALTY : 0);
+                    if (score > bestScore) { bestScore = score; bestFrom = previous; }
+                });
+                next[role] = bestScore + emission[i][role];
+                from[role] = bestFrom;
+            });
+            backlinks.push(from);
+            best = next;
+        }
+
+        const path = new Array(turns.length);
+        path[turns.length - 1] = best.customer > best.agent ? 'customer' : 'agent';
+        for (let i = turns.length - 1; i > 0; i -= 1) {
+            path[i - 1] = backlinks[i - 1][path[i]];
+        }
+
+        return turns.map(function (turn, index) {
+            if (turn.cued) return turn;
+            // Whether the words themselves said anything, or the side came
+            // only from the shape of the conversation. Downstream treats an
+            // inferred turn more carefully, so this stays honest about which
+            // of the two it was.
+            const spoke = emission[index].agent > 0 || emission[index].customer > 0;
+            return Object.assign({}, turn, {
+                role: path[index],
+                inferred: true,
+                voiced: spoke
+            });
         });
     }
 
@@ -683,7 +818,14 @@
 
     const FRUSTRATION = /frustrat|ridiculous|unacceptable|this is the (?:second|third|fourth|\d+)(?:st|nd|rd|th)? time|fed up|angry|upset|furious|waste of my time|sick of/i;
     // Something went wrong for the customer, even if they stayed polite about it.
-    const TROUBLE = /charged twice|double.?(?:bill|charg)|overcharg|shut off|shut.?off|disconnect|no power|outage|not working|broken|too high|can'?t afford|late fee|complain|my bill (?:is|went|doubled)|still (?:haven'?t|not) (?:received|got|fixed)/i;
+    //
+    // "Still haven't got" excludes identity documents on purpose. A customer
+    // explaining that they have no social security number yet is describing
+    // their own paperwork, not a failure by us, and reading it as trouble
+    // turns a routine setup call into one that needed empathy and did not get
+    // it. That is a coaching point the associate would rightly ignore, and it
+    // drags the rest of a good review down with it.
+    const TROUBLE = /charged twice|double.?(?:bill|charg)|overcharg|shut off|shut.?off|disconnect|no power|outage|not working|broken|too high|can'?t afford|late fee|complain|my bill (?:is|went|doubled)|still (?:haven'?t|not) (?:received|got|fixed)(?!\s+(?:my |a |an |the )?(?:social|ssn|sin\b|number|id\b|licen[cs]e|passport|visa|paperwork))/i;
     // Tightened so the associate thanking the customer for holding cannot read
     // as the customer praising the associate.
     const APPRECIATION = /(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful|amazing)|i (?:really )?appreciate (?:you|your|it|that)|you'?re the best|thank you so much(?! for (?:holding|waiting|calling|your patience))/i;

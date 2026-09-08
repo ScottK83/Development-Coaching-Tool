@@ -9033,6 +9033,7 @@ function handleTranscriptPaste(event) {
     // Kept whether or not it converts, because the one that does not convert
     // is the one somebody needs to be able to look at.
     lastTranscriptPasteHtml = html;
+    sawTranscriptPaste = true;
     if (!html) return;
 
     const converter = window.DevCoachModules?.verintPaste?.toLabelledTranscript;
@@ -9056,6 +9057,11 @@ function handleTranscriptPaste(event) {
  */
 let lastTranscriptPasteHtml = '';
 
+// Whether a paste happened at all, which is a different question from whether
+// it carried any formatting. Reading one off the other told somebody staring
+// at a full transcript box that nothing had been pasted yet.
+let sawTranscriptPaste = false;
+
 /**
  * Says why a paste did or did not get its speakers labelled.
  *
@@ -9078,11 +9084,31 @@ function showTranscriptPasteDiagnosis() {
     host.style.display = '';
 
     if (!lastTranscriptPasteHtml) {
+        const hasText = (document.getElementById('callListeningTranscript')?.value || '').trim().length > 0;
         host.className = 'call-note';
-        host.innerHTML = '<strong>Nothing pasted yet in this tab.</strong>'
-            + '<p>Copy the transcript on the Verint page and paste it into the box above with Ctrl+V, '
-            + 'then press this again. Pasting from a plain text box on the way here strips the '
-            + 'formatting, and the formatting is the only thing that says who was talking.</p>';
+        host.innerHTML = '<strong>'
+            + (sawTranscriptPaste
+                ? 'That paste carried no formatting.'
+                : hasText
+                    ? 'This transcript did not arrive by paste in this tab.'
+                    : 'Nothing pasted yet in this tab.')
+            + '</strong>'
+            + '<p>'
+            + (sawTranscriptPaste
+                ? 'The clipboard held plain text only, so there is nothing in it that separates the '
+                    + 'two speakers. That happens when the copy went through a plain text box on the way '
+                    + 'here, and it also happens when the page marks its speakers some way that does not '
+                    + 'survive a copy at all.'
+                : hasText
+                    ? 'It was loaded from a saved call or typed in, so there is no clipboard markup to '
+                        + 'look at. Copy it again on the Verint page and paste it here with Ctrl+V if you '
+                        + 'want this checked.'
+                    : 'Copy the transcript on the Verint page and paste it into the box above with '
+                        + 'Ctrl+V, then press this again.')
+            + '</p>'
+            + '<p style="margin-top: var(--space-2);">Either way the call still reads. Without labels the '
+            + 'two sides are worked out from what each turn says and from the shape of the conversation, '
+            + 'and Analyze Transcript will tell you which of the two it used.</p>';
         return;
     }
 

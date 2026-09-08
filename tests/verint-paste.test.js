@@ -252,7 +252,13 @@ suite('verint paste: wiring', (t) => {
     t.check('the button is bound',
         /bindElementOnce\(document\.getElementById\('checkTranscriptPasteBtn'\), 'click', showTranscriptPasteDiagnosis\)/.test(script));
     t.check('the markup is kept before the early return',
-        /lastTranscriptPasteHtml = html;\s*if \(!html\) return;/.test(script));
+        /lastTranscriptPasteHtml = html;[\s\S]{0,120}if \(!html\) return;/.test(script));
+    // A paste that carried no formatting is a different report from no paste
+    // at all, and telling somebody nothing was pasted while they look at a
+    // full transcript box is the kind of wrong that costs trust in the tool.
+    t.check('an empty paste is told apart from no paste',
+        /sawTranscriptPaste = true;/.test(script)
+        && /That paste carried no formatting/.test(script));
     t.check('and it is never written to storage',
         !/setItem\([^)]*lastTranscriptPasteHtml|lastTranscriptPasteHtml[^;]*setItem/.test(script));
 
