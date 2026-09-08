@@ -167,12 +167,38 @@
         var activeScope = window.DevCoachModules?.teamScope?.getActiveScope?.() || null;
         var selectedMembers = applyTeamScope(checkedMembers, scopeMembers);
 
+        // An empty selection means two opposite things, and collapsing them is
+        // how picking ONE person came to show the whole call centre.
+        //
+        // applyTeamScope is already right about this and says so: "Someone off
+        // the ticked list must come back empty rather than quietly falling back
+        // to the whole team." It returns []. This function then turned that []
+        // into isFiltering:false, and isAssociateIncludedByTeamFilter reads
+        // "not filtering" as "admit everyone" -- so the exact fallback the line
+        // above forbids happened one function later.
+        //
+        // It is reachable by ordinary use. The Who dropdown offers the
+        // SUPERVISOR ROSTER, which is re-read from the source system and wins
+        // by design, while the tick list is per-week and set by hand. Pick
+        // somebody the roster says is yours who was never ticked for that week
+        // and every filtered view -- dashboard, trends, coaching email, the
+        // morning pulse, the Monday post -- silently widened to everyone,
+        // including other supervisors' reps, while the header still named one
+        // person.
+        //
+        // So a requested scope keeps filtering even when it matches nobody, and
+        // scopeExcludesAll says why, so a surface can explain the emptiness
+        // rather than leaving it to read as "no data".
+        var scopeRequested = Array.isArray(scopeMembers) && scopeMembers.length > 0;
+        var isFiltering = selectedMembers.length > 0 || scopeRequested;
+
         return {
             weekKey: weekKey,
             selectedMembers: selectedMembers,
-            selectedSet: selectedMembers.length ? new Set(selectedMembers) : null,
+            selectedSet: isFiltering ? new Set(selectedMembers) : null,
             totalEmployeesInWeek: employeesForWeek.length,
-            isFiltering: selectedMembers.length > 0,
+            isFiltering: isFiltering,
+            scopeExcludesAll: scopeRequested && selectedMembers.length === 0,
             scopeId: activeScope ? activeScope.id : null,
             scopeLabel: activeScope ? activeScope.label : null
         };
