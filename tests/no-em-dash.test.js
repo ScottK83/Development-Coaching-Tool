@@ -157,3 +157,75 @@ suite('copy: the scanner reads strings and not comments', (t) => {
         .filter(s => s.indexOf('—') > -1);
     t.equal('an apostrophe does not throw the scanner off', trickyHits.length, 1);
 });
+
+/**
+ * No control characters in anything we author.
+ *
+ * The fold triangles on Call Listening were written as a CSS escape, the
+ * escape was built by a script that read \25 as octal, and the file ended up
+ * carrying a NAK byte where the arrow should have been. Every fold on the
+ * screen opened with a tofu box.
+ *
+ * The reason it needs a test rather than care is that it is invisible. It
+ * survived a diff, a review and a full green suite, because nothing about
+ * `content: '<NAK>B8'` looks different from `content: '\25B8'` in a terminal
+ * or a pull request. A byte nobody can see has to be caught by something that
+ * is not looking with its eyes.
+ *
+ * Vendored libraries are skipped. lib-pdf.worker.js is minified upstream code
+ * with real control bytes in its string tables, and it is not ours to clean.
+ */
+
+// Everything below 0x20 except tab, newline and carriage return, plus DEL.
+const CONTROL_BYTES = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
+
+function authoredFiles() {
+    const roots = ['.', 'modules', 'tests'];
+    const found = [];
+    roots.forEach((dir) => {
+        fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })
+            .filter((item) => item.isFile())
+            .map((item) => item.name)
+            .filter((name) => /\.(js|css|html)$/.test(name))
+            // Vendored, minified, not ours.
+            .filter((name) => !name.startsWith('lib-'))
+            .forEach((name) => found.push(dir === '.' ? name : `${dir}/${name}`));
+    });
+    return found;
+}
+
+suite('copy: no invisible byte rides along in a file we wrote', (t) => {
+    const files = authoredFiles();
+    t.check('there is something to check', files.length > 50);
+
+    const offences = [];
+    files.forEach((file) => {
+        const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+        text.split('\n').forEach((line, index) => {
+            let match;
+            CONTROL_BYTES.lastIndex = 0;
+            while ((match = CONTROL_BYTES.exec(line))) {
+                offences.push({
+                    file,
+                    line: index + 1,
+                    code: match[0].charCodeAt(0),
+                    text: line.trim().slice(0, 60)
+                });
+            }
+        });
+    });
+
+    offences.slice(0, 20).forEach((o) => {
+        console.log(`    ${o.file}:${o.line} carries U+${o.code.toString(16).padStart(4, '0').toUpperCase()}: ${o.text}`);
+    });
+    t.equal('nothing carries a control byte', offences.length, 0);
+
+    // The arrow that started this. It is drawn from borders now, so no font
+    // and no encoding can take it away.
+    const css = fs.readFileSync(path.join(ROOT, 'styles-v2.css'), 'utf8');
+    const marker = css.slice(css.indexOf('.panel-section .call-fold > summary::before'));
+    t.check('the fold marker needs no glyph',
+        /content: '';/.test(marker.slice(0, 400)));
+    t.check('and is drawn instead',
+        /border-left: \d+px solid currentColor/.test(marker.slice(0, 400)));
+});

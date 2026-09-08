@@ -1023,11 +1023,22 @@ textarea:focus-visible {
     display: none;
 }
 
+/* Drawn from borders rather than set in a font.
+ *
+ * This was a character escape and the escape was written wrong, so the file
+ * carried a control character and every fold on the screen opened with a tofu
+ * box. A triangle made of borders cannot be missing from a font, cannot be
+ * mangled by an encoding, and takes its colour from the text beside it. */
 .panel-section .call-fold > summary::before {
-    content: 'B8';
+    content: '';
     display: inline-block;
-    width: 1em;
-    color: var(--text-secondary);
+    width: 0;
+    height: 0;
+    margin-right: 0.55em;
+    vertical-align: middle;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
     transition: transform 0.15s ease;
 }
 
