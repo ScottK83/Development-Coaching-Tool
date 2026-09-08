@@ -98,6 +98,80 @@ suite('upload gate: a paste that is not a report at all', (t) => {
     t.equal('an empty paste raises nothing here', empty.errors.length, 0);
 });
 
+suite('upload gate: a weekend is not a drifted paste', (t) => {
+    const drift = load(t);
+
+    // Saturday. Five people on, and with five people there are no surveys
+    // back, no call scored for sentiment and no reliability to speak of.
+    // Against a Tuesday with the whole floor on it that looks exactly like a
+    // block of columns disappearing, which is the fault this gate is for. It
+    // is not that fault, and blocking it leaves the day unuploadable.
+    const baselines = drift.writeBaseline({}, 'daily', drift.computeMetricCoverage(fullWeek(127)), 127);
+    const saturday = roster(5, { scheduleAdherence: 96, transfers: 2, aht: 380 });
+    const verdict = drift.judgeUpload({ employees: saturday, periodType: 'daily', baselines });
+
+    t.equal('the weekend upload is not refused', verdict.errors.length, 0);
+    t.check('it asks instead', verdict.warnings.length > 0);
+    t.check('and the two roster sizes are both named so it can be checked',
+        verdict.warnings.some((w) => w.indexOf('5 people') > -1 && w.indexOf('127') > -1));
+    t.check('the verdict says the roster was thin', verdict.thin === true);
+
+    // The same file on a normal day is still a drifted paste.
+    const weekday = roster(120, { scheduleAdherence: 96, transfers: 2, aht: 380 });
+    t.check('a full roster losing the same columns still stops dead',
+        drift.judgeUpload({ employees: weekday, periodType: 'daily', baselines }).errors.length > 0);
+
+    // Ordinary absence is nowhere near the line. A day down a dozen people is
+    // the same day, and must still be guarded.
+    const shortHanded = roster(110, { scheduleAdherence: 96, transfers: 2, aht: 380 });
+    t.check('a day down a few people is not treated as a weekend',
+        drift.judgeUpload({ employees: shortHanded, periodType: 'daily', baselines }).errors.length > 0);
+});
+
+suite('upload gate: a weekend does not become the standard a Monday is held to', (t) => {
+    const drift = load(t);
+
+    const full = drift.writeBaseline({}, 'daily', drift.computeMetricCoverage(fullWeek(127)), 127);
+    const saturday = roster(5, { scheduleAdherence: 96, transfers: 2, aht: 380 });
+    const after = drift.writeBaseline(full, 'daily', drift.computeMetricCoverage(saturday), 5);
+
+    t.equal('the thin upload does not overwrite the full one', after.daily.rows, 127);
+    t.check('so Monday is still guarded',
+        drift.judgeUpload({
+            employees: roster(120, { transfers: 3, reliability: 99 }),
+            periodType: 'daily',
+            baselines: after
+        }).errors.length > 0);
+
+    // A roster that grew, or held roughly steady, is the new normal.
+    const grown = drift.writeBaseline(full, 'daily', drift.computeMetricCoverage(fullWeek(131)), 131);
+    t.equal('a full upload does replace it', grown.daily.rows, 131);
+});
+
+suite('upload gate: thin days and empty pastes are told apart', (t) => {
+    const drift = load(t);
+
+    const baselines = drift.writeBaseline({}, 'daily', drift.computeMetricCoverage(fullWeek(127)), 127);
+
+    // Two columns across four people on a Sunday is a Sunday.
+    const sunday = drift.judgeUpload({
+        employees: roster(4, { aht: 400, transfers: 3 }),
+        periodType: 'daily',
+        baselines
+    });
+    t.equal('a thin day with a couple of columns is not refused', sunday.errors.length, 0);
+    t.check('but it is still asked about',
+        sunday.warnings.some((w) => w.indexOf('2 metric column') > -1));
+
+    // Nothing populated at all is not a report on any day.
+    const nothing = drift.judgeUpload({
+        employees: roster(4, { name: 'x' }),
+        periodType: 'daily',
+        baselines
+    });
+    t.check('a paste with no numbers in it is still refused', nothing.errors.length > 0);
+});
+
 suite('upload gate: baselines survive the shape they used to be stored in', (t) => {
     const drift = load(t);
 
@@ -106,7 +180,11 @@ suite('upload gate: baselines survive the shape they used to be stored in', (t) 
     const legacy = JSON.stringify(drift.computeMetricCoverage(fullWeek()));
     const migrated = drift.readBaselines(legacy);
 
-    t.check('a flat map becomes the weekly baseline', migrated.week && migrated.week.fcr === 1);
+    t.check('a flat map becomes the weekly baseline',
+        migrated.week && migrated.week.coverage && migrated.week.coverage.fcr === 1);
+    // The old shape never recorded a roster size, so the roster test cannot
+    // fire off it. It stays quiet rather than guessing a number.
+    t.equal('and carries no roster size it never had', migrated.week.rows, null);
     t.check('and guards the weekly upload immediately',
         drift.judgeUpload({ employees: roster(120, { transfers: 3, reliability: 99 }), periodType: 'week', baselines: legacy }).errors.length > 0);
 

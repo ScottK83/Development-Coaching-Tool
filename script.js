@@ -3270,7 +3270,7 @@ function saveUploadMetricCoverage(employees, periodType) {
     const drift = _uploadDrift();
     if (!drift) return;
     try {
-        const next = drift.writeBaseline(loadUploadCoverageBaselines(), periodType, drift.computeMetricCoverage(employees));
+        const next = drift.writeBaseline(loadUploadCoverageBaselines(), periodType, drift.computeMetricCoverage(employees), (employees || []).length);
         localStorage.setItem(UPLOAD_METRIC_COVERAGE_KEY, JSON.stringify(next));
     } catch (e) { /* noop */ }
 }
