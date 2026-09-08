@@ -285,7 +285,15 @@
 
         var date = document.getElementById('contestDate')?.value;
         var monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        var stores = { dailyData: typeof dailyData !== 'undefined' ? dailyData : {} };
+        // Every store, because the wizard's period type decides which one a
+        // paste lands in and a single day pasted while the type still says
+        // Week goes to weeklyData. buildImportPreview keeps only the periods
+        // that pin to one day, so handing it all three cannot widen anything.
+        var stores = {
+            dailyData: typeof dailyData !== 'undefined' ? dailyData : {},
+            weeklyData: typeof weeklyData !== 'undefined' ? weeklyData : {},
+            ytdData: typeof ytdData !== 'undefined' ? ytdData : {}
+        };
 
         var preview = api.buildImportPreview(stores, {
             monthKey: monthKey,

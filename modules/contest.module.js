@@ -1391,7 +1391,6 @@
      */
     function buildImportPreview(stores, options) {
         var opts = options || {};
-        var daily = (stores && stores.dailyData) || {};
         var monthKey = String(opts.monthKey || '');
         var allowed = null;
         if (Array.isArray(opts.names)) {
@@ -1402,19 +1401,41 @@
         var days = {};
         var notes = [];
         var needsSurveyCheck = [];
+        var seenCheck = {};
         var spans = 0;
         var people = {};
-        var adherenceValues = 0;
-        var surveyEntries = 0;
 
-        Object.keys(daily).sort().forEach(function (key) {
-            var period = daily[key] || {};
-            var date = importSingleDate(key, period.metadata);
+        // Every store, not just the daily one.
+        //
+        // What makes an upload readable here is that it pins to exactly ONE
+        // day, and importSingleDate is what decides that. Which bucket the
+        // upload landed in is a different question with a different answer:
+        // the wizard's period type owns the routing, so a single day pasted in
+        // while the type still says Week is filed in weeklyData, and reading
+        // only dailyData meant the contest silently could not see it. A day is
+        // a day wherever it was filed. Spans are still refused, by the same
+        // test as before, so nothing is spread across dates it did not cover.
+        //
+        // Daily goes last so that when the same day sits in two stores, the
+        // purpose built one wins.
+        var sources = [
+            (stores && stores.weeklyData) || {},
+            (stores && stores.ytdData) || {},
+            (stores && stores.dailyData) || {}
+        ];
+        var seenSpan = {};
+        var readPeriod = function (key, period) {
+            var date = importSingleDate(key, (period || {}).metadata);
 
-            if (!date) { spans += 1; return; }
+            // A span is counted once however many stores hold it, so the note
+            // does not report one stray upload twice.
+            if (!date) {
+                if (!seenSpan[key]) { seenSpan[key] = true; spans += 1; }
+                return;
+            }
             if (monthKey && date.slice(0, 7) !== monthKey) return;
 
-            (period.employees || []).forEach(function (row) {
+            ((period || {}).employees || []).forEach(function (row) {
                 if (!row || !row.name) return;
                 var name = String(row.name).trim();
                 if (!name) return;
@@ -1423,31 +1444,51 @@
                 var adherence = importNumber(row.scheduleAdherence);
                 var surveys = importPerfectSurveys(row);
 
+                // One person day, whichever store it came from, is one thing
+                // to look at rather than one per store.
+                var flag = function () {
+                    var seen = date + '|' + name;
+                    if (seenCheck[seen]) return;
+                    seenCheck[seen] = true;
+                    needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
+                };
+
                 if (adherence === null && !surveys.count) {
-                    if (!surveys.certain) needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
+                    if (!surveys.certain) flag();
                     return;
                 }
 
                 var day = days[date] || (days[date] = {});
                 var person = day[name] || (day[name] = {});
 
-                if (adherence !== null) {
-                    person.adherence = adherence;
-                    adherenceValues += 1;
-                }
-                if (surveys.count) {
-                    person.perfectSurveys = surveys.count;
-                    surveyEntries += surveys.count;
-                }
-                if (!surveys.certain) {
-                    needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
-                }
+                if (adherence !== null) person.adherence = adherence;
+                if (surveys.count) person.perfectSurveys = surveys.count;
+                if (!surveys.certain) flag();
 
                 people[name] = true;
+            });
+        };
+
+        sources.forEach(function (store) {
+            Object.keys(store).sort().forEach(function (key) {
+                readPeriod(key, store[key]);
             });
         });
 
         var dayList = Object.keys(days).sort();
+
+        // Counted off what the import would actually write, so a day held in
+        // two stores is reported once rather than twice.
+        var adherenceValues = 0;
+        var surveyEntries = 0;
+        dayList.forEach(function (date) {
+            var people_ = days[date] || {};
+            Object.keys(people_).forEach(function (name) {
+                var person = people_[name] || {};
+                if (Number.isFinite(Number(person.adherence))) adherenceValues += 1;
+                if (Number(person.perfectSurveys) > 0) surveyEntries += Number(person.perfectSurveys);
+            });
+        });
 
         if (spans) {
             notes.push(spans + ' upload' + (spans === 1 ? '' : 's') + ' cover more than one day, so '
@@ -1460,7 +1501,8 @@
                 + 'many were perfect is not in it. Type those in. Everything at 100% came in on its own.');
         }
         if (!dayList.length) {
-            notes.push('Nothing to import for this month. Daily uploads are what this reads.');
+            notes.push('Nothing to import for this month. This reads any upload that covers a single day, '
+                + 'whichever kind it was uploaded as. An upload spanning a week cannot say what happened on a day.');
         }
 
         return {

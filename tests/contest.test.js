@@ -495,6 +495,73 @@ function upload(date, employees) {
     return stores;
 }
 
+suite('contest: a single day is read whichever store it landed in', (t) => {
+    const contest = load(t);
+
+    // The wizard's period type owns the routing, not the dates: paste one day
+    // in while the type still says Week and it is filed in weeklyData. The
+    // import read only dailyData, so the contest could not see the day at all
+    // and the card went on counting through the day before.
+    const stores = {
+        dailyData: {},
+        weeklyData: {
+            '2026-09-04|2026-09-04': {
+                metadata: { startDate: '2026-09-04', endDate: '2026-09-04', periodType: 'week' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 91.4 }]
+            },
+            // A real week still cannot say what happened on a day.
+            '2026-08-31|2026-09-06': {
+                metadata: { startDate: '2026-08-31', endDate: '2026-09-06', periodType: 'week' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 99 }]
+            }
+        },
+        ytdData: {}
+    };
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+
+    t.equal('the day filed as a week is read', preview.days['2026-09-04']['Alyssa Dimes'].adherence, 91.4);
+    t.equal('and it is the only day taken', preview.counts.days, 1);
+    t.check('the real week is left out', preview.notes.some((n) => /more than one day/.test(n)));
+
+    // A YTD upload starts January 1, so it is a span and stays refused.
+    const ytdOnly = contest.buildImportPreview({
+        ytdData: {
+            '2026-01-01|2026-09-04': {
+                metadata: { startDate: '2026-01-01', endDate: '2026-09-04', periodType: 'ytd' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 99 }]
+            }
+        }
+    }, { monthKey: '2026-09' });
+    t.equal('a YTD upload gives no days', ytdOnly.counts.days, 0);
+});
+
+suite('contest: a day held in two stores is counted once', (t) => {
+    const contest = load(t);
+
+    // The same paste can leave a copy in more than one store. The typed daily
+    // is the purpose built one, so it wins, and the value is not reported twice.
+    const stores = {
+        weeklyData: {
+            '2026-09-04|2026-09-04': {
+                metadata: { startDate: '2026-09-04', endDate: '2026-09-04' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 80 }]
+            }
+        },
+        dailyData: {
+            '2026-09-04': {
+                metadata: { startDate: '2026-09-04', endDate: '2026-09-04' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 91.4 }]
+            }
+        }
+    };
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    t.equal('the daily store wins', preview.days['2026-09-04']['Alyssa Dimes'].adherence, 91.4);
+    t.equal('and one value is reported, not two', preview.counts.adherenceValues, 1);
+    t.equal('one person, not two', preview.counts.people, 1);
+});
+
 suite('contest: adherence comes straight off the daily upload', (t) => {
     const contest = load(t);
 
