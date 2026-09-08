@@ -9029,6 +9029,10 @@ function handleTranscriptPaste(event) {
         try { return clipboard.getData('text/html') || ''; }
         catch (error) { return ''; }
     })();
+
+    // Kept whether or not it converts, because the one that does not convert
+    // is the one somebody needs to be able to look at.
+    lastTranscriptPasteHtml = html;
     if (!html) return;
 
     const converter = window.DevCoachModules?.verintPaste?.toLabelledTranscript;
@@ -9042,6 +9046,77 @@ function handleTranscriptPaste(event) {
     event.preventDefault();
     field.value = converted.text;
     showToast(`✅ Read the colour coding: ${converted.labelled} lines labelled, so it knows who was talking.`, 4000);
+}
+
+/**
+ * The last paste's markup, kept in memory so it can be looked at.
+ *
+ * Not stored, not synced, not written anywhere. It holds a customer's words
+ * and there is no reason for it to outlive the tab.
+ */
+let lastTranscriptPasteHtml = '';
+
+/**
+ * Says why a paste did or did not get its speakers labelled.
+ *
+ * The console is not available on a locked down machine, so a paste that will
+ * not label is otherwise a dead end: no way to see what came through and no
+ * way to send it anywhere it could be read. This puts the same answer on
+ * screen and offers the markup with the words taken out of it, which is the
+ * part that decides the speakers and the part that is safe to pass on.
+ */
+function showTranscriptPasteDiagnosis() {
+    const host = document.getElementById('callPasteDiagnosis');
+    if (!host) return;
+
+    const paste = window.DevCoachModules?.verintPaste;
+    if (!paste?.describePaste) {
+        showToast('⚠️ The paste reader is unavailable. Refresh and try again.', 3500);
+        return;
+    }
+
+    host.style.display = '';
+
+    if (!lastTranscriptPasteHtml) {
+        host.className = 'call-note';
+        host.innerHTML = '<strong>Nothing pasted yet in this tab.</strong>'
+            + '<p>Copy the transcript on the Verint page and paste it into the box above with Ctrl+V, '
+            + 'then press this again. Pasting from a plain text box on the way here strips the '
+            + 'formatting, and the formatting is the only thing that says who was talking.</p>';
+        return;
+    }
+
+    const advisorName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    const report = paste.describePaste(lastTranscriptPasteHtml, { advisorName });
+
+    const groupList = report.groups.length
+        ? '<ul style="margin: var(--space-2) 0 0 var(--space-4);">'
+            + report.groups.map((group) => '<li><code>' + safeEscapeHtml(group.key || '(none)') + '</code>, '
+                + group.characters + ' characters</li>').join('')
+            + '</ul>'
+        : '';
+
+    host.className = report.ok ? 'call-note call-note-success' : 'call-note';
+    host.innerHTML = '<strong>' + (report.ok ? 'The speakers were labelled.' : 'The speakers were not labelled.') + '</strong>'
+        + '<p>' + safeEscapeHtml(report.reason) + '</p>'
+        + '<p style="margin-top: var(--space-2);">'
+        + report.bytes + ' characters of markup, ' + report.lines + ' lines, '
+        + report.groups.length + ' style ' + (report.groups.length === 1 ? 'group' : 'groups') + ', '
+        + (report.greeting ? 'an opening greeting was found' : 'no opening greeting was found')
+        + '.</p>'
+        + groupList
+        + '<div class="flex-row" style="margin-top: var(--space-3);">'
+        + '<button type="button" id="copyTranscriptPasteMarkupBtn">📋 Copy the markup, words removed</button>'
+        + '</div>'
+        + '<p style="margin-top: var(--space-2); font-size: 0.9em;">The copy keeps the tags, colours and '
+        + 'classes and replaces every letter with x and every digit with 0, so it shows how the page is '
+        + 'built without carrying anything the customer said.</p>';
+
+    document.getElementById('copyTranscriptPasteMarkupBtn')?.addEventListener('click', () => {
+        copyToClipboard(paste.redactMarkup(lastTranscriptPasteHtml), {
+            message: '📋 Copied the markup with the words removed'
+        });
+    });
 }
 
 function analyzeCallListeningTranscript() {
@@ -9637,6 +9712,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
     bindElementOnce(employeeSelect, 'change', refreshCallListeningRecipient);
     bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
+    bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);

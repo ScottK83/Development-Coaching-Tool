@@ -170,6 +170,62 @@ suite('verint paste: the markup does not leak through', (t) => {
     t.check('no em dash survives the decode', !/[‒-―−]/.test(out.text));
 });
 
+suite('verint paste: it says why it could not label', (t) => {
+    const { verintPaste } = load(t);
+
+    // A machine with no console is a machine where a paste that will not label
+    // is a dead end. The reason has to be readable in the app.
+    const good = verintPaste.describePaste(COLOURED);
+    t.check('a paste that worked says so', good.ok === true);
+    t.equal('and counts the two groups it found', good.groups.length, 2);
+    t.check('and reports the greeting it keyed off', good.greeting === true);
+
+    // Nothing but plain text, which is what pasting through Notepad leaves.
+    const none = verintPaste.describePaste('');
+    t.check('no markup at all is called out as such', none.hasHtml === false);
+    t.check('and blames the trip through plain text', /plain text/.test(none.reason));
+
+    // One style over everything: the speakers are separated some other way.
+    const flat = '<div>' + ['00:05', 'how may i help you', '00:10', 'i signed a lease today', '00:23', 'okay what is the address']
+        .map((line) => '<p><span style="color:#111111">' + line + '</span></p>').join('') + '</div>';
+    const oneGroup = verintPaste.describePaste(flat);
+    t.check('one style does not label', oneGroup.ok === false);
+    t.equal('and it is reported as one group', oneGroup.groups.length, 1);
+    t.check('and says the difference is not in the text',
+        /not in the text/.test(oneGroup.reason));
+
+    // Highlighted phrases rather than speakers. Four styles is not two sides.
+    const many = '<div>' + ['a', 'b', 'c', 'd']
+        .map((c, i) => '<p><span style="color:#00000' + i + '">line ' + c + ' spoken here</span></p>').join('') + '</div>';
+    const tooMany = verintPaste.describePaste(many);
+    t.check('four styles does not label', tooMany.ok === false);
+    t.check('and says why reading it that way would invent things',
+        /invent/.test(tooMany.reason));
+});
+
+suite('verint paste: the markup can be shared without the words', (t) => {
+    const { verintPaste } = load(t);
+
+    const redacted = verintPaste.redactMarkup(COLOURED);
+
+    // Structure is what decides the speakers, so structure is what survives.
+    t.check('the colours survive', redacted.indexOf('color:#0000ff') > -1);
+    t.check('the tags survive', redacted.indexOf('<span') > -1);
+    t.check('and rgb spellings survive too', redacted.indexOf('rgb(0, 128, 0)') > -1);
+
+    // The words do not. A customer said her name and the last four of her
+    // social on this call, and none of that is needed to fix a heuristic.
+    t.check('no word from the transcript is left', redacted.indexOf('apartment') === -1);
+    t.check('nor the advisor name', redacted.indexOf('esther') === -1);
+    t.check('letters became x', /xxxx/.test(redacted));
+    t.check('and digits became zero', redacted.indexOf('00:00') > -1);
+
+    // Long pastes are trimmed rather than filling the clipboard with a call.
+    const long = verintPaste.redactMarkup('<p>' + 'word '.repeat(9000) + '</p>', 400);
+    t.check('a long paste is cut', long.length < 600);
+    t.check('and says it was cut', /trimmed/.test(long));
+});
+
 suite('verint paste: wiring', (t) => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
@@ -188,6 +244,17 @@ suite('verint paste: wiring', (t) => {
     t.check('and the associate name is passed in to help identify the advisor',
         /handleTranscriptPaste[\s\S]{0,900}advisorName/.test(script));
     t.check('it says what it did', /Read the colour coding/.test(script));
+
+    // The button exists, is wired, and the markup is kept even when the
+    // conversion declined, which is the only case anybody presses it in.
+    t.check('the panel has a button for it', html.includes('id="checkTranscriptPasteBtn"'));
+    t.check('and somewhere to put the answer', html.includes('id="callPasteDiagnosis"'));
+    t.check('the button is bound',
+        /bindElementOnce\(document\.getElementById\('checkTranscriptPasteBtn'\), 'click', showTranscriptPasteDiagnosis\)/.test(script));
+    t.check('the markup is kept before the early return',
+        /lastTranscriptPasteHtml = html;\s*if \(!html\) return;/.test(script));
+    t.check('and it is never written to storage',
+        !/setItem\([^)]*lastTranscriptPasteHtml|lastTranscriptPasteHtml[^;]*setItem/.test(script));
 
     // The parser has to honour the labels once they are there, or none of this
     // changes anything.

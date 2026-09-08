@@ -304,9 +304,140 @@
         }
     }
 
+    /**
+     * Why a paste did or did not get labelled, in words.
+     *
+     * Every decline above is a bare null, which is right for the paste handler
+     * and useless to somebody holding a transcript that will not label. This
+     * walks the same path and reports where it stopped. It decides nothing:
+     * change a rule here and the two would disagree, so it re-runs the real
+     * one and describes the result.
+     */
+    function describePaste(html, options = {}) {
+        const source = String(html || '');
+        const out = {
+            hasHtml: source.length > 0,
+            bytes: source.length,
+            runs: 0,
+            lines: 0,
+            groups: [],
+            greeting: false,
+            labelled: 0,
+            ok: false,
+            reason: ''
+        };
+
+        if (!source) {
+            out.reason = 'The clipboard carried no formatting at all, only plain text. '
+                + 'That happens when the copy went through a plain text box on the way here, '
+                + 'or when the page was copied as text rather than selected on screen.';
+            return out;
+        }
+
+        let runs = [];
+        try { runs = extractRuns(source); } catch (error) { runs = []; }
+        out.runs = runs.length;
+
+        // The same grouping attribute() does, kept close to it on purpose.
+        const lines = [];
+        let current = null;
+        runs.forEach((run) => {
+            if (run.newline) { current = null; return; }
+            if (!current) { current = { text: '', keys: {} }; lines.push(current); }
+            current.text = `${current.text}${run.text}`;
+            if (run.key) current.keys[run.key] = (current.keys[run.key] || 0) + run.text.trim().length;
+        });
+
+        const spoken = lines
+            .map((line) => ({
+                text: line.text.replace(/\s+/g, ' ').trim(),
+                key: Object.keys(line.keys).sort((a, b) => line.keys[b] - line.keys[a])[0] || ''
+            }))
+            .filter((line) => line.text);
+        out.lines = spoken.length;
+
+        const weight = {};
+        spoken.forEach((line) => {
+            if (TIMESTAMP.test(line.text) || !line.key) return;
+            weight[line.key] = (weight[line.key] || 0) + line.text.length;
+        });
+        out.groups = Object.keys(weight)
+            .sort((a, b) => weight[b] - weight[a])
+            .map((key) => ({ key, characters: weight[key] }));
+
+        out.greeting = spoken.some((line) => AGENT_GREETING.test(line.text));
+
+        const converted = toLabelledTranscript(source, options);
+        if (converted) {
+            out.ok = true;
+            out.labelled = converted.labelled;
+            out.reason = `${converted.labelled} lines were labelled from ${out.groups.length} groups.`;
+            return out;
+        }
+
+        if (!out.runs) {
+            out.reason = 'Nothing readable came out of the markup. It may not be a transcript, '
+                + 'or the copy caught the page furniture instead of the lines.';
+        } else if (!out.lines) {
+            out.reason = 'The markup came through but held no text lines.';
+        } else if (out.groups.length === 0) {
+            out.reason = 'No line carried any style of its own, so there is nothing to tell the '
+                + 'two sides apart by. In this transcript the speakers are probably marked some '
+                + 'other way, by an icon or a column rather than by the text itself.';
+        } else if (out.groups.length === 1) {
+            out.reason = 'Every line is styled the same way, so the markup holds no difference '
+                + 'between the speakers. Whatever separates them on screen is not in the text.';
+        } else if (out.groups.length > 2) {
+            out.reason = `The lines fall into ${out.groups.length} styles rather than 2. That is not `
+                + 'speaker colouring, it is something else being marked, such as the phrases the '
+                + 'system highlights. Reading it as speakers would invent who said what.';
+        } else if (!out.greeting) {
+            out.reason = 'There are two styles, but neither one opens with a greeting this '
+                + 'recognises, so which is the advisor cannot be settled. Picking one would be a '
+                + 'coin flip.';
+        } else {
+            out.reason = 'There are two styles and a greeting, but not enough lines came out '
+                + 'labelled to be worth rewriting the box.';
+        }
+        return out;
+    }
+
+    /**
+     * The same markup with every word taken out of it.
+     *
+     * What decides the speakers is structure: tags, styles, classes, which run
+     * sits where. None of that needs the words, and the words are a customer
+     * saying her name and the last four of her social. Letters become x and
+     * digits become 0, inside text only, so tags and attributes survive whole
+     * and a timestamp still reads as a timestamp shape.
+     */
+    function redactMarkup(html, limit) {
+        const source = String(html || '');
+        const cap = Number.isFinite(limit) && limit > 0 ? limit : 20000;
+        let out = '';
+        let index = 0;
+
+        const scrub = (text) => text.replace(/[A-Za-z]/g, 'x').replace(/[0-9]/g, '0');
+
+        while (index < source.length) {
+            const open = source.indexOf('<', index);
+            if (open === -1) { out += scrub(source.slice(index)); break; }
+            if (open > index) out += scrub(source.slice(index, open));
+            const close = source.indexOf('>', open);
+            if (close === -1) { out += source.slice(open); break; }
+            out += source.slice(open, close + 1);
+            index = close + 1;
+        }
+
+        return out.length > cap ? `${out.slice(0, cap)}
+<!-- trimmed, ${out.length} characters in total -->` : out;
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.verintPaste = {
         toLabelledTranscript,
+        describePaste,
+        redactMarkup,
         extractRuns,
         normalizeColour,
         styleKeyOf
