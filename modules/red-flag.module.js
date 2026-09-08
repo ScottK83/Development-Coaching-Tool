@@ -412,7 +412,7 @@ Thank you.`;
         previewSection.style.display = 'block';
     }
 
-    pendingFollowUpMailtoUrl = `mailto:${encodeURIComponent(toEmail)}?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    pendingFollowUpMailtoUrl = `mailto:${encodeURIComponent(toEmail)}?cc=${encodeURIComponent(window.DevCoachModules?.sharedUtils?.getCoachingCcEmail?.() || 'Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     // Log to follow-up history
     logFollowUpEntry({

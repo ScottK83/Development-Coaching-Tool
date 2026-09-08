@@ -72,9 +72,13 @@
             // Written as a bare string before it was routed through the storage
             // module, so an existing setting is still readable.
             const prefix = window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_';
-            return localStorage.getItem(prefix + 'ccEmail') || '';
+            const stored = localStorage.getItem(prefix + 'ccEmail');
+            // Absent means never set, and never set means the mailbox this app
+            // has always copied. An empty string means somebody turned it off
+            // on purpose and it stays off.
+            return stored === null || stored === undefined ? DEFAULT_CC_EMAIL : stored;
         } catch (_e) {
-            return '';
+            return DEFAULT_CC_EMAIL;
         }
     }
 
@@ -89,6 +93,26 @@
 
     const EMAIL_PATTERN_STORE = 'associateEmailPattern';
     const EMAIL_OVERRIDE_STORE = 'employeeEmails';
+
+    /*
+     * WHO A COACHING DRAFT GOES TO, AND WHO IS COPIED ON IT
+     *
+     * Both of these had no default, so a fresh install opened every draft with
+     * an empty To and no CC, and the panel said "No address pattern set yet"
+     * until somebody went and set one. Nothing about that was a decision: the
+     * addresses were already known.
+     *
+     * The coaching mailbox was written out as a literal in three other modules
+     * and asserted in a test, so it is not a guess, it is the address this app
+     * has always copied. The pattern is the same address read backwards:
+     * Brandywine.Lockhart@aps.com is {first}.{last}@aps.com.
+     *
+     * Both stay overridable in Settings > Team Members, and clearing the CC
+     * there means no CC rather than the default coming back, which is why the
+     * setter now writes an empty string instead of removing the key.
+     */
+    const DEFAULT_CC_EMAIL = 'Brandywine.Lockhart@aps.com';
+    const DEFAULT_EMAIL_PATTERN = '{first}.{last}@aps.com';
 
     function storagePrefix() {
         return (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
@@ -132,7 +156,14 @@
     }
 
     function getAssociateEmailPattern() {
-        const value = readStoreValue(EMAIL_PATTERN_STORE, '');
+        // null as the fallback, so a pattern that was never set is told apart
+        // from one somebody cleared. Never set gets the default, because a
+        // fresh install opening every draft with an empty To was a setting
+        // nobody had been to yet rather than a decision. Cleared stays
+        // cleared: somebody who wants to type addresses by hand should not
+        // have the pattern grow back under them.
+        const value = readStoreValue(EMAIL_PATTERN_STORE, null);
+        if (value === null || value === undefined) return DEFAULT_EMAIL_PATTERN;
         return typeof value === 'string' ? value.trim() : '';
     }
 
@@ -352,9 +383,11 @@
             // A store written around it never marks itself dirty and therefore
             // never reaches the other machine, silently.
             const save = window.DevCoachModules?.storage?.saveWithSizeCheck;
-            if (clean && typeof save === 'function') save('ccEmail', clean);
-            else if (clean) localStorage.setItem(prefix + 'ccEmail', clean);
-            else localStorage.removeItem(prefix + 'ccEmail');
+            // An empty value is stored rather than removed. Removing it would
+            // read as "never set" on the next draft and put the default CC
+            // back, so turning the copy off would quietly undo itself.
+            if (typeof save === 'function') save('ccEmail', clean);
+            else localStorage.setItem(prefix + 'ccEmail', clean);
             return true;
         } catch (err) {
             return false;
@@ -470,6 +503,8 @@
         escapeHtml,
         formatLocalDate,
         openMailtoDraft,
-        getCoachingCcEmail
+        getCoachingCcEmail,
+        DEFAULT_CC_EMAIL,
+        DEFAULT_EMAIL_PATTERN
     };
 })();

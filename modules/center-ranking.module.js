@@ -1810,7 +1810,11 @@
        July against August" is a conversation and eight columns is a report
        nobody reads. */
 
-    var COACHING_CC = 'Brandywine.Lockhart@aps.com';
+    // Read from the setting, with the literal as the fallback for a load
+    // order where shared-utils is not up yet. Three modules carried this
+    // address as a literal, so changing the coaching mailbox in Settings
+    // changed nothing anywhere it was actually used.
+    var COACHING_CC = window.DevCoachModules?.sharedUtils?.getCoachingCcEmail?.() || 'Brandywine.Lockhart@aps.com';
 
     // first.last@aps.com. Matches the rule the red-flag and trend emails use, so
     // one person cannot end up addressed two different ways.

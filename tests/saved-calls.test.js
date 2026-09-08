@@ -326,3 +326,54 @@ suite('saved calls: one gesture loads a call, in both panels', (t) => {
     t.check('a row says when a transcript is missing', listening.includes("' • no transcript'"));
     t.check('and when one is there', listening.includes("' • transcript saved'"));
 });
+
+/**
+ * The memory panel listed every associate at once.
+ *
+ * That is the right view for the job it was built for, clearing out calls that
+ * should not be feeding the coaching, and the wrong one for every other visit.
+ * A hundred and twenty seven names is not a list anybody reads to find one
+ * person's calls, and it only ever grows: every prompt generated and every
+ * Verint note copied saves a log automatically.
+ *
+ * The associate on screen is the default now. Everyone stays one click away,
+ * because deleting a stray call still needs it.
+ */
+suite('saved calls: the panel shows the associate on screen', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+    t.check('the collector can be narrowed to one person',
+        /function collectAllSavedCalls\(onlyEmployee\)/.test(script));
+    t.check('and it filters on the name',
+        /\.filter\(employeeName => !wanted \|\| employeeName === wanted\)/.test(script));
+
+    t.check('the scope is worked out in one place', /function savedCallsScope\(\)/.test(script));
+    t.check('it defaults to the selected associate',
+        /function savedCallsScope\(\)[\s\S]{0,600}callListeningEmployeeSelect/.test(script));
+
+    // With nobody picked there is nothing to narrow to, so everything beats an
+    // empty panel calling itself a filter.
+    t.check('no selection falls back to everyone',
+        /everyone: everyone \|\| !employeeName/.test(script));
+
+    t.check('there is a way back to everyone', html.includes('id="savedCallsEveryoneToggle"'));
+    t.check('the toggle re-renders', /savedCallsEveryoneToggle'\), 'change', refreshAllSavedCallsIfOpen/.test(script));
+
+    // Changing associate while the panel is open has to move it too, or it
+    // keeps showing the last person's calls under the new person's name.
+    t.check('changing associate moves the panel',
+        /callListeningEmployeeSelect'\), 'change', refreshAllSavedCallsIfOpen/.test(script));
+
+    // "Nothing saved yet" in front of a supervisor with ninety calls stored,
+    // because this one associate has none, is the panel telling them something
+    // untrue about their own data.
+    t.check('an empty scope does not claim the store is empty',
+        /No calls saved for \$\{scope\.employeeName\} yet/.test(script));
+
+    // The stored size is the whole store, so it belongs only on the everyone
+    // view. Under one associate's four calls it would read as those four
+    // weighing a megabyte.
+    t.check('the stored size is only shown for everyone',
+        /scope\.everyone[\s\S]{0,200}\$\{stored\}/.test(script));
+});

@@ -1348,7 +1348,7 @@ function openCoachingFollowupEmail(emailSubject, employeeName, emailBody) {
     try {
         const toAddress = buildEmployeeEmail(employeeName);
         const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+        mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent(window.DevCoachModules?.sharedUtils?.getCoachingCcEmail?.() || 'Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);
@@ -1428,7 +1428,7 @@ function openTrendEmailOutlook(emailSubject, employeeName) {
     try {
         const toAddress = buildEmployeeEmail(employeeName);
         const mailtoLink = document.createElement('a');
-        mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent('Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}`;
+        mailtoLink.href = `mailto:${encodeURIComponent(toAddress)}?cc=${encodeURIComponent(window.DevCoachModules?.sharedUtils?.getCoachingCcEmail?.() || 'Brandywine.Lockhart@aps.com')}&subject=${encodeURIComponent(emailSubject)}`;
         document.body.appendChild(mailtoLink);
         mailtoLink.click();
         document.body.removeChild(mailtoLink);

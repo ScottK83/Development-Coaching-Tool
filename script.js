@@ -9339,12 +9339,20 @@ function refreshCallListeningRecipient() {
     }
 
     if (!note) return;
+
+    // Who gets copied, said here rather than discovered by opening the draft.
+    // Every coaching email goes to the coaching mailbox, and a supervisor
+    // about to send one should be able to see that before they press the
+    // button rather than after.
+    const cc = utils?.getCoachingCcEmail?.() || '';
+    const copied = cc ? ` Copying ${cc}.` : ' Nobody is copied.';
+
     if (!resolved) {
-        note.textContent = 'No address pattern set yet. Type one here, or set the pattern once in Settings > Team Members.';
+        note.textContent = 'No address pattern set yet. Type one here, or set the pattern once in Settings > Team Members.' + copied;
     } else if (overrides[employeeName]) {
-        note.textContent = 'Saved address for this associate.';
+        note.textContent = 'Saved address for this associate.' + copied;
     } else {
-        note.textContent = 'Built from your address pattern. Correct it here if it is wrong and it will be remembered.';
+        note.textContent = 'Built from your address pattern. Correct it here if it is wrong and it will be remembered.' + copied;
     }
 }
 
@@ -9529,11 +9537,13 @@ function renderCallListeningHistoryForSelectedEmployee() {
  * still feeds the coaching, so it has to be visible and removable.
  */
 
-function collectAllSavedCalls() {
+function collectAllSavedCalls(onlyEmployee) {
     const logs = (typeof callListeningLogs !== 'undefined' ? callListeningLogs : {}) || {};
     const bridge = window.DevCoachModules?.callCoachingBridge;
+    const wanted = String(onlyEmployee || '').trim();
 
     return Object.keys(logs)
+        .filter(employeeName => !wanted || employeeName === wanted)
         .sort((a, b) => a.localeCompare(b))
         .map(employeeName => {
             const entries = (Array.isArray(logs[employeeName]) ? logs[employeeName] : [])
@@ -9659,19 +9669,43 @@ function describeSavedCallsSize() {
     }
 }
 
+/**
+ * The scope this panel is showing: the associate on screen, or everybody.
+ *
+ * It listed all 127 associates at once, which is the right view for the job it
+ * was built for, clearing out calls that should not be feeding the coaching,
+ * and the wrong one for every other visit. A hundred and twenty seven names is
+ * not a list anybody reads to find one person's calls, and it only ever grows.
+ * The associate on screen is the default; everyone is one click away and stays
+ * available, because deleting a stray call still needs it.
+ */
+function savedCallsScope() {
+    const everyone = document.getElementById('savedCallsEveryoneToggle')?.checked === true;
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    // With nobody picked there is nothing to narrow to, so showing everything
+    // beats showing an empty panel and calling it a filter.
+    return { everyone: everyone || !employeeName, employeeName };
+}
+
 function renderAllSavedCalls() {
     const container = document.getElementById('allSavedCalls');
     const summary = document.getElementById('allSavedCallsSummary');
     if (!container || !summary) return;
 
-    const groups = collectAllSavedCalls();
+    const scope = savedCallsScope();
+    const groups = collectAllSavedCalls(scope.everyone ? '' : scope.employeeName);
     const total = groups.reduce((sum, group) => sum + group.rows.length, 0);
     const duplicates = groups.reduce(
         (sum, group) => sum + group.rows.filter(row => row.duplicate).length, 0
     );
 
     if (!total) {
-        summary.textContent = 'Nothing saved yet. No calls are feeding the coaching.';
+        // Said differently for the two scopes. "Nothing saved yet" in front of
+        // a supervisor with ninety calls stored, because this associate has
+        // none, is the panel telling them something untrue about their data.
+        summary.textContent = scope.everyone
+            ? 'Nothing saved yet. No calls are feeding the coaching.'
+            : `No calls saved for ${scope.employeeName} yet. Tick the box to see everyone.`;
         container.innerHTML = '';
         return;
     }
@@ -9681,7 +9715,12 @@ function renderAllSavedCalls() {
     // number on the screen is one Scott can watch and act on.
     const stored = describeSavedCallsSize();
 
-    summary.textContent = `${total} saved call${total === 1 ? '' : 's'} across ${groups.length} associate${groups.length === 1 ? '' : 's'}${stored ? `, ${stored}` : ''}.`
+    // The stored size is the whole store either way, so it is only shown on
+    // the everyone view. Putting it under one associate's four calls would
+    // read as those four calls weighing a megabyte.
+    summary.textContent = (scope.everyone
+        ? `${total} saved call${total === 1 ? '' : 's'} across ${groups.length} associate${groups.length === 1 ? '' : 's'}${stored ? `, ${stored}` : ''}.`
+        : `${total} saved call${total === 1 ? '' : 's'} for ${scope.employeeName}.`)
         + (duplicates ? ` ${duplicates} look${duplicates === 1 ? 's' : ''} like the same call saved more than once.` : '');
 
     const describe = window.DevCoachModules?.callListening?.describeCallMoment;
@@ -9730,7 +9769,13 @@ function toggleAllSavedCalls() {
     const opening = container.style.display === 'none';
     if (opening) renderAllSavedCalls();
     container.style.display = opening ? 'block' : 'none';
-    if (button) button.textContent = opening ? '🔎 Hide Everything Saved' : '🔎 Show Everything Saved';
+    if (button) button.textContent = opening ? '🔎 Hide Saved Calls' : '🔎 Show Saved Calls';
+}
+
+/** Re-renders in place, for the scope toggle and for changing associate. */
+function refreshAllSavedCallsIfOpen() {
+    const container = document.getElementById('allSavedCalls');
+    if (container && container.style.display !== 'none') renderAllSavedCalls();
 }
 
 function deleteSavedCall(employeeName, entryId) {
@@ -9864,6 +9909,10 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('copyCallWordChoiceBtn'), 'click', copyCallListeningWordChoice);
     bindElementOnce(document.getElementById('callMetricChips'), 'click', handleCallMetricChipClick);
     bindElementOnce(document.getElementById('showAllSavedCallsBtn'), 'click', toggleAllSavedCalls);
+    bindElementOnce(document.getElementById('savedCallsEveryoneToggle'), 'change', refreshAllSavedCallsIfOpen);
+    // Changing associate while the panel is open has to move it too, or it
+    // keeps showing the last person's calls under the new person's name.
+    bindElementOnce(document.getElementById('callListeningEmployeeSelect'), 'change', refreshAllSavedCallsIfOpen);
     bindElementOnce(document.getElementById('allSavedCalls'), 'click', handleAllSavedCallsClick);
     bindElementOnce(document.getElementById('writeMetricMessageBtn'), 'click', writeCallMetricMessage);
     bindElementOnce(document.getElementById('writeCallFeedbackEmailBtn'), 'click', writeCallFeedbackEmail);
