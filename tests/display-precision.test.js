@@ -21,22 +21,22 @@ function loadProfiles(t) {
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
     global.METRICS_REGISTRY = global.window.METRICS_REGISTRY;
+    // The REAL formatter, loaded, not mirrored.
+    //
+    // This suite used to reach for metrics.module.js, an orphan the app never
+    // loaded whose seconds and hours formatting differed, which meant the one
+    // suite whose whole job is "judged as it is printed" was checking against
+    // something nobody prints (AUDIT.md 2.10). The fix at the time was to
+    // hand-copy metric-trends' formatter into this file, which closed that gap
+    // and opened a quieter one: a change to the real formatter could no longer
+    // fail this suite, because the suite was comparing the profile rounding
+    // against a copy that would change with it only if somebody remembered.
+    //
+    // metric-trends loads cleanly under the harness, so there is no reason to
+    // copy it. Both halves of the pairing now come from the app.
+    t.loadModule('modules/metric-trends.module.js');
     const M = global.window.DevCoachModules;
-    // The formatter the app actually uses is metric-trends.module.js:3263,
-    // mirrored here. This suite used to reach for metrics.module.js, an orphan
-    // the app never loaded whose seconds and hours formatting differed, which
-    // meant the one suite whose whole job is "judged as it is printed" was
-    // checking against something nobody prints. See AUDIT.md 2.10.
-    const metrics = {
-        formatMetricDisplay: function (key, value) {
-            const metric = global.window.METRICS_REGISTRY[key];
-            if (!metric) return String(value);
-            if (metric.unit === 'sec') return Math.round(value) + 's';
-            if (metric.unit === '%') return Number(value).toFixed(1) + '%';
-            if (metric.unit === 'hrs') return Number(value).toFixed(1) + ' hrs';
-            return String(Math.round(value));
-        }
-    };
+    const metrics = M.metricTrends;
     return { mp: M.metricProfiles, metrics: metrics };
 }
 
@@ -73,7 +73,7 @@ suite('display precision: every metric is judged as it is printed', (t) => {
         { key: 'acw', raw: 60.4, target: 60, dir: 'max' },
         { key: 'holdTime', raw: 30.4, target: 30, dir: 'max' },
         { key: 'transfers', raw: 6.04, target: 6, dir: 'max' },
-        { key: 'reliability', raw: 18.004, target: 18, dir: 'max' }
+        { key: 'reliability', raw: 18.04, target: 18, dir: 'max' }
     ];
 
     const wrong = [];
@@ -115,8 +115,11 @@ suite('display precision: rounding follows the unit, not a fixed number of place
 
     t.equal('percentages keep one decimal', mp.roundToDisplayPrecision('scheduleAdherence', 92.96), 93);
     t.equal('seconds are whole', mp.roundToDisplayPrecision('aht', 426.4), 426);
-    t.equal('hours keep two', mp.roundToDisplayPrecision('reliability', 18.004), 18);
-    t.equal('and two really is two', mp.roundToDisplayPrecision('reliability', 18.006), 18.01);
+    // Hours keep ONE, because that is what the app prints. This used to assert
+    // two, which is how reliability 18.04 came to print "18.0 hrs" and read as
+    // failing an 18-hour target in the same cell.
+    t.equal('hours keep one', mp.roundToDisplayPrecision('reliability', 18.04), 18);
+    t.equal('and one really is one', mp.roundToDisplayPrecision('reliability', 18.06), 18.1);
 
     // Nothing to round is not an error.
     t.check('a blank stays unusable', !Number.isFinite(mp.roundToDisplayPrecision('aht', '')));

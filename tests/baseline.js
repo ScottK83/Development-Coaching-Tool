@@ -691,6 +691,46 @@ function recordPeriodMath() {
         };
     });
 
+    // The one aggregator that combines an associate's periods, recorded because
+    // counts and rates have to be combined differently and it is not obvious
+    // from the output which rule a field got. A count weighted by call volume
+    // reads as a plausible number while being sum(n*tc)/sum(tc): two weeks of
+    // 100 and 300 calls came out as 250 calls answered rather than 400.
+    //
+    // Single-key buckets cannot show it — a weighted mean of one value is that
+    // value — and wow/mom/dod buckets are single-key, so the multi-key rows
+    // below are the ones that matter.
+    record('script / buildEmployeeAggregateForPeriod over one period and several', () => {
+        const build = G('buildEmployeeAggregateForPeriod');
+        if (typeof build !== 'function') return '(not reachable)';
+        const weekKeys = Object.keys(fixture.weeklyData).sort();
+        const names = ['Ada Stretch', 'Gus Nocalls', 'Hal Blanks', 'Ida Partial'];
+        const shapes = {
+            'one week': weekKeys.slice(-1),
+            'two weeks': weekKeys.slice(-2),
+            'every week': weekKeys,
+            'no keys': [],
+            'a key with no data': ['2099-01-01|2099-01-07']
+        };
+        const out = {};
+        Object.keys(shapes).forEach((label) => {
+            out[label] = {};
+            names.forEach((name) => {
+                const agg = build(name, shapes[label]);
+                out[label][name] = agg && {
+                    periodsIncluded: agg.periodsIncluded,
+                    totalCalls: agg.totalCalls,
+                    transfersCount: agg.transfersCount,
+                    reliability: agg.reliability,
+                    aht: agg.aht,
+                    fcr: agg.fcr,
+                    scheduleAdherence: agg.scheduleAdherence
+                };
+            });
+        });
+        return out;
+    });
+
     record('period-index / shiftDays and isWeekLike and isCompleteWeek', () => {
         return {
             shift: [-7, -1, 0, 1, 7].map((n) => n + ' -> ' + pi.shiftDays('2026-06-21', n)),

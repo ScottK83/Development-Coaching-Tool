@@ -123,7 +123,11 @@
         const registry = typeof window !== 'undefined' ? window.METRICS_REGISTRY : null;
         const unit = registry?.[metricKey]?.unit || '%';
         if (unit === 'sec' || unit === '#') return Math.round(numeric);
-        if (unit === 'hrs') return Math.round(numeric * 100) / 100;
+        // Hours print to ONE decimal, not two: metric-trends formatMetricValue
+        // does `value.toFixed(1)` for 'hrs' and says so. Rounding to two here
+        // meant reliability 18.04 printed "18.0 hrs" and read as failing an
+        // 18-hour target in the same cell — the exact contradiction this
+        // function exists to remove, surviving on the one unit nobody checked.
         return Math.round(numeric * 10) / 10;
     }
 

@@ -5683,7 +5683,21 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
     if (!employeeName || !Array.isArray(periodKeys) || periodKeys.length === 0) return null;
 
     const surveyBackedMetrics = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+
+    // Counts are added up. Rates are averaged. Getting that backwards does not
+    // produce a slightly-off number, it produces a meaningless one: a count
+    // weighted by totalCalls comes out as sum(n*tc)/sum(tc), so two weeks of
+    // 100 and 300 calls reported 250 calls answered rather than 400, and 10 + 30
+    // transfers reported 25. Every other aggregator in the app sums these
+    // (metric-trends:3467, futures:275, q1-review:112); this one did not.
+    //
+    // Derived from the registry's unit rather than listed, so a count added
+    // later is summed without anyone having to remember this line. '#' is the
+    // count unit; reliability is hours but accrues the same way.
     const cumulativeMetrics = new Set(['reliability']);
+    Object.keys(METRICS_REGISTRY).forEach(key => {
+        if (METRICS_REGISTRY[key]?.unit === '#') cumulativeMetrics.add(key);
+    });
     const weightedSums = {};
     const weightedCounts = {};
     const cumulativeSums = {};

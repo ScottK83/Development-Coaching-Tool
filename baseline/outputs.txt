@@ -8,7 +8,7 @@ This file is a contract, not documentation. After a refactoring pass, an
 empty `git diff` here means the pass changed no behaviour. A non-empty diff
 is either an intended change that needs explaining line by line, or a bug.
 
-Entries: 82   Not covered: 5
+Entries: 83   Not covered: 5
 
 ------------------------------------------------------------------------------
 metric-profiles / getYearTarget, every metric, both years
@@ -460,16 +460,16 @@ metric-profiles / roundToDisplayPrecision across units
     "-1.25 -> -1.2"
   ],
   "reliability": [
-    "92.46 -> 92.46",
-    "92.44 -> 92.44",
+    "92.46 -> 92.5",
+    "92.44 -> 92.4",
     "92.5 -> 92.5",
-    "92.96 -> 92.96",
+    "92.96 -> 93",
     "18.004 -> 18",
-    "18.045 -> 18.05",
+    "18.045 -> 18",
     "426.4 -> 426.4",
     "426.6 -> 426.6",
     "0 -> 0",
-    "-1.25 -> -1.25"
+    "-1.25 -> -1.2"
   ],
   "scheduleAdherence": [
     "92.46 -> 92.5",
@@ -10581,6 +10581,138 @@ period-index / selectors over the fixture
   "thisWeekSoFar": null,
   "weekLikeKeys": [],
   "yearToDate": null
+}
+
+------------------------------------------------------------------------------
+script / buildEmployeeAggregateForPeriod over one period and several
+------------------------------------------------------------------------------
+{
+  "a key with no data": {
+    "Ada Stretch": null,
+    "Gus Nocalls": null,
+    "Hal Blanks": null,
+    "Ida Partial": null
+  },
+  "every week": {
+    "Ada Stretch": {
+      "aht": 405,
+      "fcr": 74,
+      "periodsIncluded": 6,
+      "reliability": 24,
+      "scheduleAdherence": 95.2,
+      "totalCalls": 1200,
+      "transfersCount": 66
+    },
+    "Gus Nocalls": {
+      "aht": 420,
+      "fcr": undefined,
+      "periodsIncluded": 6,
+      "reliability": 72,
+      "scheduleAdherence": 93.5,
+      "totalCalls": 18,
+      "transfersCount": 0
+    },
+    "Hal Blanks": {
+      "aht": undefined,
+      "fcr": 74,
+      "periodsIncluded": 6,
+      "reliability": 72,
+      "scheduleAdherence": 93.5,
+      "totalCalls": 1200,
+      "transfersCount": 66
+    },
+    "Ida Partial": {
+      "aht": 418,
+      "fcr": 74,
+      "periodsIncluded": 6,
+      "reliability": 54,
+      "scheduleAdherence": 93.8,
+      "totalCalls": 1200,
+      "transfersCount": 66
+    }
+  },
+  "no keys": {
+    "Ada Stretch": null,
+    "Gus Nocalls": null,
+    "Hal Blanks": null,
+    "Ida Partial": null
+  },
+  "one week": {
+    "Ada Stretch": {
+      "aht": 405,
+      "fcr": 74,
+      "periodsIncluded": 1,
+      "reliability": 4,
+      "scheduleAdherence": 95.2,
+      "totalCalls": 200,
+      "transfersCount": 11
+    },
+    "Gus Nocalls": {
+      "aht": 420,
+      "fcr": undefined,
+      "periodsIncluded": 1,
+      "reliability": 12,
+      "scheduleAdherence": 93.5,
+      "totalCalls": 3,
+      "transfersCount": 0
+    },
+    "Hal Blanks": {
+      "aht": undefined,
+      "fcr": 74,
+      "periodsIncluded": 1,
+      "reliability": 12,
+      "scheduleAdherence": 93.5,
+      "totalCalls": 200,
+      "transfersCount": 11
+    },
+    "Ida Partial": {
+      "aht": 418,
+      "fcr": 74,
+      "periodsIncluded": 1,
+      "reliability": 9,
+      "scheduleAdherence": 93.8,
+      "totalCalls": 200,
+      "transfersCount": 11
+    }
+  },
+  "two weeks": {
+    "Ada Stretch": {
+      "aht": 405,
+      "fcr": 74,
+      "periodsIncluded": 2,
+      "reliability": 8,
+      "scheduleAdherence": 95.2,
+      "totalCalls": 400,
+      "transfersCount": 22
+    },
+    "Gus Nocalls": {
+      "aht": 420,
+      "fcr": undefined,
+      "periodsIncluded": 2,
+      "reliability": 24,
+      "scheduleAdherence": 93.5,
+      "totalCalls": 6,
+      "transfersCount": 0
+    },
+    "Hal Blanks": {
+      "aht": undefined,
+      "fcr": 74,
+      "periodsIncluded": 2,
+      "reliability": 24,
+      "scheduleAdherence": 93.5,
+      "totalCalls": 400,
+      "transfersCount": 22
+    },
+    "Ida Partial": {
+      "aht": 418,
+      "fcr": 74,
+      "periodsIncluded": 2,
+      "reliability": 18,
+      "scheduleAdherence": 93.8,
+      "totalCalls": 400,
+      "transfersCount": 22
+    }
+  }
 }
 
 ------------------------------------------------------------------------------
