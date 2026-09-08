@@ -898,6 +898,115 @@
      * Reads a transcript and returns draft strengths and coaching points, each
      * one anchored to the line or the timestamp that triggered it.
      */
+    /*
+     * HANDING THE CALL TO COPILOT
+     *
+     * Everything else in this file is rules. Rules are good at what was said
+     * and poor at what the call was about, because "she explained the usage
+     * charge twice and the customer still did not follow it" is not a phrase
+     * match, it is a reading. There is no model in this app and there does not
+     * need to be one: Copilot is already on the desk.
+     *
+     * So this builds the prompt and the transcript goes with it, with the
+     * roles this file worked out already applied, because a summary of a call
+     * where nobody knows who was talking is worth very little.
+     *
+     * Two things it is careful about.
+     *
+     * It asks for a summary of a conversation and says plainly that no
+     * assessment of anybody is wanted, because a prompt that reads as scoring
+     * a named employee gets refused outright. The associate is never named,
+     * which costs the summary nothing.
+     *
+     * And it takes the numbers out. A customer reads her social, her account
+     * and her phone number aloud on these calls, and the transcript spells
+     * them in words, so "four six four five" leaves as readily as "4645". None
+     * of it is needed to say what the call was about, and this prompt is going
+     * off the page.
+     */
+
+    const SPOKEN_DIGITS = '(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|niner)';
+
+    function maskIdentifiers(text) {
+        return String(text || '')
+            // Digits as digits: socials, accounts, cards, phone numbers.
+            .replace(/\b\d[\d\s.-]{2,}\d\b/g, '[number]')
+            // Digits as words, which is how a transcript records somebody
+            // reading them out. Four or more in a row is somebody reciting
+            // something, not somebody counting.
+            .replace(new RegExp('(?:\\b' + SPOKEN_DIGITS + '\\b[ ,.-]*){4,}', 'gi'), '[number] ')
+            // An email carries a name and a domain. Written form first, then
+            // the form these transcripts actually hold, which is somebody
+            // reading it out: "sheryl dot ross at gmail dot com".
+            .replace(/\b[\w.+-]+@[\w-]+\.[\w.]+\b/g, '[email]')
+            .replace(/\b(?:[a-z0-9]+\s+(?:dot|at)\s+)+[a-z0-9]+\s+dot\s+(?:com|net|org|edu|gov|io|co)\b/gi, '[email]')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    }
+
+    /**
+     * A prompt that asks Copilot to read the call and say what happened.
+     *
+     * Pure: transcript in, prompt out, so the panel can show it before it goes
+     * anywhere and the whole thing is testable without a browser.
+     */
+    function buildCallSummaryPrompt(rawText, options = {}) {
+        const transcript = String(rawText || '').trim();
+        if (!transcript) return '';
+
+        const parsed = parseTranscript(transcript, options);
+        if (!parsed.turns.length) return '';
+
+        const meta = extractMetadata(transcript) || {};
+        const lines = [];
+
+        lines.push('Below is the transcript of one customer service call from our own call recording system. '
+            + 'I am the supervisor who reviews these calls. The review itself is already done and I am not '
+            + 'asking you to assess, score or rate anybody. I want a summary of the conversation.');
+        lines.push('');
+
+        const facts = [];
+        if (meta.duration) facts.push('The call ran ' + meta.duration + '.');
+        if (meta.date) facts.push('It was taken on ' + meta.date + '.');
+        if (facts.length) { lines.push(facts.join(' ')); lines.push(''); }
+
+        if (parsed.labeled) {
+            lines.push('The two speakers are labelled in the transcript, so who said what is known.');
+        } else {
+            lines.push('The export carries no speaker labels, so the Agent and Customer labels below were '
+                + 'worked out from the conversation. They are very likely right and they are not certain. '
+                + 'If a line looks like it sits on the wrong side, say so rather than building on it.');
+        }
+        lines.push('');
+
+        lines.push('Numbers the customer read out have been replaced with [number] before this left our system. '
+            + 'Do not ask for them and do not try to reconstruct them.');
+        lines.push('');
+
+        lines.push('Tell me, in plain sentences and in this order:');
+        lines.push('1. Why the customer called, in one or two sentences.');
+        lines.push('2. What was actually done on the call, in the order it happened.');
+        lines.push('3. How it ended, and whether anything was left unresolved or promised for later.');
+        lines.push('4. How the customer sounded across the call, and whether that changed.');
+        lines.push('5. Anything a supervisor would want to know that is easy to miss on one read.');
+        lines.push('');
+        lines.push('Write it for someone who has not heard the call. No headings in title case, no scores, '
+            + 'no ratings, no bullet lists inside the numbered points. Do not name the agent and do not '
+            + 'comment on how well they did their job. If the transcript does not show something, say it '
+            + 'does not show, rather than filling it in.');
+        lines.push('');
+        lines.push('Transcript:');
+        lines.push('');
+
+        parsed.turns.forEach((turn) => {
+            const who = turn.role === 'customer' ? 'Customer' : 'Agent';
+            const said = maskIdentifiers(turn.text);
+            if (said) lines.push(who + ': ' + said);
+        });
+
+        return lines.join('\n');
+    }
+
     function analyzeTranscript(rawText, options = {}) {
         const transcript = String(rawText || '').trim();
         if (!transcript) {
@@ -1304,6 +1413,8 @@
         stripBoilerplate,
         parseTranscript,
         analyzeTranscript,
+        buildCallSummaryPrompt,
+        maskIdentifiers,
         // Exported so the word-choice scan can ask "was this emotion cue
         // acknowledged" using the same empathy definition scored here, rather
         // than keeping a second copy of the pattern that can drift from it.

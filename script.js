@@ -9145,6 +9145,43 @@ function showTranscriptPasteDiagnosis() {
     });
 }
 
+/**
+ * Hands the call to Copilot and asks it what happened.
+ *
+ * The rules in call-transcript are good at what was said and poor at what the
+ * call was about. There is no model in this app and there does not need to be
+ * one, because Copilot is already open on the same desk. So the transcript
+ * goes over with the speaker roles applied, the numbers taken out, and a
+ * prompt that asks for a summary rather than an assessment of anybody.
+ */
+function summarizeCallInCopilot() {
+    const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
+    if (!transcript) {
+        showToast('⚠️ Paste a call transcript first.', 3000);
+        return;
+    }
+
+    const build = window.DevCoachModules?.callTranscript?.buildCallSummaryPrompt;
+    if (typeof build !== 'function') {
+        showToast('⚠️ Call Transcript module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
+
+    // The associate is deliberately not passed. Naming her buys the summary
+    // nothing and a prompt that reads as scoring a named employee is refused.
+    const prompt = build(transcript);
+    if (!prompt) {
+        showToast('⚠️ Nothing readable in that transcript.', 3000);
+        return;
+    }
+
+    if (typeof openCopilotWithPrompt === 'function') {
+        openCopilotWithPrompt(prompt, 'Call Summary');
+        return;
+    }
+    copyToClipboard(prompt, { message: '📋 Call summary prompt copied. Paste it into Copilot.' });
+}
+
 function analyzeCallListeningTranscript() {
     const transcriptField = document.getElementById('callListeningTranscript');
     const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -9739,6 +9776,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(employeeSelect, 'change', refreshCallListeningRecipient);
     bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
+    bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
     bindElementOnce(document.getElementById('clearCallTranscriptBtn'), 'click', clearCallListeningTranscript);
     bindElementOnce(document.getElementById('copyCallQaBtn'), 'click', copyCallListeningQaAnswers);
