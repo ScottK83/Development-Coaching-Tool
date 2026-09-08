@@ -44,13 +44,28 @@
      * Rate metrics: weighted by totalCalls or surveyTotal.
      * Cumulative metrics (reliability): summed.
      * Returns null if no data.
+     *
+     * `hasValue` is already the whole presence test — set at :359 from
+     * `value !== undefined && value !== null && value !== '' && !isNaN(num)`.
+     * Both branches used to re-check `cell.value !== 0` on top of it, which
+     * quietly redefined a measured zero as a missing reading.
+     *
+     * Zero is not missing on this list. It is the best possible number on
+     * every reverse metric in SNAPSHOT_METRICS, and on transfersCount it is an
+     * ordinary week. Excluding those rows took the best performers out of the
+     * denominator, so the team figure printed on the shared snapshot came out
+     * worse than the team was. On reliability, which is summed rather than
+     * averaged, a team that missed no hours at all reported "--" instead of 0.
+     *
+     * The two all-zero checks further down are a different question — which
+     * columns are worth showing at all — and are left alone.
      */
     function computeTeamMetricValue(rows, metricKey) {
         if (CUMULATIVE_SNAP[metricKey]) {
             var sum = 0, hasData = false;
             rows.forEach(function(row) {
                 var cell = row.cells.find(function(c) { return c.metricKey === metricKey; });
-                if (cell && cell.hasValue && cell.value !== 0) { sum += cell.value; hasData = true; }
+                if (cell && cell.hasValue) { sum += cell.value; hasData = true; }
             });
             return hasData ? sum : null;
         }
@@ -58,7 +73,7 @@
         var wSum = 0, wCount = 0;
         rows.forEach(function(row) {
             var cell = row.cells.find(function(c) { return c.metricKey === metricKey; });
-            if (!cell || !cell.hasValue || cell.value === 0) return;
+            if (!cell || !cell.hasValue) return;
             var w = 1;
             if (SURVEY_WEIGHTED_SNAP[metricKey]) {
                 w = row.surveyTotal > 0 ? row.surveyTotal : 0;
@@ -1309,6 +1324,9 @@
         populatePeriodDropdown: populatePeriodDropdown,
         // Exported so the periods it offers can be checked without a DOM.
         getAvailablePeriods: getAvailablePeriods,
+        // Pure, and the one place a team figure is computed. Exported for the
+        // same reason, the way celebrations exports meetsCelebrationTarget.
+        computeTeamMetricValue: computeTeamMetricValue,
         loadSampleData: loadSampleData
     };
 

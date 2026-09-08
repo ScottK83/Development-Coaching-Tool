@@ -51,11 +51,25 @@
     // ENTRIES
     // ============================================
 
-    /** Today, unless a caller pins it. Tests and replays pin it. */
+    /**
+     * Today, unless a caller pins it. Tests and replays pin it.
+     *
+     * The local calendar date, not the UTC one. toISOString() rolls over at
+     * 17:00 Phoenix, and this value decides whether a week or a month has
+     * ENDED — so from five o'clock on the closing Sunday the week read as
+     * over and paid its bonus, and from five o'clock on the last day of the
+     * month so did the month. The comment below is explicit that neither pays
+     * while it is still running.
+     */
     function todayIso(options) {
         const given = options && options.asOf;
         if (/^\d{4}-\d{2}-\d{2}$/.test(String(given || ''))) return String(given);
-        return new Date().toISOString().slice(0, 10);
+        const local = window.DevCoachModules?.sharedUtils?.formatLocalDate;
+        if (typeof local === 'function') return local();
+        const now = new Date();
+        return now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0');
     }
 
     /** The Sunday that closes the week a Monday opens. */
