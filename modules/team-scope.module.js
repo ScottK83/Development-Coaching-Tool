@@ -18,7 +18,6 @@
     const PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     const ACTIVE_MEMBER_KEY = PREFIX + 'activeTeamMember';
     const MY_LABEL_KEY = PREFIX + 'mySupervisorLabel';
-    const SUPERVISORS_KEY = PREFIX + 'employeeSupervisors';
 
     const ALL_MEMBERS_ID = '__all__';
 
@@ -67,7 +66,14 @@
      */
     function getSupervisorMap() {
         try {
-            return JSON.parse(localStorage.getItem(SUPERVISORS_KEY) || '{}') || {};
+            // Through the storage module. employeeSupervisors is a bulk store,
+            // so a raw read here saw the localStorage copy, which stops being
+            // updated the moment the store moves to IndexedDB and is deleted
+            // outright once reclaimLocalStorageCopies runs. An empty map makes
+            // resolveMyLabel return null, and "my team" silently falls back to
+            // the Settings tick-list -- which is the disagreement the comment
+            // above says the roster exists to settle.
+            return window.DevCoachModules?.storage?.readStore?.('employeeSupervisors') || {};
         } catch (e) {
             return {};
         }

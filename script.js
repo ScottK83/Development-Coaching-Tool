@@ -219,12 +219,13 @@ const SENTIMENT_IMPROVEMENT_THRESHOLD = 3;
 const MONTH_RANGE_DAYS = { min: 26, max: 33 };
 const QUARTER_RANGE_DAYS = { min: 88, max: 95 };
 const YTD_MIN_DAYS = 180;
-const YEAR_END_ANNUAL_GOALS_STORAGE_KEY = STORAGE_PREFIX + 'yearEndAnnualGoals';
-const YEAR_END_DRAFT_STORAGE_KEY = STORAGE_PREFIX + 'yearEndDraftEntries';
-// No CALL_LISTENING_LOGS_STORAGE_KEY here on purpose: the call listening store
-// is reached through the storage module now, so script.js has no business
-// knowing its localStorage key. Reintroducing the constant is how a direct read
-// creeps back in and quietly bypasses the backend.
+// No storage-key constant for any bulk store here on purpose: they are reached
+// through the storage module, so script.js has no business knowing their
+// localStorage keys. Reintroducing one is how a direct read creeps back in and
+// quietly bypasses the backend — which is exactly what happened to
+// yearEndAnnualGoals and yearEndDraftEntries, whose constants used to sit on
+// this line. A precomputed constant also hides the access from the chokepoint
+// guards, which only ever matched the inline `STORAGE_PREFIX + 'name'` form.
 const CALL_LISTENING_SYNC_CONFIG_STORAGE_KEY = STORAGE_PREFIX + 'callListeningSyncConfig';
 const REPO_SYNC_LAST_SUCCESS_STORAGE_KEY = STORAGE_PREFIX + 'repoSyncLastSuccess';
 const REPO_BACKUP_APPLIED_AT_STORAGE_KEY = STORAGE_PREFIX + 'repoBackupAppliedAt';
@@ -1253,15 +1254,21 @@ const PREFERRED_NAME_SEED = {
 
 (function seedPreferredNames() {
     try {
-        const key = STORAGE_PREFIX + 'employeePreferredNames';
-        const stored = JSON.parse(localStorage.getItem(key) || '{}');
+        // Through the module, not around it. This used to read and write
+        // localStorage directly, which on the IndexedDB backend meant the seed
+        // landed somewhere nothing reads: hydrate has already filled the cache
+        // by the time script.js parses, and getEmployeeNickname below reads the
+        // cache. The seeded name never appeared, so the shout-outs went out
+        // using the roster first name instead of the one the person goes by.
+        const store = window.DevCoachModules?.storage;
+        const stored = store?.readStore?.('employeePreferredNames') ?? {};
         let added = false;
         Object.keys(PREFERRED_NAME_SEED).forEach(function(fullName) {
             if (stored[fullName]) return;
             stored[fullName] = PREFERRED_NAME_SEED[fullName];
             added = true;
         });
-        if (added) localStorage.setItem(key, JSON.stringify(stored));
+        if (added) store?.saveWithSizeCheck?.('employeePreferredNames', stored);
     } catch (_e) { console.warn('[preferredNames] seed skipped:', _e.message); }
 })();
 
@@ -1580,7 +1587,11 @@ window.backfillBlankReliability = backfillBlankReliability;
     // out-of-org name ever uploaded was still sitting in weeklyData — 257 rows for 127
     // people. Wipe the assignments and purge the stores down to the roster, once.
     if (!localStorage.getItem(STORAGE_PREFIX + 'supervisorSeeded_v5_migration')) {
-        localStorage.removeItem(STORAGE_PREFIX + 'employeeSupervisors');
+        // Through the module: employeeSupervisors is a bulk store, so removing
+        // the localStorage copy wiped nothing once the store was on IndexedDB
+        // and this one-shot migration is guarded, so it never got a second go.
+        // An empty map is the wipe; the seeding below refills it.
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('employeeSupervisors', {});
         const purged = purgeNonRosteredEmployees();
         if (purged.length) console.info('[seedSupervisorTeams] v5 purge removed ' + purged.length + ' non-rostered name(s):', purged);
         localStorage.setItem(STORAGE_PREFIX + 'supervisorSeeded_v5_migration', '1');
@@ -3996,8 +4007,7 @@ function handleDeleteSelectedSentimentClick() {
 
 function loadYearEndAnnualGoalsStore() {
     try {
-        const raw = localStorage.getItem(YEAR_END_ANNUAL_GOALS_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
+        return window.DevCoachModules?.storage?.readStore?.('yearEndAnnualGoals') ?? {};
     } catch (error) {
         console.error('Error loading year-end annual goals store:', error);
         return {};
@@ -4006,7 +4016,7 @@ function loadYearEndAnnualGoalsStore() {
 
 function saveYearEndAnnualGoalsStore(store) {
     try {
-        localStorage.setItem(YEAR_END_ANNUAL_GOALS_STORAGE_KEY, JSON.stringify(store || {}));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('yearEndAnnualGoals', store || {});
     } catch (error) {
         console.error('Error saving year-end annual goals store:', error);
     }
@@ -4014,8 +4024,7 @@ function saveYearEndAnnualGoalsStore(store) {
 
 function loadYearEndDraftStore() {
     try {
-        const raw = localStorage.getItem(YEAR_END_DRAFT_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : {};
+        return window.DevCoachModules?.storage?.readStore?.('yearEndDraftEntries') ?? {};
     } catch (error) {
         console.error('Error loading year-end draft store:', error);
         return {};
@@ -4024,7 +4033,7 @@ function loadYearEndDraftStore() {
 
 function saveYearEndDraftStore(store) {
     try {
-        localStorage.setItem(YEAR_END_DRAFT_STORAGE_KEY, JSON.stringify(store || {}));
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('yearEndDraftEntries', store || {});
     } catch (error) {
         console.error('Error saving year-end draft store:', error);
     }
@@ -7701,7 +7710,6 @@ function renderEmployeesList() {
     moduleApi.renderEmployeesList({
         container: document.getElementById('employeesList'),
         weeklyData,
-        storagePrefix: STORAGE_PREFIX,
         escapeHtml,
         getEmployeeNickname,
         onSaveName: saveEmployeePreferredName,
@@ -7728,7 +7736,6 @@ function deleteEmployee(employeeName) {
         confirmDelete: (message) => confirm(message),
         weeklyData,
         ytdData,
-        storagePrefix: STORAGE_PREFIX,
         saveWeeklyData,
         saveYtdData,
         normalizeTeamMembersForExistingWeeks,

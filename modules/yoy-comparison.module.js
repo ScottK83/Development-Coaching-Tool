@@ -8,8 +8,6 @@
 (function () {
     'use strict';
 
-    var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
-    var BASELINE_KEY = STORAGE_PREFIX + 'yoyBaseline2025';
     var BASELINE_YEAR = 2025;
     var BASELINE_START = '2025-01-01';
     var BASELINE_END = '2025-12-31';
@@ -68,11 +66,19 @@
     }
 
     // ── Baseline (2025) storage ──
+    // Through the storage module, all three of them. yoyBaseline2025 is a bulk
+    // store on the IndexedDB backend, so a raw write lands in localStorage
+    // where the backend never sees it: the baseline never marks itself dirty,
+    // never reaches the other machine, and is deleted outright the first time
+    // reclaimLocalStorageCopies frees the localStorage copy it thinks is
+    // redundant. Uploading the 2025 baseline again is the only way back.
+    function _storage() {
+        return window.DevCoachModules && window.DevCoachModules.storage;
+    }
+
     function _loadBaseline() {
         try {
-            var raw = localStorage.getItem(BASELINE_KEY);
-            if (!raw) return null;
-            var parsed = JSON.parse(raw);
+            var parsed = _storage()?.readStore?.('yoyBaseline2025');
             if (!parsed || !Array.isArray(parsed.employees)) return null;
             return parsed;
         } catch (_e) { return null; }
@@ -89,15 +95,18 @@
             }
         };
         try {
-            localStorage.setItem(BASELINE_KEY, JSON.stringify(payload));
-            return true;
+            return _storage()?.saveWithSizeCheck?.('yoyBaseline2025', payload) !== false;
         } catch (_e) {
             return false;
         }
     }
 
+    // An empty object rather than a removal: the module has no delete, and
+    // _loadBaseline already treats anything without an employees array as
+    // absent, so this reads back as "no baseline" exactly the way a removed
+    // key did.
     function _clearBaseline() {
-        try { localStorage.removeItem(BASELINE_KEY); } catch (_e) { /* ignore */ }
+        try { _storage()?.saveWithSizeCheck?.('yoyBaseline2025', {}); } catch (_e) { /* ignore */ }
     }
 
     // ── Current-year data: newest real YTD for the current year, else newest

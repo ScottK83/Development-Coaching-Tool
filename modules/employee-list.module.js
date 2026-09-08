@@ -76,7 +76,6 @@
     function renderEmployeesList(options = {}) {
         const container = options.container;
         const weeklyData = options.weeklyData || {};
-        const storagePrefix = String(options.storagePrefix || '');
 
         if (!container) return;
 
@@ -88,7 +87,11 @@
 
         let preferredNames = {};
         try {
-            preferredNames = JSON.parse(localStorage.getItem(storagePrefix + 'employeePreferredNames') || '{}');
+            // Through the module. Read raw, this saw a localStorage copy that
+            // stops being updated the moment the store moves to the backend,
+            // so the list rendered stale names while the rest of the app used
+            // the current ones.
+            preferredNames = window.DevCoachModules?.storage?.readStore?.('employeePreferredNames') ?? {};
         } catch (_error) {
             preferredNames = {};
         }
@@ -219,7 +222,6 @@
         const confirmDelete = options.confirmDelete || ((message) => window.confirm(message));
         const weeklyData = options.weeklyData || {};
         const ytdData = options.ytdData || {};
-        const storagePrefix = String(options.storagePrefix || '');
 
         if (!employeeName) return { ok: false, reason: 'missing-employee' };
 
@@ -235,9 +237,10 @@
         options.saveTeamMembers?.();
 
         try {
-            const preferredNames = JSON.parse(localStorage.getItem(storagePrefix + 'employeePreferredNames') || '{}');
+            const storage = window.DevCoachModules?.storage;
+            const preferredNames = storage?.readStore?.('employeePreferredNames') ?? {};
             delete preferredNames[employeeName];
-            localStorage.setItem(storagePrefix + 'employeePreferredNames', JSON.stringify(preferredNames));
+            storage?.saveWithSizeCheck?.('employeePreferredNames', preferredNames);
         } catch (_error) {
         }
 
