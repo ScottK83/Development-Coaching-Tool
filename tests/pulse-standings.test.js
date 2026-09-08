@@ -492,8 +492,20 @@ suite('pulse standings: the period is named for what it actually was', (t) => {
 });
 
 suite('pulse standings: a week still being worked is not spoken of in the past', (t) => {
-    // The suite clock sits on Tuesday 2026-08-18, so 08-17 through 08-20 are
-    // this week and 08-21 is the Friday that closes it.
+    // Declared rather than inherited. Every fixture below is a statement about
+    // where a date sits relative to *now*: 08-17 through 08-20 are this week,
+    // and 08-21 is the Friday that closes it. That is only true while the clock
+    // is inside that week, so the suite has to say which week it means.
+    //
+    // Left implicit, this passed on the harness default and failed on every
+    // real day from 2026-08-22 onward — the four forward-looking assertions
+    // below, because by then the "open" fixture is a closed week and the
+    // builder correctly switches to past tense. That is the failure mode
+    // harness.js warns about: a suite that goes red for calendar reasons stops
+    // being a signal and starts being something people bypass. It also made
+    // TEST_CLOCK useless as a probe, since every date returned the same four
+    // failures and hid anything real behind them.
+    t.pinClock('2026-08-18');
 
     // A file that stops on Thursday of the current week is a week with a day
     // left in it. Telling somebody what they "would have finished" hands back a
