@@ -7755,7 +7755,21 @@ function renderEmployeesList() {
         return;
     }
 
-    const teamSelectionContext = getTeamSelectionContext();
+    // ignoreTeamScope, because this list IS the tick list's editor.
+    //
+    // It was reading the scope-narrowed selection, which is the answer to "who
+    // am I looking at right now", not "who is on my team". While the My Team
+    // Who dropdown was pointed at one person, Settings showed that one person
+    // ticked and everybody else clear -- and the change handler below collects
+    // whatever is currently ticked and writes it as the WHOLE week's team. So
+    // ticking one more name saved a team of two and destroyed the rest.
+    //
+    // The mirror case is worse. A scope that matches nobody leaves
+    // selectedMembers empty, and an empty list renders every box checked
+    // (employee-list.module.js: `selectedMembers.length === 0 ||`), so the same
+    // single click would have saved the entire uploaded roster, other
+    // supervisors' reps included, as my team.
+    const teamSelectionContext = getTeamSelectionContext({ ignoreTeamScope: true });
     const teamSelectionWeek = teamSelectionContext.weekKey;
     const teamSelectionMembers = teamSelectionContext.selectedMembers;
 
