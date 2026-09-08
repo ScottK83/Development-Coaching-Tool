@@ -1129,25 +1129,6 @@ function calculateCenterAveragesFromEmployees(employees) {
 }
 
 
-function migrateReliabilityCenterAverages() {
-    try {
-        const averages = loadCallCenterAverages();
-        let changed = false;
-        for (const [key, avg] of Object.entries(averages)) {
-            if (avg?.reliability > 20) {
-                // This was saved as raw total or *100 — divide by 144
-                avg.reliability = Math.round((avg.reliability / 144) * 100) / 100;
-                changed = true;
-            }
-        }
-        if (changed) {
-            saveCallCenterAverages(averages);
-            console.log('[Migration] Fixed reliability center averages (divided by headcount)');
-        }
-    } catch (e) {
-        console.warn('[Migration] Failed to fix reliability:', e.message);
-    }
-}
 
 /**
  * Startup cleanup: remove auto-generated YTDs when a real YTD anchor exists.
@@ -7856,7 +7837,6 @@ async function initApp() {
     sentimentPhraseDatabase = loadSentimentPhraseDatabase();
     associateSentimentSnapshots = loadAssociateSentimentSnapshots();
     ensureSentimentPhraseDatabaseDefaults();
-    migrateReliabilityCenterAverages();
     cleanupStaleAutoYtds();
     cleanupStaleDuplicatePeriods();
     loadTeamMembers();
