@@ -150,7 +150,7 @@ suite('period compare: weekly reliability hours add up, they are not a running t
     t.check('July sums to 8.5 across a zero week and a bad one', july.reliabilityAccrued === 8.5);
 });
 
-suite('period compare: reliability is scored on the year, never on the period', (t) => {
+suite('period compare: reliability is scored on the period, not on the year', (t) => {
     const weekly = Object.assign({},
         week('2026-07-06', '2026-07-12', [emp('A', { reliability: 2 }), emp('B', { reliability: 0 })]),
         week('2026-07-13', '2026-07-19', [emp('A', { reliability: 1 }), emp('B', { reliability: 0 })])
@@ -173,13 +173,34 @@ suite('period compare: reliability is scored on the year, never on the period', 
     const a = july.employees.find((e) => e.name === 'A');
     const b = july.employees.find((e) => e.name === 'B');
 
-    t.check('the scored value is the year to date, not the month', a.reliability === 30);
-    t.check('so a quiet month cannot hide a bad year', a.reliability > 24);
-    t.check('hours missed in the month stay available for coaching', a.reliabilityAccrued === 3);
-    t.check('someone with a clean year still scores clean', b.reliability === 1);
+    // Operator's call, 2026-09-08: a period view has to describe its period.
+    // This used to score the running year-to-date total in every window, so a
+    // week or month showed the year -- somebody who missed nothing in July was
+    // scored on hours missed in March, and a clean period could rank behind a
+    // worse one because kpisMet is the first sort key.
+    t.check('the scored value is the month, not the year to date', a.reliability === 3);
+    t.check('and it is the sum of the weeks in that month', a.reliabilityAccrued === 3);
+    t.check('someone who missed nothing in the month scores nothing missed', b.reliability === 0);
+
+    // The running total is still computed and still on the row, so the surfaces
+    // that genuinely want the year -- the year-end mirror, coaching copy -- can
+    // read it without this deciding for them.
+    t.check('the year to date is still carried alongside', a.reliabilityCumulative === 30);
+    t.check('for everyone', b.reliabilityCumulative === 1);
+
+    // The trade this makes, asserted so it is a decision and not a surprise:
+    // against an 18-hour annual budget a single month rarely breaches, so
+    // reliability separates people less on a month than on a year.
+    const profiles = global.window.DevCoachModules.metricProfiles;
+    if (profiles) {
+        t.equal('a 3-hour month scores a 3 against the annual budget',
+            profiles.getRatingScore('reliability', 3, 2026), 3);
+        t.equal('while the same year to date scores a 1',
+            profiles.getRatingScore('reliability', 30, 2026), 1);
+    }
 });
 
-suite('period compare: with no year-to-date upload, reliability is unmeasured not zero', (t) => {
+suite('period compare: a month stands on its own with no year-to-date upload', (t) => {
     const weekly = Object.assign({},
         week('2026-07-06', '2026-07-12', [emp('A', { reliability: 2 })]),
         week('2026-07-13', '2026-07-19', [emp('A', { reliability: 1 })])
@@ -187,11 +208,11 @@ suite('period compare: with no year-to-date upload, reliability is unmeasured no
     const pc = loadPure(t, weekly);
     const a = pc.buildMonthAggregate('2026-07', 2026).employees[0];
 
-    // 0 is a perfect score here, so guessing would crown people who simply have
-    // no year-to-date file behind them.
-    t.check('no year-to-date figure means no reliability score', a.reliability === null);
-    t.check('and it is not quietly filled in as zero', a.reliability !== 0);
-    t.check('the month total is still there', a.reliabilityAccrued === 3);
+    // Scoring the period means a missing year-to-date file no longer leaves the
+    // month unmeasured. The month's own hours are a real reading either way.
+    t.check('the month is scored on its own hours', a.reliability === 3);
+    t.check('which is the sum of its weeks', a.reliabilityAccrued === 3);
+    t.check('and the year to date is simply absent', a.reliabilityCumulative === null);
 });
 
 /* ── Movement ── */
@@ -576,14 +597,19 @@ suite('period compare: a historical month is not scored with hours missed later'
     t.equal('and still knows what was missed in the month itself', march.employees[0].reliabilityAccrued, 2);
 });
 
-suite('period compare: with no year-to-date file old enough, reliability is unmeasured', (t) => {
-    // Guessing would be worse than saying nothing: 0 is a perfect score.
+suite('period compare: August hours are never back-applied to March', (t) => {
+    // The asOfMonth cut-off still matters, because reliabilityCumulative is
+    // still computed for the surfaces that read it. Absence that had not
+    // happened yet must not attach to an earlier month.
     const pc = loadPure(t, REL_WEEKS, {
         '2026-01-01|2026-08-09': { employees: [{ name: 'A', reliability: 60.1 }],
             metadata: { startDate: '2026-01-01', endDate: '2026-08-09', periodType: 'ytd' } }
     });
     const march = pc.buildMonthAggregate('2026-03', 2026);
-    t.equal('August hours are not back-applied to March', march.employees[0].reliability, null);
+    t.equal('the running total for March is left unmeasured',
+        march.employees[0].reliabilityCumulative, null);
+    t.equal('and March is scored on the hours actually missed in March',
+        march.employees[0].reliability, march.employees[0].reliabilityAccrued);
 });
 
 /* ── A rebuilt month says which dates it covers ── */

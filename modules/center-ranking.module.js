@@ -520,40 +520,45 @@
         };
     }
 
-    /* Reliability is hours of work missed against a budget for the WHOLE YEAR —
-       18 for a 3, 24 for a 2 — not a rate that stands on its own in any window.
-       buildMonthAggregate spells the reasoning out at length and substitutes the
-       running year-to-date total before scoring a rebuilt month. The stored-period
-       paths never got the same treatment, so selecting a week or an uploaded month
-       scored a week's 0 hours against an annual 18-hour budget and handed the whole
-       centre a free KPI — while the movement column beside it, built the other way,
-       disagreed about the same person in the same period.
+    /* Reliability is scored on the period you asked for, like every other metric.
+       Operator's call, 2026-09-08, and the reason is concrete.
 
-       One rule, applied on both paths. A year-to-date file already carries the
-       running total in that column and is left alone. */
-    function _withCumulativeReliability(employees, year, isYtdSource) {
+       This used to substitute the running year-to-date total before scoring, in
+       every period view. The argument for it was that reliability is hours
+       missed against a budget for the WHOLE YEAR (18 for a 3, 24 for a 2), so a
+       week's slice is meaningless and scoring 0 against 18 hands the centre a
+       free KPI. buildMonthAggregate still spells that out at length.
+
+       What it cost: pull a WEEKLY ranking and the reliability column showed the
+       year. Somebody who missed nothing that week was scored on hours missed in
+       March. A clean week ranked second behind a worse week, because kpisMet is
+       the first sort key and the year's total took the fifth KPI away — the
+       week's own numbers said the opposite. A weekly ranking has to rank the
+       week.
+
+       So the period's own figure is what gets scored now, at every granularity:
+       a week is scored on the week, a month on the month, a year-to-date file on
+       the year. reliabilityAccrued still carries it for coaching.
+
+       The consequence, stated rather than discovered: against an 18-hour annual
+       budget a single week almost never breaches, so reliability stops
+       separating people on weekly views. That is the honest answer for a week —
+       it is a year metric — and it is the price of not letting March decide this
+       week's placing. It bites normally on a month or a quarter, and is unchanged
+       on year-to-date, which is where the budget actually applies. */
+    function _withPeriodReliability(employees, year, isYtdSource) {
         var list = employees || [];
-        if (isYtdSource) return list;
-        var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
-        if (!pc || !pc.latestYtdReliability) return list;
-        var cumulative;
-        try {
-            cumulative = pc.latestYtdReliability(year) || {};
-        } catch (err) {
-            return list;
-        }
         // Copied rather than mutated — these rows are the stored upload, and every
         // other surface reads the same objects.
         return list.map(function (emp) {
             if (!emp || !emp.name) return emp;
             var copy = Object.assign({}, emp);
             var raw = parseFloat(emp.reliability);
-            // Kept for coaching — "you missed 6 hours that week" is still the
-            // useful sentence — but never scored.
+            // The same number on both fields for a stored period: what was missed
+            // in it. Kept separately because reliabilityAccrued is what the
+            // coaching copy reads, and a year-to-date file's two meanings coincide.
             copy.reliabilityAccrued = isFinite(raw) ? raw : null;
-            // Left null with no year-to-date file to read. Unmeasured is correct:
-            // 0 is a perfect score, so guessing would crown people.
-            copy.reliability = isFinite(cumulative[emp.name]) ? cumulative[emp.name] : null;
+            copy.reliability = isFinite(raw) ? raw : null;
             return copy;
         });
     }
@@ -635,7 +640,7 @@
             if (emp && emp.name) baseEmployees[emp.name] = emp;
         });
 
-        var mergedEmployees = _withCumulativeReliability(
+        var mergedEmployees = _withPeriodReliability(
             Object.values(baseEmployees), currentYear, bestPeriod === bestYtd);
 
         var rankings = _scoreAndRank(mergedEmployees, currentYear);
@@ -898,7 +903,7 @@
 
         var _isYtdSource = (meta.periodType || (yData[periodKey] ? 'ytd' : 'week')) === 'ytd';
         var rankings = _scoreAndRank(
-            _withCumulativeReliability(period.employees, endYear, _isYtdSource), endYear);
+            _withPeriodReliability(period.employees, endYear, _isYtdSource), endYear);
         if (!rankings.length) return null;
 
         // Identify team members for this period

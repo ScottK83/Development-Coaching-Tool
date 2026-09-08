@@ -431,36 +431,36 @@
             e.reliabilityAccrued = Math.round(e.reliability * 100) / 100;
             e.reliabilityCumulative = Number.isFinite(ytdRel[e.name]) ? ytdRel[e.name] : null;
 
-            // SCORED ON THE CUMULATIVE YEAR-TO-DATE FIGURE, in every period.
+            // SCORED ON THE PERIOD YOU ASKED FOR, like every other metric.
+            // Operator's call, 2026-09-08.
             //
-            // Reliability is unlike every other metric here. AHT, sentiment and the
-            // survey scores are rates that stand on their own in any window — a bad
-            // week can be followed by a good one. Reliability is hours of work
-            // missed against a budget for the WHOLE YEAR (18 for a 3, 24 for a 2),
-            // and hours already missed cannot be un-missed. Most weeks it is
-            // untouched and adds nothing; then someone misses two days.
+            // This used to score e.reliabilityCumulative — the running
+            // year-to-date total — in every period view. The argument was that
+            // reliability is hours missed against a budget for the WHOLE YEAR
+            // (18 for a 3, 24 for a 2), that hours already missed cannot be
+            // un-missed, and that a per-period slice therefore says nothing:
+            // scoring a month's ~1.4 accrued hours against an annual 18 passed
+            // everybody, and the centre averaged 2.97 of 3 monthly against 2.37
+            // on year-to-date.
             //
-            // So a per-period slice is meaningless. Scoring a month's accrued hours
-            // (~1.4) against an annual 18 passed everybody — the centre averaged
-            // 2.97 of 3 monthly against 2.37 on YTD. Annualising that slice was no
-            // better: one bad month projects to a catastrophic year for someone
-            // whose actual year-to-date total is still well inside budget.
+            // The cost was that a period view stopped describing its period. Pull
+            // a week and the reliability column showed the year; somebody who
+            // missed nothing that week was scored on hours missed in March, and
+            // a clean week could rank behind a worse one because kpisMet is the
+            // first sort key and the year's total took the fifth KPI away.
             //
-            // The figure that answers "are they on track for the year" is the
-            // running total, so that is what gets scored, whatever period is being
-            // viewed. A consequence worth stating: reliability can only hold or
-            // worsen month over month, never improve. That is the metric being
-            // honest, not a bug — you cannot go back and not miss the shift. It holds
-            // only while both months read the same year-to-date file; asOfMonth is
-            // what lets an earlier month carry a smaller total than a later one.
+            // So the period's own figure is scored, at every granularity. The
+            // consequence, stated rather than discovered: against an 18-hour
+            // annual budget a short period rarely breaches, so reliability
+            // separates people less on a week than on a year. That is the honest
+            // answer for a week, and it is the price of not letting March decide
+            // this week's placing. Year-to-date, where the budget actually
+            // applies, is unchanged.
             //
-            // Sourced from the YTD upload rather than rebuilt from weeks, because
-            // weekly coverage starts partway through the year and everything before
-            // it is unrecoverable — a rebuild would understate the year and quietly
-            // hand people a pass they have not earned. With no YTD upload the value
-            // is left null, which scoreEmployee treats as unmeasured. Unmeasured is
-            // correct here: 0 is a perfect score, so guessing would crown people.
-            e.reliability = e.reliabilityCumulative;
+            // reliabilityCumulative is still computed and still on the row, so a
+            // surface that genuinely wants the running total — the year-end
+            // mirror, coaching copy — can read it without this deciding for it.
+            e.reliability = e.reliabilityAccrued;
         });
 
         var spanStart = keys.reduce(function (min, k) {
@@ -940,6 +940,10 @@
                 return;
             }
 
+            // A rebuilt cumulative point IS a year-to-date figure -- it is every
+            // month up to this one, stacked -- so the running total is the right
+            // number here and this one keeps reading it. This is the timeline's
+            // year line, not a period ranking.
             var rows = aggregateEmployeesFrom(soFar);
             var asOf = _latestYtdReliability(yr, { asOfMonth: per.key });
             rows.forEach(function (e) {

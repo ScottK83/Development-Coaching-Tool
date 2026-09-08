@@ -612,9 +612,9 @@ suite('rankings view: the KPI count prints the denominator it actually has', (t)
         pairs.every((m) => Number(m[2]) === Number(m[4]) * 3));
 });
 
-/* ── Reliability is a year, not a slice ── */
+/* ── Reliability follows the period you asked for ── */
 
-suite('rankings view: a week is scored on the year\'s missed hours, not the week\'s', (t) => {
+suite('rankings view: a week is scored on the week, not on the year', (t) => {
     const REL_WEEKS = period('2026-07-20', '2026-07-26', 'week',
         roster(40, 11).map((e) => Object.assign({}, e, { reliability: 0 })), 'Week ending Jul 26');
     const REL_YTD = period('2026-01-01', '2026-07-31', 'ytd',
@@ -623,23 +623,36 @@ suite('rankings view: a week is scored on the year\'s missed hours, not the week
 
     const { cr } = loadRankings(t, REL_WEEKS, REL_YTD);
 
-    // A weekly upload carries hours missed IN THAT WEEK; the budget it is scored
-    // against is 18 for the whole year. Scoring 0 against 18 hands the entire
-    // centre a free KPI, and the movement column beside it — built the other way
-    // — then disagrees about the same person in the same period.
+    // Operator's call, 2026-09-08. This used to substitute the running
+    // year-to-date total before scoring any period, so the reliability column on
+    // a WEEKLY ranking showed the year: P0 missed nothing in the week on file and
+    // was still scored on 30 hours missed since January. Because kpisMet is the
+    // first sort key, a clean week could rank behind a worse one on the strength
+    // of an absence months earlier.
     const week = cr.buildRankingsForPeriod('2026-07-20|2026-07-26');
     const p0 = week.rankings.find((r) => r.name === 'P0');
-    t.equal('the running year-to-date total is what gets scored', p0.reliability, 30);
-    t.equal('so a blown budget still scores a 1', p0.scores.reliability, 1);
-    t.equal('the week figure is kept for coaching', p0.reliabilityAccrued, 0);
+    t.equal('the week figure is what gets scored', p0.reliability, 0);
+    t.equal('so a clean week scores a 3', p0.scores.reliability, 3);
+    t.equal('and it is still carried for coaching', p0.reliabilityAccrued, 0);
 
     const p1 = week.rankings.find((r) => r.name === 'P1');
-    t.equal('and someone inside budget keeps their 3', p1.scores.reliability, 3);
+    t.equal('as does everyone else who missed nothing', p1.scores.reliability, 3);
 
-    // A year-to-date file already carries the running total in that column.
+    // The trade, asserted so it stays a decision rather than a surprise: against
+    // an 18-hour annual budget a single week almost never breaches, so
+    // reliability stops separating people on a weekly view. That is the honest
+    // answer for a week, and the price of not letting March decide it.
+    t.check('nobody is separated by reliability on the week',
+        week.rankings.every((r) => r.scores.reliability === 3));
+
+    // Year-to-date is where the annual budget actually applies, and it is
+    // untouched: a blown budget still scores a 1 there.
     const ytd = cr.buildRankingsForPeriod('2026-01-01|2026-07-31');
-    t.equal('a year-to-date file is left exactly as uploaded',
-        ytd.rankings.find((r) => r.name === 'P0').reliability, 30);
+    const y0 = ytd.rankings.find((r) => r.name === 'P0');
+    t.equal('a year-to-date file is left exactly as uploaded', y0.reliability, 30);
+    t.equal('and a blown year still scores a 1', y0.scores.reliability, 1);
+    t.equal('while a clean year keeps its 3',
+        ytd.rankings.find((r) => r.name === 'P1').scores.reliability, 3);
 });
 
 /* ── The movement column, beside a rank column counting something else ── */

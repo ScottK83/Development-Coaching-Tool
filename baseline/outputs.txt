@@ -3405,7 +3405,7 @@ center-ranking / buildMonthlyStatsEmail per associate
 ------------------------------------------------------------------------------
 {
   "Ada Stretch": {
-    "body": "Hi Ada,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 405s (goal: 426s or lower). Met.\n- Schedule Adherence: 95.2% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 91.0% (goal: 88.0% or higher). Met.\n- Rep Satisfaction: 85.0% (goal: 82.0% or higher). Met.\n- Reliability: 4.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 5 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Ada,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 405s (goal: 426s or lower). Met.\n- Schedule Adherence: 95.2% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 91.0% (goal: 88.0% or higher). Met.\n- Rep Satisfaction: 85.0% (goal: 82.0% or higher). Met.\n- Reliability: 12.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 5 of 5 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3413,7 +3413,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "ada.stretch@aps.com"
   },
   "Ben Ongoal": {
-    "body": "Hi Ben,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 426s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.0% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 88.0% (goal: 88.0% or higher). Met.\n- Rep Satisfaction: 82.0% (goal: 82.0% or higher). Met.\n- Reliability: 18.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 5 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Ben,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 426s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.0% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 88.0% (goal: 88.0% or higher). Met.\n- Rep Satisfaction: 82.0% (goal: 82.0% or higher). Met.\n- Reliability: 54.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 4 of 5 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3421,7 +3421,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "ben.ongoal@aps.com"
   },
   "Cara Floor": {
-    "body": "Hi Cara,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 434s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.5% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.5% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.5% (goal: 82.0% or higher). Not there yet.\n- Reliability: 24.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Cara,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 434s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.5% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.5% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.5% (goal: 82.0% or higher). Not there yet.\n- Reliability: 72.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3429,7 +3429,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "cara.floor@aps.com"
   },
   "Dan Under": {
-    "body": "Hi Dan,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 435s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.4% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.4% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.4% (goal: 82.0% or higher). Not there yet.\n- Reliability: 24.1 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Dan,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 435s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.4% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.4% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.4% (goal: 82.0% or higher). Not there yet.\n- Reliability: 72.3 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3437,7 +3437,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "dan.under@aps.com"
   },
   "Eve Rounding": {
-    "body": "Hi Eve,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 434s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.5% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.5% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.5% (goal: 82.0% or higher). Not there yet.\n- Reliability: 24.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Eve,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 434s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 92.5% (goal: 93.0% or higher). Not there yet.\n- Overall Sentiment: 87.5% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 81.5% (goal: 82.0% or higher). Not there yet.\n- Reliability: 72.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 0 of 5 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3445,7 +3445,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "eve.rounding@aps.com"
   },
   "Fay Mixed": {
-    "body": "Hi Fay,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 450s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 96.0% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 87.0% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 85.5% (goal: 82.0% or higher). Met.\n- Reliability: 6.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 5 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Fay,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 450s (goal: 426s or lower). Not there yet.\n- Schedule Adherence: 96.0% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 87.0% (goal: 88.0% or higher). Not there yet.\n- Rep Satisfaction: 85.5% (goal: 82.0% or higher). Met.\n- Reliability: 18.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 5 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3453,7 +3453,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "fay.mixed@aps.com"
   },
   "Gus Nocalls": {
-    "body": "Hi Gus,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 420s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.5% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 89.0% (goal: 88.0% or higher). Met.\n- Reliability: 12.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 4 of 4 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Gus,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 420s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.5% (goal: 93.0% or higher). Met.\n- Overall Sentiment: 89.0% (goal: 88.0% or higher). Met.\n- Reliability: 36.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 3 of 4 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3461,7 +3461,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "gus.nocalls@aps.com"
   },
   "Hal Blanks": {
-    "body": "Hi Hal,\n\nHere is where June 2026 stands so far against target:\n\n- Schedule Adherence: 93.5% (goal: 93.0% or higher). Met.\n- Rep Satisfaction: 83.0% (goal: 82.0% or higher). Met.\n- Reliability: 12.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 3 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Hal,\n\nHere is where June 2026 stands so far against target:\n\n- Schedule Adherence: 93.5% (goal: 93.0% or higher). Met.\n- Rep Satisfaction: 83.0% (goal: 82.0% or higher). Met.\n- Reliability: 36.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 2 of 3 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -3469,7 +3469,7 @@ center-ranking / buildMonthlyStatsEmail per associate
     "to": "hal.blanks@aps.com"
   },
   "Ida Partial": {
-    "body": "Hi Ida,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 418s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.8% (goal: 93.0% or higher). Met.\n- Rep Satisfaction: 76.0% (goal: 82.0% or higher). Not there yet.\n- Reliability: 9.0 hrs (goal: 18.0 hrs or lower). Met.\n\nThat is 3 of 4 goals met so far.\n\nHappy to walk through any of it.",
+    "body": "Hi Ida,\n\nHere is where June 2026 stands so far against target:\n\n- Average Handle Time: 418s (goal: 426s or lower). Met.\n- Schedule Adherence: 93.8% (goal: 93.0% or higher). Met.\n- Rep Satisfaction: 76.0% (goal: 82.0% or higher). Not there yet.\n- Reliability: 27.0 hrs (goal: 18.0 hrs or lower). Not there yet.\n\nThat is 2 of 4 goals met so far.\n\nHappy to walk through any of it.",
     "cc": "Brandywine.Lockhart@aps.com",
     "inProgress": true,
     "monthLabel": "June 2026",
@@ -10956,7 +10956,7 @@ period-compare / buildMonthAggregate and coverage
         "overallExperience": 76,
         "overallSentiment": 91,
         "positiveWord": 87,
-        "reliability": 4,
+        "reliability": 12,
         "reliabilityAccrued": 12,
         "reliabilityCumulative": 4,
         "repSurveyTotal": 120,
@@ -10982,7 +10982,7 @@ period-compare / buildMonthAggregate and coverage
         "overallExperience": 76,
         "overallSentiment": 88,
         "positiveWord": 87,
-        "reliability": 18,
+        "reliability": 54,
         "reliabilityAccrued": 54,
         "reliabilityCumulative": 18,
         "repSurveyTotal": 120,
@@ -11008,7 +11008,7 @@ period-compare / buildMonthAggregate and coverage
         "overallExperience": 76,
         "overallSentiment": 87.5,
         "positiveWord": 87,
-        "reliability": 24,
+        "reliability": 72,
         "reliabilityAccrued": 72,
         "reliabilityCumulative": 24,
         "repSurveyTotal": 120,
@@ -11034,7 +11034,7 @@ period-compare / buildMonthAggregate and coverage
         "overallExperience": 76,
         "overallSentiment": 87.4,
         "positiveWord": 87,
-        "reliability": 24.1,
+        "reliability": 72.3,
         "reliabilityAccrued": 72.3,
         "reliabilityCumulative": 24.1,
         "repSurveyTotal": 120,
@@ -11060,7 +11060,7 @@ period-compare / buildMonthAggregate and coverage
         "overallExperience": 76,
         "overallSentiment": 87.46,
         "positiveWord": 87,
-        "reliability": 24.004,
+        "reliability": 72.01,
         "reliabilityAccrued": 72.01,
         "reliabilityCumulative": 24.004,
         "repSurveyTotal": 120,
@@ -11086,7 +11086,7 @@ period-compare / buildMonthAggregate and coverage
         "overallExperience": 76,
         "overallSentiment": 87,
         "positiveWord": 87,
-        "reliability": 6,
+        "reliability": 18,
         "reliabilityAccrued": 18,
         "reliabilityCumulative": 6,
         "repSurveyTotal": 120,
@@ -11109,7 +11109,7 @@ period-compare / buildMonthAggregate and coverage
         "negativeWord": 84,
         "overallSentiment": 89,
         "positiveWord": 87,
-        "reliability": 12,
+        "reliability": 36,
         "reliabilityAccrued": 36,
         "reliabilityCumulative": 12,
         "repSurveyTotal": 0,
@@ -11128,7 +11128,7 @@ period-compare / buildMonthAggregate and coverage
         "firstName": "Hal",
         "name": "Hal Blanks",
         "overallExperience": 76,
-        "reliability": 12,
+        "reliability": 36,
         "reliabilityAccrued": 36,
         "reliabilityCumulative": 12,
         "repSurveyTotal": 120,
@@ -11152,7 +11152,7 @@ period-compare / buildMonthAggregate and coverage
         "negativeWord": 84,
         "overallExperience": 76,
         "positiveWord": 87,
-        "reliability": 9,
+        "reliability": 27,
         "reliabilityAccrued": 27,
         "reliabilityCumulative": 9,
         "repSurveyTotal": 120,
