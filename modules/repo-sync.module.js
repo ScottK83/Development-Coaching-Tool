@@ -847,12 +847,54 @@
 
     // Bookkeeping tied to one machine and moment. Syncing it would let one
     // browser's view state and sync timestamps overwrite another's.
-    const NON_SYNCED_STORES = new Set([
+    //
+    // Taken from the store registry, which already answers this question --
+    // tier 'data' is "belongs on the server", anything else is "never leaves
+    // this machine" -- rather than being kept by hand beside it. The hand-list
+    // had drifted to twelve names against the registry's twenty-five, and the
+    // thirteen it had lost were being swept into every payload and every dated
+    // snapshot by collectVerbatimStores and written back by applyVerbatimStores:
+    //
+    //   callListeningSyncConfig  endpoint, sharedSecret and isWorkPc. The secret
+    //                            sat in R2 in clear -- sanitizeForRepo matches on
+    //                            the KEY name, and this one does not match -- and
+    //                            a restore handed the receiving machine the
+    //                            sender's endpoint, secret and work-PC flag, so
+    //                            the wrong machine started pushing.
+    //   v2DeviceId               the receiving machine took the sender's identity.
+    //   v2SyncState              worse: the applied-hash map came with it, so pull()
+    //                            skipped every shard the map claimed and this
+    //                            machine did not hold, and they were never recovered.
+    //   idbMigrated_v1           a machine that had not migrated was told it had.
+    //   lastUploadUndo           another machine's undo snapshot, offered as this one's.
+    //   plus theme, selectedYearEndYear, lastTrendPeriod, celebrationsThreshold,
+    //   dataHealthReviewed, reliabilityBlankIsZero_v1 and the two lastUpload*
+    //   fingerprints, which are merely noise.
+    //
+    // The literal list stays as the fallback for a missing registry, and
+    // sync-store-coverage asserts the two agree.
+    const _registry = window.DevCoachModules?.storeRegistry;
+    const NON_SYNCED_STORES = new Set(_registry?.deviceNames?.() || [
         'deleteAllJustRan', 'debugLog', 'errorLog', 'lastError',
         'repoSyncLastSuccess', 'repoBackupAppliedAt',
         'uiNavState', 'selectedAssociate', 'teamMemberSelectorExpanded',
-        'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection'
+        'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection',
+        'callListeningSyncConfig', 'v2SyncState', 'v2DeviceId', 'idbMigrated_v1',
+        'theme', 'selectedYearEndYear', 'lastTrendPeriod', 'celebrationsThreshold',
+        'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'lastUploadUndo',
+        'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage'
     ]);
+
+    // Device state that is keyed rather than named: smartDefault_*, and the
+    // one-shot supervisor seed and rename markers. Swept in by name alone they
+    // would carry another machine's "already done" flags across.
+    const NON_SYNCED_PREFIXES = _registry?.DEVICE_KEY_PREFIXES
+        || ['smartDefault_', 'supervisorSeeded_', 'supervisorRenamed_'];
+
+    function isDeviceOnlyStore(name) {
+        if (NON_SYNCED_STORES.has(name)) return true;
+        return NON_SYNCED_PREFIXES.some((prefix) => String(name).startsWith(prefix));
+    }
 
     function collectVerbatimStores() {
         const stores = {};
@@ -860,7 +902,7 @@
             const key = localStorage.key(index);
             if (!key || !key.startsWith(STORAGE_PREFIX)) continue;
             const name = key.slice(STORAGE_PREFIX.length);
-            if (EXPLICITLY_SYNCED_STORES.has(name) || NON_SYNCED_STORES.has(name)) continue;
+            if (EXPLICITLY_SYNCED_STORES.has(name) || isDeviceOnlyStore(name)) continue;
             const raw = localStorage.getItem(key);
             if (typeof raw === 'string') stores[name] = raw;
         }
@@ -872,7 +914,7 @@
         // be worse than useless once that copy is reclaimed.
         const bulkKeys = window.DevCoachConstants?.BULK_STORAGE_KEYS || [];
         bulkKeys.forEach((name) => {
-            if (EXPLICITLY_SYNCED_STORES.has(name) || NON_SYNCED_STORES.has(name)) return;
+            if (EXPLICITLY_SYNCED_STORES.has(name) || isDeviceOnlyStore(name)) return;
             const value = safeLoadJson(name);
             if (value === null || value === undefined) return;
             try {

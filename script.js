@@ -809,12 +809,37 @@ function collectAllStoresVerbatim() {
 // written, not to the data. Backed up for completeness, skipped on restore so a
 // backup cannot drag another machine's sync timestamps or a stale "delete just
 // ran" flag onto this one.
-const NON_RESTORABLE_STORE_SUFFIXES = new Set([
-    'deleteAllJustRan', 'debugLog', 'errorLog', 'lastError',
-    'repoSyncLastSuccess', 'repoBackupAppliedAt',
-    'uiNavState', 'selectedAssociate', 'teamMemberSelectorExpanded',
-    'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection'
-]);
+//
+// Taken from the store registry rather than kept by hand: tier 'data' is
+// "belongs on the server", anything else is "never leaves this machine", and
+// that question already has one answer. The hand-list had drifted to twelve
+// names against the registry's twenty-five, so a file restore wrote back the
+// sending machine's sync endpoint and shared secret, its device id, its
+// applied-hash map and its storage-migration marker. The literal list is the
+// fallback for a missing registry.
+const NON_RESTORABLE_STORE_SUFFIXES = new Set(
+    window.DevCoachModules?.storeRegistry?.deviceNames?.() || [
+        'deleteAllJustRan', 'debugLog', 'errorLog', 'lastError',
+        'repoSyncLastSuccess', 'repoBackupAppliedAt',
+        'uiNavState', 'selectedAssociate', 'teamMemberSelectorExpanded',
+        'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection',
+        'callListeningSyncConfig', 'v2SyncState', 'v2DeviceId', 'idbMigrated_v1',
+        'theme', 'selectedYearEndYear', 'lastTrendPeriod', 'celebrationsThreshold',
+        'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'lastUploadUndo',
+        'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage'
+    ]
+);
+
+// The same question for keyed device state: smartDefault_*, and the one-shot
+// supervisor seed and rename markers.
+const NON_RESTORABLE_STORE_PREFIXES =
+    window.DevCoachModules?.storeRegistry?.DEVICE_KEY_PREFIXES
+    || ['smartDefault_', 'supervisorSeeded_', 'supervisorRenamed_'];
+
+function isNonRestorableStoreName(name) {
+    if (NON_RESTORABLE_STORE_SUFFIXES.has(name)) return true;
+    return NON_RESTORABLE_STORE_PREFIXES.some(prefix => String(name).startsWith(prefix));
+}
 
 /**
  * Writes every backed-up store back verbatim. Reports what failed rather than
@@ -827,7 +852,7 @@ function applyAllStoresVerbatim(stores) {
 
     Object.keys(stores).forEach((key) => {
         if (!key.startsWith(STORAGE_PREFIX)) return;
-        if (NON_RESTORABLE_STORE_SUFFIXES.has(key.slice(STORAGE_PREFIX.length))) return;
+        if (isNonRestorableStoreName(key.slice(STORAGE_PREFIX.length))) return;
 
         const raw = stores[key];
         if (typeof raw !== 'string') return;
