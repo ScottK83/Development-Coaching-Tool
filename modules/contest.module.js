@@ -465,6 +465,49 @@
         return GFX_MONTHS[index] + ' ' + Number(m[3]);
     }
 
+    /**
+     * The last day the month actually holds data for, inside the team on the
+     * card.
+     *
+     * The header used to read this off the tickets, which is the last day
+     * somebody EARNED something rather than the last day that was counted. A
+     * day where nobody hit the target and nobody had a perfect survey is a day
+     * that was counted and paid nothing, and the card would quietly claim the
+     * numbers stopped the day before. It also disagreed with the check in post,
+     * which has always taken its span from the days themselves.
+     *
+     * Scoped to `names` for the same reason the board is: a supervisor's card
+     * should not say it counts through a day that only somebody else's team has
+     * uploaded.
+     */
+    function gfxLastDataDate(days, names) {
+        var source = days && typeof days === 'object' ? days : null;
+        if (!source) return '';
+
+        var wanted = null;
+        if (Array.isArray(names)) {
+            wanted = {};
+            names.forEach(function (name) {
+                var key = String(name === undefined || name === null ? '' : name).trim();
+                if (key) wanted[key] = true;
+            });
+        }
+
+        var last = '';
+        Object.keys(source).forEach(function (date) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date <= last) return;
+            var people = source[date] || {};
+            var counted = Object.keys(people).some(function (name) {
+                if (wanted && !wanted[String(name).trim()]) return false;
+                var person = people[name] || {};
+                return Number.isFinite(Number(person.adherence))
+                    || Number(person.perfectSurveys) > 0;
+            });
+            if (counted) last = date;
+        });
+        return last;
+    }
+
     function gfxTargetLabel(target) {
         var n = Number(target);
         // Number(null) is 0 and Number.isFinite(0) is true, so a null target
@@ -1038,9 +1081,10 @@
             totals.bonus += row.bonus;
             var counted = row.surveys + row.days + row.bonus;
             if (row.total > counted) totals.other += row.total - counted;
-            // The last day anybody earned something, read off the entries. Only
-            // the per-day reasons carry a real date; a weekly award carries its
-            // Monday and a monthly one carries a YYYY-MM.
+            // Fallback only, for a caller that hands over a board without the
+            // days behind it. The last day anybody earned something, read off
+            // the entries: only the per-day reasons carry a real date, since a
+            // weekly award carries its Monday and a monthly one a YYYY-MM.
             (row.reasons || []).forEach(function (entry) {
                 var reason = entry && entry.reason;
                 if (reason !== 'perfect-survey' && reason !== 'daily-adherence') return;
@@ -1082,8 +1126,10 @@
                 + column(rows) + '</div>';
         }
 
+        var through = gfxLastDataDate(opts.days, opts.names) || lastDate;
+
         return gfxCard(
-            gfxHeader(month, teamLabel, pool, earners, gfxDayLabel(lastDate))
+            gfxHeader(month, teamLabel, pool, earners, gfxDayLabel(through))
             + gfxLegend(totals, axisMax, totals.other > 0)
             + boardHtml
             + gfxCta(targetLabel, 'The longest bar is not the winner. Every ticket is one pull.')

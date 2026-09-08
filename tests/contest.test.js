@@ -303,6 +303,45 @@ function row(name, total, parts) {
     }, parts || {});
 }
 
+suite('contest: the card counts through the last day uploaded', (t) => {
+    const contest = load(t);
+
+    // The header used to read its date off the tickets, so a day where nobody
+    // hit the target and nobody had a perfect survey vanished from the label:
+    // upload Friday, and a card built the same hour still said "counted through
+    // Thursday" while handing out the week bonus that Friday helped decide.
+    const days = {
+        '2026-09-03': { 'Ann Zeta': { adherence: 96 } },
+        '2026-09-04': { 'Ann Zeta': { adherence: 71 } }
+    };
+    const html = graphicFor(contest, [row('Ann Zeta', 1)], { names: ['Ann Zeta'], days: days });
+
+    t.check('the label names the last day counted', html.indexOf('Counted through September 4') > -1);
+    t.check('and not the last day that paid', html.indexOf('September 3') === -1);
+
+    // Scoped to the team on the card, the same way the board is. A day only
+    // somebody else's team has uploaded is not a day this card counted.
+    const scoped = graphicFor(contest, [row('Ann Zeta', 1)], {
+        names: ['Ann Zeta'],
+        days: Object.assign({}, days, { '2026-09-05': { 'Not Mine': { adherence: 99 } } })
+    });
+    t.check('a day only another team uploaded is not claimed', scoped.indexOf('Counted through September 4') > -1);
+
+    // A day that carries only a perfect survey still counts as a day counted.
+    const surveyOnly = graphicFor(contest, [row('Ann Zeta', 1)], {
+        names: ['Ann Zeta'],
+        days: { '2026-09-03': { 'Ann Zeta': { adherence: 96 } }, '2026-09-08': { 'Ann Zeta': { perfectSurveys: 1 } } }
+    });
+    t.check('a survey only day is counted too', surveyOnly.indexOf('Counted through September 8') > -1);
+
+    // Without the days, the old reading stands rather than the label dropping
+    // off: a caller that hands over a bare board still gets a date.
+    const bare = graphicFor(contest, [row('Ann Zeta', 1, {
+        reasons: [{ associate: 'Ann Zeta', reason: 'daily-adherence', on: '2026-09-03' }]
+    })], { names: ['Ann Zeta'] });
+    t.check('a board with no days behind it still dates itself', bare.indexOf('Counted through September 3') > -1);
+});
+
 suite('contest: the graphic leaves nobody off the board', (t) => {
     const contest = load(t);
 

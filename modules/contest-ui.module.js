@@ -411,7 +411,12 @@
             target: contest()?.adherenceTarget(),
             teamLabel: team === '__all__' ? 'Everyone' : 'Team ' + team,
             names: namesForTeam(team),
-            adherence: contest()?.buildAdherenceSummary?.(currentMonthData())
+            adherence: contest()?.buildAdherenceSummary?.(currentMonthData()),
+            // The days themselves, so the card's "counted through" line reads
+            // the same span the check in post does. Without them it falls back
+            // to the last day a ticket was earned, which is earlier than the
+            // truth on any day nobody hit the target.
+            days: currentMonthData()?.days || null
         };
     }
 
