@@ -229,21 +229,53 @@
         'Catch me anytime if you want to talk through anything.',
         'Onward. I\'m always just a message away.',
     ];
-    // --- Monday Kickoff phrase pools ---
-    const MK_OPENERS = [
-        name => `Happy Monday ${name}! 🌟 New week, let's talk about where you stand and where we're headed.`,
-        name => `Hey ${name}! ☀️ Kicking off the week with your numbers and a game plan.`,
-        name => `Morning ${name}! 🚀 Start of a new week. Here's your snapshot and what to focus on.`,
-        name => `${name}! Monday check-in time. 📊 Let's celebrate what's working and lock in a plan.`,
-        name => `Good morning ${name}! 💪 Quick Monday rundown on your wins and where we can push.`,
-        name => `Hey ${name}, let's get this week started right. Here's where things landed. ☕`,
-        name => `${name}! Fresh week ahead. Let's look at what's going well and set a target. 🎯`,
-        name => `Top of the week ${name}! Here's your latest numbers and our focus for the days ahead.`,
-        name => `Rise and shine ${name}! 🌅 Let me share your numbers and set us up for a strong week.`,
-        name => `Monday's here ${name}! Quick peek at last week's results and what to aim for this week.`,
-        name => `${name}, new week, new opportunity. Let's see what we're working with. 📈`,
-        name => `Hey ${name}! Starting the week off by looking at your wins and setting a focus. Let's go!`,
+    /*
+     * KICKOFF OPENERS
+     *
+     * Three plans start from this generator: Monday, the Tuesday follow-up and
+     * the weekend recap. Ten of the twelve openers named Monday outright, so
+     * running a Tuesday follow-up the day after a holiday Monday greeted
+     * everybody with "Monday's here Destiny!". A message that opens by naming
+     * a day the associate did not work is one she stops trusting on the first
+     * line, before any of the numbers underneath get read.
+     *
+     * Two pools now. One for the day that actually opens the week, which takes
+     * the day word rather than assuming it, so a week that starts on Tuesday
+     * says Tuesday. One for a day that picks up an already running week, which
+     * makes no claim about a new week at all.
+     *
+     * Which pool is a question for the caller. A Tuesday with Monday's numbers
+     * in hand is a follow-up; a Tuesday with no Monday at all, because nobody
+     * worked it, is the start of the week.
+     */
+    const MK_OPENERS_WEEK_START = [
+        (name, day) => `Happy ${day} ${name}! 🌟 New week, let's talk about where you stand and where we're headed.`,
+        (name) => `Hey ${name}! ☀️ Kicking off the week with your numbers and a game plan.`,
+        (name) => `Morning ${name}! 🚀 Start of a new week. Here's your snapshot and what to focus on.`,
+        (name, day) => `${name}! ${day} check-in time. 📊 Let's celebrate what's working and lock in a plan.`,
+        (name, day) => `Good morning ${name}! 💪 Quick ${day} rundown on your wins and where we can push.`,
+        (name) => `Hey ${name}, let's get this week started right. Here's where things landed. ☕`,
+        (name) => `${name}! Fresh week ahead. Let's look at what's going well and set a target. 🎯`,
+        (name) => `Top of the week ${name}! Here's your latest numbers and our focus for the days ahead.`,
+        (name) => `Rise and shine ${name}! 🌅 Let me share your numbers and set us up for a strong week.`,
+        (name, day) => `${day}'s here ${name}! Quick peek at last week's results and what to aim for this week.`,
+        (name) => `${name}, new week, new opportunity. Let's see what we're working with. 📈`,
+        (name) => `Hey ${name}! Starting the week off by looking at your wins and setting a focus. Let's go!`,
     ];
+
+    // The week is already running. Nothing here calls it new, and nothing
+    // names a day the caller has not confirmed happened.
+    const MK_OPENERS_MIDWEEK = [
+        (name) => `Morning ${name}! 📊 Picking up where we left off. Here's where things stand.`,
+        (name, day) => `Hey ${name}! Quick ${day} look at your numbers and what to keep pushing on.`,
+        (name) => `${name}! Checking back in. 📈 Here's the read and where I want us focused.`,
+        (name) => `Good morning ${name}! Following up with your latest numbers and the plan from here.`,
+        (name, day) => `Hey ${name}, ${day} catch up. Let's look at what has landed and where to push. ☕`,
+        (name) => `${name}! Here's your latest snapshot and the one thing I want us on. 🎯`,
+        (name) => `Morning ${name}! 🌅 Rounding up where your numbers sit and where we go next.`,
+        (name) => `Hey ${name}! Circling back on your results and our focus for the rest of the week.`,
+    ];
+
     const MK_TRANSITION = [
         'Now let\'s talk about where we can push this week.',
         'On the flip side, here\'s where I think we can make a move.',
@@ -335,6 +367,10 @@
         name => `Before you get deep into the afternoon, ${name}, a quick check-in.`,
         name => `${name}, stepped away from the dashboard to send you this midweek note.`,
     ];
+    // Nothing in here names the day the focus was set. Three lines used to say
+    // Monday, and a week that opens on a Tuesday because Monday was a holiday
+    // makes those a claim about a conversation that never happened. "This
+    // week" and "to start the week" are true whichever day the week started.
     const MW_FOCUS_RECALL = [
         (label) => `Earlier this week we said ${label} was the focus.`,
         (label) => `We set ${label} as your target this week.`,
@@ -346,16 +382,16 @@
         (label) => `You've been working on ${label} this week.`,
         (label) => `We identified ${label} as the one to move this week.`,
         (label) => `This week's focus has been ${label}.`,
-        (label) => `Monday we zeroed in on ${label} as the metric to move.`,
+        (label) => `We zeroed in on ${label} as the metric to move.`,
         (label) => `The one we locked in on this week: ${label}.`,
-        (label) => `You've had ${label} in your sights since Monday.`,
+        (label) => `You've had ${label} in your sights all week.`,
         (label) => `${label} was the priority we landed on to start the week.`,
         (label) => `We chose ${label} as the lever to pull this week.`,
         (label) => `The number you've been hunting this week is ${label}.`,
         (label) => `${label} is where we pointed the attention this week.`,
         (label) => `Our commitment this week was to lean into ${label}.`,
         (label) => `Coming into the week, the call was to move ${label}.`,
-        (label) => `${label} is the one we put on the board Monday.`,
+        (label) => `${label} is the one we put on the board to start the week.`,
     ];
     const MW_ON_TRACK = [
         (label, val, target) => `You're crushing it. ${label} at ${val} is already above the ${target} target! 🔥`,
@@ -1721,7 +1757,32 @@
 
     // --- Monday Kickoff message generation ---
 
-    async function generateMondayKickoffMessage(employeeName, latestKey, baselineKey) {
+    /**
+     * @param {{dayWord?: string, startsTheWeek?: boolean}} [options] which day
+     *   this message is actually for, and whether that day opens the week.
+     *   Defaults to Monday opening the week, which is what the standalone
+     *   kickoff button means and what every caller meant before the Tuesday
+     *   follow-up started sharing this generator.
+     */
+    /**
+     * The weekday a plan speaks for, capitalised for use in a sentence.
+     *
+     * Read off the plan rather than off the clock, because a supervisor can
+     * pick any day's plan on any day, which is exactly what happens when a
+     * holiday moves the week and the Tuesday plan gets run on a Wednesday.
+     */
+    function dayWordFor(plan) {
+        const WORDS = {
+            monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday',
+            thursday: 'Thursday', friday: 'Friday'
+        };
+        // The weekend recap deliberately has no word. It is read on a Saturday
+        // or a Sunday about the week that finished, and naming any weekday in
+        // it would be naming one it is not about.
+        return WORDS[String(plan?.id || '').toLowerCase()] || '';
+    }
+
+    async function generateMondayKickoffMessage(employeeName, latestKey, baselineKey, options) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
         if (!emp) return null;
@@ -1867,7 +1928,19 @@
         // ytdMap is already built for the focal point; handing it over saves a
         // second full YTD analysis pass per associate on a bulk generate.
         const yearBlock = buildYearStandingBlock(employeeName, allMetrics, ytdMap);
-        let message = `${pick(MK_OPENERS)(firstName)} ${praiseText}${focusText}`;
+        // No options at all is the standalone kickoff button, which is Monday
+        // and does open the week. An explicit empty day word is a caller
+        // saying there is no day to name, which is different from not saying.
+        const dayWord = options ? String(options.dayWord || '').trim() : 'Monday';
+        const startsTheWeek = options?.startsTheWeek !== false;
+
+        // With no day to name, the openers that name one are not in the pool.
+        // A greeting that has to invent a weekday would be back where this
+        // started.
+        const pool = startsTheWeek ? MK_OPENERS_WEEK_START : MK_OPENERS_MIDWEEK;
+        const openers = dayWord ? pool : pool.filter(line => line.length < 2);
+
+        let message = `${pick(openers)(firstName, dayWord)} ${praiseText}${focusText}`;
         if (yearBlock) message += `\n\n${yearBlock}`;
         message += `\n\n${pick(MK_CLOSERS)}`;
         return message;
@@ -3818,7 +3891,15 @@
         } else if (plan.base === 'midweek') {
             base = await generateMidweekCheckinMessage(employeeName, latestKey, baselineKey);
         } else {
-            base = await generateMondayKickoffMessage(employeeName, latestKey, baselineKey);
+            // A Tuesday holding Monday's numbers is a follow-up. A Tuesday with
+            // no Monday at all, because nobody worked it, is the start of the
+            // week and should open like one.
+            const startsTheWeek = plan.id === 'monday'
+                || (plan.id === 'tuesday' && !dailyEntry?.mondayRow);
+            base = await generateMondayKickoffMessage(employeeName, latestKey, baselineKey, {
+                dayWord: dayWordFor(plan),
+                startsTheWeek
+            });
         }
 
         // When the weekly file already is this week, the recap would be the
