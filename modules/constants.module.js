@@ -59,7 +59,7 @@
         'customMetrics', 'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips',
         'yoyBaseline2025', 'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory',
         'oneOnOneMeetings', 'midYearMeta', 'associateEmailPattern', 'employeeEmails',
-        'callTranscripts'
+        'callTranscripts', 'syncTestMarker'
     ];
 
     window.DevCoachConstants = {

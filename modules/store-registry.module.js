@@ -74,6 +74,12 @@
         { name: 'deletedServerTips', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'metricCoachingTips', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'yoyBaseline2025', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        // Written only by the Test sync button, so it can prove the whole chain
+        // -- write, mark dirty, push, pull on the other machine -- against a
+        // store whose contents nobody ever reads. It used to append a row to
+        // userCustomTips, which is the operator's own coaching tips and is an
+        // object keyed by metric, not a list.
+        { name: 'syncTestMarker', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'ccEmail', tier: 'data', backend: 'local', merge: 'lastWriterWins' },
         // ccEmail above is the one data store still in localStorage, because the
         // mailto helper reads it before the storage module exists. These two are

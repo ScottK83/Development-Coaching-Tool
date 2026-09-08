@@ -2887,11 +2887,24 @@ async function handleCloudSyncTestClick() {
     }
 
     // Write through the real path, so this proves the chain the app uses.
-    const existing = storage.readStore('userCustomTips') || [];
+    //
+    // Into a store that exists only for this. It used to append a row to
+    // userCustomTips, which is wrong twice over: that store is the operator's
+    // own coaching tips, so every press left a permanent "SYNC TEST ..." entry
+    // in real data and pushed it to the other machine; and it is an object
+    // keyed by metric, not a list, so `existing.concat` threw the moment the
+    // operator had written a single tip of their own. That line sat outside the
+    // try below, so the diagnostic stopped dead with nothing on screen saying
+    // why -- the one thing a diagnostic must never do.
     const marker = 'SYNC TEST ' + new Date().toISOString().slice(0, 19);
-    storage.saveWithSizeCheck('userCustomTips', existing.concat([{ tip: marker, metric: 'transfers' }]));
-    say(`wrote a test tip: ${marker}`);
-    say(`marked as changed: ${storage.isStoreDirty('userCustomTips')}`);
+    try {
+        storage.saveWithSizeCheck('syncTestMarker', { marker: marker, from: sync.getDeviceId() });
+        say(`wrote a test marker: ${marker}`);
+        say(`marked as changed: ${storage.isStoreDirty('syncTestMarker')}`);
+    } catch (error) {
+        say(`WRITE FAILED: ${error?.message || error}`);
+        return;
+    }
 
     const dirty = registry.syncedNames().filter((n) => storage.isStoreDirty(n));
     say(`changed stores: ${dirty.join(', ') || '(none)'}`);
