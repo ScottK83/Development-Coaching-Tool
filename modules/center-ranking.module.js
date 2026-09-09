@@ -264,6 +264,22 @@
             periods.push({ key: key, label: label, type: pType, source: 'ytd', count: count, endDate: endStr });
         });
 
+        // Day files. The dropdown has always had a Daily group and a slot for
+        // it in the type order, and nothing ever put anything in either,
+        // because this only ever read the weekly and year-to-date stores. A
+        // day cannot be rolled up into anything, which is why it is kept
+        // apart, but it is the whole answer to "where did everyone place
+        // yesterday".
+        Object.keys(_getDailyData()).forEach(function(key) {
+            var data = _getDailyData()[key];
+            var meta = data?.metadata || {};
+            var count = (data?.employees || []).length;
+            if (count < 2) return;
+            var endStr = meta.endDate || (key.includes('|') ? key.split('|')[1] : '');
+            var label = meta.label || _fmtPeriodLabel(key, 'daily');
+            periods.push({ key: key, label: label, type: 'daily', source: 'daily', count: count, endDate: endStr });
+        });
+
         // Months rebuilt from weekly uploads. Not stored under these keys —
         // buildRankingsForPeriod recognises the prefix and assembles them.
         var _pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
@@ -2957,7 +2973,13 @@
         if (_selectedRankingPeriodKey && String(_selectedRankingPeriodKey).indexOf(MONTH_KEY_PREFIX) !== 0) {
             var wData = _getWeeklyData();
             var yData = _getYtdData();
-            if (!wData[_selectedRankingPeriodKey] && !yData[_selectedRankingPeriodKey]) {
+            // Day files live in their own store. Leaving it out here is the
+            // same fault the month prefix above documents: picking yesterday
+            // resolved, rendered, and was then dropped as a stale key on the
+            // very next render, so the tab snapped back to the auto pick and
+            // the chip looked dead.
+            var dData = _getDailyData();
+            if (!wData[_selectedRankingPeriodKey] && !yData[_selectedRankingPeriodKey] && !dData[_selectedRankingPeriodKey]) {
                 _selectedRankingPeriodKey = null;
                 _rankingPeriodInitialized = false;
             }

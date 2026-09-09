@@ -600,7 +600,18 @@
         // Matchup keys its own selection as "key||source", so the chip has to
         // be matched on the key alone.
         var chipHtml = '';
-        var windows = picker ? picker.windows() : [];
+        // Head to head runs over a year, a month or a week. A day file is not
+        // one of those, and the scope selector has no button for it, so the
+        // day chip is offered greyed rather than as a click that silently
+        // lands on a different comparison. Rankings is where a single day gets
+        // answered.
+        var windows = (picker ? picker.windows() : []).map(function (w) {
+            if (w.id !== 'day') return w;
+            return Object.assign({}, w, {
+                available: false,
+                reason: 'Head to head compares a year, a month or a week. For a single day, use Trends then Rankings.'
+            });
+        });
         if (picker && windows.length) {
             var selectedKey = String(selectedValue || '').split('||')[0];
             var chosenChip = picker.idForKey(windows, selectedKey);
