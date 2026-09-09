@@ -143,11 +143,32 @@
             if (reserved.has(index)) continue;
 
             const headerText = String(headers[index] || '').toLowerCase();
+
+            // The candidate has to BE a hold column, not merely the fullest one
+            // left over.
+            //
+            // This used to score every unreserved column by how many numbers it
+            // held and take the winner, with a bonus for a "hold" header. On a
+            // standard export the unmapped columns are TotalIn-OfficeShrink%,
+            // TotalOOOShrink% and TotalShrinkage% -- all full of numbers -- so a
+            // genuinely blank Hold column handed hold time an office-shrink
+            // PERCENTAGE, rounded and stored as seconds. Nine associates came
+            // out at 4, 4, 4, 4, 4, 5, 5, 5, 5 seconds of hold against a
+            // 30-second target.
+            //
+            // Worse than the wrong figure: the substitution filled the column,
+            // so buildMetricsUploadQualityWarnings saw coverage and stayed
+            // quiet. The warning written to catch a blank hold column was
+            // silenced by the code meant to rescue it.
+            //
+            // Leaving it blank is the honest outcome. There is no hold data in
+            // an export that has no hold column.
+            if (!headerText.includes('hold')) continue;
+
             const numericCount = countNumericValuesForColumn(rows, index);
             if (numericCount <= 0) continue;
 
             let score = numericCount;
-            if (headerText.includes('hold')) score += 100;
             if (headerText.includes('sec')) score += 10;
 
             if (score > bestScore) {
@@ -689,6 +710,9 @@
         normalizeTransfersPercentage,
         validatePastedData,
         parsePastedData,
+        // Pure, and the one place a mis-mapped hold column is repaired.
+        // Exported so the repair can be asserted without a full paste.
+        autoCorrectHoldTimeColumn,
         // Constants
         POWERBI_COLUMNS,
         CANONICAL_SCHEMA,
