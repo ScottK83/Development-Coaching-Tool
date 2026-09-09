@@ -165,3 +165,21 @@ suite('sub-sections: the time-off tracker is inside Attendance, not stranded', (
         /embeddedPtoInMyTeam/.test(script) && /getElementById\('ptoSection'\)/.test(script));
     t.check('and opening Attendance runs it', /embedPtoTracker\?\.\(\)/.test(myTeam));
 });
+
+suite('sub-sections: every top-level tab survives a refresh', (t) => {
+    // The nav writes the section you are on to storage and restores it on the
+    // next load. A section the restore does not know about is not an error you
+    // can see: you simply land on the dashboard, which is also where a first
+    // visit lands, so it reads as normal. Contest was in that state.
+    const buttons = [...html.matchAll(/id="(\w+Btn)" class="btn-secondary top-nav-btn/g)].map(m => m[1]);
+    const mapped = [...navSrc.matchAll(/(\w+Section): '(\w+Btn)'/g)].map(m => m[1]);
+
+    t.check('the top nav is still readable', buttons.length >= 7);
+    t.check('and every button it holds maps to a section', mapped.length >= 7);
+
+    mapped.forEach(sectionId => {
+        t.check(`${sectionId} is restored by name`,
+            navSrc.indexOf(`sectionId === '${sectionId}'`) > -1
+            || navSrc.indexOf(`if (sectionId === '${sectionId}')`) > -1);
+    });
+});

@@ -391,6 +391,15 @@
             return;
         }
 
+        // Contest draws its whole panel in JS, so showing the section without
+        // running the renderer leaves an empty page. It had no branch at all,
+        // which meant a refresh on Contest quietly landed on the dashboard.
+        if (sectionId === 'contestSection') {
+            showOnlySection('contestSection');
+            window.DevCoachModules?.contestUi?.show?.();
+            return;
+        }
+
         if (sectionId === 'uploadSection') {
             showOnlySection('uploadSection');
             return;
