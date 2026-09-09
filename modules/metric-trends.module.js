@@ -3726,14 +3726,22 @@ function collectTeamTrendMetrics(period) {
 
         let teamValue;
         if (key === 'reliability') {
-            // Cumulative: sum across team
-            let sum = 0, hasData = false;
+            // Hours per person, not the team's total.
+            //
+            // Reliability accrues across PERIODS for one associate, so summing
+            // there is right. Summing across PEOPLE gives a total, and the very
+            // next lines compare this figure against the PER-PERSON 18-hour
+            // budget. Ten associates on 4 hours each came out as 40.0 hrs
+            // against a target of 18, so the prompt listed Reliability as an
+            // improvement area for every team that has ever missed an hour --
+            // it could not do anything else.
+            let sum = 0, people = 0;
             filteredEmployees.forEach(emp => {
                 const v = parseFloat(emp[key]);
-                if (Number.isFinite(v)) { sum += v; hasData = true; }
+                if (Number.isFinite(v)) { sum += v; people += 1; }
             });
-            if (!hasData) return;
-            teamValue = sum;
+            if (!people) return;
+            teamValue = sum / people;
         } else {
             // Rate metrics: weighted average
             let wSum = 0, wCount = 0;
@@ -3744,7 +3752,11 @@ function collectTeamTrendMetrics(period) {
                 const st = parseInt(emp.surveyTotal, 10);
                 let w = 1;
                 if (SURVEY_WEIGHTED[key]) {
-                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                    // Each survey question by its own response count.
+                    const responses = typeof window.getSurveyWeight === 'function'
+                        ? window.getSurveyWeight(key, emp)
+                        : st;
+                    w = Number.isFinite(responses) && responses > 0 ? responses : 0;
                 } else {
                     w = Number.isInteger(tc) && tc > 0 ? tc : 1;
                 }

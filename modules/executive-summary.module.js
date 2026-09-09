@@ -349,7 +349,11 @@
                     } else {
                         var w = 1;
                         if (SURVEY_WEIGHTED_METRICS[metricKey]) {
-                            w = Number.isInteger(st) && st > 0 ? st : 0;
+                            // Each survey question by its own response count.
+                            var responses = typeof window.getSurveyWeight === 'function'
+                                ? window.getSurveyWeight(metricKey, emp)
+                                : st;
+                            w = Number.isFinite(responses) && responses > 0 ? responses : 0;
                         } else {
                             w = Number.isInteger(tc) && tc > 0 ? tc : 1;
                         }
@@ -378,7 +382,22 @@
                 return;
             }
             if (CUMULATIVE_METRICS[metricKey]) {
-                averages[metricKey] = metrics.cumulativeSums[metricKey] || 0;
+                // Per person, not the floor's total. Reliability accrues across
+                // PERIODS for one associate, so summing there is right; summing
+                // across PEOPLE gives a total, and this function's callers put
+                // the result on a card labelled "Avg Reliability" and colour it
+                // against the per-person 18-hour budget. Ten associates on 4
+                // hours each read 40.0 hrs in red where the truth is 4.0 in
+                // green, and the adherence card beside it was correctly
+                // weighted, so two cards in the same row disagreed about how
+                // they were built.
+                //
+                // calculateCenterAveragesFromEmployees already divides by the
+                // head count it counted; this now matches it.
+                var headcount = metrics.totalEmployees ? metrics.totalEmployees.size : 0;
+                averages[metricKey] = headcount > 0
+                    ? (metrics.cumulativeSums[metricKey] || 0) / headcount
+                    : null;
             } else if (metrics.weightedCounts[metricKey] > 0) {
                 averages[metricKey] = metrics.weightedSums[metricKey] / metrics.weightedCounts[metricKey];
             } else {
