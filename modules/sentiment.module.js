@@ -413,6 +413,32 @@
         return focusLines.join('\n');
     }
 
+    /**
+     * Profanity that must not reach a coaching document.
+     *
+     * containsCurseWords and censorCurseWords both read this and it was defined
+     * nowhere, so every call to either threw a ReferenceError. All three section
+     * builders call them on every phrase, which means the sentiment summary was
+     * broken twice over: the composer that assembles it did not exist, and the
+     * sections it would have assembled could not run either.
+     *
+     * These phrase lists come out of the Verint transcript lexicon, so they
+     * carry whatever the customer said. Matching is substring and
+     * case-insensitive, which is deliberately blunt: this list decides what is
+     * dropped from a shout-out and what is masked in a document that goes to a
+     * person, so a false positive costs one phrase and a false negative costs
+     * rather more.
+     *
+     * Ordered longest first, so censoring replaces the fuller match rather than
+     * leaving a fragment behind.
+     */
+    const CURSE_WORDS = [
+        'motherfucker', 'bullshit', 'asshole', 'dumbass', 'jackass', 'goddamn',
+        'bastard', 'fucking', 'fucked', 'shitty', 'pissed', 'wanker', 'bollocks',
+        'fuck', 'shit', 'cunt', 'twat', 'prick', 'bitch', 'damn', 'crap', 'piss',
+        'dick', 'cock', 'arse', 'wtf', 'stfu'
+    ];
+
     function containsCurseWords(phrase) {
         if (!phrase) return false;
         const lowerPhrase = phrase.toLowerCase();
@@ -611,6 +637,250 @@
             || window.METRICS_REGISTRY?.[metricKey]?.target;
         const value = target ? parseFloat(target.value) : NaN;
         return Number.isFinite(value) ? value : fallback;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       THE SUMMARY COMPOSER
+
+       generateSentimentSummary and generateSentimentCoPilotPrompt have always
+       called buildSentimentSummaryText and buildSentimentCopilotPrompt through
+       their own namespace. Neither function existed anywhere in the codebase,
+       so both buttons have only ever produced their failure alert. The three
+       section builders below were written and exported all along; only the
+       thing that assembles them was missing.
+
+       What it says, and why:
+
+       - It opens with the standing on all three, because that is the question
+         somebody clicked the button to answer. Each line carries the figure,
+         the goal, and whether it is met, so no line can be read two ways.
+       - Then ONE focus. Three focuses is a list, not a plan, and the widest gap
+         is the one worth the week.
+       - Then the phrases actually behind it, taken from the report itself, so
+         the focus is something to do rather than something to be.
+       - The detailed sections follow unchanged.
+
+       House rules it holds to: no em dashes, plain words, nothing promised on
+       anyone's behalf, no "you are new" framing, and no "only X away from" --
+       the gap is stated as a number and left to stand.
+       ══════════════════════════════════════════════════════════════════════ */
+
+    function sentimentStandingLine(label, report, goal) {
+        const pct = Number(report && report.percentage);
+        if (!Number.isFinite(pct)) {
+            return '  ' + label + ': no reading in this file';
+        }
+        const met = pct >= goal;
+        const gap = Math.round((goal - pct) * 10) / 10;
+        const verdict = met ? 'met' : gap + ' points under';
+        return '  ' + label + ': ' + pct.toFixed(1) + '% against a ' + goal + '% goal, ' + verdict;
+    }
+
+    function sentimentFocusPick(reports, goals) {
+        const candidates = [
+            { label: 'Positive Language', report: reports.positive, goal: goals.POSITIVE_GOAL, isNegative: false },
+            { label: 'Avoiding Negative Words', report: reports.negative, goal: goals.NEGATIVE_GOAL, isNegative: true },
+            { label: 'Managing Emotions', report: reports.emotions, goal: goals.EMOTIONS_GOAL, isNegative: false }
+        ].filter(function (c) { return Number.isFinite(Number(c.report && c.report.percentage)); });
+
+        if (!candidates.length) return null;
+
+        // Widest gap wins. Everything at goal means there is no focus to name,
+        // and saying so is better than manufacturing one.
+        let worst = null;
+        candidates.forEach(function (c) {
+            const gap = c.goal - Number(c.report.percentage);
+            if (!worst || gap > worst.gap) {
+                worst = { label: c.label, report: c.report, goal: c.goal, gap: gap, isNegative: c.isNegative };
+            }
+        });
+        return worst && worst.gap > 0 ? worst : null;
+    }
+
+    /**
+     * The phrases behind a focus, and what each list MEANS.
+     *
+     * The polarity flips between reports and getting it backwards is not a
+     * cosmetic slip. On Positive Language and Managing Emotions a phrase used
+     * on 28 calls is a habit worth keeping. On Avoiding Negative Words the same
+     * shape is "unfortunately, 28 times" -- a habit to break. Calling that
+     * "already landing" would congratulate somebody for the exact thing the
+     * metric is docking them for.
+     *
+     * The speaker filter matters just as much. These reports carry the
+     * CUSTOMER's phrases alongside the associate's, tagged 'C' and 'A'. Quoting
+     * a customer's words back at the associate as though they said them is the
+     * worst thing this summary could do, so anything not tagged as the
+     * associate is dropped. Where the field is absent the phrase is kept, since
+     * the older files carry the associate only.
+     */
+    function sentimentFocusPhrases(report, options) {
+        const o = options || {};
+        const negative = o.negative === true;
+        const phrases = (Array.isArray(report && report.phrases) ? report.phrases : [])
+            .filter(function (p) {
+                if (!p || containsCurseWords(p.phrase)) return false;
+                return p.speaker === undefined || p.speaker === null || p.speaker === 'A';
+            });
+
+        const spoken = phrases
+            .filter(function (p) { return p.value > 0; })
+            .sort(function (a, b) { return b.value - a.value; })
+            .slice(0, 3)
+            .map(function (p) {
+                return '"' + censorCurseWords(p.phrase) + '" on ' + p.value + ' call' + (p.value === 1 ? '' : 's');
+            });
+        const absent = phrases
+            .filter(function (p) { return p.value === 0; })
+            .slice(0, 3)
+            .map(function (p) { return '"' + censorCurseWords(p.phrase) + '"'; });
+
+        // On a negative-words focus the useful half is what came out and wants
+        // replacing. What never came out is the absence of a problem, and
+        // listing it reads as a warning about phrases nobody said.
+        if (negative) {
+            return {
+                heading: 'Coming out in your calls, and worth replacing:',
+                lines: spoken,
+                secondHeading: '',
+                secondLines: []
+            };
+        }
+        return {
+            heading: 'Already landing:',
+            lines: spoken,
+            secondHeading: 'Not showing up yet, and worth trying:',
+            secondLines: absent
+        };
+    }
+
+    function sentimentPeriodLine(report) {
+        const start = String((report && report.startDate) || '').trim();
+        const end = String((report && report.endDate) || '').trim();
+        if (start && end) return start + ' to ' + end;
+        return end || start || '';
+    }
+
+    function sentimentGoalSet(options) {
+        const o = options || {};
+        return {
+            POSITIVE_GOAL: Number.isFinite(o.POSITIVE_GOAL) ? o.POSITIVE_GOAL : sentimentGoal('positiveWord', 86),
+            NEGATIVE_GOAL: Number.isFinite(o.NEGATIVE_GOAL) ? o.NEGATIVE_GOAL : sentimentGoal('negativeWord', 83),
+            EMOTIONS_GOAL: Number.isFinite(o.EMOTIONS_GOAL) ? o.EMOTIONS_GOAL : sentimentGoal('managingEmotions', 95)
+        };
+    }
+
+    /**
+     * The whole summary: a standing, one focus, the phrases behind it, then the
+     * three detailed sections.
+     */
+    function buildSentimentSummaryText(reports, helpers) {
+        const h = helpers || {};
+        const esc = typeof h.escapeHtml === 'function'
+            ? h.escapeHtml
+            : function (v) { return String(v == null ? '' : v); };
+        const positive = reports && reports.positive;
+        const negative = reports && reports.negative;
+        const emotions = reports && reports.emotions;
+        if (!positive || !negative || !emotions) return { summary: '' };
+
+        const goals = sentimentGoalSet(h);
+        const name = esc(positive.associateName || 'this associate');
+        const period = sentimentPeriodLine(positive);
+        const calls = Number(positive.totalCalls) > 0 ? Number(positive.totalCalls) : null;
+
+        let out = '';
+        out += '═══════════════════════════════════\n';
+        out += 'SENTIMENT SUMMARY\n';
+        out += '═══════════════════════════════════\n';
+        out += name + '\n';
+        if (period) out += period + '\n';
+        if (calls) out += calls + ' call' + (calls === 1 ? '' : 's') + ' reviewed\n';
+        out += '\n';
+
+        out += 'WHERE IT STANDS\n';
+        out += sentimentStandingLine('Positive Language', positive, goals.POSITIVE_GOAL) + '\n';
+        out += sentimentStandingLine('Avoiding Negative Words', negative, goals.NEGATIVE_GOAL) + '\n';
+        out += sentimentStandingLine('Managing Emotions', emotions, goals.EMOTIONS_GOAL) + '\n';
+        out += '\n';
+
+        const focus = sentimentFocusPick({ positive: positive, negative: negative, emotions: emotions }, goals);
+        out += 'WHAT TO WORK ON\n';
+        if (!focus) {
+            out += '  All three are at goal for this period. Keep doing what is working.\n\n';
+        } else {
+            const gap = Math.round(focus.gap * 10) / 10;
+            out += '  ' + focus.label + '. It is the widest gap of the three, '
+                + gap + ' points under a ' + focus.goal + '% goal.\n';
+
+            const phrases = sentimentFocusPhrases(focus.report, { negative: focus.isNegative });
+            if (phrases.lines.length) {
+                out += '\n  ' + phrases.heading + '\n';
+                phrases.lines.forEach(function (line) { out += '    • ' + line + '\n'; });
+            }
+            if (phrases.secondLines.length) {
+                out += '\n  ' + phrases.secondHeading + '\n';
+                phrases.secondLines.forEach(function (line) { out += '    • ' + line + '\n'; });
+            }
+            out += '\n';
+        }
+
+        // The detail, unchanged. Passed in so this composer never has to know
+        // how a section is built.
+        const sections = [
+            typeof h.buildPositiveLanguageSentimentSection === 'function'
+                ? h.buildPositiveLanguageSentimentSection(positive, name) : '',
+            typeof h.buildNegativeLanguageSentimentSection === 'function'
+                ? h.buildNegativeLanguageSentimentSection(negative, name) : '',
+            typeof h.buildManagingEmotionsSentimentSection === 'function'
+                ? h.buildManagingEmotionsSentimentSection(emotions, name) : ''
+        ].filter(Boolean);
+
+        if (sections.length) out += sections.join('\n');
+
+        return { summary: out };
+    }
+
+    /**
+     * The CoPilot prompt. Same facts, asked as a question rather than stated.
+     */
+    function buildSentimentCopilotPrompt(reports, options) {
+        const o = options || {};
+        const positive = reports && reports.positive;
+        const negative = reports && reports.negative;
+        const emotions = reports && reports.emotions;
+        if (!positive || !negative || !emotions) return '';
+
+        const goals = sentimentGoalSet(o);
+        const name = o.associateName || positive.associateName || 'the associate';
+        const period = sentimentPeriodLine(positive);
+        const pct = function (r) { return Number(r.percentage).toFixed(1); };
+
+        let out = '';
+        out += 'Write a short, warm coaching note for ' + name + ' about how they speak on calls.\n\n';
+        if (period) out += 'Period: ' + period + '\n';
+        out += 'Positive Language: ' + pct(positive) + '% against a ' + goals.POSITIVE_GOAL + '% goal\n';
+        out += 'Avoiding Negative Words: ' + pct(negative) + '% against a ' + goals.NEGATIVE_GOAL + '% goal\n';
+        out += 'Managing Emotions: ' + pct(emotions) + '% against a ' + goals.EMOTIONS_GOAL + '% goal\n\n';
+
+        const focus = sentimentFocusPick({ positive: positive, negative: negative, emotions: emotions }, goals);
+        if (focus) {
+            out += 'Focus on ' + focus.label + ', which is the widest gap.\n';
+            const phrases = sentimentFocusPhrases(focus.report, { negative: focus.isNegative });
+            if (phrases.lines.length) out += phrases.heading + ' ' + phrases.lines.join('; ') + '\n';
+            if (phrases.secondLines.length) out += phrases.secondHeading + ' ' + phrases.secondLines.join('; ') + '\n';
+        } else {
+            out += 'All three are at goal, so make this a recognition note rather than a correction.\n';
+        }
+
+        out += '\nRules for the note:\n';
+        out += '- Plain words. No jargon, and do not read the scores back like a report.\n';
+        out += '- Name one thing to try, not a list.\n';
+        out += '- Do not promise any exception, allowance or adjustment.\n';
+        out += '- Do not assume they are new to the job.\n';
+        out += '- Keep it under 150 words and address them directly.\n';
+
+        return out;
     }
 
     function generateSentimentSummary() {
@@ -1500,6 +1770,10 @@
         buildPositiveLanguageSentimentSection,
         buildNegativeLanguageSentimentSection,
         buildManagingEmotionsSentimentSection,
+        // The composers the two buttons have always called and that never
+        // existed. Exported under exactly the names the call sites look up.
+        buildSentimentSummaryText,
+        buildSentimentCopilotPrompt,
         generateSentimentSummary,
         parseSentimentReportDate,
         handleSentimentInteractionsMatch,
