@@ -40,52 +40,82 @@ const BANNED = [
 ];
 
 /**
- * Every offset inside a string literal, so a comment can say what it likes.
+ * Everything in a file that is not a comment.
  *
- * A hand-rolled scanner rather than a parser, because the alternative is a
- * dependency and this file has one job. It tracks the four states that matter:
- * outside, in a line comment, in a block comment, and in a string of any of the
- * three quote flavours. Escapes are skipped as pairs so a quote inside a string
- * cannot end it early.
+ * The check is "does a person read this", and the honest split is code versus
+ * comment rather than string versus everything else. Em dashes do not appear
+ * in JavaScript syntax, so anything left after the comments are taken out and
+ * still carrying one is copy.
+ *
+ * This used to track quote state across the whole file, and that is the part
+ * that failed. One line in almost every module ends
+ * `.replace(/"/g, '&quot;').replace(/'/g, '&#39;')`, and read as ordinary code
+ * those two quotes open strings nothing closes. From there the scanner was a
+ * quote out of step for the rest of the file: comments read as copy, copy read
+ * as comment. It had been quietly doing that in every file with an escapeHtml
+ * in it, which is nearly all of them, and the rule was only ever enforced
+ * above that line. Six real em dashes were sitting under it.
+ *
+ * Resynchronising every line is what stops that being possible. A line can
+ * confuse this scanner; it cannot confuse the next one.
  */
 function stringRanges(src) {
     const ranges = [];
-    let i = 0;
-    let state = null;
-    let quote = null;
-    let start = 0;
-    while (i < src.length) {
-        const c = src[i];
-        if (state === null) {
-            if (c === '/' && src[i + 1] === '/') { state = 'line'; i += 2; continue; }
-            if (c === '/' && src[i + 1] === '*') { state = 'block'; i += 2; continue; }
-            if (c === '"' || c === "'" || c === '`') { state = 'str'; quote = c; start = i; i++; continue; }
+    const lines = src.split('\n');
+    let offset = 0;
+    let inBlock = false;
+
+    lines.forEach((line) => {
+        let segStart = inBlock ? -1 : 0;
+        let i = 0;
+
+        const keep = (from, to) => {
+            if (from < 0 || to <= from) return;
+            if (line.slice(from, to).trim()) ranges.push([offset + from, offset + to]);
+        };
+
+        while (i < line.length) {
+            if (inBlock) {
+                if (line[i] === '*' && line[i + 1] === '/') { inBlock = false; i += 2; segStart = i; continue; }
+                i++;
+                continue;
+            }
+            if (line[i] === '/' && line[i + 1] === '*') { keep(segStart, i); inBlock = true; i += 2; continue; }
+            // A line comment, but not the // inside a URL. Template literals
+            // carry hrefs, and cutting one at the slashes would hide the copy
+            // sitting after it.
+            if (line[i] === '/' && line[i + 1] === '/' && line[i - 1] !== ':') { keep(segStart, i); segStart = -1; break; }
             i++;
-            continue;
         }
-        if (state === 'line') {
-            if (c === '\n') state = null;
-            i++;
-            continue;
-        }
-        if (state === 'block') {
-            if (c === '*' && src[i + 1] === '/') { state = null; i += 2; continue; }
-            i++;
-            continue;
-        }
-        if (c === '\\') { i += 2; continue; }
-        if (c === quote) { ranges.push([start, i]); state = null; quote = null; i++; continue; }
-        i++;
-    }
-    // An unterminated string means the scanner lost its place, which would make
-    // every result after it a guess. Report the whole tail so a real problem
-    // shows up as a failure rather than as silence.
-    if (state === 'str') ranges.push([start, src.length]);
+
+        if (!inBlock) keep(segStart, line.length);
+        offset += line.length + 1;
+    });
+
     return ranges;
 }
 
 function lineOf(src, index) {
     return src.slice(0, index).split('\n').length;
+}
+
+/**
+ * A dash inside a regex character class is a pattern that matches the
+ * character, not a character anybody reads. Two places normalise pasted dashes
+ * and have to name them to do it.
+ */
+function isRegexCharacterClass(src, at) {
+    const lineStart = src.lastIndexOf('\n', at) + 1;
+    let lineEnd = src.indexOf('\n', at);
+    if (lineEnd === -1) lineEnd = src.length;
+    const before = src.slice(lineStart, at);
+    const after = src.slice(at, lineEnd);
+    const open = before.lastIndexOf('[');
+    if (open === -1) return false;
+    if (before.indexOf(']', open) > -1) return false;
+    if (before.lastIndexOf('/', open) === -1) return false;
+    const close = after.indexOf(']');
+    return close > -1 && after.indexOf('/', close) > -1;
 }
 
 function offences(file) {
@@ -97,7 +127,9 @@ function offences(file) {
         BANNED.forEach(({ name, find }) => {
             let at = text.indexOf(find);
             while (at !== -1) {
-                found.push({ file, line: lineOf(src, a + at), what: name, text: text.slice(0, 90) });
+                if (!isRegexCharacterClass(src, a + at)) {
+                    found.push({ file, line: lineOf(src, a + at), what: name, text: text.slice(0, 90) });
+                }
                 at = text.indexOf(find, at + find.length);
             }
         });

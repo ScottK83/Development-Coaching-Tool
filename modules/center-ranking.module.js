@@ -62,6 +62,9 @@
     function _getYtdData() {
         return typeof ytdData !== 'undefined' ? ytdData : {};
     }
+    function _getDailyData() {
+        return typeof dailyData !== 'undefined' ? dailyData : {};
+    }
 
     // ── Period selector ──
     var _selectedRankingPeriodKey = null;
@@ -900,7 +903,12 @@
         }
         var wData = _getWeeklyData();
         var yData = _getYtdData();
-        var period = wData[periodKey] || yData[periodKey];
+        // Day files are canonical for their own day, which is exactly the
+        // question a caller asking for one period key is asking. They are left
+        // out of every rollup and out of the ranking tab's own period list;
+        // this reads one when it is named, so "yesterday" can be ranked the
+        // same way a week can.
+        var period = wData[periodKey] || yData[periodKey] || _getDailyData()[periodKey];
         if (!period || !period.employees?.length) return null;
 
         var meta = period.metadata || {};

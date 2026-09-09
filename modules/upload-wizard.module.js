@@ -817,7 +817,7 @@
                 el.value = opt.id;
                 el.disabled = true;
                 const when = opt.uploadedAt ? new Date(opt.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-                el.textContent = `✓ ${opt.label}${when ? ` — uploaded ${when}` : ''}`;
+                el.textContent = `✓ ${opt.label}${when ? `, uploaded ${when}` : ''}`;
                 el.dataset.periodType = opt.periodType;
                 el.dataset.startDate = opt.startDate || '';
                 el.dataset.endDate = opt.endDate || '';

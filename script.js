@@ -6549,17 +6549,17 @@ function renderTrendSimpleView() {
     const scoredCount = snapshot.employeeNamesCount || 0;
 
     const coachHtml = topCoach.length
-        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${escapeHtml(entry.reason)}</li>`).join('')
+        ? topCoach.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong>: ${escapeHtml(entry.reason)}</li>`).join('')
         : '<li>No urgent coaching interventions this cycle.</li>';
 
     const recognizeHtml = topRecognize.length
-        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong> — ${escapeHtml(entry.reason)}</li>`).join('')
+        ? topRecognize.map(entry => `<li style="margin-bottom: 4px;"><strong>${escapeHtml(entry.name)}</strong>: ${escapeHtml(entry.reason)}</li>`).join('')
         : '<li>No standout recognition callouts this cycle.</li>';
 
     container.innerHTML = `
         ${goalsSummaryHtml}
         <div style="padding: 14px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
-            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">🧭 Simple View — This Week’s Priorities</div>
+            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">🧭 Simple View: This Week’s Priorities</div>
             <div style="color: #546e7a; font-size: 0.9em; margin-bottom: 10px;">${modeLabel} • Team Members Scored: ${scoredCount}</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div style="padding: 10px; border-radius: 6px; background: #fff0f0; border: 1px solid #f3c9c9;">
@@ -6847,7 +6847,7 @@ function buildTrendThisWeekPlanText() {
             const whyText = Array.isArray(entry.why) && entry.why.length
                 ? ` | Why: ${entry.why.slice(0, 3).join(' • ')}`
                 : '';
-            lines.push(`[ ] ${index + 1}. ${entry.name} — ${entry.reason}${whyText}`);
+            lines.push(`[ ] ${index + 1}. ${entry.name}: ${entry.reason}${whyText}`);
         });
     } else {
         lines.push('[ ] No urgent coaching interventions this cycle.');
@@ -6861,7 +6861,7 @@ function buildTrendThisWeekPlanText() {
             const whyText = Array.isArray(entry.why) && entry.why.length
                 ? ` | Why: ${entry.why.slice(0, 3).join(' • ')}`
                 : '';
-            lines.push(`[ ] ${index + 1}. ${entry.name} — ${entry.reason}${whyText}`);
+            lines.push(`[ ] ${index + 1}. ${entry.name}: ${entry.reason}${whyText}`);
         });
     } else {
         lines.push('[ ] No standout recognition callouts this cycle.');
@@ -7310,7 +7310,7 @@ async function generateOneOnOnePrep() {
         ? trends.map(t => `${METRICS_REGISTRY[t.key]?.label || t.key} (${t.delta > 0 ? 'up' : t.delta < 0 ? 'down' : 'flat'})`).join(', ')
         : 'No clear trend changes';
 
-    output.value = `Prep for 1:1 — ${associate}\n` +
+    output.value = `Prep for 1:1: ${associate}\n` +
         `Key Wins: ${winText}\n` +
         `Current Trends: ${trendText}\n` +
         `Last Coaching Topics: ${lastCoaching.join(' | ')}\n` +

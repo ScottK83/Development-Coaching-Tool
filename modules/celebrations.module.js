@@ -52,6 +52,24 @@
     // else — rankings, Attendance, meeting prep.
     var SHOUTOUT_EXCLUDED_METRICS = { reliability: true };
 
+    // Never shouted about off a single day.
+    //
+    // Survey scores land days after the calls and arrive a handful at a time,
+    // so one day's file has three responses in it where it has three hundred
+    // calls. Ranking a center on that hands first place to whoever happened to
+    // get the one good survey back. Daily uploads carry these columns because
+    // the parser is shared, not because a day can support them — the same
+    // reason the daily check-in leaves them out.
+    var DAY_UNSAFE_METRICS = { associateOverall: true, fcr: true, overallExperience: true };
+
+    function _isDailyPeriod(periodKey) {
+        if (!periodKey) return false;
+        var daily = typeof dailyData !== 'undefined' ? dailyData : {};
+        if (daily[periodKey]) return true;
+        var raw = _rawPeriodFor({ key: periodKey });
+        return (raw && raw.metadata && raw.metadata.periodType) === 'daily';
+    }
+
     // Metrics the meets-target gate is switched off for.
     //
     // The gate exists so nobody is congratulated for a number they are failing.
@@ -326,6 +344,11 @@
      */
     var SHOUTOUT_WINDOW_SPECS = [
         { id: 'latest', label: 'Latest upload' },
+        // A day file cannot stand in for the week — that is why "this week"
+        // refuses one — but it is perfectly good evidence about its own day,
+        // and a day you uploaded this morning is the freshest thing on file.
+        // It was the one window with no way to pick it.
+        { id: 'day', label: 'Yesterday' },
         { id: 'thisWeek', label: 'This week' },
         { id: 'lastWeek', label: 'Last week' },
         { id: 'mtd', label: 'Month to date' },
@@ -339,6 +362,7 @@
     var MIN_FIELD_FOR_CENTER_RANK = 30;
 
     var NO_UPLOAD_REASON = {
+        day: 'No day file uploaded yet.',
         thisWeek: 'Nothing uploaded for this week yet.',
         lastWeek: 'No finished week on file yet.',
         mtd: 'No month-to-date upload for this month yet.',
@@ -407,6 +431,35 @@
     }
 
     /**
+     * The most recent day file, whatever day it is for.
+     *
+     * Dailies are ephemeral and get purged the moment a weekly covers them, so
+     * the newest one is the only one worth offering. Stale ones are not hidden;
+     * they are named by their date, below.
+     */
+    function _windowEntryDay(pi, index) {
+        return pi.latestOfType(index, 'daily');
+    }
+
+    /**
+     * What to call the day chip.
+     *
+     * "Yesterday" is right on the morning you upload it and a lie by Thursday.
+     * The chip says which day it actually is once it stops being yesterday, so
+     * a stale day file cannot be picked by accident.
+     */
+    function _dayWindowLabel(entry, todayIso) {
+        var end = entry && entry.end;
+        if (!end) return 'Yesterday';
+        if (end === todayIso) return 'Today';
+
+        var pi = _periodIndex();
+        var yesterday = pi && pi.shiftDays ? pi.shiftDays(todayIso, -1) : null;
+        if (end === yesterday) return 'Yesterday';
+        return formatDateFriendly(end);
+    }
+
+    /**
      * Every window, whether it can be used, and why not when it cannot.
      * "Latest upload" is the old behaviour kept under a name. It resolves to
      * no key at all, which is what tells detection to pick for itself.
@@ -425,7 +478,8 @@
                     available: false, reason: 'The period index is not loaded, so only the latest upload can be used.' };
             }
 
-            var entry = spec.id === 'thisWeek' ? _windowEntryThisWeek(pi, index, today)
+            var entry = spec.id === 'day' ? _windowEntryDay(pi, index)
+                : spec.id === 'thisWeek' ? _windowEntryThisWeek(pi, index, today)
                 : spec.id === 'lastWeek' ? pi.lastCompletedWeek(index, today)
                 : spec.id === 'mtd' ? _windowEntryMonthToDate(pi, index, today)
                 : _windowEntryYearToDate(pi, index);
@@ -438,11 +492,12 @@
                     available: false, reason: missing };
             }
 
+            var label = spec.id === 'day' ? _dayWindowLabel(entry, today) : spec.label;
             var count = entry.employeeCount || 0;
             var enough = count >= MIN_FIELD_FOR_CENTER_RANK;
             return {
                 id: spec.id,
-                label: spec.label,
+                label: label,
                 key: entry.key,
                 dateRange: getDateRangeForKey(entry.key),
                 count: count,
@@ -560,6 +615,12 @@
         var maxTier = tiers[tiers.length - 1];
         var results = [];
 
+        // Which metrics a single day can carry differs from a week's, so this
+        // is settled once against the period actually ranked rather than the
+        // key that was asked for. They differ whenever the requested key had
+        // nothing behind it and detection picked for itself.
+        var isDayScoped = _isDailyPeriod(data.periodKey || periodKey);
+
         var ranked = buildDisplayRanks(data);
         var rank1CountsByMetric = ranked.rank1CountsByMetric;
         var rankCountsByMetric = ranked.rankCountsByMetric;
@@ -614,6 +675,7 @@
             // Check each individual metric rank
             Object.keys(METRIC_RANK_LABELS).forEach(function(metricKey) {
                 if (SHOUTOUT_EXCLUDED_METRICS[metricKey]) return;
+                if (isDayScoped && DAY_UNSAFE_METRICS[metricKey]) return;
                 if (!volume.ok && !VOLUME_INDEPENDENT_METRICS[metricKey]) return;
                 var metricRank = displayRankByMetric[metricKey]?.[r.name] || r.metricRanks?.[metricKey];
                 if (!metricRank || metricRank > maxTier) return;

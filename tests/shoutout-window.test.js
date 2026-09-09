@@ -77,7 +77,7 @@ suite('shout-out window: each window resolves to the upload that actually covers
     const celebrations = load(t);
     const windows = celebrations.listShoutOutWindows(TODAY);
 
-    t.equal('all four windows plus the old behaviour are offered', windows.length, 5);
+    t.equal('all five windows plus the old behaviour are offered', windows.length, 6);
     t.equal('the latest upload stays available as itself', byId(windows, 'latest').key, null);
 
     t.equal('this week is the week in progress, not the finished one',
@@ -92,7 +92,7 @@ suite('shout-out window: each window resolves to the upload that actually covers
     // A rank is unreadable without the range it was earned over, so every
     // window carries its own dates rather than borrowing the page header's.
     t.check('and each one knows its own date range',
-        windows.filter((w) => w.id !== 'latest').every((w) => w.dateRange));
+        windows.filter((w) => w.id !== 'latest' && w.key).every((w) => w.dateRange));
     t.equal('with the size of the field behind it', byId(windows, 'mtd').count, 126);
 });
 
@@ -412,4 +412,68 @@ suite('shout-out window: a week-shaped upload still wins over the day files', (t
     // it change nothing — the aggregated upload was always the better answer.
     t.check('the week-in-progress upload is used', thisWeek.available === true);
     t.equal('and it is the file that gets ranked', thisWeek.key, '2026-08-17|2026-08-18');
+});
+
+suite('shout-out window: the day you just uploaded can be picked', (t) => {
+    // A day file is not allowed to stand in for the week, and that is right:
+    // one day cannot rank seven. It is still the best evidence there is about
+    // its own day, and it was the one window with no way to select it. Upload
+    // yesterday first thing and the post was built from a week-old file.
+    const celebrations = load(t, {
+        dailyData: {
+            '2026-08-17|2026-08-17': { metadata: { periodType: 'daily', endDate: '2026-08-17' }, employees: bigTeam(126) }
+        }
+    });
+    const windows = celebrations.listShoutOutWindows(TODAY);
+    const day = byId(windows, 'day');
+
+    t.check('the day window is offered', Boolean(day));
+    t.equal('and resolves to the day file', day.key, '2026-08-17|2026-08-17');
+    t.check('it can be used', day.available === true);
+    t.equal('called yesterday, because it is', day.label, 'Yesterday');
+    t.check('and it carries its own date', Boolean(day.dateRange));
+
+    // It sits above the week, because the newest thing on file is the first
+    // thing a manager reaches for on a Tuesday morning.
+    t.check('offered before this week', windows.map((w) => w.id).indexOf('day') < windows.map((w) => w.id).indexOf('thisWeek'));
+
+    // The week is unchanged. A day file still cannot rank one.
+    t.check('and this week still refuses to be a day file',
+        byId(windows, 'thisWeek').key === '2026-08-17|2026-08-18');
+});
+
+suite('shout-out window: a stale day file says which day it is', (t) => {
+    // "Yesterday" is right on the morning you upload it and a lie by Thursday.
+    const celebrations = load(t, {
+        dailyData: {
+            '2026-08-11|2026-08-11': { metadata: { periodType: 'daily', endDate: '2026-08-11' }, employees: bigTeam(126) }
+        }
+    });
+    const day = byId(celebrations.listShoutOutWindows(TODAY), 'day');
+
+    t.check('it is not called yesterday', day.label !== 'Yesterday');
+    t.check('it is named by its date instead', day.label.indexOf('Aug') > -1 && day.label.indexOf('11') > -1);
+});
+
+suite('shout-out window: a day with nobody in it is not a center', (t) => {
+    // Labor Day. Eight people worked, and eight people are not a ranking.
+    const celebrations = load(t, {
+        dailyData: {
+            '2026-09-07|2026-09-07': { metadata: { periodType: 'daily', endDate: '2026-09-07' }, employees: bigTeam(8) }
+        }
+    });
+    const day = byId(celebrations.listShoutOutWindows(TODAY), 'day');
+
+    t.check('the thin day cannot be posted from', day.available === false);
+    t.check('and the head count is the reason', day.reason.indexOf('8') > -1);
+    t.check('the file is named rather than hidden', day.key === '2026-09-07|2026-09-07');
+});
+
+suite('shout-out window: no day file at all is said plainly', (t) => {
+    const celebrations = load(t);
+    const day = byId(celebrations.listShoutOutWindows(TODAY), 'day');
+
+    t.check('nothing to offer', day.available === false);
+    t.check('and it says what is missing', day.reason.indexOf('day file') > -1);
+    t.equal('with no key handed back', day.key, null);
 });
