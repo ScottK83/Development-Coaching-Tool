@@ -223,12 +223,27 @@
         if (typeof value === 'string') {
             value = value.replace('%', '').trim();
         }
-        
+        const rawText = typeof value === 'string' ? value : String(value);
+
         const parsed = parseFloat(value);
         if (isNaN(parsed)) return 0;
         
         if (parsed > 0 && parsed < 1) {
             return parseFloat((parsed * 100).toFixed(2));
+        }
+
+        // Exactly 1 is the one value the rescale above cannot decide on its own,
+        // and it is the one that matters: in a fraction-formatted export it is a
+        // perfect score. 0.999 became 99.9 while 1.000 became 1 -- the lowest
+        // rating band, for the best possible result, in a column where everyone
+        // below converted correctly.
+        //
+        // The written form settles it. A fraction export writes "1.000" or
+        // "1.0"; a whole-percent export writes "1". So a decimal point on a
+        // value of exactly 1 means a fraction, and a bare 1 is left as one
+        // percent.
+        if (parsed === 1 && rawText.indexOf('.') > -1) {
+            return 100;
         }
         
         if (parsed >= 1 && parsed <= 100) {
@@ -271,12 +286,19 @@
         if (typeof value === 'string') {
             value = value.replace('%', '').trim();
         }
-        
+        const rawText = typeof value === 'string' ? value : String(value);
+
         const parsed = parseFloat(value);
         if (isNaN(parsed)) return '';
         
         if (parsed > 0 && parsed < 1) {
             return parseFloat((parsed * 100).toFixed(2));
+        }
+
+        // Same rule as parsePercentage: a decimal point on a value of exactly 1
+        // means a fraction-formatted perfect score, not one percent.
+        if (parsed === 1 && rawText.indexOf('.') > -1) {
+            return 100;
         }
         
         if (parsed >= 1 && parsed <= 100) {
@@ -292,6 +314,26 @@
 
     function parseSeconds(value) {
         if (value === '' || value === null || value === undefined) return '';
+
+        // A duration, if it is written as one. parseFloat stops at the colon, so
+        // "6:42" came through as 6 SECONDS rather than 402, and "0:06:42" as 0.
+        // Both are plausible-looking figures, which is what made it invisible: a
+        // six-second handle time is absurd, but a six-second hold time is not.
+        const text = String(value).trim();
+        const clock = /^(\d+):([0-5]?\d)(?::([0-5]?\d))?$/.exec(text);
+        // Something with a colon in it that is not a valid duration is not a
+        // number with a colon after it either. "12:60" used to come through as
+        // 12. Unreadable is the honest answer, and it is the sentinel the rest
+        // of this function already returns.
+        if (!clock && text.indexOf(':') > -1) return '';
+        if (clock) {
+            const a = parseInt(clock[1], 10);
+            const b = parseInt(clock[2], 10);
+            const c = clock[3] === undefined ? null : parseInt(clock[3], 10);
+            // Two parts are mm:ss, three are hh:mm:ss.
+            return c === null ? (a * 60) + b : (a * 3600) + (b * 60) + c;
+        }
+
         const parsed = parseFloat(value);
         if (isNaN(parsed)) return '';
         return Math.round(parsed);
@@ -535,7 +577,16 @@
     function hasMetricCell(cells, colIndex) {
         if (colIndex === undefined || colIndex === null || colIndex < 0) return false;
         const text = String(getCell(cells, colIndex) ?? '').replace(/ /g, ' ').trim();
-        return text !== '' && text !== '(Blank)' && text.toLowerCase() !== 'n/a';
+        if (text === '' || text === '(Blank)') return false;
+        // A dash is how a report writes "nothing to report", and it used to pass
+        // this check. parsePercentage then turned it into a real 0, so an
+        // associate with no adherence reading scored 0% and the lowest rating
+        // band -- indistinguishable from somebody who genuinely adhered to none
+        // of their schedule. Every shape of it, including the unicode dashes a
+        // spreadsheet substitutes.
+        if (/^[-‐-―−]+$/.test(text)) return false;
+        const lowered = text.toLowerCase();
+        return lowered !== 'n/a' && lowered !== 'na' && lowered !== 'null' && lowered !== 'none';
     }
 
     // Build the canonical employee row from parsed cells + the detected col map.
@@ -594,7 +645,11 @@
             transfers: hasTransfersData
                 ? normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls)
                 : '',
-            transfersCount: parsedTransfersCount,
+            // Blank when the column was not carried, for the same reason
+            // `transfers` above is: a fabricated 0 reads as a flawless week
+            // nobody earned, and this is a reverse metric where 0 is the best
+            // possible number. Same guard.
+            transfersCount: hasTransfersData ? parsedTransfersCount : '',
             aht: parseSeconds(getCell(cells, colMap.aht)) || '',
             talkTime: parseSeconds(getCell(cells, colMap.talkTime)) || '',
             acw: parseSeconds(getCell(cells, colMap.acw)),
