@@ -4937,12 +4937,29 @@ function getEntryYear(entry) {
 }
 
 function normalizeTeamMembersForExistingWeeks() {
-    const validWeekKeys = new Set(Object.keys(weeklyData || {}));
+    // Both stores, because a team selection can be keyed to either.
+    //
+    // getTeamSelectionWeekKey resolves through the Delete Data dropdown or
+    // getLatestTeamSelectionWeekKey, and both of those consider weeklyData AND
+    // ytdData. So ticking people while a year-to-date period is the active one
+    // stores the selection under a YTD key -- and this function used to drop
+    // every entry whose key was not in weeklyData.
+    //
+    // Dropping it is only half the damage. The auto-seed below then refills the
+    // week keys from DEFAULT_TEAM_MEMBERS, so a hand-picked team was replaced by
+    // the built-in roster with nothing said. It runs on delete, on upload and on
+    // restore, so it did not need anything unusual to happen.
+    //
+    // The seeding pass is still weekly-only on purpose: seeding a YTD file with
+    // a default roster is not something anyone asked for.
+    const weeklyKeys = new Set(Object.keys(weeklyData || {}));
+    const validWeekKeys = new Set([...weeklyKeys, ...Object.keys(ytdData || {})]);
+    const employeesForKey = (key) => (weeklyData[key] || ytdData[key])?.employees || [];
     const normalized = {};
 
     Object.entries(myTeamMembers || {}).forEach(([weekKey, members]) => {
         if (!validWeekKeys.has(weekKey)) return;
-        const weekEmployees = (weeklyData[weekKey]?.employees || []).map(emp => String(emp?.name || '').trim()).filter(Boolean);
+        const weekEmployees = employeesForKey(weekKey).map(emp => String(emp?.name || '').trim()).filter(Boolean);
         const validEmployees = new Set(weekEmployees);
         const safeMembers = Array.isArray(members) ? members.map(name => String(name || '').trim()).filter(Boolean) : [];
         const filteredMembers = safeMembers.filter(name => validEmployees.has(name));
@@ -4950,7 +4967,7 @@ function normalizeTeamMembersForExistingWeeks() {
     });
 
     // Auto-seed new week keys with DEFAULT_TEAM_MEMBERS so only your team is checked
-    validWeekKeys.forEach(function(weekKey) {
+    weeklyKeys.forEach(function(weekKey) {
         if (normalized[weekKey] && normalized[weekKey].length > 0) return;
         var weekEmployees = (weeklyData[weekKey]?.employees || []).map(function(emp) { return String(emp?.name || '').trim(); }).filter(Boolean);
         var weekSet = new Set(weekEmployees);
