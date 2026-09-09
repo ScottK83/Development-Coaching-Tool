@@ -112,9 +112,19 @@
                 agg.totalCalls += Number.isInteger(tc) ? tc : 0;
                 agg.surveyTotal += Number.isInteger(st) ? st : 0;
 
-                // Reliability: cumulative hours — take the highest (most complete) value
+                // Reliability: hours missed IN each period, so they add up.
+                //
+                // This took the highest value seen, on the belief that the
+                // column is a running total. It is not, for anything but a YTD
+                // upload -- metric-trends:3469 and futures:278 both say so, and
+                // both fixed the same mistake in their own aggregation. Maxing
+                // keeps an associate's single worst week and silently discards
+                // every other absence, so a quarter with 8 + 8 + 3 hours missed
+                // was reported as 8: inside the 18-hour budget, listed as a
+                // strength, and driving the sort and the review copy off a
+                // figure less than half the real one.
                 var rel = parseFloat(emp.reliability);
-                if (Number.isFinite(rel) && rel > agg.reliability) agg.reliability = rel;
+                if (Number.isFinite(rel)) agg.reliability += rel;
 
                 Q1_METRICS.forEach(function (mk) {
                     if (CUMULATIVE_METRICS.has(mk)) return; // handled above
@@ -123,7 +133,11 @@
 
                     var weight = 1;
                     if (SURVEY_WEIGHTED.has(mk)) {
-                        weight = Number.isInteger(st) && st > 0 ? st : 0;
+                        // Each survey question by its own response count.
+                        var responses = typeof window.getSurveyWeight === 'function'
+                            ? window.getSurveyWeight(mk, emp)
+                            : st;
+                        weight = Number.isFinite(responses) && responses > 0 ? responses : 0;
                     } else {
                         weight = Number.isInteger(tc) && tc > 0 ? tc : 1;
                     }
