@@ -516,6 +516,12 @@
             // 100% and untouched.
             associateOverallSource: result.associateOverallSource || null,
             surveyTotal: parseInt(emp.surveyTotal, 10) || 0,
+            // The per-question counts travel with the row, so anything ranking
+            // off it can apply the survey floor without going back to the
+            // upload. The three questions are answered independently and each
+            // has its own denominator.
+            repSurveyTotal: parseInt(emp.repSurveyTotal, 10) || 0,
+            fcrSurveyTotal: parseInt(emp.fcrSurveyTotal, 10) || 0,
             totalCalls: parseInt(emp.totalCalls, 10) || 0
         };
     }
@@ -2206,6 +2212,22 @@
         holders.forEach(function (h) {
             var value = _trajectoryMetricValue(h.holder, row);
             if (value === null || value === undefined || isNaN(value)) return;
+
+            // A survey metric needs enough responses to be ranked, the same
+            // floor buildExtraRankValues already applies to the ranked extras.
+            //
+            // This function builds the per-metric placings on the year card that
+            // gets emailed to the associate, and it had no floor at all: one
+            // response at 100% took #1 on CX Adv, in a picture sent to the
+            // person it is about, while the projection ladder underneath refused
+            // to project the same number.
+            if (_SURVEY_WEIGHTED_AVG[row.registry]) {
+                var responses = typeof window.getSurveyWeight === 'function'
+                    ? window.getSurveyWeight(row.registry, h.holder)
+                    : Number(h.holder.surveyTotal);
+                if (!(responses >= MIN_SURVEYS_FOR_RANK)) return;
+            }
+
             scored.push({ name: h.name, value: Number(value) });
         });
 

@@ -1393,7 +1393,7 @@ on-off-tracker / calculateYearEndOnOffMirror, every associate, both years
         "reliability": 3,
         "sentiment": 2
       },
-      "surveyCount": null,
+      "surveyCount": 40,
       "trackLabel": "On Track/Successful",
       "trackStatusValue": "on-track-successful",
       "values": {

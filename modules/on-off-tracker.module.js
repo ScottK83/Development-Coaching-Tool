@@ -114,6 +114,46 @@
         };
     }
 
+    /**
+     * How many responses stand behind the Associate Overall figure.
+     *
+     * Which survey it is depends on which one the picker chose: rep sat is
+     * counted by repSurveyTotal, Overall Experience by surveyTotal. Reading
+     * surveyTotal either way both mis-floors the score and mislabels the
+     * "Associate Overall (N surveys)" caption.
+     */
+    function surveyResponsesBehindOverall(source, employeeRecord) {
+        const metricKey = source === 'overallExperience' ? 'overallExperience' : 'cxRepOverall';
+        const viaRegistry = typeof window.getSurveyWeight === 'function'
+            ? window.getSurveyWeight(metricKey, employeeRecord)
+            : null;
+        if (Number.isFinite(viaRegistry)) return viaRegistry;
+        const fallback = parseInt(employeeRecord?.surveyTotal, 10);
+        return Number.isInteger(fallback) ? fallback : 0;
+    }
+
+    /**
+     * How many responses a survey score needs before it is a score at all.
+     *
+     * Matches MIN_SURVEYS_FOR_RANK in center-ranking, which already blanks the
+     * RANKED survey metrics below three. The SCORED one had no floor anywhere,
+     * and it is the one that matters: associateOverall drives the KPI score,
+     * kpisMet, the metric rank and the tiebreaker, and it reaches the year card
+     * that gets emailed to the associate.
+     *
+     * Measured, with every other metric held identical: one response at 100%
+     * scored a 3 and took first place from someone on 88% across forty. The
+     * projection ladder underneath already refused to project that number below
+     * three surveys, so the table was ranking a figure the ladder would not
+     * touch.
+     *
+     * Null rather than a low score, because a survey nobody answered is not a
+     * bad survey result. Every consumer already treats null as unmeasured and
+     * scales the average over what was measured -- "A KPI with no data for the
+     * period is not a failed KPI".
+     */
+    const MIN_SURVEYS_TO_SCORE = 3;
+
     function resolveYearEndOnOffTrackStatus(ratingAverage) {
         if (ratingAverage <= 1.79) {
             return { trackLabel: 'Off Track', trackStatusValue: 'off-track' };
@@ -129,11 +169,14 @@
     function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
         const associateOverallPick = pickYearEndAssociateOverallValue(employeeRecord);
         const values = buildYearEndOnOffValues(employeeRecord, associateOverallPick);
-        const surveyTotal = parseInt(employeeRecord?.surveyTotal, 10);
-        const surveyCount = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : null;
+        const responses = surveyResponsesBehindOverall(associateOverallPick.source, employeeRecord);
+        const surveyCount = responses > 0 ? responses : null;
 
         const scoreYear = parseInt(reviewYear, 10);
         const scores = buildYearEndOnOffScores(values, scoreYear);
+
+        // Too few responses to be a score. See MIN_SURVEYS_TO_SCORE above.
+        if (!(responses >= MIN_SURVEYS_TO_SCORE)) scores.associateOverall = null;
 
         const scoreValues = Object.values(scores);
         const hasAllScores = scoreValues.every(score => score !== null);
