@@ -368,8 +368,15 @@ function populateEmployeeDropdownForPeriod(weekKey) {
         return;
     }
 
-    // Get employees only for selected period
-    const periodData = ytdData[weekKey] || weeklyData[weekKey];
+    // Get employees only for selected period.
+    //
+    // dailyData included, because the Daily period type offers periods from it.
+    // Without it the period dropdown filled correctly and the associate
+    // dropdown beside it always read "No employees in this period", so the
+    // Daily option on Metric Charts could be selected and never used. Same
+    // three-store fallthrough as script.js getTrendPeriodRecord.
+    const dailies = trendSourceForPeriodType('daily');
+    const periodData = ytdData[weekKey] || weeklyData[weekKey] || dailies[weekKey];
     if (!periodData || !periodData.employees) {
         // Keeps its own wording: "no employees in this period" tells the reader why
         // the list is empty, which the generic placeholder would not.

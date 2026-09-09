@@ -1088,7 +1088,16 @@
             var raw = typeof read === 'function'
                 ? JSON.stringify(read('callCenterAverages') ?? null)
                 : localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
-            if (raw) callCenterAverages = JSON.parse(raw);
+            // The round trip through a string is what made this throw. On an
+            // install that has never saved a centre average readStore returns
+            // undefined, `?? null` makes it null, and JSON.stringify(null) is
+            // the STRING "null" -- which is truthy, so the assignment ran and
+            // set callCenterAverages to null. The next line then read a
+            // property off it and threw, taking the Executive Summary callouts
+            // and the team-vs-centre analysis with it. script.js's own
+            // loadCallCenterAverages returns {} for the same state.
+            var parsed = raw ? JSON.parse(raw) : null;
+            if (parsed && typeof parsed === 'object') callCenterAverages = parsed;
         } catch (e) {
             console.error('Failed to parse callCenterAverages:', e);
         }
