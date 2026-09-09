@@ -5415,8 +5415,28 @@ function parseWeekKeyDate(weekKey, week) {
     return 0;
 }
 
+/**
+ * Keys that are actually IN weeklyData, newest last.
+ *
+ * getWeeklyKeysSorted merges weeklyData and ytdData on purpose -- several
+ * callers want every period there is. The two helpers below are not those
+ * callers. Every consumer of getLatestWeeklyKey immediately does
+ * `weeklyData[latestKey]`, so a key that lives only in ytdData reads as
+ * undefined and the feature reports no data.
+ *
+ * That is the normal state after uploading the year-to-date report, because a
+ * YTD file ends later than the last completed week. Six features went quiet at
+ * once: 1:1 Prep, Today's Focus, recognition signals, the coaching-impact
+ * panel, and the two ranking modules that read the same key. Nothing errored;
+ * each one simply said there was no weekly data, on an account holding six
+ * weekly uploads.
+ */
+function getWeeklyStoreKeysSorted() {
+    return getWeeklyKeysSorted().filter(key => Object.prototype.hasOwnProperty.call(weeklyData, key));
+}
+
 function getLatestWeeklyKey() {
-    const keys = getWeeklyKeysSorted();
+    const keys = getWeeklyStoreKeysSorted();
     return keys.length ? keys[keys.length - 1] : null;
 }
 
@@ -5649,7 +5669,9 @@ function formatTrendBucketLabel(periodKeys) {
 }
 
 function getPreviousWeeklyKey(latestKey) {
-    const keys = getWeeklyKeysSorted();
+    // Same store as getLatestWeeklyKey, or "the week before" could be a
+    // year-to-date file and every caller's weeklyData lookup would miss it.
+    const keys = getWeeklyStoreKeysSorted();
     const idx = keys.indexOf(latestKey);
     if (idx > 0) return keys[idx - 1];
     return null;
