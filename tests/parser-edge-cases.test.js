@@ -139,3 +139,43 @@ suite('parser: a missing transfer column is not a flawless week', (t) => {
     const zero = dp.parsePastedData(zeroed, '2026-08-17', '2026-08-23')[0];
     t.equal('a measured zero count is zero', zero.transfersCount, 0);
 });
+
+suite('parser: a space-separated paste is refused, not imported as zeros', (t) => {
+    const dp = load(t);
+
+    const headers = ['Name (Last, First)', 'TotalCallsAnswered', 'Transfers%',
+        'Number of Transfers', 'AHT', 'Talk', 'Hold', 'ACW', 'Adherence%'];
+    const cells = ['Reed, Dana', '200', '5.5%', '11', '400', '300', '22', '55', '95.2%'];
+
+    // The column names contain spaces themselves, so a space-separated header
+    // cannot be split back into columns. It used to collapse into one lowercase
+    // blob, findColumnIndex matched every keyword against index 0, and every
+    // metric read the NAME column. The rows still parsed, because
+    // parsePowerBIRow handles the space-separated form, so the upload reported
+    // success and saved the whole team with 0% adherence, 0 transfers, 0 calls
+    // and a blank AHT. All three upload guards passed: the numbers were there,
+    // they were just all zero.
+    const NL = String.fromCharCode(10);
+    const TAB = String.fromCharCode(9);
+
+    let refused = false;
+    let message = '';
+    try {
+        dp.parsePastedData([headers.join('  '), cells.join('  ')].join(NL), '2026-08-17', '2026-08-23');
+    } catch (error) {
+        refused = true;
+        message = String(error && error.message);
+    }
+
+    t.check('it is refused rather than imported', refused);
+    t.check('and the message says what to do about it',
+        message.indexOf('tab') > -1 && message.indexOf('zero') > -1);
+
+    // The tab-separated form of the same data still works, which is the half
+    // that must not move.
+    const ok = dp.parsePastedData([headers.join(TAB), cells.join(TAB)].join(NL),
+        '2026-08-17', '2026-08-23');
+    t.equal('the tab-separated paste still parses', ok.length, 1);
+    t.equal('with its real adherence', ok[0].scheduleAdherence, 95.2);
+    t.equal('and its real call count', ok[0].totalCalls, 200);
+});

@@ -701,6 +701,28 @@
             throw new Error('ℹ️ Header row not found! Make sure to include the header row at the top of your pasted data.');
         }
 
+        // The header is split on TABS, and only on tabs, because the column
+        // names contain spaces themselves -- "Number of Transfers", "Name
+        // (Last, First)". A space-separated header cannot be split back into
+        // columns, so there is nothing sensible to do with one.
+        //
+        // What used to happen instead: the whole header collapsed into a single
+        // lowercase blob, and findColumnIndex matched every keyword against
+        // index 0. Every metric therefore read the NAME column. The rows still
+        // parsed, because parsePowerBIRow handles the space-separated form, so
+        // the upload reported success and saved the entire team with 0%
+        // adherence, 0 transfers, 0 calls and a blank AHT. All three upload
+        // guards passed: the numbers were present, they were just all zero.
+        //
+        // Refusing is the only honest answer, and it names the fix.
+        if (!headerLine.includes('	')) {
+            throw new Error(
+                'The columns could not be read. This paste is separated by spaces rather than tabs, '
+                + 'so the header cannot be split into columns and every metric would import as zero. '
+                + 'Copy the data again using the table copy option, which separates columns with tabs.'
+            );
+        }
+
         const { headers, colMap } = detectColumnMapping(headerLine);
 
         // First pass: parse rows into cell arrays, filter blank/nameless rows.
