@@ -3299,13 +3299,40 @@ function loadUploadCoverageBaselines() {
 }
 
 /**
+ * How many people a full file normally carries, read off what is already
+ * stored.
+ *
+ * The drift gate's thin-roster escape needs a number to call a roster small
+ * against, and it takes that from the last upload of the same kind. There
+ * isn't always one: the first daily upload has no daily baseline, and a
+ * baseline written before roster sizes were recorded carries no count at all.
+ * In both cases the escape was switched off and a holiday was refused as a
+ * drifted paste. The stored periods know the answer, so they are asked.
+ */
+function knownRosterSize() {
+    let widest = 0;
+    [weeklyData, ytdData].forEach(store => {
+        Object.values(store || {}).forEach(period => {
+            const count = Array.isArray(period?.employees) ? period.employees.length : 0;
+            if (count > widest) widest = count;
+        });
+    });
+    return widest || null;
+}
+
+/**
  * Blocking errors, and the softer notes that only warrant a question.
  * The rules are in modules/upload-drift.module.js; this reads the baseline.
  */
 function buildUploadDriftErrors(employees, periodType) {
     const judge = _uploadDrift()?.judgeUpload;
     if (!judge) return { errors: [], warnings: [] };
-    const verdict = judge({ employees, periodType, baselines: loadUploadCoverageBaselines() });
+    const verdict = judge({
+        employees,
+        periodType,
+        baselines: loadUploadCoverageBaselines(),
+        knownRosterSize: knownRosterSize()
+    });
     return { errors: verdict.errors || [], warnings: verdict.warnings || [] };
 }
 
@@ -3317,7 +3344,11 @@ function saveUploadMetricCoverage(employees, periodType) {
     const drift = _uploadDrift();
     if (!drift) return;
     try {
-        const next = drift.writeBaseline(loadUploadCoverageBaselines(), periodType, drift.computeMetricCoverage(employees), (employees || []).length);
+        // The roster recorded is the people who worked, to match the roster the
+        // coverage was measured over. Counting rows the report merely listed
+        // would set a holiday's baseline at full strength.
+        const worked = drift.activeRoster?.(employees) || employees || [];
+        const next = drift.writeBaseline(loadUploadCoverageBaselines(), periodType, drift.computeMetricCoverage(employees), worked.length);
         localStorage.setItem(UPLOAD_METRIC_COVERAGE_KEY, JSON.stringify(next));
     } catch (e) { /* noop */ }
 }

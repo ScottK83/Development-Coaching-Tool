@@ -24,6 +24,17 @@
      * than refuses. Anything wider than the survey block still stops the
      * upload dead.
      *
+     * The fourth way was the one that blocked Labor Day. Coverage was measured
+     * across every row in the paste, and the report lists the whole floor
+     * whether or not a given person worked. On a holiday eight people work and
+     * a hundred and nineteen rows come through blank, so every column reads as
+     * nearly empty while the row count stays exactly where it was — which is
+     * precisely the fingerprint this gate refuses on. Rows with no activity are
+     * now dropped before anything is measured: the roster is the people who
+     * worked, not the people the report happened to list. A drifted paste still
+     * has its full roster present with the columns landing wrong, so it is
+     * still refused.
+     *
      * The third way it got in the way is a roster, not a column. A Saturday is
      * worked by a handful of people, and with a handful of people most columns
      * hold nothing: no surveys came back, no call was scored for sentiment,
@@ -63,6 +74,11 @@
     // own, and they empty out together.
     const SURVEY_DRIFT_KEYS = ['cxRepOverall', 'fcr', 'overallExperience'];
 
+    // Reliability is a running year-to-date figure, so it is populated for
+    // somebody who did not work today. Every other metric here needs a call to
+    // exist, which is what makes them the evidence that a row worked at all.
+    const VOLUME_METRIC_KEYS = DRIFT_METRIC_KEYS.filter(k => k !== 'reliability');
+
     // A metric counts as "was there" above this and "is gone" below the other.
     // The gap between them is deliberate: a column half full is a roster
     // question, not a mapping one, and this check should not have an opinion.
@@ -101,18 +117,54 @@
         return DRIFT_METRIC_LABELS[key] || key;
     }
 
+    function hasNumber(value) {
+        return value !== '' && value !== null && value !== undefined && Number.isFinite(parseFloat(value));
+    }
+
+    /**
+     * The people who actually worked the period, out of everybody the report
+     * listed.
+     *
+     * The export names the whole floor every time. On an ordinary day that is
+     * the same set twice over and this changes nothing. On a holiday it is
+     * eight names of activity under a hundred and twenty-seven rows, and
+     * measuring coverage across all of them says every column is empty when
+     * what is actually empty is most of the building.
+     *
+     * Call volume is the reading that settles it, but only when the export
+     * carried the column — without it every row parses as zero calls, which
+     * would empty the roster rather than describe it. Falling back to "has a
+     * number in any metric that needs a call to exist" reaches the same answer
+     * from the columns that are there.
+     *
+     * Returns the full list when nothing looks worked. That case is a paste
+     * with no numbers in it, and it belongs in front of the gate, not around
+     * it.
+     */
+    function activeRoster(employees) {
+        const rows = Array.isArray(employees) ? employees : [];
+        if (!rows.length) return rows;
+
+        const callsReported = rows.some(e => parseFloat(e?.totalCalls) > 0);
+        const worked = callsReported
+            ? (e => parseFloat(e?.totalCalls) > 0)
+            : (e => VOLUME_METRIC_KEYS.some(k => hasNumber(e?.[k])));
+
+        const active = rows.filter(worked);
+        return active.length ? active : rows;
+    }
+
     /**
      * What fraction of the roster has a real number for each metric.
+     *
+     * The roster here is whoever worked. See activeRoster.
      */
     function computeMetricCoverage(employees) {
-        if (!Array.isArray(employees) || !employees.length) return {};
+        const rows = activeRoster(employees);
+        if (!rows.length) return {};
         const coverage = {};
         DRIFT_METRIC_KEYS.forEach(key => {
-            const populated = employees.filter(e => {
-                const v = e?.[key];
-                return v !== '' && v !== null && v !== undefined && Number.isFinite(parseFloat(v));
-            }).length;
-            coverage[key] = populated / employees.length;
+            coverage[key] = rows.filter(e => hasNumber(e?.[key])).length / rows.length;
         });
         return coverage;
     }
@@ -181,19 +233,48 @@
      *
      * Returns errors, which block, and warnings, which ask.
      */
+    /**
+     * The roster size this upload is measured against.
+     *
+     * Its own kind first, because that is the like-for-like number. Failing
+     * that, the largest roster any kind has on file, then whatever the caller
+     * knows from the data already stored. The fallbacks exist because the
+     * thin-roster escape is the only thing standing between a holiday and a
+     * refusal, and without them it is switched off exactly when it is needed:
+     * on the first upload of a kind, and on installs whose baseline predates
+     * roster sizes being recorded at all.
+     */
+    function referenceRosterSize(baselines, periodType, knownRosterSize) {
+        const own = baselines[periodType] && baselines[periodType].rows;
+        if (own) return own;
+
+        let widest = 0;
+        Object.keys(baselines).forEach(kind => {
+            const rows = baselines[kind] && baselines[kind].rows;
+            if (rows && rows > widest) widest = rows;
+        });
+        if (widest) return widest;
+
+        const known = parseFloat(knownRosterSize);
+        return Number.isFinite(known) && known > 0 ? known : null;
+    }
+
     function judgeUpload(input) {
-        const employees = (input && input.employees) || [];
+        const allRows = (input && input.employees) || [];
         const periodType = (input && input.periodType) || 'week';
         const baselines = readBaselines(input && input.baselines);
 
         const errors = [];
         const warnings = [];
-        if (!Array.isArray(employees) || !employees.length) return { errors, warnings, coverage: {} };
+        if (!Array.isArray(allRows) || !allRows.length) return { errors, warnings, coverage: {} };
 
+        // Everything below counts people who worked, not rows the report
+        // printed. See activeRoster.
+        const employees = activeRoster(allRows);
         const coverage = computeMetricCoverage(employees);
 
         const prev = baselines[periodType];
-        const prevRows = prev && prev.rows;
+        const prevRows = referenceRosterSize(baselines, periodType, input && input.knownRosterSize);
         const isThin = !!(prevRows && employees.length <= prevRows * THIN_ROSTER_RATIO);
 
         // A thin roster empties columns on its own, so the same count that
@@ -237,6 +318,7 @@
         DRIFT_METRIC_LABELS,
         SURVEY_DRIFT_KEYS,
         describeUploadKind,
+        activeRoster,
         computeMetricCoverage,
         readBaselines,
         writeBaseline,

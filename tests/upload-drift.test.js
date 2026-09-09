@@ -196,3 +196,76 @@ suite('upload gate: baselines survive the shape they used to be stored in', (t) 
     const written = drift.writeBaseline({ week: { aht: 1 } }, 'week-in-progress', { aht: 1 });
     t.check('writing one kind leaves the others alone', written.week && written['week-in-progress']);
 });
+
+suite('upload gate: a holiday is not a drifted paste', (t) => {
+    const drift = load(t);
+
+    // Labor Day. The export lists the whole floor every time, so 127 rows come
+    // through with eight people's numbers in them and a hundred and nineteen
+    // blanks. Measured across every row, every column reads as nearly empty
+    // while the row count sits exactly where it was — the fingerprint this
+    // gate refuses on. It is the opposite fault: the columns landed fine and
+    // the building was shut.
+    const baselines = drift.writeBaseline({}, 'daily', drift.computeMetricCoverage(fullWeek(127)), 127);
+
+    const worked = roster(8, Object.assign({ totalCalls: 40 }, OPERATIONAL));
+    const off = roster(119, { totalCalls: 0, reliability: 12 }).map((e, i) => Object.assign(e, { name: 'Off' + i }));
+    const laborDay = worked.concat(off);
+
+    const verdict = drift.judgeUpload({ employees: laborDay, periodType: 'daily', baselines });
+
+    t.equal('the holiday upload is not refused', verdict.errors.length, 0);
+    t.equal('the roster is the eight who worked, not the 127 listed', verdict.rows, 8);
+    t.check('so it reads as a thin day', verdict.thin === true);
+    t.check('and the columns those eight filled read as full',
+        verdict.coverage.scheduleAdherence === 1 && verdict.coverage.aht === 1);
+});
+
+suite('upload gate: rows nobody worked do not empty the columns', (t) => {
+    const drift = load(t);
+
+    // Without a call-volume column the same judgement has to come off the
+    // metrics themselves. A row with nothing in it but a running year-to-date
+    // reliability figure did not work.
+    const workedFive = roster(5, Object.assign({}, OPERATIONAL, SURVEYS));
+    const idle = roster(100, { reliability: 12 }).map((e, i) => Object.assign(e, { name: 'Idle' + i }));
+    const coverage = drift.computeMetricCoverage(workedFive.concat(idle));
+
+    t.equal('adherence is full, not one twenty-first of full', coverage.scheduleAdherence, 1);
+    t.equal('and the active roster is the five', drift.activeRoster(workedFive.concat(idle)).length, 5);
+
+    // A paste where nothing looks worked is still a paste with no numbers in
+    // it, and that belongs in front of the gate rather than around it.
+    t.equal('a file with no activity anywhere keeps every row',
+        drift.activeRoster(roster(4, { name: 'x' })).length, 4);
+});
+
+suite('upload gate: the thin-roster escape works without a baseline of its own kind', (t) => {
+    const drift = load(t);
+
+    // The first daily upload has no daily baseline, and an install from before
+    // roster sizes were recorded has a baseline that cannot say how big it
+    // was. Both switched the escape off and refused the holiday.
+    const holiday = roster(6, { scheduleAdherence: 96, transfers: 2, aht: 380 });
+
+    const legacyFlat = { daily: drift.computeMetricCoverage(fullWeek(127)) };
+    t.check('a baseline that carries no roster size falls back to the widest on file',
+        drift.judgeUpload({ employees: holiday, periodType: 'daily', baselines: legacyFlat, knownRosterSize: 127 }).errors.length === 0);
+
+    t.check('and with nothing on file at all, the stored roster answers',
+        drift.judgeUpload({
+            employees: holiday,
+            periodType: 'daily',
+            baselines: { week: { coverage: drift.computeMetricCoverage(fullWeek(127)), rows: 127 } }
+        }).thin === true);
+
+    // The teeth stay in. A full roster losing the same columns is still a
+    // refusal, hint or no hint.
+    t.check('a full roster losing columns is still refused',
+        drift.judgeUpload({
+            employees: roster(120, { transfers: 3, reliability: 99 }),
+            periodType: 'daily',
+            baselines: legacyFlat,
+            knownRosterSize: 127
+        }).errors.length > 0);
+});
