@@ -32,6 +32,14 @@
     // A run of text and the colour it was wearing.
     const BLOCK_TAGS = new Set(['br', 'p', 'div', 'tr', 'li', 'h1', 'h2', 'h3', 'h4', 'table', 'tbody']);
     const SKIP_TAGS = new Set(['style', 'script', 'head', 'meta', 'title']);
+    // Tags that never close. Written as <br> far more often than <br/>, and the
+    // slash is the only thing the loop below used to check -- so a plain <br>
+    // pushed a style frame that nothing ever popped. The next real </span> then
+    // popped the <br>'s frame instead of the span's, leaving the advisor's
+    // colour active, and every uncoloured line after it was labelled as the
+    // advisor. One line break in the middle of a transcript put the customer's
+    // words in the agent's mouth.
+    const VOID_TAGS = new Set(['br', 'hr', 'img', 'input', 'meta', 'link', 'source', 'col', 'area', 'base', 'embed', 'param', 'track', 'wbr']);
 
     const ENTITIES = {
         '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
@@ -179,6 +187,11 @@
             if (skipDepth) continue;
 
             if (BLOCK_TAGS.has(name)) push('', true);
+
+            // A void element carries no content and has nothing to close, so it
+            // must not touch the style stack whether or not it was written with
+            // a slash.
+            if (VOID_TAGS.has(name)) continue;
 
             if (isClosing) {
                 if (stack.length) stack.pop();
