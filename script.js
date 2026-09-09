@@ -96,7 +96,6 @@ let dailyData = {};
 
 // Smart defaults and state tracking
 let hasUnsavedChanges = false;
-let lastSelectedEmployee = null;
 let lastError = null;
 let myTeamMembers = {}; // Stores selected team members by weekKey: { "2026-01-24|2026-01-20": ["Alyssa", "John", ...] }
 let coachingLatestWeekKey = null;
@@ -209,13 +208,7 @@ function saveWithSizeCheck(key, data) {
 const TOP_PHRASES_COUNT = 5;
 const MIN_PHRASE_VALUE = 0;
 const LOCALSTORAGE_MAX_SIZE_MB = window.DevCoachConstants?.LOCALSTORAGE_MAX_SIZE_MB || 4;
-const REGEX_TIMEOUT_MS = 100;
-const FILE_PARSE_CHUNK_SIZE = 100;
 const DEBUG_MAX_ENTRIES = 50;
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
-const QUARTER_END_MONTHS = new Set([2, 5, 8, 11]); // March, June, September, December (0-indexed)
-const SENTIMENT_IMPROVEMENT_THRESHOLD = 3;
 const MONTH_RANGE_DAYS = { min: 26, max: 33 };
 const QUARTER_RANGE_DAYS = { min: 88, max: 95 };
 const YTD_MIN_DAYS = 180;
@@ -235,7 +228,6 @@ const GITHUB_REPO_API_URL = 'https://api.github.com/repos/ScottK83/Development-C
 // Single source of truth: modules/metric-profiles.module.js
 // These aliases keep existing references working without duplication
 const YEAR_END_TARGETS_BY_YEAR = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {};
-const METRIC_RATING_BANDS_BY_YEAR = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {};
 
 function getMetricProfilesModule() {
     return window?.DevCoachModules?.metricProfiles || null;
@@ -246,14 +238,6 @@ function getMetricRatingScore(metricKey, value, year) {
     if (profileModule?.getRatingScore) {
         return profileModule.getRatingScore(metricKey, value, year);
     }
-    return null;
-}
-
-function getRatingBandRowColor(metricKey, value, year) {
-    const score = getMetricRatingScore(metricKey, value, year);
-    if (score === 3) return '#d4edda';
-    if (score === 2) return '#fff3cd';
-    if (score === 1) return '#f8d7da';
     return null;
 }
 
@@ -271,8 +255,6 @@ const YEAR_END_ANNUAL_GOALS = [
 // Sentiment Analysis Constants
 const SENTIMENT_TOP_WINS_COUNT = 5;
 const SENTIMENT_BOTTOM_COUNT = 5;
-const SENTIMENT_UNUSED_SUGGESTIONS = 3;
-const SENTIMENT_MIN_PHRASES_FOR_BOTTOM = 5;
 const SENTIMENT_CUSTOMER_CONTEXT_COUNT = 3;
 const SENTIMENT_EMOTION_LOW_THRESHOLD = 5;
 const SENTIMENT_PHRASE_DB_STORAGE_KEY = window.DevCoachConstants?.SENTIMENT_PHRASE_DB_STORAGE_KEY || 'sentimentPhraseDatabase';
@@ -398,47 +380,11 @@ function showTrendsSubSection(subSectionId, activeButtonId = null) {
 function showReviewPrepSubSection(subSectionId, activeButtonId = null) {
     window.DevCoachModules?.navigation?.showReviewPrepSubSection?.(subSectionId, activeButtonId);
 }
-function getDefaultUiNavState() {
-    return window.DevCoachModules?.navigation?.getDefaultUiNavState?.() || { sectionId: 'dashboardSection', myTeamSubSectionId: 'subSectionMorningPulse', trendsSubSectionId: 'subSectionTaTrendIntelligence', reviewPrepSubSectionId: 'subSectionOnOffTracker', settingsSubSectionId: 'subSectionTeamMembers' };
-}
-
-// Navigation state functions delegated to modules/navigation.module.js
-function loadUiNavState() {
-    return window.DevCoachModules?.navigation?.loadUiNavState?.() || getDefaultUiNavState();
-}
 function saveUiNavState(partialState = {}) {
     window.DevCoachModules?.navigation?.saveUiNavState?.(partialState);
 }
 function restoreLastViewedSection() {
     window.DevCoachModules?.navigation?.restoreLastViewedSection?.();
-}
-
-/**
- * Initialize the content of a section when it's shown
- */
-function initializeSection(sectionId) {
-    switch(sectionId) {
-        case 'tipsManagementSection':
-            renderTipsManagement();
-            break;
-        case 'metricTrendsSection':
-            initializeMetricTrends();
-            break;
-        case 'manageDataSection':
-            console.log('🔧 Initializing Manage Data section');
-            populateDeleteWeekDropdown();
-            populateDeleteSentimentDropdown();
-            renderEmployeesList();
-            window.DevCoachModules?.sharedUtils?.bindCoachingCcEmailSetting?.(document);
-            window.DevCoachModules?.sharedUtils?.bindAssociateEmailPatternSetting?.(document);
-            break;
-        case 'executiveSummarySection':
-            renderExecutiveSummary();
-            break;
-        case 'debugSection':
-            renderDebugPanel();
-            break;
-    }
 }
 
 function escapeHtml(text) {
@@ -575,21 +521,6 @@ function addDebugEntry(type, message, details = {}) {
 function installDebugListeners() {
     window.DevCoachModules?.debug?.installDebugListeners?.();
 }
-function getPeriodTypeCounts(sourceData) {
-    return window.DevCoachModules?.debug?.getPeriodTypeCounts?.(sourceData) || {};
-}
-function getLatestPeriodKeyByType(sourceData, periodType) {
-    return window.DevCoachModules?.debug?.getLatestPeriodKeyByType?.(sourceData, periodType) || null;
-}
-function getLocalStorageSummary() {
-    return window.DevCoachModules?.debug?.getLocalStorageSummary?.() || {};
-}
-function buildDebugSnapshot() {
-    return window.DevCoachModules?.debug?.buildDebugSnapshot?.() || {};
-}
-function buildDebugPayload() {
-    return window.DevCoachModules?.debug?.buildDebugPayload?.() || {};
-}
 function renderDebugPanel() {
     window.DevCoachModules?.debug?.renderDebugPanel?.();
 }
@@ -627,10 +558,6 @@ function getSavedNickname(employeeFullName) {
 // Data parsing functions are now in modules/data-parsing.module.js
 // Use window.DevCoachModules.dataParsing.* to access them
 
-// Wrapper functions for backward compatibility
-function parsePowerBIRow(row) {
-    return window.DevCoachModules?.dataParsing?.parsePowerBIRow?.(row);
-}
 function parsePercentage(value) {
     return window.DevCoachModules?.dataParsing?.parsePercentage?.(value) ?? 0;
 }
@@ -662,7 +589,6 @@ const COLUMN_MAPPING = window.DevCoachModules?.dataParsing?.COLUMN_MAPPING ?? {}
 // ============================================
 // DATA LOADING - EXCEL FILES
 // ============================================
-
 
 
 // (Tips management code removed - migrated to tips.module.js)
@@ -971,10 +897,6 @@ function getTeamMembersForWeek(weekKey) {
     return DEFAULT_TEAM_MEMBERS;
 }
 window.getDefaultTeamMembers = function() { return DEFAULT_TEAM_MEMBERS; };
-function isTeamMember(weekKey, employeeName) {
-    const members = getTeamMembersForWeek(weekKey);
-    return members.length === 0 || members.includes(employeeName);
-}
 function getLatestTeamSelectionWeekKey() {
     return window.DevCoachModules?.teamFilter?.getLatestTeamSelectionWeekKey?.() || '';
 }
@@ -1130,7 +1052,6 @@ function calculateCenterAveragesFromEmployees(employees) {
 
     return Object.keys(result).length > 0 ? result : null;
 }
-
 
 
 /**
@@ -1980,15 +1901,6 @@ function embedTeamSnapshot() {
     if (typeof initializeTeamSnapshot === 'function') initializeTeamSnapshot();
 }
 
-function embedPtoTracker() {
-    const target = document.getElementById('embeddedPto') || document.getElementById('embeddedPtoInMyTeam');
-    const source = document.getElementById('ptoSection');
-    if (target && source && !target.hasChildNodes()) {
-        target.append(...source.childNodes);
-    }
-    if (typeof initializePtoTracker === 'function') initializePtoTracker();
-}
-
 function bindNavigationHandlers() {
     // --- Top-level nav ---
     document.getElementById('dashboardBtn')?.addEventListener('click', () => {
@@ -2169,15 +2081,33 @@ function ensureSentimentMountedInTrends() {
     handleSubNavSentimentClick(true);
 }
 
+/**
+ * The two email settings that sit under Team Members.
+ *
+ * Both were only ever bound inside initializeSection, which nothing called,
+ * so the CC address and the address pattern could be typed and saved by a
+ * button that had no click handler on it. Every draft opened with an empty To
+ * and nobody copied, whatever was in the boxes. Both binders guard themselves
+ * with a dataset flag, so calling this on every visit costs nothing and
+ * survives the panel being reopened.
+ */
+function bindSettingsEmailControls() {
+    const utils = window.DevCoachModules?.sharedUtils;
+    utils?.bindCoachingCcEmailSetting?.(document);
+    utils?.bindAssociateEmailPatternSetting?.(document);
+}
+
 function bindManageDataNavigationHandlers() {
     document.getElementById('manageDataBtn')?.addEventListener('click', () => {
         showOnlySection('manageDataSection');
         showManageDataSubSection('subSectionTeamMembers');
         renderEmployeesList();
+        bindSettingsEmailControls();
     });
     document.getElementById('subNavTeamMembers')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionTeamMembers');
         renderEmployeesList();
+        bindSettingsEmailControls();
     });
     document.getElementById('subNavCoachingTips')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionCoachingTips');
@@ -2221,8 +2151,6 @@ function bindManageDataNavigationHandlers() {
 }
 
 function bindQuickActionHandlers() {
-    document.getElementById('generateOneOnOneBtn')?.addEventListener('click', generateOneOnOnePrep);
-    document.getElementById('copyOneOnOneBtn')?.addEventListener('click', copyOneOnOnePrep);
     document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
     document.getElementById('contestBtn')?.addEventListener('click', () => {
         showOnlySection('contestSection');
@@ -2330,17 +2258,6 @@ function handlePasteDataTextareaInput(event) {
             ${validation.issues.map(i => `• ${escapeHtml(i)}`).join('<br>')}
         `;
     }
-}
-
-// Legacy stubs for any code that still references old inner tab functions
-function handleSubNavMetricTrendsClick() {
-    ensureMetricTrendsMountedInTrends();
-    initializeMetricTrends();
-}
-
-function handleSubNavTrendIntelligenceClick() {
-    ensureTrendIntelligenceMountedInTrends();
-    renderExecutiveSummary();
 }
 
 function handleUploadMoreDataClick() {
@@ -2476,7 +2393,6 @@ function buildPastedUploadContext(startDate, endDate, periodType, selectedYearEn
 // ============================================
 // STORAGE QUOTA MONITOR
 // ============================================
-const STORAGE_QUOTA_BYTES = LOCALSTORAGE_MAX_SIZE_MB * 1024 * 1024; // per-key cap (size guard)
 // Total localStorage budget for the origin (~5MB in all major browsers). The
 // meter tracks TOTAL usage against this, because many keys can each stay under
 // the per-key cap yet together hit the origin wall. We do NOT use
@@ -3099,7 +3015,6 @@ function archiveOldWeeks(monthsToKeep = 6) {
 // UPLOAD UNDO SNAPSHOT
 // ============================================
 const UPLOAD_UNDO_STORAGE_KEY = STORAGE_PREFIX + 'lastUploadUndo';
-const UPLOAD_HEADER_FINGERPRINT_KEY = STORAGE_PREFIX + 'lastUploadHeaderFingerprint';
 const UPLOAD_METRIC_COVERAGE_KEY = STORAGE_PREFIX + 'lastUploadMetricCoverage';
 
 // Metric keys and coverage maths live in the upload-drift module, which is
@@ -3334,10 +3249,6 @@ function buildUploadDriftErrors(employees, periodType) {
         knownRosterSize: knownRosterSize()
     });
     return { errors: verdict.errors || [], warnings: verdict.warnings || [] };
-}
-
-function describeUploadKind(periodType) {
-    return _uploadDrift()?.describeUploadKind?.(periodType) || 'previous';
 }
 
 function saveUploadMetricCoverage(employees, periodType) {
@@ -4140,36 +4051,12 @@ function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
     }
 }
 
-// REFACTOR: ~150 wrapper functions below simply delegate to modules.
-// These exist for backward compatibility during the module extraction.
-// Future: call window.DevCoachModules.<module>.<fn>() directly at call sites,
-// or use a delegateAll() factory to eliminate this boilerplate.
-function getDefaultCallListeningSyncConfig() {
-    return window.DevCoachModules?.repoSync?.getDefaultCallListeningSyncConfig?.();
-}
-
 function loadCallListeningSyncConfig() {
     return window.DevCoachModules?.repoSync?.loadCallListeningSyncConfig?.();
 }
 
-function saveCallListeningSyncConfig(config) {
-    return window.DevCoachModules?.repoSync?.saveCallListeningSyncConfig?.(config);
-}
-
 function enforceRepoAutoSyncEnabled() {
     return window.DevCoachModules?.repoSync?.enforceRepoAutoSyncEnabled?.();
-}
-
-function setCallListeningSyncStatus(message, type = 'info') {
-    return window.DevCoachModules?.repoSync?.setCallListeningSyncStatus?.(message, type);
-}
-
-function withRepoSyncSuppressed(action) {
-    return window.DevCoachModules?.repoSync?.withRepoSyncSuppressed?.(action);
-}
-
-function shouldSyncForStorageKey(key) {
-    return window.DevCoachModules?.repoSync?.shouldSyncForStorageKey?.(key);
 }
 
 function installRepoSyncStorageHooks() {
@@ -4180,183 +4067,20 @@ function loadRepoSyncLastSuccess() {
     return window.DevCoachModules?.repoSync?.loadRepoSyncLastSuccess?.();
 }
 
-function saveRepoSyncLastSuccess(meta) {
-    return window.DevCoachModules?.repoSync?.saveRepoSyncLastSuccess?.(meta);
-}
-
 function renderCallListeningLastSync(meta = null) {
     return window.DevCoachModules?.repoSync?.renderCallListeningLastSync?.(meta);
-}
-
-function buildDiagnosticsSummary() {
-    return window.DevCoachModules?.repoSync?.buildDiagnosticsSummary?.();
 }
 
 function bindDiagnosticsCopyAction() {
     return window.DevCoachModules?.repoSync?.bindDiagnosticsCopyAction?.();
 }
 
-function setAutoSyncEnabledStatus(config) {
-    return window.DevCoachModules?.repoSync?.setAutoSyncEnabledStatus?.(config);
-}
-
-function getTotalCallListeningLogCount() {
-    return Object.values(callListeningLogs || {}).reduce((count, entries) => {
-        return count + (Array.isArray(entries) ? entries.length : 0);
-    }, 0);
-}
-
-async function runWithButtonBusyState(button, busyText, action) {
-    if (!button) return;
-    const buttonOriginalText = button.textContent;
-    button.disabled = true;
-    button.textContent = busyText;
-    try {
-        await action();
-    } finally {
-        button.disabled = false;
-        button.textContent = buttonOriginalText;
-    }
-}
-
 function initializeRepoSyncControls() {
     return window.DevCoachModules?.repoSync?.initializeRepoSyncControls?.();
 }
 
-function setRepoExcelUploadStatus(message, type = 'info') {
-    return window.DevCoachModules?.repoSync?.setRepoExcelUploadStatus?.(message, type);
-}
-
-function arrayBufferToBase64(buffer) {
-    return window.DevCoachModules?.repoSync?.arrayBufferToBase64?.(buffer);
-}
-
-async function uploadExcelFileToRepo() {
-    return window.DevCoachModules?.repoSync?.uploadExcelFileToRepo?.();
-}
-
-function openRepoExcelFile(fileName) {
-    return window.DevCoachModules?.repoSync?.openRepoExcelFile?.(fileName);
-}
-
-async function fetchReferenceCsvFromWorkspaceOrRepo(fileName) {
-    return window.DevCoachModules?.repoSync?.fetchReferenceCsvFromWorkspaceOrRepo?.(fileName);
-}
-
-function appendCsvAsSheet(workbook, csvText, sheetName) {
-    return window.DevCoachModules?.repoSync?.appendCsvAsSheet?.(workbook, csvText, sheetName);
-}
-
-async function exportIntelligenceLedgerWorkbook() {
-    return window.DevCoachModules?.repoSync?.exportIntelligenceLedgerWorkbook?.();
-}
-
 function getCallListeningSyncConfigFromUI() {
     return window.DevCoachModules?.repoSync?.getCallListeningSyncConfigFromUI?.();
-}
-
-function summarizeStorageValue(rawValue) {
-    return window.DevCoachModules?.repoSync?.summarizeStorageValue?.(rawValue);
-}
-
-function getAllAppStorageSnapshot() {
-    return window.DevCoachModules?.repoSync?.getAllAppStorageSnapshot?.();
-}
-
-function hasNonEmptyEntries(value) {
-    return window.DevCoachModules?.repoSync?.hasNonEmptyEntries?.(value);
-}
-
-function getMeaningfulLocalDataSources() {
-    return window.DevCoachModules?.repoSync?.getMeaningfulLocalDataSources?.();
-}
-
-function getMeaningfulBackupDataSources(payload) {
-    return window.DevCoachModules?.repoSync?.getMeaningfulBackupDataSources?.(payload);
-}
-
-function buildRepoSyncHeaders(sharedSecret) {
-    return window.DevCoachModules?.repoSync?.buildRepoSyncHeaders?.(sharedSecret);
-}
-
-async function parseRepoSyncErrorResponse(response) {
-    let details = '';
-    let errorCode = '';
-    let parsedBody = null;
-
-    try {
-        const errorText = await response.text();
-        details = errorText;
-        try {
-            const parsedError = JSON.parse(errorText);
-            parsedBody = parsedError;
-            errorCode = String(parsedError?.code || '');
-            if (parsedError?.error) {
-                details = String(parsedError.error);
-            }
-        } catch (parseError) {
-            // Keep raw response text as details when not JSON.
-        }
-    } catch (error) {
-        details = '';
-    }
-
-    return { details, errorCode, parsedBody };
-}
-
-function buildRepoSyncPayload(reason = 'updated') {
-    return window.DevCoachModules?.repoSync?.buildRepoSyncPayload?.(reason);
-}
-
-function summarizeLocalBackupFreshness() {
-    const weeklyKeys = Object.keys(weeklyData || {});
-    const ytdKeys = Object.keys(ytdData || {});
-    const latestWeeklyEndMs = getLatestPeriodEndMsFromMap(weeklyData || {});
-
-    return {
-        generatedAt: new Date().toISOString(),
-        weeklyPeriods: weeklyKeys.length,
-        ytdPeriods: ytdKeys.length,
-        latestWeeklyEndDate: latestWeeklyEndMs ? new Date(latestWeeklyEndMs).toISOString().slice(0, 10) : null,
-        latestWeeklyEndMs,
-        footprintScore: getBackupFootprintScore({
-            weeklyData,
-            ytdData,
-            coachingHistory,
-            callListeningLogs,
-            associateSentimentSnapshots,
-            myTeamMembers
-        })
-    };
-}
-
-function getLatestPeriodEndMsFromMap(periodMap) {
-    if (!periodMap || typeof periodMap !== 'object') return 0;
-
-    let latest = 0;
-    Object.entries(periodMap).forEach(([periodKey, periodValue]) => {
-        const candidates = [];
-        const keyText = String(periodKey || '');
-        if (keyText.includes('|')) {
-            candidates.push(keyText.split('|')[1]);
-        }
-
-        const metadata = periodValue?.metadata || {};
-        candidates.push(metadata.endDate, metadata.weekEndingDate, metadata.weekEndDate, metadata.periodEndDate);
-
-        candidates.forEach(candidate => {
-            const parsed = Date.parse(String(candidate || '').trim());
-            if (!Number.isNaN(parsed)) {
-                latest = Math.max(latest, parsed);
-            }
-        });
-    });
-
-    return latest;
-}
-
-function getBackupFootprintScore(payload) {
-    return window.DevCoachModules?.repoSync?.getBackupFootprintScore?.(payload) ?? 0;
 }
 
 // Public wrapper for manual repo-sync triggers (e.g., explicit "Sync Now" buttons,
@@ -4364,30 +4088,6 @@ function getBackupFootprintScore(payload) {
 // via the localStorage.setItem hook in repo-sync.module.js.
 function queueRepoSync(reason = 'updated') {
     return window.DevCoachModules?.repoSync?.queueRepoSync?.(reason);
-}
-
-function isLocalSummaryCaughtUp(localSummary, baselineSummary) {
-    return window.DevCoachModules?.repoSync?.isLocalSummaryCaughtUp?.(localSummary, baselineSummary);
-}
-
-function clearRepoSyncAutoPause() {
-    return window.DevCoachModules?.repoSync?.clearRepoSyncAutoPause?.();
-}
-
-function pauseRepoSyncForRegression(existingSummary = null) {
-    return window.DevCoachModules?.repoSync?.pauseRepoSyncForRegression?.(existingSummary);
-}
-
-function canQueueRepoSync() {
-    return window.DevCoachModules?.repoSync?.canQueueRepoSync?.();
-}
-
-function scheduleRepoSync(reason) {
-    return window.DevCoachModules?.repoSync?.scheduleRepoSync?.(reason);
-}
-
-function setRepoSyncQueuedStatus() {
-    return window.DevCoachModules?.repoSync?.setRepoSyncQueuedStatus?.();
 }
 
 function queueCallListeningRepoSync(reason = 'updated') {
@@ -4398,36 +4098,8 @@ function hasMeaningfulLocalData() {
     return window.DevCoachModules?.repoSync?.hasMeaningfulLocalData?.();
 }
 
-function hasMeaningfulBackupData(payload) {
-    return window.DevCoachModules?.repoSync?.hasMeaningfulBackupData?.(payload);
-}
-
-async function withRepoSyncHydrationLock(action) {
-    return window.DevCoachModules?.repoSync?.withRepoSyncHydrationLock?.(action);
-}
-
-async function fetchRepoBackupPayload() {
-    return window.DevCoachModules?.repoSync?.fetchRepoBackupPayload?.() || null;
-}
-
 function applyRepoBackupPayload(payload) {
     return window.DevCoachModules?.repoSync?.applyRepoBackupPayload?.(payload);
-}
-
-function loadRepoBackupAppliedAt() {
-    return window.DevCoachModules?.repoSync?.loadRepoBackupAppliedAt?.() || '';
-}
-
-function saveRepoBackupAppliedAt(isoText) {
-    return window.DevCoachModules?.repoSync?.saveRepoBackupAppliedAt?.(isoText);
-}
-
-function parseTimeMs(value) {
-    return window.DevCoachModules?.repoSync?.parseTimeMs?.(value) || 0;
-}
-
-function getLatestLocalRepoDataTimestampMs() {
-    return window.DevCoachModules?.repoSync?.getLatestLocalRepoDataTimestampMs?.() || 0;
 }
 
 async function tryAutoRestoreFromRepoBackupOnEmptyState() {
@@ -4436,95 +4108,6 @@ async function tryAutoRestoreFromRepoBackupOnEmptyState() {
 
 async function deleteAllRemoteData() {
     return window.DevCoachModules?.repoSync?.deleteAllRemoteData?.() || { ok: false, reason: 'module not loaded' };
-}
-
-async function postRepoSyncPayload(endpoint, config, payload) {
-    return fetch(endpoint, {
-        method: 'POST',
-        headers: buildRepoSyncHeaders(config.sharedSecret),
-        body: JSON.stringify(payload)
-    });
-}
-
-async function throwIfRepoSyncErrorResponse(response) {
-    if (response.ok) return;
-
-    const { details, errorCode, parsedBody } = await parseRepoSyncErrorResponse(response);
-
-    if (response.status === 409 && errorCode === 'EMPTY_PAYLOAD_GUARD') {
-        const error = new Error('Blank profile sync blocked to protect existing repo data. Open your primary browser profile with saved data.');
-        error.code = errorCode;
-        error.responseStatus = response.status;
-        error.details = details;
-        error.payload = parsedBody;
-        throw error;
-    }
-
-    if (response.status === 409 && errorCode === 'DATA_REGRESSION_GUARD') {
-        const incomingSummary = parsedBody?.incomingSummary || null;
-        const existingSummary = parsedBody?.existingSummary || null;
-        const incomingDate = incomingSummary?.latestWeeklyEndDate || 'unknown';
-        const existingDate = existingSummary?.latestWeeklyEndDate || 'unknown';
-        const error = new Error(`Sync blocked: this device appears older (${incomingDate}) than repo (${existingDate}). Use Force Restore, then sync again.`);
-        error.code = errorCode;
-        error.responseStatus = response.status;
-        error.details = details;
-        error.payload = parsedBody;
-        throw error;
-    }
-
-    const normalizedDetails = String(details || '').toLowerCase();
-    if (normalizedDetails.includes('repository rule violation') || normalizedDetails.includes('secret scanning')) {
-        const error = new Error('Sync blocked by GitHub secret scanning. Remove token-like content from notes/data and try Sync Now again.');
-        error.code = errorCode;
-        error.responseStatus = response.status;
-        error.details = details;
-        error.payload = parsedBody;
-        throw error;
-    }
-
-    const error = new Error(`HTTP ${response.status}${details ? ` - ${details}` : ''}`);
-    error.code = errorCode;
-    error.responseStatus = response.status;
-    error.details = details;
-    error.payload = parsedBody;
-    throw error;
-}
-
-async function parseRepoSyncSuccessResponse(response) {
-    try {
-        return await response.json();
-    } catch (error) {
-        return null;
-    }
-}
-
-function buildRepoSyncMeta(reason, responseData) {
-    return window.DevCoachModules?.repoSync?.buildRepoSyncMeta?.(reason, responseData);
-}
-
-function getRepoSyncEndpointIfAllowed(config, forceSync) {
-    return window.DevCoachModules?.repoSync?.getRepoSyncEndpointIfAllowed?.(config, forceSync);
-}
-
-function finalizeRepoSyncSuccess(reason, responseData) {
-    return window.DevCoachModules?.repoSync?.finalizeRepoSyncSuccess?.(reason, responseData);
-}
-
-function handleRepoSyncFailure(error) {
-    return window.DevCoachModules?.repoSync?.handleRepoSyncFailure?.(error);
-}
-
-function formatSummaryLabel(summary) {
-    return window.DevCoachModules?.repoSync?.formatSummaryLabel?.(summary);
-}
-
-async function maybeHandleRepoSyncConflict(error) {
-    return window.DevCoachModules?.repoSync?.maybeHandleRepoSyncConflict?.(error);
-}
-
-async function requestValidatedRepoSyncResponse(endpoint, config, payload) {
-    return window.DevCoachModules?.repoSync?.requestValidatedRepoSyncResponse?.(endpoint, config, payload);
 }
 
 async function syncRepoData(reason = 'updated', options = {}) {
@@ -5098,17 +4681,6 @@ function deleteEmployeeDataByYear(employeeName, reviewYear) {
     showToast(`✅ Removed ${employeeName} ${reviewYear} data (weekly: ${weeklyPeriodsTouched}, ytd: ${ytdPeriodsTouched}, coaching entries: ${coachingEntriesRemoved}, call logs: ${callEntriesRemoved}).`, 4500);
 }
 
-function updateTeamSelection() {
-    const weekKey = document.querySelector('.team-member-checkbox')?.dataset.week;
-    if (!weekKey) return;
-    
-    const selectedCheckboxes = document.querySelectorAll(`.team-member-checkbox[data-week="${weekKey}"]:checked`);
-    const selectedMembers = Array.from(selectedCheckboxes).map(cb => cb.dataset.name);
-    
-    setTeamMembersForWeek(weekKey, selectedMembers);
-    
-}
-
 // ============================================
 // KEYBOARD SHORTCUTS
 // ============================================
@@ -5303,117 +4875,9 @@ const TREND_METRIC_MAPPINGS = {
 // EXECUTIVE SUMMARY
 // ============================================
 
-function buildExecutiveSummaryCallouts(latestKey, latestWeek) {
-    const delegated = window.DevCoachModules?.trendIntelligence?.buildExecutiveSummaryCallouts?.({
-        latestWeek,
-        centerAvg: latestKey ? getCenterAverageForWeek(latestKey) : null,
-        metricsRegistry: METRICS_REGISTRY,
-        isReverseMetric,
-        formatMetricValue,
-        isAssociateIncludedByTeamFilter
-    });
-    return Array.isArray(delegated) ? delegated : [];
-}
-
-function buildExecutiveSummarySavedNotesText(associate) {
-    const saved = getExecutiveSummaryNotesStore();
-    const employeeNotes = saved[associate] || {};
-    const ytdNotes = employeeNotes['ytd-summary'] || {};
-
-    const delegated = window.DevCoachModules?.trendIntelligence?.buildExecutiveSummarySavedNotesText?.(ytdNotes);
-    return delegated || 'SAVED RISK NOTES:\n- No saved red flags or phishing notes.\n';
-}
-
-async function generateExecutiveSummaryCopilotEmail() {
-    const associate = document.getElementById('summaryAssociateSelect')?.value;
-    if (!associate) {
-        showToast('Select an associate first', 3000);
-        return;
-    }
-
-    const latestKey = getLatestWeeklyKey();
-    const latestWeek = latestKey ? weeklyData[latestKey] : null;
-    if (!latestKey || !latestWeek) {
-        showToast('No weekly data available', 3000);
-        return;
-    }
-
-    const endDate = latestWeek?.metadata?.endDate
-        ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-        : (latestKey?.split('|')[1] ? formatDateMMDDYYYY(latestKey.split('|')[1]) : 'this period');
-
-    // Load tips from CSV
-    const allTips = await loadServerTips();
-
-    // Build individual wins callouts
-    const individualWins = buildExecutiveSummaryCallouts(latestKey, latestWeek);
-    let individualWinsText = '';
-    if (individualWins.length > 0) {
-        individualWinsText = 'INDIVIDUAL WINS (Team Members Crushing Metrics vs Call Center Average):\\n';
-        individualWins.forEach(item => {
-            individualWinsText += `- ${item.name}: ${item.metric} at ${item.value} vs center ${item.center} (${item.diff})\\n`;
-        });
-    } else {
-        individualWinsText = 'INDIVIDUAL WINS: No call center averages configured yet.\\n';
-    }
-
-    // Build team performance vs center average
-    const teamPerformance = buildTeamVsCenterAnalysis(latestKey, latestWeek);
-    let teamPerformanceText = 'TEAM PERFORMANCE vs CALL CENTER AVERAGE:\\n';
-    if (teamPerformance.length > 0) {
-        teamPerformance.forEach(item => {
-            const indicator = item.diff > 0 ? '✓' : item.diff < 0 ? '✗' : '=';
-            teamPerformanceText += `${indicator} ${item.metric}: Team ${item.teamValue} vs Center ${item.centerValue} (${item.diffFormatted})\\n`;
-        });
-    } else {
-        teamPerformanceText += 'No call center averages configured yet.\\n';
-    }
-
-    // Find biggest opportunity and get a tip
-    let focusAreaText = '';
-    const biggestOpportunity = teamPerformance.find(item => item.diff < 0);
-    if (biggestOpportunity && allTips[biggestOpportunity.metricKey]) {
-        const tips = allTips[biggestOpportunity.metricKey] || [];
-        const randomTip = tips[Math.floor(Math.random() * tips.length)];
-        focusAreaText = `TEAM FOCUS AREA & TIP:\\n- ${biggestOpportunity.metric}: Team needs improvement (${biggestOpportunity.diffFormatted} below center)\\n- Tip: ${randomTip}\\n`;
-    } else {
-        focusAreaText = 'TEAM FOCUS AREA: Team is performing well across all metrics!\\n';
-    }
-
-    const savedNotesText = buildExecutiveSummarySavedNotesText(associate);
-
-    const copilotPrompt = window.DevCoachModules?.trendIntelligence?.buildExecutiveSummaryCopilotPrompt?.({
-        endDate,
-        individualWinsText,
-        teamPerformanceText,
-        focusAreaText,
-        savedNotesText
-    }) || '';
-
-    if (!copilotPrompt) {
-        showToast('Trend Intelligence module not available. Refresh and try again.', 3500);
-        return;
-    }
-
-    // Call Copilot with the prompt
-    openCopilotWithPrompt(copilotPrompt, 'Executive Summary Email');
-}
-
 // ============================================
 // OFFLINE COPILOT SUPPORT
 // ============================================
-
-function buildTeamVsCenterAnalysis(latestKey, latestWeek) {
-    const delegated = window.DevCoachModules?.trendIntelligence?.buildTeamVsCenterAnalysis?.({
-        latestWeek,
-        centerAvg: latestKey ? getCenterAverageForWeek(latestKey) : null,
-        metricsRegistry: METRICS_REGISTRY,
-        isReverseMetric,
-        formatMetricValue,
-        isAssociateIncludedByTeamFilter
-    });
-    return Array.isArray(delegated) ? delegated : [];
-}
 
 // ============================================
 // SUPERVISOR INTELLIGENCE HELPERS
@@ -5667,38 +5131,6 @@ function surveyWeightFor(metricKey, employee) {
     const n = parseInt(employee?.surveyTotal, 10);
     return Number.isInteger(n) ? n : 0;
 }
-function buildTeamWeightedAverages(employees, metricKeys) {
-    const out = {};
-    (metricKeys || []).forEach(key => { out[key] = null; });
-    if (!Array.isArray(employees) || !employees.length) return out;
-
-    const sums = {};
-    const weights = {};
-    employees.forEach(emp => {
-        if (!emp) return;
-        const totalCalls = parseInt(emp.totalCalls, 10);
-        metricKeys.forEach(key => {
-            const value = parseFloat(emp[key]);
-            if (!Number.isFinite(value)) return;
-            let w;
-            if (SURVEY_WEIGHTED_METRIC_KEYS.has(key)) {
-                const responses = surveyWeightFor(key, emp);
-                w = Number.isFinite(responses) && responses > 0 ? responses : 0;
-            } else {
-                w = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
-            }
-            if (w <= 0) return;
-            sums[key] = (sums[key] || 0) + value * w;
-            weights[key] = (weights[key] || 0) + w;
-        });
-    });
-
-    metricKeys.forEach(key => {
-        if (weights[key] > 0) out[key] = sums[key] / weights[key];
-    });
-    return out;
-}
-
 function getTrendMetadataType(periodType) {
     if (periodType === 'dod') return 'daily';
     if (periodType === 'mom') return 'month';
@@ -5728,15 +5160,6 @@ function formatTrendBucketLabel(periodKeys) {
     if (!Array.isArray(periodKeys) || periodKeys.length === 0) return 'No data';
     if (periodKeys.length === 1) return getTrendPeriodLabel(periodKeys[0]);
     return `${getTrendPeriodLabel(periodKeys[0])} -> ${getTrendPeriodLabel(periodKeys[periodKeys.length - 1])}`;
-}
-
-function getPreviousWeeklyKey(latestKey) {
-    // Same store as getLatestWeeklyKey, or "the week before" could be a
-    // year-to-date file and every caller's weeklyData lookup would miss it.
-    const keys = getWeeklyStoreKeysSorted();
-    const idx = keys.indexOf(latestKey);
-    if (idx > 0) return keys[idx - 1];
-    return null;
 }
 
 function getTrendPeriodDescriptor(periodType) {
@@ -6408,92 +5831,12 @@ function selectSmartTip({ employeeId, metricKey, severity, tips }) {
     return `${prefixMap[severity] || 'Tip:'} ${chosen}`;
 }
 
-function getCoachingContext(employeeId, metricKey, currentValue) {
-    const history = resolveCoachingHistoryForEmployee(employeeId);
-    const last = history.find(entry => (entry.metricsCoached || []).includes(metricKey));
-    if (!last) return null;
-
-    const priorValue = getEmployeeMetricForWeek(employeeId, last.weekEnding, metricKey);
-    if (priorValue === null || priorValue === undefined) return null;
-
-    const change = metricDelta(metricKey, currentValue, priorValue);
-    const trend = change > 0 ? 'improved' : change < 0 ? 'declined' : 'unchanged';
-    const unit = METRICS_REGISTRY[metricKey]?.unit || '';
-    const amount = Math.abs(change);
-    const display = unit === '%' ? `${amount.toFixed(1)}%` : unit === 'sec' ? `${Math.round(amount)}s` : unit === 'hrs' ? `${amount.toFixed(1)} hrs` : amount.toFixed(1);
-
-    if (trend === 'improved') {
-        return `Previously coached on ${METRICS_REGISTRY[metricKey]?.label || metricKey} on ${last.weekEnding}. Performance improved by ${display}. Reinforce progress and encourage consistency.`;
-    }
-    if (trend === 'unchanged') {
-        return `Previously coached on ${METRICS_REGISTRY[metricKey]?.label || metricKey} on ${last.weekEnding}. Performance is steady. Consider a different angle (habit, confidence, or workflow).`;
-    }
-    return `Previously coached on ${METRICS_REGISTRY[metricKey]?.label || metricKey} on ${last.weekEnding}. Performance declined by ${display}. Consider a supportive reset and barrier removal.`;
-}
-
 function getEmployeeMetricForWeek(employeeId, weekKey, metricKey) {
     const week = weeklyData[weekKey] || ytdData[weekKey];
     if (!week || !week.employees) return null;
     const emp = week.employees.find(e => e.name === employeeId);
     if (!emp) return null;
     return emp[metricKey];
-}
-
-function detectComplianceFlags(text) {
-    if (!text) return [];
-    const flags = [];
-    const lower = text.toLowerCase();
-    const keywords = [
-        { key: 'safety', label: 'Safety' },
-        { key: 'esh', label: 'ESH' },
-        { key: 'abusive', label: 'Abusive Customer' },
-        { key: 'harassment', label: 'Harassment' },
-        { key: 'threat', label: 'Threat' },
-        { key: 'pci', label: 'PCI' },
-        { key: 'credit card', label: 'Sensitive Data' },
-        { key: 'ssn', label: 'Sensitive Data' },
-        { key: 'pii', label: 'Sensitive Data' },
-        { key: 'phi', label: 'Sensitive Data' },
-        { key: 'hipaa', label: 'Sensitive Data' }
-    ];
-    keywords.forEach(({ key, label }) => {
-        if (lower.includes(key)) flags.push(label);
-    });
-    return [...new Set(flags)];
-}
-
-function logComplianceFlag(entry) {
-    try {
-        const log = (window.DevCoachModules?.storage?.readStore?.('complianceLog') ?? []);
-        log.push(entry);
-        window.DevCoachModules?.storage?.saveWithSizeCheck?.('complianceLog', log);
-    } catch {
-        // no-op
-    }
-}
-
-function buildConfidenceInsight(employeeData, coachedMetricKeys) {
-    if (!employeeData) return null;
-    const signals = [];
-    if ((employeeData.transfers || 0) > (getMetricTarget('transfers') + 2)) signals.push('high transfers');
-    if ((employeeData.holdTime || 0) > (getMetricTarget('holdTime') + 10)) signals.push('elevated hold time');
-    if ((employeeData.fcr || 0) < (getMetricTarget('fcr') - 3)) signals.push('lower FCR');
-    if (coachedMetricKeys && coachedMetricKeys.length >= 2) signals.push('repeat coaching');
-
-    if (signals.length >= 2) {
-        return 'Pattern suggests knowledge hesitation. Recommend job aid review, shadowing, or confidence-building practice instead of metric pressure.';
-    }
-    return null;
-}
-
-function renderSupervisorIntelligence() {
-    initializeTrendIntelligence();
-    renderTrendIntelligence();
-    renderRecognitionIntelligence();
-    renderCoachingImpactTracker();
-    renderCoachingLoadAwareness();
-    renderCoachingPriorityQueue();
-    renderComplianceAlerts();
 }
 
 var trendIntelligenceListenersAttached = false;
@@ -6509,9 +5852,7 @@ function setTrendFocusMode(enabled) {
 
     const secondarySectionIds = [
         'trendVisualizationsContainer',
-        'coachingImpactTrackerPanel',
-        'coachingLoadOutput',
-        'complianceAlertsOutput'
+        'coachingImpactTrackerPanel'
     ];
 
     secondarySectionIds.forEach(id => {
@@ -7190,211 +6531,6 @@ function initializeTrendIntelligence() {
     renderTrendVisualizations();
 }
 
-function renderComplianceAlerts() {
-    const container = document.getElementById('complianceAlertsOutput');
-    if (!container) return;
-    const log = (window.DevCoachModules?.storage?.readStore?.('complianceLog') ?? []);
-    const teamFilterContext = getTeamSelectionContext();
-    const filteredLog = log.filter(entry => isAssociateIncludedByTeamFilter(entry?.employeeId, teamFilterContext));
-    if (!filteredLog.length) {
-        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">No compliance flags logged.</div>';
-        return;
-    }
-    const items = filteredLog.slice(-5).reverse().map(entry => {
-        return `<div style="padding: 10px; border: 1px solid #f1d5d5; border-radius: 6px; background: #fff7f7;">
-            <strong>${escapeHtml(entry.employeeId || 'Unknown')}</strong> • ${escapeHtml(entry.flag || '')} • ${escapeHtml(new Date(entry.timestamp).toLocaleString())}
-        </div>`;
-    }).join('');
-    container.innerHTML = items;
-}
-
-function renderCoachingLoadAwareness() {
-    const container = document.getElementById('coachingLoadOutput');
-    if (!container) return;
-    const now = Date.now();
-    const thirtyDays = now - THIRTY_DAYS_MS;
-    const fourteenDays = now - FOURTEEN_DAYS_MS;
-
-    const noRecent = [];
-    const highLoad = [];
-    const teamFilterContext = getTeamSelectionContext();
-
-    // Get all unique employees from weekly data
-    const allEmployees = new Set();
-    Object.values(weeklyData).forEach(week => {
-        if (week && week.employees) {
-            week.employees.forEach(emp => {
-                if (emp.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
-                    allEmployees.add(emp.name);
-                }
-            });
-        }
-    });
-
-    // Check each employee's coaching history
-    allEmployees.forEach(employeeId => {
-        const history = resolveCoachingHistoryForEmployee(employeeId);
-        if (!history.length) {
-            // Never been coached
-            noRecent.push(employeeId);
-            return;
-        }
-        const last = history[0];
-        if (new Date(last.generatedAt).getTime() < thirtyDays) {
-            // Last coaching was over 30 days ago
-            noRecent.push(employeeId);
-        }
-        const recentCount = history.filter(h => new Date(h.generatedAt).getTime() >= fourteenDays).length;
-        if (recentCount >= 3) {
-            highLoad.push(`${employeeId} (${recentCount} in 14 days)`);
-        }
-    });
-
-    container.innerHTML = `
-        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>Not coached in 30+ days:</strong> ${noRecent.length ? noRecent.map(n => escapeHtml(n)).join(', ') : 'None'}
-        </div>
-        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>High coaching load:</strong> ${highLoad.length ? highLoad.map(n => escapeHtml(n)).join(', ') : 'None'}
-        </div>
-    `;
-}
-
-async function generateOneOnOnePrep() {
-    const output = document.getElementById('oneOnOnePrepOutput');
-    if (!output) return;
-
-    const associate = document.getElementById('oneOnOneAssociateSelect')?.value
-        || document.getElementById('summaryAssociateSelect')?.value;
-    if (!associate) {
-        showToast('Select an associate first', 3000);
-        return;
-    }
-
-    const latestKey = getLatestWeeklyKey();
-    const prevKey = getPreviousWeeklyKey(latestKey);
-    const latestWeek = latestKey ? weeklyData[latestKey] : null;
-    const prevWeek = prevKey ? weeklyData[prevKey] : null;
-
-    const current = latestWeek?.employees?.find(e => e.name === associate);
-    const previous = prevWeek?.employees?.find(e => e.name === associate);
-
-    if (!current) {
-        output.value = 'No recent weekly data for this associate.';
-        return;
-    }
-
-    const metricsToUse = window.CORE_PERFORMANCE_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment', 'transfers', 'aht'];
-    const wins = metricsToUse.filter(key => metricMeetsTarget(key, current[key])).slice(0, 2);
-    const trends = previous ? metricsToUse.map(key => ({
-        key,
-        delta: metricDelta(key, current[key], previous[key])
-    })).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 2) : [];
-
-    const history = resolveCoachingHistoryForEmployee(associate).slice(0, 3);
-    const lastCoaching = history.length
-        ? history.map(h => `${h.weekEnding || new Date(h.generatedAt).toLocaleDateString()}: ${(h.metricsCoached || []).join(', ') || 'General'}`)
-        : ['None in last period'];
-
-    const tips = await loadServerTips();
-    const opportunities = metricsToUse
-        .filter(key => !metricMeetsTarget(key, current[key]))
-        .sort((a, b) => Math.abs(metricGapToTarget(b, current[b])) - Math.abs(metricGapToTarget(a, current[a])));
-    const focusMetric = opportunities[0];
-    const talkingPoint = focusMetric
-        ? selectSmartTip({ employeeId: associate, metricKey: focusMetric, severity: getMetricSeverity(focusMetric, current[focusMetric]), tips: tips[focusMetric] || [] })
-        : null;
-
-    const winText = wins.length ? wins.map(key => METRICS_REGISTRY[key]?.label || key).join(', ') : 'No standout wins yet';
-    const trendText = trends.length
-        ? trends.map(t => `${METRICS_REGISTRY[t.key]?.label || t.key} (${t.delta > 0 ? 'up' : t.delta < 0 ? 'down' : 'flat'})`).join(', ')
-        : 'No clear trend changes';
-
-    output.value = `Prep for 1:1: ${associate}\n` +
-        `Key Wins: ${winText}\n` +
-        `Current Trends: ${trendText}\n` +
-        `Last Coaching Topics: ${lastCoaching.join(' | ')}\n` +
-        `Suggested Talking Point: ${talkingPoint || 'Reinforce momentum and ask what support would help this week.'}`;
-}
-
-function copyOneOnOnePrep() {
-    const output = document.getElementById('oneOnOnePrepOutput');
-    if (!output) return;
-    copyToClipboard(output.value || '', { message: '📋 1:1 prep copied' });
-}
-
-function renderRecognitionIntelligence() {
-    const container = document.getElementById('recognitionIntelligenceOutput');
-    if (!container) return;
-
-    const latestKey = getLatestWeeklyKey();
-    const prevKey = getPreviousWeeklyKey(latestKey);
-    if (!latestKey || !prevKey) {
-        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for recognition signals.</div>';
-        return;
-    }
-
-    const latestWeek = weeklyData[latestKey];
-    const prevWeek = weeklyData[prevKey];
-    if (!latestWeek?.employees || !prevWeek?.employees) {
-        container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Not enough data for recognition signals.</div>';
-        return;
-    }
-
-    const mostImproved = [];
-    const recoveryWins = [];
-    const quietConsistent = [];
-    const teamFilterContext = getTeamSelectionContext();
-    const latestFilteredEmployees = latestWeek.employees.filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext));
-    const previousByName = new Map(
-        prevWeek.employees
-            .filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext))
-            .map(emp => [emp.name, emp])
-    );
-
-    latestFilteredEmployees.forEach(emp => {
-        const prevEmp = previousByName.get(emp.name);
-        if (!prevEmp) return;
-
-        const sentimentDelta = metricDelta('overallSentiment', emp.overallSentiment, prevEmp.overallSentiment);
-        if (sentimentDelta > SENTIMENT_IMPROVEMENT_THRESHOLD) {
-            mostImproved.push({ name: emp.name, delta: sentimentDelta });
-        }
-
-        const recoveryMetric = (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).find(key =>
-            !metricMeetsTarget(key, prevEmp[key]) && metricMeetsTarget(key, emp[key])
-        );
-        if (recoveryMetric) {
-            recoveryWins.push(`${escapeHtml(emp.name)} (${METRICS_REGISTRY[recoveryMetric]?.label || recoveryMetric})`);
-        }
-
-        const consistent = (window.CORE_SURVEY_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'overallSentiment']).every(key => metricMeetsTarget(key, emp[key]));
-        const recentCoaching = resolveCoachingHistoryForEmployee(emp.name).find(h =>
-            new Date(h.generatedAt).getTime() >= Date.now() - 30 * 24 * 60 * 60 * 1000
-        );
-        if (consistent && !recentCoaching) {
-            quietConsistent.push(emp.name);
-        }
-    });
-
-    mostImproved.sort((a, b) => b.delta - a.delta);
-    const mostImprovedText = mostImproved.length
-        ? `${escapeHtml(mostImproved[0].name)} (+${mostImproved[0].delta.toFixed(1)} sentiment)`
-        : 'None yet';
-
-    container.innerHTML = `
-        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>Most Improved (30 days):</strong> ${mostImprovedText}
-        </div>
-        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>Recovery Wins:</strong> ${recoveryWins.length ? recoveryWins.join(', ') : 'None'}
-        </div>
-        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
-            <strong>Quiet Consistency:</strong> ${quietConsistent.length ? quietConsistent.map(n => escapeHtml(n)).join(', ') : 'None'}
-        </div>
-    `;
-}
-
 function renderTrendIntelligence() {
     const container = document.getElementById('trendIntelligenceOutput');
     const modeIndicator = document.getElementById('trendModeIndicator');
@@ -7590,146 +6726,6 @@ async function generateTrendCoachingEmail() {
     });
 }
 
-async function generateIndividualCoachingEmail(employeeName) {
-    const delegated = window.DevCoachModules?.trendCoachingEmail?.generateIndividualCoachingEmail;
-    if (typeof delegated !== 'function') {
-        showToast('Trend coaching module not available. Refresh and try again.', 3500);
-        return;
-    }
-
-    await delegated({
-        employeeName,
-        getWeeklyKeysSorted,
-        weeklyData,
-        formatDateMMDDYYYY,
-        loadServerTips,
-        metricsRegistry: METRICS_REGISTRY,
-        metricMeetsTarget,
-        metricDelta,
-        formatMetricValue,
-        isAssociateIncludedByTeamFilter,
-        getEmployeeNickname,
-        openCopilotWithPrompt,
-        showToast
-    });
-}
-
-async function generateGroupCoachingEmail() {
-    const delegated = window.DevCoachModules?.trendCoachingEmail?.generateGroupCoachingEmail;
-    if (typeof delegated !== 'function') {
-        showToast('Trend coaching module not available. Refresh and try again.', 3500);
-        return;
-    }
-
-    await delegated({
-        getWeeklyKeysSorted,
-        weeklyData,
-        formatDateMMDDYYYY,
-        getCenterAverageForWeek,
-        loadServerTips,
-        metricsRegistry: METRICS_REGISTRY,
-        metricMeetsTarget,
-        metricDelta,
-        formatMetricValue,
-        isAssociateIncludedByTeamFilter,
-        showToast
-    });
-}
-
-function buildTodaysFocusData() {
-    const latestKey = getLatestWeeklyKey();
-    if (!latestKey) return null;
-    const prevKey = getPreviousWeeklyKey(latestKey);
-    const latestWeek = weeklyData[latestKey];
-    const prevWeek = prevKey ? weeklyData[prevKey] : null;
-    if (!latestWeek?.employees) return null;
-
-    const teamFilterContext = getTeamSelectionContext();
-    const latestEmployees = latestWeek.employees.filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext));
-    if (!latestEmployees.length) return null;
-
-    const metricsToUse = ['overallSentiment', 'scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht'];
-    const averages = buildTeamWeightedAverages(latestEmployees, metricsToUse);
-
-    let prevAverages = {};
-    metricsToUse.forEach(key => { prevAverages[key] = null; });
-    if (prevWeek?.employees) {
-        const previousEmployees = getFilteredEmployeesForPeriod(prevWeek, teamFilterContext);
-        prevAverages = buildTeamWeightedAverages(previousEmployees, metricsToUse);
-    }
-
-    let teamWin = null;
-    let focusArea = null;
-    let bestScore = -Infinity;
-    let worstScore = -Infinity;
-
-    const distribution = {};
-    metricsToUse.forEach(key => {
-        distribution[key] = { better: 0, worse: 0, total: 0 };
-    });
-
-    latestEmployees.forEach(emp => {
-        metricsToUse.forEach(key => {
-            const avg = averages[key];
-            const value = emp[key];
-            if (avg === null || value === undefined || value === null || value === '') return;
-            distribution[key].total += 1;
-            const better = isReverseMetric(key) ? value <= avg : value >= avg;
-            if (better) distribution[key].better += 1;
-            else distribution[key].worse += 1;
-        });
-    });
-
-    metricsToUse.forEach(key => {
-        const value = averages[key];
-        if (value === null) return;
-        const improvement = prevAverages[key] !== null && prevAverages[key] !== undefined ? metricDelta(key, value, prevAverages[key]) : 0;
-        const ratio = distribution[key].total ? distribution[key].better / distribution[key].total : 0;
-        const score = ratio + (improvement > 0 ? 0.5 : 0);
-        if (score > bestScore) {
-            bestScore = score;
-            teamWin = key;
-        }
-
-        const focusRatio = distribution[key].total ? distribution[key].worse / distribution[key].total : 0;
-        if (focusRatio > worstScore) {
-            worstScore = focusRatio;
-            focusArea = key;
-        }
-    });
-
-    const callouts = buildTodaysFocusCallouts(latestEmployees, metricsToUse, averages);
-
-    return {
-        latestKey,
-        latestWeek,
-        averages,
-        teamWin,
-        focusArea,
-        callouts
-    };
-}
-
-function buildTodaysFocusCallouts(employees, metricsToUse, averages) {
-    const scores = (employees || []).map(emp => {
-        let wins = 0;
-        metricsToUse.forEach(key => {
-            const avg = averages[key];
-            const value = emp[key];
-            if (avg === null || value === undefined || value === null || value === '') return;
-            const better = isReverseMetric(key) ? value <= avg : value >= avg;
-            if (better) wins += 1;
-        });
-        return { name: emp.name, wins };
-    });
-
-    return scores
-        .filter(item => item.wins > 0)
-        .sort((a, b) => b.wins - a.wins)
-        .slice(0, 3);
-}
-
-
 function generateVerintSummary() {
     const moduleApi = window.DevCoachModules?.copilotPrompt;
     if (!moduleApi?.generateVerintSummary) {
@@ -7749,54 +6745,6 @@ function generateVerintSummary() {
     });
 }
 
-function collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.collectIndividualTrendWarningsAndRationale) {
-        return { warnings: [], rationale: [] };
-    }
-    return moduleApi.collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel, {
-        metricDelta,
-        getTrendDeltaThreshold,
-        metricsRegistry: METRICS_REGISTRY
-    });
-}
-
-function collectIndividualTrendWinsAndRationale(employeeName, currentEmp, prevEmp, periodLabel) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.collectIndividualTrendWinsAndRationale) {
-        return { wins: [], rationale: [] };
-    }
-    return moduleApi.collectIndividualTrendWinsAndRationale(employeeName, currentEmp, prevEmp, periodLabel, {
-        metricDelta,
-        metricMeetsTarget,
-        metricsRegistry: METRICS_REGISTRY
-    });
-}
-
-function buildIndividualTrendHeaderHtml(employeeName, descriptor, currentEmp, prevEmp, thirdEmp) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildIndividualTrendHeaderHtml) return '';
-    return moduleApi.buildIndividualTrendHeaderHtml(employeeName, descriptor, currentEmp, prevEmp, thirdEmp);
-}
-
-function buildIndividualTrendItemsSectionHtml(title, titleColor, itemBorderColor, itemBgColor, items) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildIndividualTrendItemsSectionHtml) return '';
-    return moduleApi.buildIndividualTrendItemsSectionHtml(title, titleColor, itemBorderColor, itemBgColor, items);
-}
-
-function buildIndividualTrendCoachingImpactHtml(coachingImpact) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildIndividualTrendCoachingImpactHtml) return '';
-    return moduleApi.buildIndividualTrendCoachingImpactHtml(coachingImpact);
-}
-
-function buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildIndividualTrendNoSignalsHtml) return '';
-    return moduleApi.buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins);
-}
-
 function renderIndividualTrendAnalysis(container, employeeName, keys, periodType = 'wow') {
     const moduleApi = window.DevCoachModules?.trendIntelligence;
     if (!moduleApi?.renderIndividualTrendAnalysis) {
@@ -7813,57 +6761,6 @@ function renderIndividualTrendAnalysis(container, employeeName, keys, periodType
         buildEmployeeAggregateForPeriod,
         calculateCoachingImpact
     });
-}
-
-function hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.hasGroupThreePeriodDecline) return false;
-    return moduleApi.hasGroupThreePeriodDecline(currentEmp, prevEmp, thirdEmp, { metricDelta });
-}
-
-function hasGroupSuddenDrop(currentEmp, prevEmp) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.hasGroupSuddenDrop) return false;
-    return moduleApi.hasGroupSuddenDrop(currentEmp, prevEmp, { metricDelta });
-}
-
-function hasGroupImprovement(currentEmp, prevEmp) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.hasGroupImprovement) return false;
-    return moduleApi.hasGroupImprovement(currentEmp, prevEmp, { metricDelta });
-}
-
-function isGroupConsistentPerformer(currentEmp) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.isGroupConsistentPerformer) return false;
-    return moduleApi.isGroupConsistentPerformer(currentEmp, { metricMeetsTarget });
-}
-
-function classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.classifyGroupTrendEmployee) return;
-    moduleApi.classifyGroupTrendEmployee(teamInsights, employeeName, currentEmp, prevEmp, thirdEmp, {
-        metricDelta,
-        metricMeetsTarget
-    });
-}
-
-function buildGroupTrendHeaderHtml(buckets) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildGroupTrendHeaderHtml) return '';
-    return moduleApi.buildGroupTrendHeaderHtml(buckets);
-}
-
-function buildGroupTrendSummaryCardsHtml(teamInsights) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildGroupTrendSummaryCardsHtml) return '';
-    return moduleApi.buildGroupTrendSummaryCardsHtml(teamInsights);
-}
-
-function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names) {
-    const moduleApi = window.DevCoachModules?.trendIntelligence;
-    if (!moduleApi?.buildGroupTrendNamedSectionHtml) return '';
-    return moduleApi.buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names);
 }
 
 function renderGroupTrendAnalysis(container, keys, periodType = 'wow') {
@@ -10339,128 +9236,16 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
     };
 }
 
-function parseOnOffMirrorNumber(value) {
-    return window.DevCoachModules?.onOffTracker?.parseOnOffMirrorNumber?.(value);
-}
-
-function isValidOnOffPercent(value) {
-    return window.DevCoachModules?.onOffTracker?.isValidOnOffPercent?.(value);
-}
-
-function pickYearEndAssociateOverallValue(employeeRecord) {
-    return window.DevCoachModules?.onOffTracker?.pickYearEndAssociateOverallValue?.(employeeRecord);
-}
-
-function buildYearEndOnOffValues(employeeRecord, associateOverallPick) {
-    return window.DevCoachModules?.onOffTracker?.buildYearEndOnOffValues?.(employeeRecord, associateOverallPick);
-}
-
-function getYearEndOnOffScoreOrFallback(metricKey, value, scoreYear) {
-    return window.DevCoachModules?.onOffTracker?.getYearEndOnOffScoreOrFallback?.(metricKey, value, scoreYear);
-}
-
-function buildYearEndOnOffScores(values, scoreYear) {
-    return window.DevCoachModules?.onOffTracker?.buildYearEndOnOffScores?.(values, scoreYear);
-}
-
-function resolveYearEndOnOffTrackStatus(ratingAverage) {
-    return window.DevCoachModules?.onOffTracker?.resolveYearEndOnOffTrackStatus?.(ratingAverage);
-}
-
 function calculateYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear()) {
     return window.DevCoachModules?.onOffTracker?.calculateYearEndOnOffMirror?.(employeeRecord, reviewYear);
-}
-
-function applyOnOffMirrorResultToElements(summaryEl, detailsEl, result, reviewYear, goalSource, periodMetadata = null) {
-    return window.DevCoachModules?.onOffTracker?.applyOnOffMirrorResultToElements?.(summaryEl, detailsEl, result, reviewYear, goalSource, periodMetadata);
 }
 
 function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFullYear(), periodMetadata = null) {
     return window.DevCoachModules?.onOffTracker?.renderYearEndOnOffMirror?.(employeeRecord, reviewYear, periodMetadata);
 }
 
-function renderOnOffMirrorForElementIds(employeeRecord, summaryElementId, detailsElementId, reviewYear = new Date().getFullYear()) {
-    return window.DevCoachModules?.onOffTracker?.renderOnOffMirrorForElementIds?.(employeeRecord, summaryElementId, detailsElementId, reviewYear);
-}
-
-function resolveOnOffBandGoalText(bands, bandKey, formatKey) {
-    return window.DevCoachModules?.onOffTracker?.resolveOnOffBandGoalText?.(bands, bandKey, formatKey) || '';
-}
-
-function resolveMetricTrendsGoalText(metricKey, formatKey, reviewYear, periodMetadata) {
-    return window.DevCoachModules?.onOffTracker?.resolveMetricTrendsGoalText?.(metricKey, formatKey, reviewYear, periodMetadata) || '';
-}
-
-function resolveOnOffGoalText(goalSource, bands, targetMetricKey, bandMetricKey, formatKey, reviewYear, periodMetadata) {
-    return window.DevCoachModules?.onOffTracker?.resolveOnOffGoalText?.(goalSource, bands, targetMetricKey, bandMetricKey, formatKey, reviewYear, periodMetadata) || '';
-}
-
-function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffScoreRows?.(result, goalSource, bands, reviewYear, periodMetadata);
-}
-
-function getOnOffScoreCellStyle(score) {
-    return window.DevCoachModules?.onOffTracker?.getOnOffScoreCellStyle?.(score) || '';
-}
-
-function getOnOffStatusStyle(statusText) {
-    return window.DevCoachModules?.onOffTracker?.getOnOffStatusStyle?.(statusText) || '';
-}
-
-function buildOnOffHeaderSummaryHtml(ratingText, statusText, statusStyle) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffHeaderSummaryHtml?.(ratingText, statusText, statusStyle) || '';
-}
-
-function buildOnOffRowsHtml(rows) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffRowsHtml?.(rows) || '';
-}
-
 function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(), options = {}) {
     return window.DevCoachModules?.onOffTracker?.buildOnOffScoreTableHtml?.(result, reviewYear, options) || '';
-}
-
-function getOnOffTrackerLegendBandsByYear(reviewYear) {
-    return window.DevCoachModules?.onOffTracker?.getOnOffTrackerLegendBandsByYear?.(reviewYear) || null;
-}
-
-function buildOnOffLegendMissingConfigCardHtml(label) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffLegendMissingConfigCardHtml?.(label) || '';
-}
-
-function buildOnOffLegendMinTypeCardHtml(metricKey, label, config) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffLegendMinTypeCardHtml?.(metricKey, label, config) || '';
-}
-
-function buildOnOffLegendMaxTypeCardHtml(metricKey, label, config) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffLegendMaxTypeCardHtml?.(metricKey, label, config) || '';
-}
-
-function buildOnOffLegendMetricCardHtml(metric, bands) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffLegendMetricCardHtml?.(metric, bands) || '';
-}
-
-function buildOnOffLegendContainerHtml(reviewYear, cardsHtml, sourceLabel, usingFallback) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffLegendContainerHtml?.(reviewYear, cardsHtml, sourceLabel, usingFallback) || '';
-}
-
-function renderOnOffTrackerLegend(reviewYear) {
-    return window.DevCoachModules?.onOffTracker?.renderOnOffTrackerLegend?.(reviewYear);
-}
-
-function populateOnOffTrackerEmployeeSelect(employeeSelect) {
-    return window.DevCoachModules?.onOffTracker?.populateOnOffTrackerEmployeeSelect?.(employeeSelect) || [];
-}
-
-function resetOnOffTrackerPanel(panel, factsSummary, summary, details) {
-    return window.DevCoachModules?.onOffTracker?.resetOnOffTrackerPanel?.(panel, factsSummary, summary, details);
-}
-
-function bindOnOffTrackerHandlers(employeeSelect, reviewYearInput, calculateBtn) {
-    return window.DevCoachModules?.onOffTracker?.bindOnOffTrackerHandlers?.(employeeSelect, reviewYearInput, calculateBtn);
-}
-
-function resolveOnOffTrackerFactsSummaryText(latestPeriod) {
-    return window.DevCoachModules?.onOffTracker?.resolveOnOffTrackerFactsSummaryText?.(latestPeriod) || '';
 }
 
 function initializeOnOffTracker() {
@@ -10471,337 +9256,18 @@ function initializeMidYearTab() {
     return window.DevCoachModules?.onOffTracker?.initializeMidYearTab?.();
 }
 
-function updateOnOffTrackerDisplay() {
-    return window.DevCoachModules?.onOffTracker?.updateOnOffTrackerDisplay?.();
-}
-
 function bindElementOnce(element, eventName, handler) {
     if (!element || element.dataset.bound) return;
     element.addEventListener(eventName, handler);
     element.dataset.bound = 'true';
 }
 
-function getYearEndCommentsElements() {
-    return window.DevCoachModules?.yearEndComments?.getYearEndCommentsElements?.() || {};
-}
-
-function hasRequiredYearEndCommentsElements(elements) {
-    return window.DevCoachModules?.yearEndComments?.hasRequiredYearEndCommentsElements?.(elements) ?? false;
-}
-
-function resetYearEndCommentsInitialState(snapshotPanel, promptArea) {
-    return window.DevCoachModules?.yearEndComments?.resetYearEndCommentsInitialState?.(snapshotPanel, promptArea);
-}
-
-function initializeYearEndReviewYearInput(reviewYearInput) {
-    return window.DevCoachModules?.yearEndComments?.initializeYearEndReviewYearInput?.(reviewYearInput);
-}
-
-function populateYearEndEmployeeSelect(employeeSelect) {
-    return window.DevCoachModules?.yearEndComments?.populateYearEndEmployeeSelect?.(employeeSelect) || [];
-}
-
-function bindYearEndPrimaryActionHandlers(elements) {
-    return window.DevCoachModules?.yearEndComments?.bindYearEndPrimaryActionHandlers?.(elements);
-}
-
-function bindYearEndDraftPersistenceHandlers(elements) {
-    return window.DevCoachModules?.yearEndComments?.bindYearEndDraftPersistenceHandlers?.(elements);
-}
-
 function initializeYearEndComments() {
     return window.DevCoachModules?.yearEndComments?.initializeYearEndComments?.();
 }
 
-function clearYearEndOnOffMirror(onOffSummary, onOffDetails) {
-    return window.DevCoachModules?.yearEndComments?.clearYearEndOnOffMirror?.(onOffSummary, onOffDetails);
-}
-
-function clearYearEndDraftInputs(trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput) {
-    return window.DevCoachModules?.yearEndComments?.clearYearEndDraftInputs?.(trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput);
-}
-
-function applyYearEndSavedDraft(savedDraft, trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput) {
-    return window.DevCoachModules?.yearEndComments?.applyYearEndSavedDraft?.(savedDraft, trackSelect, positivesInput, improvementsInput, managerContextInput, responseInput, performanceRatingInput, meritDetailsInput, bonusAmountInput, verbalSummaryOutput);
-}
-
-function buildYearEndSummaryLine(latestPeriod, targetProfileYear, wins, opportunities) {
-    return window.DevCoachModules?.yearEndComments?.buildYearEndSummaryLine?.(latestPeriod, targetProfileYear, wins, opportunities) || '';
-}
-
-function autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals) {
-    return window.DevCoachModules?.yearEndComments?.autoPopulateYearEndNarrativeInputs?.(positivesInput, improvementsInput, wins, opportunities, annualGoals);
-}
-
-function buildYearEndDraftContext(employeeName, reviewYear, latestPeriod, endDateText, wins, opportunities, targetProfileYear, annualGoals) {
-    return window.DevCoachModules?.yearEndComments?.buildYearEndDraftContext?.(employeeName, reviewYear, latestPeriod, endDateText, wins, opportunities, targetProfileYear, annualGoals) || {};
-}
-
-function getYearEndSnapshotElements() {
-    return window.DevCoachModules?.yearEndComments?.getYearEndSnapshotElements?.() || {};
-}
-
-function clearYearEndSnapshotListsAndPrompt(summary, winsList, improvementList, promptArea) {
-    return window.DevCoachModules?.yearEndComments?.clearYearEndSnapshotListsAndPrompt?.(summary, winsList, improvementList, promptArea);
-}
-
-function setYearEndSnapshotStatus(status, snapshotPanel, text, showPanel) {
-    return window.DevCoachModules?.yearEndComments?.setYearEndSnapshotStatus?.(status, snapshotPanel, text, showPanel);
-}
-
-function renderYearEndSnapshotMetricLists(winsList, improvementList, wins, opportunities) {
-    return window.DevCoachModules?.yearEndComments?.renderYearEndSnapshotMetricLists?.(winsList, improvementList, wins, opportunities);
-}
-
-function resolveYearEndEndDateText(latestPeriod) {
-    return window.DevCoachModules?.yearEndComments?.resolveYearEndEndDateText?.(latestPeriod) || '';
-}
-
 function updateYearEndSnapshotDisplay() {
     return window.DevCoachModules?.yearEndComments?.updateYearEndSnapshotDisplay?.();
-}
-
-function getYearEndPromptInputs() {
-    return window.DevCoachModules?.yearEndComments?.getYearEndPromptInputs?.() || {};
-}
-
-function validateYearEndPromptInputs(employeeName, reviewYear, trackStatus, promptArea) {
-    return window.DevCoachModules?.yearEndComments?.validateYearEndPromptInputs?.(employeeName, reviewYear, trackStatus, promptArea) ?? false;
-}
-
-function ensureYearEndDraftContext(employeeName, reviewYear) {
-    return window.DevCoachModules?.yearEndComments?.ensureYearEndDraftContext?.(employeeName, reviewYear);
-}
-
-function buildYearEndPromptSupportData(employeeName, reviewYear) {
-    return window.DevCoachModules?.yearEndComments?.buildYearEndPromptSupportData?.(employeeName, reviewYear) || {};
-}
-
-function resolveYearEndPromptHeaderData(employeeName, reviewYear, trackStatus) {
-    return window.DevCoachModules?.yearEndComments?.resolveYearEndPromptHeaderData?.(employeeName, reviewYear, trackStatus) || {};
-}
-
-function buildYearEndCopilotPrompt(inputData, supportData, headerData) {
-    const delegated = window.DevCoachModules?.yearEnd?.buildCopilotPrompt?.(inputData, supportData, headerData);
-    return delegated || '';
-}
-
-function generateYearEndPromptAndCopy() {
-    return window.DevCoachModules?.yearEndComments?.generateYearEndPromptAndCopy?.();
-}
-
-function copyYearEndResponseToClipboard() {
-    return window.DevCoachModules?.yearEndComments?.copyYearEndResponseToClipboard?.();
-}
-
-function focusYearEndResponseInput(responseInput) {
-    return window.DevCoachModules?.yearEndComments?.focusYearEndResponseInput?.(responseInput);
-}
-
-async function getClipboardTextViaReadText() {
-    return window.DevCoachModules?.yearEndComments?.getClipboardTextViaReadText?.();
-}
-
-async function extractClipboardTextFromItem(item) {
-    return window.DevCoachModules?.yearEndComments?.extractClipboardTextFromItem?.(item);
-}
-
-async function getClipboardTextViaReadItems() {
-    return window.DevCoachModules?.yearEndComments?.getClipboardTextViaReadItems?.();
-}
-
-async function readYearEndClipboardText() {
-    return window.DevCoachModules?.yearEndComments?.readYearEndClipboardText?.();
-}
-
-async function pasteYearEndResponseFromClipboard() {
-    return window.DevCoachModules?.yearEndComments?.pasteYearEndResponseFromClipboard?.();
-}
-
-function extractYearEndBoxText(responseText, boxNumber) {
-    const delegated = window.DevCoachModules?.yearEnd?.extractBoxText?.(responseText, boxNumber);
-    return typeof delegated === 'string' ? delegated : '';
-}
-
-function copyYearEndBoxResponseToClipboard(boxNumber) {
-    return window.DevCoachModules?.yearEndComments?.copyYearEndBoxResponseToClipboard?.(boxNumber);
-}
-
-function generateYearEndVerbalSummary() {
-    return window.DevCoachModules?.yearEndComments?.generateYearEndVerbalSummary?.();
-}
-
-function copyYearEndVerbalSummary() {
-    return window.DevCoachModules?.yearEndComments?.copyYearEndVerbalSummary?.();
-}
-
-function deleteLatestCoachingEntry() {
-    return window.DevCoachModules?.coachingEmail?.deleteLatestCoachingEntry?.();
-}
-
-function clearCoachingHistoryForEmployee() {
-    return window.DevCoachModules?.coachingEmail?.clearCoachingHistoryForEmployee?.();
-}
-
-function getCoachingEmailDisplayElements() {
-    return window.DevCoachModules?.coachingEmail?.getCoachingEmailDisplayElements?.() || {};
-}
-
-function resetCoachingEmailDisplayState(elements) {
-    return window.DevCoachModules?.coachingEmail?.resetCoachingEmailDisplayState?.(elements);
-}
-
-function resolveCoachingEmployeeRecord(employeeName) {
-    return window.DevCoachModules?.coachingEmail?.resolveCoachingEmployeeRecord?.(employeeName) || null;
-}
-
-function buildCoachingDisplayMetricData(employeeRecord) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingDisplayMetricData?.(employeeRecord) || { wins: [], opportunities: [] };
-}
-
-function resolveCoachingDisplayEndDate() {
-    return window.DevCoachModules?.coachingEmail?.resolveCoachingDisplayEndDate?.() || '';
-}
-
-function renderCoachingMetricLists(winsList, oppList, wins, opportunities) {
-    return window.DevCoachModules?.coachingEmail?.renderCoachingMetricLists?.(winsList, oppList, wins, opportunities);
-}
-
-function updateCoachingEmailDisplay() {
-    return window.DevCoachModules?.coachingEmail?.updateCoachingEmailDisplay?.();
-}
-
-function getCoachingHistoryElements() {
-    return window.DevCoachModules?.coachingEmail?.getCoachingHistoryElements?.() || {};
-}
-
-function setCoachingHistoryEmptyState(summary, list, panel, summaryText) {
-    return window.DevCoachModules?.coachingEmail?.setCoachingHistoryEmptyState?.(summary, list, panel, summaryText);
-}
-
-function renderCoachingHistory(employeeName) {
-    const { panel, summary, list } = getCoachingHistoryElements();
-
-    if (!panel || !summary || !list) return;
-
-    const delegated = window.DevCoachModules?.coaching?.renderHistoryView;
-    if (typeof delegated === 'function') {
-        delegated({
-            panel,
-            summary,
-            list,
-            employeeName,
-            history: resolveCoachingHistoryForEmployee(employeeName),
-            formatDate: formatDateMMDDYYYY,
-            metricsRegistry: METRICS_REGISTRY
-        });
-        return;
-    }
-
-    setCoachingHistoryEmptyState(summary, list, panel, 'Coaching module unavailable. Refresh and try again.');
-}
-
-function chooseCoachingTip(metricConfig, usedTips) {
-    return window.DevCoachModules?.coachingEmail?.chooseCoachingTip?.(metricConfig, usedTips);
-}
-
-function collectCoachingPromptMetricData(employeeRecord) {
-    return window.DevCoachModules?.coachingEmail?.collectCoachingPromptMetricData?.(employeeRecord) || { wins: [], opportunities: [] };
-}
-
-function resolveCoachingPromptPeriodEndDate() {
-    return window.DevCoachModules?.coachingEmail?.resolveCoachingPromptPeriodEndDate?.() || '';
-}
-
-function buildCoachingPromptMetricsText(wins, opportunities) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptMetricsText?.(wins, opportunities) || { winsText: '', oppText: '' };
-}
-
-function buildCoachingPromptRoleSection(employeeName) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptRoleSection?.(employeeName) || '';
-}
-
-function buildCoachingPromptVoiceToneSection() {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptVoiceToneSection?.() || '';
-}
-
-function buildCoachingPromptRulesSection() {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptRulesSection?.() || '';
-}
-
-function buildCoachingPromptFlowSection(preferredName) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptFlowSection?.(preferredName) || '';
-}
-
-function buildCoachingPromptOutputRequirementsSection(preferredName) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptOutputRequirementsSection?.(preferredName) || '';
-}
-
-function buildCoachingPromptDataSection(endDate, winsText, oppText) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptDataSection?.(endDate, winsText, oppText) || '';
-}
-
-function buildCoachingPromptDataRulesSection() {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptDataRulesSection?.() || '';
-}
-
-function buildCoachingPromptFinalInstructionSection(preferredName) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPromptFinalInstructionSection?.(preferredName) || '';
-}
-
-function buildCoachingPrompt(employeeRecord) {
-    return window.DevCoachModules?.coachingEmail?.buildCoachingPrompt?.(employeeRecord) || '';
-}
-
-function getCoachingPromptGenerationInputs() {
-    return window.DevCoachModules?.coachingEmail?.getCoachingPromptGenerationInputs?.() || {};
-}
-
-function resolveCoachingPromptEmployeeRecord(employeeName) {
-    return window.DevCoachModules?.coachingEmail?.resolveCoachingPromptEmployeeRecord?.(employeeName) || null;
-}
-
-function buildLatestCoachingSummaryData(employeeRecord) {
-    return window.DevCoachModules?.coachingEmail?.buildLatestCoachingSummaryData?.(employeeRecord) || {};
-}
-
-function recordAndRenderCoachingEvent(employeeName, weekEnding, coachedMetricKeys) {
-    return window.DevCoachModules?.coachingEmail?.recordAndRenderCoachingEvent?.(employeeName, weekEnding, coachedMetricKeys);
-}
-
-function revealCoachingOutlookSection() {
-    return window.DevCoachModules?.coachingEmail?.revealCoachingOutlookSection?.();
-}
-
-function generateCoachingPromptAndCopy() {
-    return window.DevCoachModules?.coachingEmail?.generateCoachingPromptAndCopy?.();
-}
-
-function getCoachingOutlookGenerationInputs() {
-    return window.DevCoachModules?.coachingEmail?.getCoachingOutlookGenerationInputs?.() || {};
-}
-
-function generateOutlookEmailFromCoPilot() {
-    const { bodyText, selectedEmployee } = getCoachingOutlookGenerationInputs();
-
-    const delegated = window.DevCoachModules?.coaching?.generateOutlookDraftFromCopilot;
-    if (typeof delegated === 'function') {
-        delegated({
-            bodyText,
-            selectedEmployee,
-            periodMeta: weeklyData[coachingLatestWeekKey]?.metadata || {},
-            periodKey: coachingLatestWeekKey,
-            getEmployeeNickname,
-            formatDate: formatDateMMDDYYYY,
-            showToast,
-            onError: (error) => {
-                console.error('Error opening Outlook draft from coaching email:', error);
-            }
-        });
-        return;
-    }
-
-    showToast('⚠️ Coaching module is unavailable. Refresh and try again.', 3500);
 }
 
 // ============================================

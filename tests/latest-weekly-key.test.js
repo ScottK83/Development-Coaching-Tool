@@ -32,7 +32,7 @@ function bodyOf(src, fnName) {
     return end === -1 ? src.slice(at) : src.slice(at, end);
 }
 
-suite('latest weekly key: both helpers read the weekly store', (t) => {
+suite('latest weekly key: the helper reads the weekly store', (t) => {
     const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
 
     const filter = bodyOf(src, 'getWeeklyStoreKeysSorted');
@@ -40,7 +40,10 @@ suite('latest weekly key: both helpers read the weekly store', (t) => {
     t.check('and it filters on membership of weeklyData',
         /hasOwnProperty\.call\(weeklyData, key\)/.test(filter || ''));
 
-    ['getLatestWeeklyKey', 'getPreviousWeeklyKey'].forEach((fn) => {
+    // getPreviousWeeklyKey went with the duplicate 1:1 prep panel that was its
+    // last caller. The rule it was guarded for is the same rule, so the guard
+    // follows whichever helpers survive rather than naming one that does not.
+    ['getLatestWeeklyKey'].forEach((fn) => {
         const body = bodyOf(src, fn);
         t.check(`${fn} is still there`, !!body);
         if (!body) return;

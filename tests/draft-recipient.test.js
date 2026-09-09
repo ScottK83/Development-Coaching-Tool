@@ -145,7 +145,14 @@ suite('draft recipient: wiring', (t) => {
     t.check('a typed address is remembered', listening.includes('setAssociateEmailOverride'));
 
     t.check('the pattern setting exists', html.includes('id="associateEmailPattern"'));
+    // Both binders used to be called from initializeSection, which nothing
+    // called, so the settings saved into boxes whose buttons had no handler.
+    // Naming the string was not enough to prove that; being reached from the
+    // handler that opens the panel is.
     t.check('the pattern setting is bound', script.includes('bindAssociateEmailPatternSetting'));
+    t.check('the CC setting is bound too', script.includes('bindCoachingCcEmailSetting'));
+    t.check('and both are reached when Settings opens',
+        (script.match(/bindSettingsEmailControls\(\)/g) || []).length >= 3);
 
     // Both new stores must sync, or a pattern set at home is absent at work.
     t.check('the pattern store is registered', registry.includes("name: 'associateEmailPattern'"));
