@@ -200,7 +200,12 @@
         // itself once the content is actually in the panel.
         subSectionTeamSnapshot: () => window.embedTeamSnapshot?.(),
         subSectionCallListening: () => window.initializeCallListeningSection?.(),
-        subSectionReliability: () => mods().reliability?.initialize?.()
+        subSectionReliability: () => {
+            mods().reliability?.initialize?.();
+            // The time-off tracker lives under the attendance dashboard. It
+            // reads the PTO balance PDF, which nothing else does.
+            window.embedPtoTracker?.();
+        }
     };
 
     function openTab(subSectionId, buttonId) {

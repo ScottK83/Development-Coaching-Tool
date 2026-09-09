@@ -148,3 +148,20 @@ suite('sub-sections: My Team offers every tab it registers', (t) => {
     t.check('and a refresh restores through it too',
         navSrc.indexOf('myTeam.openTab(subId, btnId)') > -1);
 });
+
+suite('sub-sections: the time-off tracker is inside Attendance, not stranded', (t) => {
+    // PTO stopped being a tab of its own: navigation still rewrites a saved
+    // subSectionPto to Attendance. The move was never finished. embedPtoTracker
+    // looked for a container that did not exist in the markup, so the tracker
+    // sat in a section nothing could show while its PDF import went on writing
+    // balances nobody could read.
+    const myTeam = fs.readFileSync(path.join(ROOT, 'modules', 'my-team.module.js'), 'utf8');
+
+    t.check('the container it moves into exists', divPosition('embeddedPtoInMyTeam') !== -1);
+    t.check('and it sits inside the Attendance panel',
+        divPosition('embeddedPtoInMyTeam') > divPosition('subSectionReliability'));
+    t.check('the standalone section is still there to move from', divPosition('ptoSection') !== -1);
+    t.check('the mover names that container',
+        /embeddedPtoInMyTeam/.test(script) && /getElementById\('ptoSection'\)/.test(script));
+    t.check('and opening Attendance runs it', /embedPtoTracker\?\.\(\)/.test(myTeam));
+});

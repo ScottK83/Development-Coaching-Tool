@@ -532,7 +532,6 @@
         renderExecutiveSummary();
         loadExecutiveSummaryData();
         renderYearlySummaryTrendCharts();
-        syncOneOnOneAssociateSelect();
     }
 
     // ============================================
@@ -541,7 +540,6 @@
 
     function initializeYearlyIndividualSummary() {
         populateExecutiveSummaryAssociate();
-        populateOneOnOneAssociateSelect();
 
         var summaryAssociateSelect = document.getElementById('summaryAssociateSelect');
         bindElementOnce(summaryAssociateSelect, 'change', handleExecutiveSummaryAssociateChange);
@@ -698,38 +696,6 @@
     // ============================================
     // ONE-ON-ONE ASSOCIATE SELECT
     // ============================================
-
-    function populateOneOnOneAssociateSelect() {
-        var select = document.getElementById('oneOnOneAssociateSelect');
-        if (!select) return;
-
-        var weeklyData = getWeeklyData();
-        var allEmployees = new Set();
-        var teamFilterContext = getTeamSelectionContext();
-        for (var weekKey in weeklyData) {
-            var week = weeklyData[weekKey];
-            if (week.employees && Array.isArray(week.employees)) {
-                week.employees.forEach(function(emp) {
-                    if (emp.name && isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) {
-                        allEmployees.add(emp.name);
-                    }
-                });
-            }
-        }
-
-        window.DevCoachModules.associatePicker.populateSelect(select, Array.from(allEmployees));
-
-        syncOneOnOneAssociateSelect();
-    }
-
-    function syncOneOnOneAssociateSelect() {
-        var select = document.getElementById('oneOnOneAssociateSelect');
-        var summarySelect = document.getElementById('summaryAssociateSelect');
-        if (!select || !summarySelect) return;
-        if (summarySelect.value && select.value !== summarySelect.value) {
-            select.value = summarySelect.value;
-        }
-    }
 
     // ============================================
     // POPULATE EXECUTIVE SUMMARY ASSOCIATE
@@ -1149,8 +1115,6 @@
         generateExecutiveSummaryCopilotEmail: generateExecutiveSummaryCopilotEmail,
         openCopilotWithPrompt: openCopilotWithPrompt,
         buildTeamVsCenterAnalysis: buildTeamVsCenterAnalysis,
-        populateOneOnOneAssociateSelect: populateOneOnOneAssociateSelect,
-        syncOneOnOneAssociateSelect: syncOneOnOneAssociateSelect,
         populateExecutiveSummaryAssociate: populateExecutiveSummaryAssociate,
         loadExecutiveSummaryData: loadExecutiveSummaryData,
         setExecutiveSummaryVisibility: setExecutiveSummaryVisibility,
@@ -1188,8 +1152,6 @@
     window.generateExecutiveSummaryCopilotEmail = generateExecutiveSummaryCopilotEmail;
     window.openCopilotWithPrompt = openCopilotWithPrompt;
     window.buildTeamVsCenterAnalysis = buildTeamVsCenterAnalysis;
-    window.populateOneOnOneAssociateSelect = populateOneOnOneAssociateSelect;
-    window.syncOneOnOneAssociateSelect = syncOneOnOneAssociateSelect;
     window.populateExecutiveSummaryAssociate = populateExecutiveSummaryAssociate;
     window.loadExecutiveSummaryData = loadExecutiveSummaryData;
     window.setExecutiveSummaryVisibility = setExecutiveSummaryVisibility;

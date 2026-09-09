@@ -663,28 +663,7 @@ main section {
     border-radius: var(--radius-md) !important;
     box-shadow: none;
     border: 1px solid var(--border);
-}
-
-/* --- Form elements --- */
-.form-group {
-    margin-bottom: var(--space-4);
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    font-weight: 600;
-    margin-bottom: var(--space-1);
-    color: var(--text-secondary);
-    font-size: 0.85em;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea,
-.form-section input,
+}.form-section input,
 .form-section select,
 .form-section textarea {
     padding: 9px 12px;
@@ -697,25 +676,12 @@ main section {
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus,
 .form-section input:focus,
 .form-section select:focus,
 .form-section textarea:focus {
     outline: none;
     border-color: var(--brand) !important;
     box-shadow: var(--shadow-focus);
-}
-
-.form-group small {
-    font-size: 0.8em;
-    color: var(--text-tertiary);
-    margin-top: var(--space-1);
-}
-
-.form-section .form-group {
-    margin-bottom: 0;
 }
 
 /* --- Buttons --- */
@@ -779,28 +745,7 @@ textarea:focus-visible {
 .btn-danger:hover {
     background: var(--red-text) !important;
     border-color: var(--red-text) !important;
-}
-
-.btn-ai {
-    background: var(--brand);
-    color: var(--text-inverse);
-    padding: 8px 16px;
-    font-size: 0.85em;
-    font-weight: 600;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    box-shadow: none;
-    border: 1px solid var(--brand-hover);
-}
-
-.btn-ai:hover {
-    background: var(--brand-hover);
-    transform: none;
-    box-shadow: none;
-}
-
-/* --- Sub-navigation --- */
+}/* --- Sub-navigation --- */
 .sub-nav {
     margin-bottom: var(--space-5);
     display: flex;
@@ -840,43 +785,7 @@ textarea:focus-visible {
     background: var(--bg-surface);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-}
-
-.panel-accent {
-    padding: var(--space-5);
-    background: var(--bg-surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--brand);
-}
-
-/* --- Status panels --- */
-.status-info {
-    padding: var(--space-3) var(--space-4);
-    background: var(--yellow-soft);
-    border-left: 3px solid var(--yellow);
-    border-radius: var(--radius-sm);
-    font-size: 0.9em;
-}
-
-.status-success {
-    padding: var(--space-3) var(--space-4);
-    background: var(--green-soft);
-    border: 1px solid var(--green);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-size: 0.9em;
-}
-
-.status-error {
-    padding: var(--space-3) var(--space-4);
-    background: var(--red-soft);
-    border-left: 3px solid var(--red);
-    border-radius: var(--radius-sm);
-    color: var(--red-text);
-    font-size: 0.9em;
-}
-
-/* --- Win/opportunity panels --- */
+}/* --- Win/opportunity panels --- */
 .wins-panel {
     background: var(--green-soft);
     border-radius: var(--radius-md);
@@ -1191,9 +1100,6 @@ textarea:focus-visible {
     text-align: left;
 }
 
-.panel-section .call-metric-warn { border-left-color: var(--red); }
-.panel-section .call-metric-watch { border-left-color: var(--yellow); }
-
 .panel-section .call-metric-chip[aria-pressed="true"] {
     background: var(--bg-surface-raised);
     border-color: var(--text-secondary);
@@ -1378,123 +1284,18 @@ textarea:focus-visible {
 #resultsSection {
     padding: var(--space-6);
     background: var(--bg-surface);
-}
-
-.results-header {
-    margin-bottom: var(--space-6);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.results-header h2 {
-    color: var(--text-primary);
-    font-size: 1.2em;
-    font-weight: 700;
-}
-
-.button-group {
-    display: flex;
-    gap: var(--space-2);
-}
-
-.button-group button {
-    margin: 0;
-}
-
-/* --- Coaching section --- */
-.coaching-section {
-    margin-bottom: var(--space-5);
-    padding: var(--space-5);
-    background: var(--bg-surface-sunken);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-}
-
-.coaching-section h3 {
-    color: var(--text-primary);
-    margin-bottom: var(--space-3);
-    font-size: 1em;
-    font-weight: 650;
-}
-
-.coaching-script {
-    background: var(--bg-surface);
-    padding: var(--space-5);
-    border-left: 3px solid var(--brand);
-    line-height: var(--leading-relaxed);
-    color: var(--text-primary);
-    font-size: 0.9em;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    border-radius: var(--radius-sm);
-}
-
-/* --- History --- */
-.history-employee {
-    margin-bottom: var(--space-6);
-    padding: var(--space-5);
-    background: var(--bg-surface-sunken);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--brand);
-}
-
-.history-employee h3 {
-    color: var(--text-primary);
-    margin-bottom: var(--space-3);
-    font-weight: 650;
-}
-
-.history-item {
+}.history-item {
     background: var(--bg-surface);
     padding: var(--space-4);
     margin-bottom: var(--space-3);
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
-}
-
-.history-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: var(--space-2);
-    color: var(--text-tertiary);
-    font-size: 0.8em;
-}
-
-.history-preview {
-    color: var(--text-secondary);
-    line-height: var(--leading-relaxed);
-    margin-bottom: var(--space-2);
-    font-style: normal;
-    font-size: 0.9em;
-}
-
-/* --- Metrics grid --- */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: var(--space-3);
-    margin-top: var(--space-3);
-}
-
-.target {
+}.target {
     font-size: 0.8em;
     color: var(--brand);
     font-weight: 600;
     margin-top: var(--space-1);
-}
-
-.empty-state {
-    text-align: center;
-    padding: var(--space-8);
-    color: var(--text-tertiary);
-    font-style: normal;
-}
-
-/* --- Upload buttons --- */
+}/* --- Upload buttons --- */
 .btn-upload-metrics,
 .btn-upload-sentiment,
 .btn-upload-verint,
@@ -1751,20 +1552,7 @@ textarea:focus-visible {
     gap: var(--space-2);
     flex-wrap: wrap;
     justify-content: center;
-}
-
-.flex-row-end {
-    display: flex;
-    gap: var(--space-2);
-    justify-content: flex-end;
-}
-
-.flex-col {
-    display: flex;
-    flex-direction: column;
-}
-
-.grid-2col {
+}.grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-4);
@@ -1786,48 +1574,7 @@ textarea:focus-visible {
     margin-bottom: var(--space-1);
     font-size: 0.85em;
     color: var(--text-secondary);
-}
-
-.input-standard {
-    width: 100%;
-    padding: 9px 12px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    font-size: 0.9em;
-}
-
-.resource-list {
-    list-style: none;
-    padding: 0;
-}
-
-.resource-list li {
-    margin-bottom: var(--space-2);
-}
-
-.resource-link {
-    display: inline-block;
-    padding: var(--space-2) var(--space-3);
-    background: var(--bg-surface-sunken);
-    color: var(--brand);
-    text-decoration: none;
-    border-radius: var(--radius-md);
-    border-left: 3px solid var(--brand);
-    transition: all 0.15s ease;
-    font-size: 0.9em;
-    font-weight: 500;
-}
-
-.resource-link:hover {
-    background: var(--brand-soft);
-}
-
-.view-full {
-    padding: 6px 12px;
-    font-size: 0.85em;
-}
-
-/* --- Responsive --- */
+}/* --- Responsive --- */
 @media (max-width: 768px) {
     body {
         padding: var(--space-2);
@@ -1841,28 +1588,10 @@ textarea:focus-visible {
         padding: var(--space-4);
     }
 
-    .metrics-grid {
-        grid-template-columns: 1fr;
-    }
-
     .grid-2col {
         grid-template-columns: 1fr;
     }
 
-    .results-header {
-        flex-direction: column;
-        gap: var(--space-3);
-        align-items: flex-start;
-    }
-
-    .button-group {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .button-group button {
-        width: 100%;
-    }
 }
 
 /* --- Toast animations --- */

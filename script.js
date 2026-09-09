@@ -275,26 +275,6 @@ const ASSOCIATE_SENTIMENT_SNAPSHOTS_STORAGE_KEY = window.DevCoachConstants?.ASSO
 // ============================================
 
 /**
- * Smart Defaults - Save and restore user preferences
- */
-function saveSmartDefault(key, value) {
-    try {
-        localStorage.setItem(STORAGE_PREFIX + 'smartDefault_' + key, JSON.stringify(value));
-    } catch (e) {
-        console.error('Failed to save smart default:', e);
-    }
-}
-
-function getSmartDefault(key, fallback = null) {
-    try {
-        const stored = localStorage.getItem(STORAGE_PREFIX + 'smartDefault_' + key);
-        return stored ? JSON.parse(stored) : fallback;
-    } catch (e) {
-        return fallback;
-    }
-}
-
-/**
  * Data Validation - Validate PowerBI paste before processing
  */
 /**
@@ -308,54 +288,6 @@ function markUnsavedChanges() {
 function clearUnsavedChanges() {
     hasUnsavedChanges = false;
     document.title = document.title.replace(/^\* /, '');
-}
-
-/**
- * Restore smart defaults on page load
- */
-function restoreSmartDefaults() {
-    // Restore period type preference
-    const lastPeriodType = getSmartDefault('lastPeriodType');
-    if (lastPeriodType) {
-        const button = document.querySelector(`button[data-period-type="${lastPeriodType}"]`);
-        if (button) {
-            // Simulate click on the period type button
-            const allPeriodButtons = document.querySelectorAll('[data-period-type]');
-            allPeriodButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-        }
-    }
-    
-    // Auto-select most recent week in dropdowns
-    const weekKeys = getWeeklyKeysSorted();
-    if (weekKeys.length > 0) {
-        const mostRecentWeek = weekKeys[weekKeys.length - 1];
-        
-        // Set in main period dropdown
-        const periodSelect = document.getElementById('weekSelect');
-        if (periodSelect) {
-            periodSelect.value = mostRecentWeek;
-        }
-        
-        // Set in metric trends dropdown
-        const trendSelect = document.getElementById('trendWeekSelect');
-        if (trendSelect) {
-            trendSelect.value = mostRecentWeek;
-        }
-    }
-    
-    // Restore last selected employee
-    const lastEmployee = getSmartDefault('lastEmployee');
-    if (lastEmployee) {
-        const employeeSelect = document.getElementById('employeeSelect');
-        if (employeeSelect) {
-            // Check if this employee still exists in the data
-            const optionExists = Array.from(employeeSelect.options).some(opt => opt.value === lastEmployee);
-            if (optionExists) {
-                employeeSelect.value = lastEmployee;
-            }
-        }
-    }
 }
 
 /**
@@ -934,7 +866,6 @@ function bindTeamFilterChangeHandlers() {
         }
 
         populateExecutiveSummaryAssociate();
-        populateOneOnOneAssociateSelect();
         initializeCoachingEmail();
         initializeYearEndComments();
         initializeCallListeningSection();
@@ -1899,6 +1830,26 @@ function embedTeamSnapshot() {
         target.append(...source.childNodes);
     }
     if (typeof initializeTeamSnapshot === 'function') initializeTeamSnapshot();
+}
+
+/**
+ * Move the payroll time-off tracker into the Attendance tab.
+ *
+ * PTO stopped being a tab of its own some time ago: the nav migration map
+ * still rewrites a saved subSectionPto to Attendance. The move itself was
+ * never finished. This function existed, looking for a container called
+ * embeddedPto or embeddedPtoInMyTeam, and neither was ever added to the
+ * markup, so the tracker sat in a section nothing could show while its
+ * initialiser ran on every load and its PDF import went on writing balances
+ * nobody could see.
+ */
+function embedPtoTracker() {
+    const target = document.getElementById('embeddedPtoInMyTeam');
+    const source = document.getElementById('ptoSection');
+    if (target && source && !target.hasChildNodes()) {
+        target.append(...source.childNodes);
+    }
+    if (typeof initializePtoTracker === 'function') initializePtoTracker();
 }
 
 function bindNavigationHandlers() {
@@ -3313,7 +3264,6 @@ function handleLoadPastedDataClick() {
         startDate = `${ytdYear}-01-01`;
     }
 
-    saveSmartDefault('lastPeriodType', periodType);
 
     if (!pastedData) {
         alert('⚠️ Please paste data first');
@@ -3849,13 +3799,6 @@ function handleDeleteSelectedWeekClick() {
     renderEmployeesList();
     showToast('✅ Period deleted successfully');
 
-    const employeeSelect = document.getElementById('employeeSelect');
-    if (employeeSelect) employeeSelect.value = '';
-
-    ['metricsSection', 'employeeInfoSection', 'customNotesSection', 'generateEmailBtn'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.style.display = 'none';
-    });
 }
 
 function handleDeleteWeekSelectChange() {
@@ -6947,7 +6890,6 @@ async function initApp() {
     }
     
     // Restore smart defaults
-    restoreSmartDefaults();
     
     // Ensure data is saved before page unload (survives Ctrl+Shift+R).
     // Skip when a repo restore just wrote fresh data straight to localStorage. 

@@ -1228,13 +1228,7 @@
             scorecardBtn.addEventListener('click', generateScorecard);
         }
 
-        var sampleBtn = document.getElementById('snapshotSampleDataBtn');
-        if (sampleBtn) {
-            sampleBtn.removeEventListener('click', loadSampleData);
-            sampleBtn.addEventListener('click', loadSampleData);
-        }
-
-        // Hide export buttons until snapshot is generated
+// Hide export buttons until snapshot is generated
         var exportBtns = document.getElementById('snapshotExportBtns');
         if (exportBtns) exportBtns.style.display = 'none';
 
@@ -1246,69 +1240,6 @@
     // ============================================
     // SAMPLE DATA (for preview/demo)
     // ============================================
-
-    function loadSampleData() {
-        var sampleEmployees = [
-            { name: 'Anderson, Mike', firstName: 'Mike', scheduleAdherence: 95.2, cxRepOverall: 84.1, fcr: 76.3, overallExperience: 78.0, transfers: 4.8, aht: 410, acw: 52, overallSentiment: 91.2, positiveWord: 92.0, negativeWord: 88.5, managingEmotions: 96.1, reliability: 12.0 },
-            { name: 'Baker, Sarah', firstName: 'Sarah', scheduleAdherence: 88.4, cxRepOverall: 79.5, fcr: 68.2, overallExperience: 71.0, transfers: 7.1, aht: 445, acw: 65, overallSentiment: 86.0, positiveWord: 84.2, negativeWord: 80.1, managingEmotions: 93.5, reliability: 20.5 },
-            { name: 'Clark, James', firstName: 'James', scheduleAdherence: 96.1, cxRepOverall: 88.3, fcr: 81.5, overallExperience: 82.0, transfers: 3.2, aht: 388, acw: 48, overallSentiment: 93.8, positiveWord: 95.1, negativeWord: 90.2, managingEmotions: 97.8, reliability: 8.0 },
-            { name: 'Davis, Emily', firstName: 'Emily', scheduleAdherence: 91.7, cxRepOverall: 82.6, fcr: 74.1, overallExperience: 76.0, transfers: 5.9, aht: 432, acw: 58, overallSentiment: 89.4, positiveWord: 88.0, negativeWord: 85.3, managingEmotions: 95.2, reliability: 15.0 },
-            { name: 'Evans, Chris', firstName: 'Chris', scheduleAdherence: 93.5, cxRepOverall: 76.8, fcr: 70.5, overallExperience: 68.0, transfers: 8.3, aht: 468, acw: 72, overallSentiment: 84.1, positiveWord: 82.5, negativeWord: 78.9, managingEmotions: 91.0, reliability: 22.0 },
-            { name: 'Foster, Lisa', firstName: 'Lisa', scheduleAdherence: 97.3, cxRepOverall: 90.2, fcr: 79.8, overallExperience: 80.0, transfers: 2.9, aht: 395, acw: 44, overallSentiment: 95.1, positiveWord: 96.3, negativeWord: 91.8, managingEmotions: 98.5, reliability: 6.0 },
-            { name: 'Garcia, Alex', firstName: 'Alex', scheduleAdherence: 89.8, cxRepOverall: 81.0, fcr: 72.0, overallExperience: 73.0, transfers: 6.5, aht: 440, acw: 62, overallSentiment: 87.5, positiveWord: 86.1, negativeWord: 83.0, managingEmotions: 94.0, reliability: 18.0 },
-            { name: 'Harris, Tom', firstName: 'Tom', scheduleAdherence: 94.6, cxRepOverall: 85.7, fcr: 75.9, overallExperience: 77.0, transfers: 5.1, aht: 415, acw: 55, overallSentiment: 90.8, positiveWord: 90.0, negativeWord: 86.7, managingEmotions: 96.0, reliability: 10.0 }
-        ];
-
-        var sampleCenterAvgs = {
-            scheduleAdherence: 93.0,
-            cxRepOverall: 83.5,
-            fcr: 74.0,
-            overallExperience: 75.5,
-            transfers: 5.5,
-            aht: 420,
-            acw: 57,
-            overallSentiment: 89.5,
-            positiveWord: 88.0,
-            negativeWord: 85.0,
-            managingEmotions: 95.5,
-            reliability: 14.0
-        };
-
-        // Build snapshot data directly (bypass period selection)
-        var rows = sampleEmployees.map(function(emp) {
-            var cells = SNAPSHOT_METRICS.map(function(metricKey) {
-                var value = emp[metricKey];
-                var numValue = parseFloat(value);
-                var hasValue = value !== undefined && value !== null && !isNaN(numValue);
-                var registry = getRegistry();
-                var metrics = getMetrics();
-                var target = registry[metricKey]?.target;
-                var meetsTarget = false;
-                var centerAvg = sampleCenterAvgs[metricKey];
-                var aboveAvg = null;
-
-                if (hasValue && target) {
-                    meetsTarget = metrics.isMetricMeetingTarget?.(metricKey, numValue, target.value) || false;
-                }
-                var avgDelta = null;
-                if (hasValue && centerAvg !== undefined) {
-                    var isReverse = metrics.isReverseMetric?.(metricKey) || false;
-                    aboveAvg = isReverse ? (numValue <= centerAvg) : (numValue >= centerAvg);
-                    avgDelta = isReverse ? (centerAvg - numValue) : (numValue - centerAvg);
-                }
-                var displayValue = hasValue ? (metrics.formatMetricValue?.(metricKey, numValue) || String(numValue)) : 'N/A';
-
-                return { metricKey: metricKey, value: numValue, displayValue: displayValue, hasValue: hasValue, meetsTarget: meetsTarget, aboveAvg: aboveAvg, avgDelta: avgDelta };
-            });
-            return { name: emp.firstName, fullName: emp.name, cells: cells };
-        });
-
-        var snapshotData = { rows: rows, centerAvgs: sampleCenterAvgs, periodKey: 'sample', source: 'sample' };
-        renderSnapshotGraphic(snapshotData, 'Daily: Mon, Mar 17, 2026 (Sample Data)');
-
-        var toast = window.DevCoachModules?.uiUtils?.showToast;
-        if (toast) toast('Sample data loaded! Preview generated below.');
-    }
 
     // ============================================
     // EXPORTS
@@ -1326,11 +1257,9 @@
         getAvailablePeriods: getAvailablePeriods,
         // Pure, and the one place a team figure is computed. Exported for the
         // same reason, the way celebrations exports meetsCelebrationTarget.
-        computeTeamMetricValue: computeTeamMetricValue,
-        loadSampleData: loadSampleData
+        computeTeamMetricValue: computeTeamMetricValue
     };
 
     // Convenience globals
     window.initializeTeamSnapshot = initializeTeamSnapshot;
-    window.loadSnapshotSampleData = loadSampleData;
 })();
