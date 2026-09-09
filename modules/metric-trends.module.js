@@ -3487,9 +3487,16 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
             const metricValue = parseFloat(emp[metricKey]);
             if (!Number.isFinite(metricValue)) return;
 
+            // Each survey question by its own response count. Weighting all
+            // three by surveyTotal put a rep-sat figure behind the Overall
+            // Experience denominator, and made a period nobody answered
+            // rep-sat in indistinguishable from one that scored 0%.
             let weight = 1;
             if (surveyWeightedMetrics.has(metricKey)) {
-                weight = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+                const responses = typeof window.getSurveyWeight === 'function'
+                    ? window.getSurveyWeight(metricKey, emp)
+                    : surveyTotal;
+                weight = Number.isFinite(responses) && responses > 0 ? responses : 0;
             } else {
                 weight = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
             }

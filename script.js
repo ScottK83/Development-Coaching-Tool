@@ -1093,7 +1093,6 @@ function calculateCenterAveragesFromEmployees(employees) {
 
     employees.forEach(emp => {
         const tc = parseInt(emp.totalCalls, 10);
-        const st = parseInt(emp.surveyTotal, 10);
 
         // Rate metrics
         Object.entries(rateMetrics).forEach(([empKey, avgKey]) => {
@@ -1104,11 +1103,15 @@ function calculateCenterAveragesFromEmployees(employees) {
             wCounts[avgKey] += w;
         });
 
-        // Survey-weighted metrics
+        // Survey-weighted metrics, each by its own response count. Weighting
+        // all three by surveyTotal put a rep-sat figure behind the Overall
+        // Experience denominator, and made a period nobody answered rep-sat in
+        // indistinguishable from one that scored 0%.
         Object.entries(surveyWeighted).forEach(([empKey, avgKey]) => {
             const v = parseFloat(emp[empKey]);
             if (!Number.isFinite(v)) return;
-            const w = Number.isInteger(st) && st > 0 ? st : 0;
+            const responses = surveyWeightFor(empKey, emp);
+            const w = Number.isFinite(responses) && responses > 0 ? responses : 0;
             if (w > 0) { wSums[avgKey] += v * w; wCounts[avgKey] += w; }
         });
 
@@ -5560,9 +5563,28 @@ function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
 }
 
 // Weighted team averages across a set of employees within a single period.
-// Matches the aggregation rule (never average-of-averages): weight by
-// surveyTotal for survey-backed metrics, totalCalls otherwise.
-const SURVEY_WEIGHTED_METRIC_KEYS = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+// Matches the aggregation rule (never average-of-averages): weight a survey
+// metric by ITS OWN response count, everything else by call volume.
+//
+// The three survey questions are answered independently and the export carries
+// a separate count for each. Weighting all three by surveyTotal -- the Overall
+// Experience count -- put a rep-sat figure behind a denominator it does not
+// belong to, and made a period where nobody answered the rep-sat question
+// indistinguishable from one that scored 0%. Measured: an associate who
+// answered only an Overall Experience survey one week and scored 100% rep-sat
+// across 40 responses the next came out at 0%, because the whole weight sat on
+// the week with no rep-sat responses in it.
+//
+// period-compare, morning-pulse and contest already used the right
+// denominators; the map now lives in the metrics registry with the rest of the
+// metric facts, and these read it.
+const SURVEY_WEIGHTED_METRIC_KEYS = new Set(Object.keys(
+    window.SURVEY_WEIGHT_FIELD || { overallExperience: 1, cxRepOverall: 1, fcr: 1 }));
+function surveyWeightFor(metricKey, employee) {
+    if (typeof window.getSurveyWeight === 'function') return window.getSurveyWeight(metricKey, employee);
+    const n = parseInt(employee?.surveyTotal, 10);
+    return Number.isInteger(n) ? n : 0;
+}
 function buildTeamWeightedAverages(employees, metricKeys) {
     const out = {};
     (metricKeys || []).forEach(key => { out[key] = null; });
@@ -5573,13 +5595,13 @@ function buildTeamWeightedAverages(employees, metricKeys) {
     employees.forEach(emp => {
         if (!emp) return;
         const totalCalls = parseInt(emp.totalCalls, 10);
-        const surveyTotal = parseInt(emp.surveyTotal, 10);
         metricKeys.forEach(key => {
             const value = parseFloat(emp[key]);
             if (!Number.isFinite(value)) return;
             let w;
             if (SURVEY_WEIGHTED_METRIC_KEYS.has(key)) {
-                w = Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
+                const responses = surveyWeightFor(key, emp);
+                w = Number.isFinite(responses) && responses > 0 ? responses : 0;
             } else {
                 w = Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1;
             }
@@ -5701,7 +5723,7 @@ function getTrendComparisonBuckets(keys, periodType) {
 function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
     if (!employeeName || !Array.isArray(periodKeys) || periodKeys.length === 0) return null;
 
-    const surveyBackedMetrics = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+    const surveyBackedMetrics = SURVEY_WEIGHTED_METRIC_KEYS;
 
     // Counts are added up. Rates are averaged. Getting that backwards does not
     // produce a slightly-off number, it produces a meaningless one: a count
@@ -5732,7 +5754,8 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
         const st = parseInt(employee?.surveyTotal, 10);
 
         Object.keys(METRICS_REGISTRY).forEach(metricKey => {
-            if (surveyBackedMetrics.has(metricKey) && (!Number.isInteger(st) || st <= 0)) return;
+            const surveyWeight = surveyBackedMetrics.has(metricKey) ? surveyWeightFor(metricKey, employee) : null;
+            if (surveyBackedMetrics.has(metricKey) && !(surveyWeight > 0)) return;
 
             const value = parseFloat(employee[metricKey]);
             if (Number.isNaN(value)) return;
@@ -5742,7 +5765,7 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
             } else {
                 let w = 1;
                 if (surveyBackedMetrics.has(metricKey)) {
-                    w = Number.isInteger(st) && st > 0 ? st : 0;
+                    w = surveyWeight > 0 ? surveyWeight : 0;
                 } else {
                     w = Number.isInteger(tc) && tc > 0 ? tc : 1;
                 }
@@ -6423,7 +6446,7 @@ const TREND_TRACKER_METRICS = window.CORE_PERFORMANCE_METRICS || ['scheduleAdher
 function buildTeamAggregateForPeriod(periodKeys) {
     if (!Array.isArray(periodKeys) || periodKeys.length === 0) return null;
 
-    const surveyBackedMetrics = new Set(['overallExperience', 'cxRepOverall', 'fcr']);
+    const surveyBackedMetrics = SURVEY_WEIGHTED_METRIC_KEYS;
     const weightedSums = {};
     const weightedCounts = {};
     let periodsIncluded = 0;
@@ -6441,13 +6464,16 @@ function buildTeamAggregateForPeriod(periodKeys) {
             const surveyTotal = parseInt(employee?.surveyTotal, 10);
 
             TREND_TRACKER_METRICS.forEach(metricKey => {
-                if (surveyBackedMetrics.has(metricKey) && (!Number.isInteger(surveyTotal) || surveyTotal <= 0)) return;
+                const surveyWeight = surveyBackedMetrics.has(metricKey)
+                    ? surveyWeightFor(metricKey, employee)
+                    : null;
+                if (surveyBackedMetrics.has(metricKey) && !(surveyWeight > 0)) return;
 
                 const value = parseFloat(employee?.[metricKey]);
                 if (!Number.isFinite(value)) return;
 
                 const weight = surveyBackedMetrics.has(metricKey)
-                    ? surveyTotal
+                    ? surveyWeight
                     : (Number.isInteger(totalCalls) && totalCalls > 0 ? totalCalls : 1);
 
                 if (weight > 0) {

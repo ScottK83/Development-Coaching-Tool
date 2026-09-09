@@ -228,6 +228,50 @@
     // comparable quantities.
     const NOISE_BY_UNIT = { sec: 5, hrs: 0.5, '#': 1, '%': 1 };
 
+    /**
+     * Which response count a survey metric is weighted by.
+     *
+     * The three survey metrics are answered independently: a customer can answer
+     * the Overall Experience question and not the rep-sat one. The export
+     * carries a separate count for each, and weighting one metric by another's
+     * denominator is wrong twice over. The figure is weighted by a count it does
+     * not belong to; and worse, a period where nobody answered the rep-sat
+     * question cannot be told from one that scored 0%, because both arrive as 0
+     * with a positive Overall Experience weight.
+     *
+     * Measured: an associate who answered only an Overall Experience survey one
+     * week and scored 100% rep-sat across 40 responses the next came out of
+     * buildEmployeeAggregateForPeriod at 0%, because the entire weight sat on
+     * the week with no rep-sat responses in it. period-compare, which already
+     * used the right denominators, returned 100%.
+     *
+     * Falling back to surveyTotal is the old behaviour, kept for an export that
+     * did not carry the per-question columns.
+     */
+    const SURVEY_WEIGHT_FIELD = {
+        cxRepOverall: 'repSurveyTotal',
+        fcr: 'fcrSurveyTotal',
+        overallExperience: 'surveyTotal'
+    };
+
+    /**
+     * The response count to weight `metricKey` by for this row, or null when the
+     * metric is not survey-backed. Null means "not a survey metric", 0 means
+     * "a survey metric nobody answered" — the caller must not conflate them.
+     */
+    function getSurveyWeight(metricKey, employee) {
+        const field = SURVEY_WEIGHT_FIELD[metricKey];
+        if (!field) return null;
+        const own = parseInt(employee?.[field], 10);
+        if (Number.isInteger(own)) return own;
+        const fallback = parseInt(employee?.surveyTotal, 10);
+        return Number.isInteger(fallback) ? fallback : 0;
+    }
+
+    function isSurveyWeightedMetric(metricKey) {
+        return Object.prototype.hasOwnProperty.call(SURVEY_WEIGHT_FIELD, metricKey);
+    }
+
     function getMetricNoiseThreshold(metricKey) {
         if (Number.isFinite(METRIC_NOISE[metricKey])) return METRIC_NOISE[metricKey];
         const unit = METRICS_REGISTRY[metricKey]?.unit || '%';
@@ -272,6 +316,9 @@
     // Expose globally so script.js and all modules can use it directly
     window.METRICS_REGISTRY = METRICS_REGISTRY;
     window.isReverseMetric = isReverseMetric;
+    window.SURVEY_WEIGHT_FIELD = SURVEY_WEIGHT_FIELD;
+    window.getSurveyWeight = getSurveyWeight;
+    window.isSurveyWeightedMetric = isSurveyWeightedMetric;
     window.getMetricNoiseThreshold = getMetricNoiseThreshold;
     window.MIN_CALLS_TO_JUDGE = MIN_CALLS_TO_JUDGE;
     window.CORE_PERFORMANCE_METRICS = CORE_PERFORMANCE_METRICS;
@@ -280,5 +327,5 @@
     // Also register in module system
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.metricsRegistry = METRICS_REGISTRY;
-    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, getMetricNoiseThreshold, MIN_CALLS_TO_JUDGE, METRIC_NOISE, NOISE_BY_UNIT, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS };
+    window.DevCoachModules.metricsRegistryHelpers = { isReverseMetric, getMetricNoiseThreshold, MIN_CALLS_TO_JUDGE, METRIC_NOISE, NOISE_BY_UNIT, CORE_PERFORMANCE_METRICS, CORE_SURVEY_METRICS, SURVEY_WEIGHT_FIELD, getSurveyWeight, isSurveyWeightedMetric };
 })();
