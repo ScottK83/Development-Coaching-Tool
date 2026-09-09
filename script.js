@@ -5917,13 +5917,29 @@ function renderCoachingPriorityQueue() {
         // keep default open state
     }
 
-    const keys = getWeeklyKeysSorted();
+    const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
+
+    // Keys OF THE SELECTED TYPE, which is what every other panel on this screen
+    // uses and what getTrendComparisonBuckets falls back to when handed nothing.
+    //
+    // This passed getWeeklyKeysSorted(), which merges weeklyData AND ytdData and
+    // returns every period type there is -- weeks, a week-in-progress, months,
+    // quarters, year-to-date files -- sorted by end date. Handing that in
+    // bypasses the type filter entirely, because the bucket builder only
+    // consults getTrendKeysForPeriodType when its keys argument is empty. So
+    // "Week over Week" took the last two entries of that merged list.
+    //
+    // On the fixture that is a three-day week-in-progress (Jun 22-24) against a
+    // full year-to-date file (Jan 1 - Jun 21), while the trend panels directly
+    // above compared Jun 15-21 against Jun 8-14. The queue is what says who to
+    // coach, and its deltas were the difference between three days and half a
+    // year, labelled "Week over Week".
+    const keys = getTrendKeysForPeriodType(periodType);
     if (keys.length < 2) {
         container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.95em;">Upload at least 2 periods of data to generate a priority queue.</div>';
         return;
     }
 
-    const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
     const buckets = getTrendComparisonBuckets(keys, periodType);
 
     if (!buckets.currentKeys.length || !buckets.previousKeys.length) {
