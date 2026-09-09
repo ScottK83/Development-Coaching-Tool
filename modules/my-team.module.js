@@ -155,7 +155,15 @@
 
         // The rest of My Team is a quieter second group. Still one click away,
         // but visibly not the main thing you came here to do.
+        // Highlights and Celebrations belong here too. Replacing the seven-tab
+        // row left them with no way in at all: their markup, their modules and
+        // their buttons all still worked, and the only thing that reached them
+        // was a nav row that had been hidden. Celebrations carries the history
+        // and the per-metric thresholds, and the weekly pulse and the cheer
+        // lines sit inside it, so all four went with it.
         const others = [
+            { id: 'subSectionHighlights', btn: 'subNavHighlights', label: 'Highlights' },
+            { id: 'subSectionMorningPulse', btn: 'subNavMorningPulse', label: 'Celebrations' },
             { id: 'subSectionCoachingEmail', btn: 'subNavCoachingEmail', label: 'Coaching' },
             { id: 'subSectionTeamSnapshot', btn: 'subNavTeamSnapshot', label: 'Snapshot' },
             { id: 'subSectionCallListening', btn: 'subNavCallListening', label: 'Calls' },
@@ -168,6 +176,39 @@
             tabs +
             `<span style="margin-left:auto; display:flex; align-items:center; gap:2px;">${others}</span>` +
         `</div>`;
+    }
+
+    /**
+     * Open one of the quieter tabs and let it draw itself.
+     *
+     * Showing a sub-section and initialising it are two different things, and
+     * the nav row that used to do both is gone. One place owns the pairing now
+     * because two owned it before and they disagreed: the hidden row embedded
+     * the snapshot's markup before initialising it, the day hub's row did not,
+     * and the snapshot tab opened blank as a result. Reloading onto one of
+     * these tabs comes through here as well, so a refresh lands on a drawn
+     * panel rather than an empty one.
+     */
+    const TAB_INITIALISERS = {
+        subSectionHighlights: () => mods().teamHub?.initializeHighlights?.(),
+        // Also binds the inner tabs, so the weekly pulse and the cheer lines
+        // are reachable from the same click.
+        subSectionMorningPulse: () => mods().celebrations?.initializeCelebrations?.(),
+        subSectionCoachingEmail: () => window.initializeCoachingEmail?.(),
+        // The snapshot's markup ships in a standalone section and is moved into
+        // this panel on first open. embedTeamSnapshot runs the initialiser
+        // itself once the content is actually in the panel.
+        subSectionTeamSnapshot: () => window.embedTeamSnapshot?.(),
+        subSectionCallListening: () => window.initializeCallListeningSection?.(),
+        subSectionReliability: () => mods().reliability?.initialize?.()
+    };
+
+    function openTab(subSectionId, buttonId) {
+        if (typeof window.showMyTeamSubSection === 'function') {
+            window.showMyTeamSubSection(subSectionId, buttonId);
+        }
+        const init = TAB_INITIALISERS[subSectionId];
+        if (init) init();
     }
 
     // --- What's behind the message ---
@@ -343,18 +384,7 @@
         bindWindowPicker(container.querySelector('#myTeamWindowPicker'));
 
         container.querySelectorAll('.mt-other-tab').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (typeof window.showMyTeamSubSection === 'function') {
-                    window.showMyTeamSubSection(btn.dataset.section, btn.dataset.btn);
-                }
-                const init = {
-                    subSectionCoachingEmail: () => window.initializeCoachingEmail?.(),
-                    subSectionTeamSnapshot: () => mods().teamSnapshot?.initializeTeamSnapshot?.(),
-                    subSectionCallListening: () => window.initializeCallListeningSection?.(),
-                    subSectionReliability: () => mods().reliability?.initialize?.()
-                }[btn.dataset.section];
-                if (init) init();
-            });
+            btn.addEventListener('click', () => openTab(btn.dataset.section, btn.dataset.btn));
         });
 
         const messageEl = document.getElementById('myTeamDayMessage');
@@ -823,6 +853,8 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.myTeam = {
         initializeMyTeam,
+        openTab,
+        TAB_INITIALISERS,
         renderDayPage,
         renderDayTabs,
         renderToneRow,

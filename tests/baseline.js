@@ -1196,13 +1196,6 @@ function recordTextGenerators() {
         };
     });
 
-    cannotCover('monday-morning-post / the post text',
-        'mondayPost exports only initializeMondayPost, which reads three <select> '
-        + 'elements and writes into the DOM. The text assembly is not separable from '
-        + 'the render without moving code, so it is left alone. Consolidating period '
-        + 'selection (pass 5) touches this module — that pass will need a browser '
-        + 'spot-check rather than a baseline diff.');
-
     cannotCover('morning-pulse / the pulse text',
         'Same shape: no pure text builder is exported. The pulse assembles and renders '
         + 'in one pass. Its metric classification is covered indirectly through '

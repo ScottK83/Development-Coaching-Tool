@@ -110,3 +110,41 @@ suite('sub-sections: a tab nobody can click is not registered', (t) => {
         });
     });
 });
+
+suite('sub-sections: My Team offers every tab it registers', (t) => {
+    // My Team stopped having a nav row of its own: the day hub draws one in JS
+    // and the row of hidden buttons was deleted. So "does a button with this id
+    // exist in index.html" stopped being the question. The question is whether
+    // the row the hub draws offers the tab, and whether opening it draws it.
+    //
+    // Both halves matter. Highlights and Celebrations had markup, modules and
+    // buttons that all worked, and no way in at all, because the only thing
+    // that reached them was a nav row that had been hidden. And the snapshot
+    // was offered but opened blank, because the row that offered it called the
+    // initialiser without first moving the markup into the panel.
+    const myTeam = fs.readFileSync(path.join(ROOT, 'modules', 'my-team.module.js'), 'utf8');
+
+    const offered = [...myTeam.matchAll(/\{ id: '(subSection\w+)', btn: '\w+', label: '[^']+' \}/g)]
+        .map(m => m[1]);
+    t.check('the quiet row is still readable', offered.length >= 6);
+
+    const initialisers = myTeam.slice(myTeam.indexOf('TAB_INITIALISERS'));
+    offered.forEach(id => {
+        t.check(`${id} has markup`, divPosition(id) !== -1);
+        t.check(`${id} is drawn when opened`, initialisers.indexOf(`${id}:`) > -1);
+    });
+
+    // The tabs the hub itself owns are not in that row, so name them here
+    // rather than letting the list quietly shrink to nothing.
+    ['subSectionHighlights', 'subSectionMorningPulse', 'subSectionCoachingEmail',
+     'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability'].forEach(id => {
+        t.check(`${id} is offered`, offered.indexOf(id) > -1);
+    });
+
+    // One owner for open-and-draw. Two owners is what let the snapshot open
+    // blank from one row and fine from the other.
+    t.check('opening a tab goes through one function',
+        /function openTab\(subSectionId, buttonId\)/.test(myTeam));
+    t.check('and a refresh restores through it too',
+        navSrc.indexOf('myTeam.openTab(subId, btnId)') > -1);
+});

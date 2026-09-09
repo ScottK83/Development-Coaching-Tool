@@ -88,12 +88,14 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionHighlights', 'subSectionMorningPulse', 'subSectionMondayPost', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
-    var MY_TEAM_NAV_BUTTONS = ['subNavHighlights', 'subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail', 'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionHighlights', 'subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
+    // My Team renders its own tab row in JS and lights its own active tab, so
+    // there are no buttons here to style. The row of hidden buttons this used
+    // to name went with the seven-tab nav it belonged to.
+    var MY_TEAM_NAV_BUTTONS = [];
     var MY_TEAM_SUB_TO_BTN = {
         subSectionHighlights: 'subNavHighlights',
         subSectionMorningPulse: 'subNavMorningPulse',
-        subSectionMondayPost: 'subNavMondayPost',
         subSectionCoachingEmail: 'subNavCoachingEmail',
         subSectionTeamSnapshot: 'subNavTeamSnapshot',
         subSectionCallListening: 'subNavCallListening',
@@ -335,10 +337,19 @@
             // The day hub has no sub-nav button — it replaced that row, and the
             // row it replaced is hidden. Its own initializer stands in for the
             // click handler the other tabs get.
+            // My Team's tabs have no buttons to click any more, so restoring
+            // one means opening it the same way its own row does. Showing it
+            // without drawing it is how a refresh used to land on an empty
+            // panel.
             restoreSub(state.myTeamSubSectionId, MY_TEAM_SUB_TO_BTN, function(subId, btnId) {
+                var myTeam = window.DevCoachModules?.myTeam;
+                if (myTeam?.openTab && subId !== 'subSectionMyTeamDay') {
+                    myTeam.openTab(subId, btnId);
+                    return;
+                }
                 showMyTeamSubSection(subId, btnId);
-                window.DevCoachModules?.myTeam?.initializeMyTeam?.();
-            }, 'subSectionMyTeamDay', 'subNavHighlights');
+                myTeam?.initializeMyTeam?.();
+            }, 'subSectionMyTeamDay', null);
             return;
         }
 

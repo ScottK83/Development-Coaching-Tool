@@ -8,7 +8,7 @@ This file is a contract, not documentation. After a refactoring pass, an
 empty `git diff` here means the pass changed no behaviour. A non-empty diff
 is either an intended change that needs explaining line by line, or a bug.
 
-Entries: 83   Not covered: 5
+Entries: 83   Not covered: 4
 
 ------------------------------------------------------------------------------
 metric-profiles / getYearTarget, every metric, both years

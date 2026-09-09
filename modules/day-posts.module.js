@@ -272,35 +272,9 @@
         });
     }
 
-    /**
-     * The Posts tab shows one of two things depending on the Who dropdown:
-     * a whole-team post, or one person's five days.
-     */
-    async function renderPostsTab() {
-        const scope = window.DevCoachModules?.teamScope;
-        const person = scope?.getActiveMember?.() || null;
-
-        const dayContainer = document.getElementById('dayPostsContainer');
-        const teamBody = document.getElementById('teamPostBody');
-
-        if (person) {
-            if (teamBody) teamBody.style.display = 'none';
-            await renderDayPosts(dayContainer, person);
-            return;
-        }
-
-        if (dayContainer) {
-            dayContainer.innerHTML = '';
-            dayContainer.style.display = 'none';
-        }
-        if (teamBody) teamBody.style.display = 'block';
-        window.DevCoachModules?.mondayPost?.initializeMondayPost?.();
-    }
-
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.dayPosts = {
         renderDayPosts,
-        renderPostsTab,
         resolveContext,
         periodStatusByDay,
         latestWeekEnd,

@@ -1915,39 +1915,6 @@ function bindNavigationHandlers() {
         showMyTeamSubSection('subSectionMyTeamDay', 'subNavHighlights');
         window.DevCoachModules?.myTeam?.initializeMyTeam?.();
     });
-    document.getElementById('subNavHighlights')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionHighlights', 'subNavHighlights');
-        window.DevCoachModules?.teamHub?.initializeHighlights?.();
-    });
-    document.getElementById('subNavMorningPulse')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionMorningPulse', 'subNavMorningPulse');
-        // initializeCelebrations also binds the inner-tab click handlers, so
-        // running it on every subnav click (not just the My Team entry) keeps
-        // the section usable after a refresh lands directly here.
-        if (window.DevCoachModules?.celebrations?.initializeCelebrations) {
-            window.DevCoachModules.celebrations.initializeCelebrations();
-        }
-    });
-    document.getElementById('subNavMondayPost')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionMondayPost', 'subNavMondayPost');
-        // Which view this shows depends on the Who dropdown: the whole team
-        // gets a team post, one person gets their five day posts.
-        window.DevCoachModules?.dayPosts?.renderPostsTab?.();
-    });
-    document.getElementById('subNavCoachingEmail')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
-        initializeCoachingEmail();
-    });
-    document.getElementById('subNavCallListening')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionCallListening', 'subNavCallListening');
-        initializeCallListeningSection();
-    });
-    document.getElementById('subNavReliability')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionReliability', 'subNavReliability');
-        if (window.DevCoachModules?.reliability?.initialize) {
-            window.DevCoachModules.reliability.initialize();
-        }
-    });
 
     // --- Trends & Analysis ---
     document.getElementById('trendsAnalysisBtn')?.addEventListener('click', () => {
@@ -2155,10 +2122,6 @@ function bindQuickActionHandlers() {
     document.getElementById('contestBtn')?.addEventListener('click', () => {
         showOnlySection('contestSection');
         window.DevCoachModules?.contestUi?.show?.();
-    });
-    document.getElementById('subNavTeamSnapshot')?.addEventListener('click', () => {
-        showMyTeamSubSection('subSectionTeamSnapshot', 'subNavTeamSnapshot');
-        embedTeamSnapshot();
     });
 
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);

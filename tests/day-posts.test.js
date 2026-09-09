@@ -150,7 +150,6 @@ suite('day posts: rendering without markup is a no-op, not a crash', (t) => {
     let threw = null;
     return Promise.resolve()
         .then(() => posts.renderDayPosts(null, 'Alyssa Dimes'))
-        .then(() => posts.renderPostsTab())
         .catch((err) => { threw = err; })
         .then(() => {
             t.check('no DOM to draw into is handled quietly', threw === null);

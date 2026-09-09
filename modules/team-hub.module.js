@@ -145,7 +145,6 @@
             if (visible('morningPulseContainer')) modules.morningPulse?.initializeMorningPulse?.();
         }
         if (visible('subSectionMyTeamDay')) modules.myTeam?.renderDayPage?.();
-        if (visible('subSectionMondayPost')) modules.dayPosts?.renderPostsTab?.();
         if (visible('subSectionTeamSnapshot')) modules.teamSnapshot?.initializeTeamSnapshot?.();
         if (visible('subSectionHighlights')) renderHighlights();
     }

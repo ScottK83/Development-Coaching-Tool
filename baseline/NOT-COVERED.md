@@ -8,7 +8,7 @@ no application code was changed to make anything on this list reachable.
 
 ## Files that failed to load
 
-None. All 77 modules and `script.js`
+None. All 76 modules and `script.js`
 evaluate cleanly under the harness.
 
 ## Entry points not called
@@ -25,10 +25,6 @@ evaluate cleanly under the harness.
 ### celebrations
 
 - **celebrations / findNearMiss** — Signature is findNearMiss(row, name, tiers, year, ctx, data) — six arguments, four of which are internal shapes built inside renderCelebrations. Reaching it honestly would mean reconstructing that internal state, and constructing it wrongly would bake a fiction into the contract. Reached indirectly through generateAllShoutOuts instead.
-
-### monday-morning-post
-
-- **monday-morning-post / the post text** — mondayPost exports only initializeMondayPost, which reads three <select> elements and writes into the DOM. The text assembly is not separable from the render without moving code, so it is left alone. Consolidating period selection (pass 5) touches this module — that pass will need a browser spot-check rather than a baseline diff.
 
 ### morning-pulse
 
