@@ -2392,8 +2392,22 @@ function handleSubNavSentimentClick(skipShowSubSection) {
 }
 
 function detectUploadPeriodTypeByRange(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    // Anchored at local noon, the same way parseWeekKeyDate does and for the
+    // same reason. Date.parse on a bare YYYY-MM-DD is UTC midnight, so read
+    // back with the local getMonth/getDate west of Greenwich it is the previous
+    // day -- in Phoenix new Date('2026-01-01') is 31 December 2025.
+    //
+    // That made the "starts on Jan 1, so it is a year to date" branch below
+    // unreachable in the timezone this app is used in. And the fall-through is
+    // not a near miss: a genuine 171-day year-to-date range fails month (26-33),
+    // fails quarter (88-95), fails YTD_MIN_DAYS (180), and lands on the `week`
+    // default. Verified both ways with PROBE_TZ.
+    const parseLocalNoon = (value) => {
+        const text = String(value == null ? '' : value).trim();
+        return new Date(/^\d{4}-\d{2}-\d{2}$/.test(text) ? text + 'T12:00:00' : text);
+    };
+    const start = parseLocalNoon(startDate);
+    const end = parseLocalNoon(endDate);
     const daysDiff = Math.round((end - start) / (1000 * 60 * 60 * 24));
 
     // Check if it starts on Jan 1 — likely YTD
@@ -5783,7 +5797,39 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
     const cumulativeSums = {};
     let periodsIncluded = 0;
 
-    periodKeys.forEach(weekKey => {
+    // Overlapping periods are not additive.
+    //
+    // Adding is right for a run of weeks: they are disjoint, and the hours
+    // missed in each of them really do stack. It is wrong the moment two of the
+    // periods cover the same days, because the larger one already counts what
+    // the smaller one counts. getTrendComparisonBuckets's 'ytd' branch buckets
+    // year-to-date keys BY YEAR and hands the whole bucket in, so a year holding
+    // both a March and a June year-to-date file reported reliability 8 where the
+    // truth was 4 -- a 100% inflation on a metric measured against a hard
+    // 18-hour ceiling and scored at year end.
+    //
+    // A period fully inside another is dropped rather than the whole thing
+    // refused: the wider file already describes it, so the answer is simply the
+    // wider one. Weeks never contain each other, so a normal bucket is
+    // untouched.
+    const rangeOf = (key) => {
+        const record = getTrendPeriodRecord(key);
+        const parts = String(key || '').split('|');
+        const start = record?.metadata?.startDate || parts[0] || '';
+        const end = record?.metadata?.endDate || parts[1] || parts[0] || '';
+        return { key, start: String(start), end: String(end) };
+    };
+    const ranges = periodKeys.map(rangeOf);
+    const isInsideAnother = (r) => ranges.some(other =>
+        other.key !== r.key
+        && other.start && other.end && r.start && r.end
+        && other.start <= r.start && other.end >= r.end
+        // A tie on both edges is the same window twice; keep the first of them
+        // rather than dropping both.
+        && !(other.start === r.start && other.end === r.end && ranges.indexOf(other) > ranges.indexOf(r)));
+    const usableKeys = ranges.filter(r => !isInsideAnother(r)).map(r => r.key);
+
+    usableKeys.forEach(weekKey => {
         const week = getTrendPeriodRecord(weekKey);
         const employee = week?.employees?.find(emp => emp.name === employeeName);
         if (!employee) return;
@@ -5821,7 +5867,9 @@ function buildEmployeeAggregateForPeriod(employeeName, periodKeys) {
     const aggregate = {
         name: employeeName,
         periodsIncluded,
-        periodKeys: [...periodKeys]
+        // What was actually aggregated, which is what a caller reasoning about
+        // the number needs. periodKeys is what it was asked for.
+        periodKeys: [...usableKeys]
     };
 
     Object.keys(weightedSums).forEach(metricKey => {
