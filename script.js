@@ -30,7 +30,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.09.09.7'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.09.11.1'; // Version: YYYY.MM.DD.NN
 // A top-level const is not a window property, and every reader of the version
 // asks window for it: the diagnostics summary, the crash reports, the sync
 // metadata. All three had been recording 'unknown' since the version moved to a
