@@ -704,7 +704,15 @@
                 nameFs: GFX_T.body, totalGap: 12, totalW: 44, totalFs: GFX_T.body,
                 barH: 16, minSeg: 3, breakdown: false };
         } else {
-            cfg = { columns: 1, rowH: 38, rankW: 26, rankGap: 10, nameW: 220, nameGap: 12,
+            // The only tier that prints the breakdown line, so it is the only
+            // one sized for it rather than for the name. A name needs about
+            // 200px; the sentence under it runs past 300 once somebody has a
+            // survey, a run of days, a bonus and an adherence average covering
+            // more days than it paid for. Sizing this column for the name is
+            // what was clipping that line mid-word. The rail gives up 100px
+            // and keeps 420, still four times the width where two different
+            // ticket counts start painting the same mark.
+            cfg = { columns: 1, rowH: 38, rankW: 26, rankGap: 10, nameW: 320, nameGap: 12,
                 nameFs: GFX_T.body, totalGap: 12, totalW: 44, totalFs: GFX_T.total,
                 barH: 20, minSeg: 4, breakdown: true };
         }
@@ -771,35 +779,78 @@
         return painted;
     }
 
-    /** Which lever paid, in the legend's own colours, as a readable line. */
-    function gfxBreakdown(row) {
+    /**
+     * Which lever paid, in the legend's own colours, as a readable line.
+     *
+     * `detail` trims the line from the tail inward, because the tail is the
+     * only part of it that is not a count somebody earned. The column is sized
+     * for the whole sentence, so a normal board never trims; a month where one
+     * person has run every lever at once can still outgrow it, and a shorter
+     * true line beats one cut off mid-word.
+     *
+     *   0  1 survey · 6 days · 1 bonus · 94.1% adherence over 7 days
+     *   1  1 survey · 6 days · 1 bonus · 94.1% adherence
+     *   2  1 survey · 6 days · 1 bonus · 94.1%
+     */
+    function gfxBreakdownParts(row, detail) {
         var bits = [];
         if (row.surveys) {
-            bits.push('<span style="color: ' + GFX.survey + ';">' + row.surveys + ' '
-                + gfxPlural(row.surveys, 'survey', 'surveys') + '</span>');
+            bits.push({ color: GFX.survey,
+                text: row.surveys + ' ' + gfxPlural(row.surveys, 'survey', 'surveys') });
         }
         if (row.days) {
-            bits.push('<span style="color: ' + GFX.day + ';">' + row.days + ' '
-                + gfxPlural(row.days, 'day', 'days') + '</span>');
+            bits.push({ color: GFX.day,
+                text: row.days + ' ' + gfxPlural(row.days, 'day', 'days') });
         }
         if (row.bonus) {
-            bits.push('<span style="color: ' + GFX.bonus + ';">' + row.bonus + ' bonus</span>');
+            bits.push({ color: GFX.bonus, text: row.bonus + ' bonus' });
         }
         // Where the month actually stands, next to what it has banked. The
         // target colour is the honest one: a run that is not going to pay
         // should not be wearing the colour of one that is.
         if (row.adherence) {
-            var pct = row.adherence.average.toFixed(1) + '% adherence'
-                + (row.days === row.adherence.days ? '' : ' over ' + row.adherence.days + ' '
-                    + gfxPlural(row.adherence.days, 'day', 'days'));
-            bits.push('<span style="color: ' + (row.adherence.meets ? GFX.day : GFX.inkFaint) + ';">'
-                + pct + '</span>');
+            var pct = row.adherence.average.toFixed(1) + '%';
+            if (detail < 2) pct += ' adherence';
+            if (detail < 1 && row.days !== row.adherence.days) {
+                pct += ' over ' + row.adherence.days + ' '
+                    + gfxPlural(row.adherence.days, 'day', 'days');
+            }
+            bits.push({ color: row.adherence.meets ? GFX.day : GFX.inkFaint, text: pct });
         }
+        return bits;
+    }
 
+    function gfxBreakdown(row, detail) {
+        var bits = gfxBreakdownParts(row, detail);
         if (!bits.length) {
             return '<span style="color: ' + GFX.inkFaint + ';">No tickets yet.</span>';
         }
-        return bits.join('<span style="color: ' + GFX.inkFaint + ';"> · </span>');
+        return bits.map(function (bit) {
+            return '<span style="color: ' + bit.color + ';">' + bit.text + '</span>';
+        }).join('<span style="color: ' + GFX.inkFaint + ';"> · </span>');
+    }
+
+    /**
+     * The most complete breakdown every row on this board can print whole.
+     *
+     * One level for the whole card rather than one per row, so the lines under
+     * the names read as a column instead of a ragged mix of two phrasings. The
+     * width estimator over-reads real text, so a line that measures as fitting
+     * always fits. The last level prints whether it fits or not: by then there
+     * is nothing left to cut that somebody did not earn.
+     */
+    function gfxBreakdownDetail(rows, widthPx) {
+        for (var detail = 0; detail < 2; detail += 1) {
+            var fits = true;
+            for (var i = 0; i < rows.length; i += 1) {
+                var line = gfxBreakdownParts(rows[i], detail).map(function (bit) {
+                    return bit.text;
+                }).join(' · ');
+                if (gfxTextWidth(line, GFX_T.micro) > widthPx) { fits = false; break; }
+            }
+            if (fits) return detail;
+        }
+        return 2;
     }
 
     function gfxRow(row, cfg, axisMax, isLast, isSoleLeader) {
@@ -829,7 +880,8 @@
             + gfxEsc(name.text) + '</div>';
         if (cfg.breakdown) {
             nameBlock += '<div style="' + gfxType(GFX_T.micro) + ' font-weight: 700; '
-                + 'white-space: nowrap; overflow: hidden;">' + gfxBreakdown(row) + '</div>';
+                + 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">'
+                + gfxBreakdown(row, cfg.detail) + '</div>';
         }
 
         // The accent eats its own width out of the row padding, so no name
@@ -1108,6 +1160,7 @@
         });
 
         var cfg = gfxTier(rows.length);
+        cfg.detail = cfg.breakdown ? gfxBreakdownDetail(rows, cfg.nameW) : 0;
         var axisMax = gfxAxisMax(rows[0].total);
         var leaderTotal = rows[0].total;
         var tiedAtTop = 0;

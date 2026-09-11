@@ -457,6 +457,56 @@ suite('contest: the graphic holds its shape at every team size', (t) => {
     t.check('a team-sized board does not', build(12).indexOf('margin-right: 24px') === -1);
 });
 
+suite('contest: the line under the name prints whole or not at all', (t) => {
+    const contest = load(t);
+
+    // It used to sit in a column sized for the name, so the sentence under it
+    // was cut mid-word: a real card read "1 survey, 6 days, 1 bonus, 94.1%
+    // adherence o" and stopped. The column is sized for the sentence now.
+    const full = graphicFor(contest, [row('Christi Martinez-Sharp', 8, {
+        perfectSurvey: 1, dailyAdherence: 6, weeklyAdherence: 1
+    })], {
+        adherence: { 'Christi Martinez-Sharp': { average: 94.1, days: 7, meets: true } }
+    });
+
+    t.check('the levers are named', /1 survey/.test(full) && /6 days/.test(full) && /1 bonus/.test(full));
+    t.check('and the whole adherence phrase fits beside them',
+        full.indexOf('94.1% adherence over 7 days') > -1);
+
+    // A month where one person ran every lever at once can still outgrow the
+    // column. That trims from the tail, which is the only part of the line
+    // that is not a count somebody earned, rather than clipping a glyph.
+    const huge = graphicFor(contest, [row('Ann Zeta', 35, {
+        perfectSurvey: 12, dailyAdherence: 21, weeklyAdherence: 2
+    })], {
+        adherence: { 'Ann Zeta': { average: 100, days: 22, meets: true } }
+    });
+
+    t.check('the counts survive the trim',
+        /12 surveys/.test(huge) && /21 days/.test(huge) && /2 bonus/.test(huge));
+    t.check('the average survives it too', huge.indexOf('100.0% adherence') > -1);
+    t.check('the tail is what goes', huge.indexOf('over 22 days') === -1);
+
+    // One level for the whole card, so the lines read as a column instead of a
+    // ragged mix of two phrasings. The row that does not fit takes the tail
+    // off the row beside it that would have.
+    const mixed = graphicFor(contest, [
+        row('Ann Zeta', 35, { perfectSurvey: 12, dailyAdherence: 21, weeklyAdherence: 2 }),
+        row('Bob Young', 3, { perfectSurvey: 1, dailyAdherence: 2 })
+    ], {
+        adherence: {
+            'Ann Zeta': { average: 100, days: 22, meets: true },
+            'Bob Young': { average: 90.8, days: 7, meets: false }
+        }
+    });
+
+    t.check('every row on the card trims together', mixed.indexOf('over 7 days') === -1);
+    t.check('and still says where the month stands', mixed.indexOf('90.8% adherence') > -1);
+
+    // Whatever is left over ends in an ellipsis rather than half a letter.
+    t.check('the last resort reads as a trim', /text-overflow: ellipsis/.test(full));
+});
+
 suite('contest: the card reads correctly in the panel, not just in the export', (t) => {
     const contest = load(t);
     const html = graphicFor(contest, [row('Ann Zeta', 6), row('Bob Young', 2)]);
