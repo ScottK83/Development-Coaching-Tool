@@ -10,9 +10,9 @@ const { suite } = require('./harness');
  * from. detectCelebrations built one near miss for the people it celebrated and
  * another for the people it did not, and only the second one was handed the
  * rankings the pace needs, so somebody who won on FCR and sat two spots outside
- * the top 10 in Schedule Adherence got "you are #12, 2 spots away" with nothing
+ * the bar in Schedule Adherence got "you are #17, 2 spots away" with nothing
  * after it, while the exact same near miss pulled through nearMissFor came back
- * with "Top 10 sits at 94.6%. One week at 95.6% gets you there." Same person,
+ * with "Top 15 sits at 94.6%. One week at 95.6% gets you there." Same person,
  * same week, two messages.
  *
  * So these suites check the message, not the plumbing, and they check the two
@@ -22,11 +22,14 @@ const { suite } = require('./harness');
  */
 
 // The center as a field, not as one row. The door is the value standing at
-// position 10, so there have to be ten real adherence figures above the subject
-// or thresholdValueForRank has nothing to name.
-const ADHERENCE_ABOVE = [99.0, 98.5, 98.0, 97.5, 97.0, 96.5, 96.0, 95.5, 95.0, 94.6, 94.3];
-const DOOR_ADHERENCE = 94.6;   // 10th best, the top-10 door
-const ERICA_ADHERENCE = 94.1;  // 12th, two spots outside, and past the 93% target
+// position 15, so there have to be fifteen real adherence figures above the
+// subject or thresholdValueForRank has nothing to name.
+const ADHERENCE_ABOVE = [
+    99.0, 98.7, 98.4, 98.1, 97.8, 97.5, 97.2, 96.9,
+    96.6, 96.3, 96.0, 95.7, 95.4, 95.1, 94.6, 94.3
+];
+const DOOR_ADHERENCE = 94.6;   // 15th best, the top-15 door
+const ERICA_ADHERENCE = 94.1;  // 17th, two spots outside, and past the 93% target
 
 function centerField() {
     const rows = [];
@@ -47,8 +50,8 @@ function centerField() {
 
     rows.push({
         name: 'Erica Mora',
-        rank: 12,
-        metricRanks: { adherence: 12, fcr: 3 },
+        rank: 17,
+        metricRanks: { adherence: 17, fcr: 3 },
         values: { adherence: ERICA_ADHERENCE },
         extraValues: { fcr: 96.9 },
         totalCalls: 250,
@@ -58,8 +61,8 @@ function centerField() {
     [93.5, 93.0].forEach((value, i) => {
         rows.push({
             name: 'Behind ' + i,
-            rank: 13 + i,
-            metricRanks: { adherence: 13 + i, fcr: 13 + i },
+            rank: 18 + i,
+            metricRanks: { adherence: 18 + i, fcr: 18 + i },
             values: { adherence: value },
             extraValues: { fcr: Number((90 - i * 0.5).toFixed(1)) },
             totalCalls: 280,
@@ -101,7 +104,7 @@ function load(t, teamMembers) {
     return t.loadModule('modules/celebrations.module.js').celebrations;
 }
 
-const DOOR_SENTENCE = 'Top 10 sits at 94.6%. One week at 95.6% gets you there, and holding it keeps you there.';
+const DOOR_SENTENCE = 'Top 15 sits at 94.6%. One week at 95.6% gets you there, and holding it keeps you there.';
 
 suite('celebrations: a winner with a near miss still gets told where the door is', (t) => {
     const celebrations = load(t);
@@ -116,7 +119,7 @@ suite('celebrations: a winner with a near miss still gets told where the door is
     t.equal('two spots outside the bar', erica.nearMiss.away, 2);
 
     // The whole point of the sixth argument. Without the rankings the near miss
-    // still exists, still says #12, and quietly has no pace hanging off it.
+    // still exists, still says #17, and quietly has no pace hanging off it.
     // Read through a placeholder so a missing pace fails these four and still
     // lets the message assertions below run: the message is the symptom anybody
     // would report, and a suite that dies before reaching it hides that.
@@ -127,7 +130,7 @@ suite('celebrations: a winner with a near miss still gets told where the door is
     t.equal('at a number a week is measured in', pace.periodNoun, 'week');
 
     const dm = celebrations.generateDirectMessage(erica, result.dateRange);
-    t.check('the direct message names the placing', dm.indexOf('#12') > -1);
+    t.check('the direct message names the placing', dm.indexOf('#17') > -1);
     t.check('and finishes the thought with the door', dm.indexOf(DOOR_SENTENCE) > -1);
 });
 
@@ -162,12 +165,12 @@ suite('celebrations: a near miss on the miss list carries the door too', (t) => 
     // Erica off the roster and a teammate on it who won nothing, so the same
     // period exercises the branch that builds the miss list. Both branches now
     // go through one bound helper, and this holds them there.
-    const celebrations = load(t, ['Ahead 10']);
+    const celebrations = load(t, ['Ahead 15']);
     const result = celebrations.detectCelebrations(PERIOD);
-    const missed = result.missed.find(m => m.name === 'Ahead 10');
+    const missed = result.missed.find(m => m.name === 'Ahead 15');
 
     t.check('the teammate is on the miss list', Boolean(missed));
-    t.equal('eleventh in adherence, one off the bar', missed.nearMiss.away, 1);
+    t.equal('sixteenth in adherence, one off the bar', missed.nearMiss.away, 1);
     t.check('and the door came with it', Boolean(missed.nearMiss.pace));
     t.equal('naming the same doorway', missed.nearMiss.pace.doorValue, DOOR_ADHERENCE);
 });
@@ -178,10 +181,10 @@ suite('celebrations: no rankings means no pace, not a made-up one', (t) => {
     const celebrations = load(t);
     const rows = centerField();
     const erica = rows.find(r => r.name === 'Erica Mora');
-    const bare = celebrations.findNearMiss(erica, 'Erica Mora', [1, 5, 10], 2026, {});
+    const bare = celebrations.findNearMiss(erica, 'Erica Mora', [1, 5, 10, 15], 2026, {});
 
     t.check('the placing survives without rankings', Boolean(bare));
-    t.equal('and it is the same placing', bare.rank, 12);
+    t.equal('and it is the same placing', bare.rank, 17);
     t.equal('but there is no pace to hang off it', bare.pace, null);
     t.equal('so the sentence stops where it stopped before', celebrations.nearMissDoorClause(bare), '');
 });

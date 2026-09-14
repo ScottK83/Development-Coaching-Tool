@@ -19,7 +19,9 @@ suite('placement highlighting', (t) => {
     t.equal('fifth is the last top five', celebrations.placementTier(5), 'top5');
     t.equal('sixth is a top ten', celebrations.placementTier(6), 'top10');
     t.equal('tenth is the last top ten', celebrations.placementTier(10), 'top10');
-    t.equal('eleventh is a top twenty five', celebrations.placementTier(11), 'top25');
+    t.equal('eleventh is a top fifteen', celebrations.placementTier(11), 'top15');
+    t.equal('fifteenth is the last top fifteen', celebrations.placementTier(15), 'top15');
+    t.equal('sixteenth is a top twenty five', celebrations.placementTier(16), 'top25');
     t.equal('twenty fifth is the last band', celebrations.placementTier(25), 'top25');
     t.equal('twenty sixth gets no colour', celebrations.placementTier(26), null);
     t.equal('a missing rank gets no colour', celebrations.placementTier(null), null);
@@ -36,6 +38,10 @@ suite('placement highlighting', (t) => {
         t.equal('rank ' + r + ' says Top 10 and colours as top10',
             celebrations.tierBadge({ rank: r }) + '|' + celebrations.placementTier(r), 'Top 10!|top10');
     });
+    [11, 15].forEach(function (r) {
+        t.equal('rank ' + r + ' says Top 15 and colours as top15',
+            celebrations.tierBadge({ rank: r }) + '|' + celebrations.placementTier(r), 'Top 15!|top15');
+    });
     t.equal('rank 1 needs no badge and colours as first',
         celebrations.tierBadge({ rank: 1 }) + '|' + celebrations.placementTier(1), '|first');
 
@@ -51,7 +57,10 @@ suite('placement highlighting', (t) => {
     t.check('the "Tied for" is inside the highlight', tied.indexOf('>Tied for 4th best in the Call Center<') !== -1);
 
     const deep = celebrations.highlightPlacements('12th best in the Call Center.');
-    t.check('twelfth is a top twenty five', deep.indexOf('placement-tier-top25') !== -1);
+    t.check('twelfth is a top fifteen', deep.indexOf('placement-tier-top15') !== -1);
+
+    const deeper = celebrations.highlightPlacements('20th best in the Call Center.');
+    t.check('twentieth is a top twenty five', deeper.indexOf('placement-tier-top25') !== -1);
 
     const past = celebrations.highlightPlacements('40th best in the Call Center.');
     t.check('past twenty five nothing is wrapped', past.indexOf('placement-tier') === -1);

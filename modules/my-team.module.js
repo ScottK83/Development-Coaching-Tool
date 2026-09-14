@@ -811,6 +811,7 @@
                 `<span class="placement-tier placement-tier-first">#1</span>` +
                 `<span class="placement-tier placement-tier-top5">Top 5</span>` +
                 `<span class="placement-tier placement-tier-top10">Top 10</span>` +
+                `<span class="placement-tier placement-tier-top15">Top 15</span>` +
                 `<span class="placement-tier placement-tier-top25">Top 25</span>` +
                 `<span style="margin-left:auto;">Colour is on screen only. The copied post is plain text.</span>` +
             `</div>` +

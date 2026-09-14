@@ -2046,14 +2046,16 @@ turning "background: #f0f9ff" into
 .placement-tier-first  { background: #fff3c4; color: #6d4c00; box-shadow: inset 0 0 0 1px #d4a92a; }
 .placement-tier-top5   { background: #d7f5dd; color: #14532d; box-shadow: inset 0 0 0 1px #4caf50; }
 .placement-tier-top10  { background: #d6ebfd; color: #0d3f6e; box-shadow: inset 0 0 0 1px #2196f3; }
+.placement-tier-top15  { background: #d3f1ec; color: #0b4f47; box-shadow: inset 0 0 0 1px #14a394; }
 .placement-tier-top25  { background: #e9ddfb; color: #4a1d8f; box-shadow: inset 0 0 0 1px #9c5fd6; }
 
-/* Light tints go muddy on a dark ground, so dark mode keeps the four hues but
+/* Light tints go muddy on a dark ground, so dark mode keeps the same hues but
    carries them on the text over a low-alpha wash. The border does the work of
    separating the badge from the paragraph. */
 [data-theme="dark"] .placement-tier-first  { background: rgba(255, 205, 60, 0.18); color: #ffd970; box-shadow: inset 0 0 0 1px rgba(255, 205, 60, 0.55); }
 [data-theme="dark"] .placement-tier-top5   { background: rgba(76, 220, 120, 0.18); color: #8ff0ab; box-shadow: inset 0 0 0 1px rgba(76, 220, 120, 0.5); }
 [data-theme="dark"] .placement-tier-top10  { background: rgba(70, 165, 255, 0.18); color: #8ecbff; box-shadow: inset 0 0 0 1px rgba(70, 165, 255, 0.5); }
+[data-theme="dark"] .placement-tier-top15  { background: rgba(45, 212, 191, 0.18); color: #7fe3d5; box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.5); }
 [data-theme="dark"] .placement-tier-top25  { background: rgba(178, 130, 245, 0.20); color: #d3b4fb; box-shadow: inset 0 0 0 1px rgba(178, 130, 245, 0.55); }
 
 .shoutout-preview {

@@ -18,7 +18,11 @@
     var THRESHOLD_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsThreshold';
     var HISTORY_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsHistory';
     var SELECTION_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsSelection';
-    var DEFAULT_TIERS = [1, 5, 10];
+    // The bands a placing can land in, and with it the bar for being in a
+    // shout-out at all: the last one is the door. Fifteen rather than ten
+    // because the center is 127 people deep, and 14th of 127 is a real week
+    // that the top-ten bar threw away.
+    var DEFAULT_TIERS = [1, 5, 10, 15];
 
     // Largest share of a scored field that can share a placing and still have it
     // count as a win. Above this the "achievement" is just where the metric tops
@@ -808,7 +812,7 @@
     }
 
     // How far past the bar still counts as knocking on the door. Against the
-    // standard top-10 bar this is ranks 11 through 15.
+    // standard top-15 bar this is ranks 16 through 20.
     var NEAR_MISS_WINDOW = 5;
 
     // The longest pace worth naming. Ten periods is most of a quarter of weeks,
@@ -921,7 +925,7 @@
      * weeks produces an assumed value nobody can place: "eleven weeks" is tidy,
      * but "97.3%" is a figure with no meaning attached to it, and the first
      * question back is always "why that?". The door plus the smallest move that
-     * counts as a real move answers that question in the sentence itself. Top 10
+     * counts as a real move answers that question in the sentence itself. The door
      * sits at 94.6, a point is what it takes for adherence to have moved at all
      * rather than wobbled, so 95.6 is the number that puts you plainly past the
      * door instead of oscillating around it.
@@ -974,7 +978,7 @@
      *
      * The blend it feeds is over the associate's running figure, not over next
      * week's table. That is the honest reading and it is the one the door makes
-     * possible: the value standing at top 10 barely moves across the year even as
+     * possible: the value standing at the door barely moves across the year even as
      * the names on it shuffle every week, so "get your number to 95.6% and you
      * are through" survives where "you will be 9th" does not. The count answers
      * how long at that pace before their number is a door-clearing number.
@@ -1039,7 +1043,7 @@
      * The best placing that just missed the bar, if there is one.
      *
      * Only ever a number they are actually passing. Telling somebody they are
-     * three off the top ten on a metric they are behind on rewards the rank and
+     * three off the bar on a metric they are behind on rewards the rank and
      * ignores the number, which is the same mistake the shout-out target gate
      * exists to prevent: it would have Kristin, sixth on the floor at 73.1%
      * against an 83% bar, reading that she is nearly there.
@@ -1180,7 +1184,7 @@
      *
      * "No celebrations" had three completely different causes and one blank
      * screen, which reads as "they did nothing" when the truth is usually
-     * "they were #14 and the bar is top 10". Each of these is worth saying
+     * "they were #19 and the bar is top 15". Each of these is worth saying
      * out loud, because they call for different responses.
      */
     function _rowFor(data, name) {
@@ -1375,7 +1379,7 @@
 
     /**
      * Build per-person aggregate stats from history for the year.
-     * Returns { name -> { totalAppearances, numberOneCount, top5Count, top10Count, metricBreakdown: { key -> count } } }
+     * Returns { name -> { totalAppearances, numberOneCount, top5Count, top10Count, top15Count, metricBreakdown: { key -> count } } }
      */
     function buildYearStats() {
         var history = loadHistory();
@@ -1395,6 +1399,7 @@
                         numberOneCount: 0,
                         top5Count: 0,
                         top10Count: 0,
+                        top15Count: 0,
                         metricBreakdown: {},
                         periods: []
                     };
@@ -1407,6 +1412,7 @@
                     if (a.soloRank1) s.numberOneCount++;
                     if (a.rank <= 5) s.top5Count++;
                     if (a.rank <= 10) s.top10Count++;
+                    if (a.rank <= 15) s.top15Count++;
                     if (!s.metricBreakdown[a.key]) s.metricBreakdown[a.key] = 0;
                     s.metricBreakdown[a.key]++;
                 });
@@ -1762,17 +1768,21 @@
     /**
      * The tier badge that goes with a placing.
      *
-     * Everything that reaches a shout-out is inside the top ten already, so the
-     * badge exists to say which half of it. #1 gets nothing — the placing has
+     * Everything that reaches a shout-out is inside the bar already, so the
+     * badge exists to say which band of it. #1 gets nothing — the placing has
      * said it more strongly than a tier ever could, and "Top 5!" under "#1 in
      * the Call Center" reads as a downgrade.
+     *
+     * Read off the active tiers rather than written out here, so the bands the
+     * badge names are the same ones the gate let through. Hardcoding them left
+     * a raised bar printing placings with no badge under them.
      */
     function tierBadge(achievement) {
         var rank = achievement && achievement.rank;
         if (!rank || !isFinite(rank) || rank === 1) return '';
-        if (rank <= 5) return 'Top 5!';
-        if (rank <= 10) return 'Top 10!';
-        return '';
+        var tiers = getActiveTiers();
+        if (rank > tiers[tiers.length - 1]) return '';
+        return getTierForRank(rank, tiers).label + '!';
     }
 
     // A flawless set of surveys, and how many were behind it.
@@ -2059,6 +2069,7 @@
         if (n === 1) return 'first';
         if (n <= 5) return 'top5';
         if (n <= 10) return 'top10';
+        if (n <= 15) return 'top15';
         if (n <= 25) return 'top25';
         return null;
     }
@@ -2068,6 +2079,7 @@
         if (band === 'first') return { bg: '#ffd700', color: '#7c5c00', text: '#1', glow: '0 0 8px rgba(255,215,0,0.6)' };
         if (band === 'top5') return { bg: '#c0c0c0', color: '#444', text: 'Top 5', glow: '0 0 6px rgba(192,192,192,0.5)' };
         if (band === 'top10') return { bg: '#cd7f32', color: '#fff', text: 'Top 10', glow: '0 0 6px rgba(205,127,50,0.4)' };
+        if (band === 'top15') return { bg: '#0f766e', color: '#fff', text: 'Top 15', glow: '0 0 6px rgba(15,118,110,0.4)' };
         return { bg: '#667eea', color: '#fff', text: 'Top ' + tier, glow: 'none' };
     }
 

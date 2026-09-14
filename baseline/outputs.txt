@@ -12520,7 +12520,9 @@ celebrations / placement highlighting (display only)
     "5 -> top5",
     "6 -> top10",
     "10 -> top10",
-    "11 -> top25",
+    "11 -> top15",
+    "15 -> top15",
+    "16 -> top25",
     "25 -> top25",
     "26 -> null",
     "null -> null"

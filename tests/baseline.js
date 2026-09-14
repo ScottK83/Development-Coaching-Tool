@@ -1118,7 +1118,7 @@ function recordTextGenerators() {
         });
         const highlighted = c.highlightPlacements(post);
         return {
-            tiers: [1, 2, 5, 6, 10, 11, 25, 26, null].map((r) => String(r) + ' -> ' + String(c.placementTier(r))),
+            tiers: [1, 2, 5, 6, 10, 11, 15, 16, 25, 26, null].map((r) => String(r) + ' -> ' + String(c.placementTier(r))),
             // The post itself must be untouched by any of this.
             postIsUnchangedByHighlighting: highlighted.replace(/<\/?span[^>]*>/g, '')
                 === post.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

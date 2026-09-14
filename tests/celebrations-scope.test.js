@@ -502,14 +502,16 @@ suite('celebrations: the post says where in the building they landed', (t) => {
         celebrations.centerPlacement({ rank: 11, tiedCount: 1 }), '11th best in the Call Center');
     t.equal('no rank names no place', celebrations.centerPlacement({}), '');
 
-    // Everything that reaches a shout-out is inside the top ten, so the badge
-    // says which half of it — and never undersells the person on top.
+    // Everything that reaches a shout-out is inside the bar, so the badge says
+    // which band of it — and never undersells the person on top.
     t.equal('first place needs no consolation badge', celebrations.tierBadge({ rank: 1 }), '');
     t.equal('fourth is a top five', celebrations.tierBadge({ rank: 4 }), 'Top 5!');
     t.equal('fifth still is', celebrations.tierBadge({ rank: 5 }), 'Top 5!');
     t.equal('sixth is a top ten', celebrations.tierBadge({ rank: 6 }), 'Top 10!');
-    t.equal('and tenth is the last one that counts', celebrations.tierBadge({ rank: 10 }), 'Top 10!');
-    t.equal('past that there is no badge to give', celebrations.tierBadge({ rank: 11 }), '');
+    t.equal('and tenth is the last top ten', celebrations.tierBadge({ rank: 10 }), 'Top 10!');
+    t.equal('eleventh is a top fifteen', celebrations.tierBadge({ rank: 11 }), 'Top 15!');
+    t.equal('and fifteenth is the last one that counts', celebrations.tierBadge({ rank: 15 }), 'Top 15!');
+    t.equal('past that there is no badge to give', celebrations.tierBadge({ rank: 16 }), '');
 });
 
 suite('celebrations: the post is spaced evenly and the names are mentionable', (t) => {
@@ -981,11 +983,11 @@ suite('celebrations: the pools no longer claim a week', (t) => {
 });
 
 /**
- * "X away from top 10."
+ * "X away from top 15."
  *
  * A placing just outside the bar is worth telling somebody about, but only in
  * private and only on a number they are actually passing. Telling a person they
- * are three off the top ten on a metric they are behind on rewards the rank and
+ * are three off the bar on a metric they are behind on rewards the rank and
  * ignores the number, which is the mistake the shout-out target gate exists to
  * stop.
  */
@@ -1029,15 +1031,15 @@ function loadNearMiss(t, value, rank) {
     return t.loadModule('modules/celebrations.module.js').celebrations;
 }
 
-suite('celebrations: knocking on the door of the top 10', (t) => {
-    const celebrations = loadNearMiss(t, 93.4, 12);
+suite('celebrations: knocking on the door of the top 15', (t) => {
+    const celebrations = loadNearMiss(t, 93.4, 17);
     const miss = celebrations.nearMissFor('Erica Mora', '2026-08-17|2026-08-21');
 
     t.check('a placing just outside the bar is found', Boolean(miss));
     t.equal('named by metric', miss.label, 'Negative Word Usage');
-    t.equal('with the placing', miss.rank, 12);
+    t.equal('with the placing', miss.rank, 17);
     t.equal('and how far off the bar it is', miss.away, 2);
-    t.equal('against the bar itself', miss.bar, 10);
+    t.equal('against the bar itself', miss.bar, 15);
 
     // Said more than one way, and every way carries the same four facts. A
     // variant that dropped the rank is exactly the sort of thing a pool grows
@@ -1049,37 +1051,65 @@ suite('celebrations: knocking on the door of the top 10', (t) => {
     t.check('every one names the metric',
         Array.from(lines).every(l => l.indexOf('Negative Word Usage') > -1));
     t.check('every one says the placing',
-        Array.from(lines).every(l => l.indexOf('#12') > -1));
+        Array.from(lines).every(l => l.indexOf('#17') > -1));
     t.check('every one says how far off the bar',
         Array.from(lines).every(l => l.indexOf('2 spots') > -1));
     t.check('and every one names the bar',
-        Array.from(lines).every(l => l.indexOf('top 10') > -1));
+        Array.from(lines).every(l => l.indexOf('top 15') > -1));
 });
 
 suite('celebrations: a near miss on a failing number is not a near miss', (t) => {
-    // #12 on the floor, but 73.1% is under the 83% bar for the metric itself.
-    const celebrations = loadNearMiss(t, 73.1, 12);
+    // #17 on the floor, but 73.1% is under the 83% bar for the metric itself.
+    const celebrations = loadNearMiss(t, 73.1, 17);
     t.check('the target still gates it',
         celebrations.nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
 });
 
 suite('celebrations: the door only stretches so far', (t) => {
     t.check('inside the bar is a shout-out, not a near miss',
-        loadNearMiss(t, 93.4, 8).nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
-    t.check('and #16 is past knocking distance',
-        loadNearMiss(t, 93.4, 16).nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
+        loadNearMiss(t, 93.4, 13).nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
+    t.check('and #21 is past knocking distance',
+        loadNearMiss(t, 93.4, 21).nearMissFor('Erica Mora', '2026-08-17|2026-08-21') === null);
 
     // The edges of the window, spelled out.
-    t.equal('#11 is one away', loadNearMiss(t, 93.4, 11).nearMissFor('Erica Mora', '2026-08-17|2026-08-21').away, 1);
-    t.equal('and #15 is five', loadNearMiss(t, 93.4, 15).nearMissFor('Erica Mora', '2026-08-17|2026-08-21').away, 5);
+    t.equal('#16 is one away', loadNearMiss(t, 93.4, 16).nearMissFor('Erica Mora', '2026-08-17|2026-08-21').away, 1);
+    t.equal('and #20 is five', loadNearMiss(t, 93.4, 20).nearMissFor('Erica Mora', '2026-08-17|2026-08-21').away, 5);
 
-    const one = loadNearMiss(t, 93.4, 11);
+    const one = loadNearMiss(t, 93.4, 16);
     t.check('one spot reads as a spot, not spots',
         one.describeNearMiss(one.nearMissFor('Erica Mora', '2026-08-17|2026-08-21')).indexOf('1 spot ') > -1);
 });
 
-suite('celebrations: the near miss rides along with the result', (t) => {
+/**
+ * The bar is fifteen, not ten.
+ *
+ * A center 127 deep makes 12th a real week, and under the old bar that week
+ * came back as a blank Celebrations tab. So the ranks that used to be near
+ * misses are shout-outs now, and the badge has to say which band they landed
+ * in rather than printing a placing with nothing under it.
+ */
+suite('celebrations: the bar reaches fifteen', (t) => {
     const celebrations = loadNearMiss(t, 93.4, 12);
+    const result = celebrations.detectCelebrations('2026-08-17|2026-08-21');
+    const erica = result.celebrations.find(c => c.name === 'Erica Mora');
+
+    t.check('twelfth is celebrated', Boolean(erica));
+    t.equal('on the metric she placed in', erica.achievements[0].label, 'Negative Word Usage');
+    t.equal('and the badge names the band she is in', celebrations.tierBadge(erica.achievements[0]), 'Top 15!');
+
+    const post = celebrations.generateAllShoutOuts(result.celebrations, '', '2026-08-17|2026-08-21');
+    t.check('the post says where in the building she landed', post.indexOf('12th best in the Call Center') > -1);
+    t.check('and carries the badge with it', post.indexOf('Top 15!') > -1);
+
+    // The bar moved; the gate did not. A placing past it is still nothing.
+    const past = loadNearMiss(t, 93.4, 16);
+    t.check('sixteenth is still outside',
+        !past.detectCelebrations('2026-08-17|2026-08-21').celebrations
+            .some(c => c.name === 'Erica Mora'));
+});
+
+suite('celebrations: the near miss rides along with the result', (t) => {
+    const celebrations = loadNearMiss(t, 93.4, 17);
     const result = celebrations.detectCelebrations('2026-08-17|2026-08-21');
     const erica = result.missed.find(m => m.name === 'Erica Mora');
 
