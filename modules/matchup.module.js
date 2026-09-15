@@ -497,8 +497,9 @@
      * member's rank improves with nobody doing anything differently. KPI score is a
      * fixed 1-3 scale, so a move in it is a real move.
      *
-     * Independent of the period selector above, which chooses what the matchup
-     * itself is computed over. Both months are named so the two are not confused.
+     * Follows the period selector above rather than always answering about
+     * months, and both ends of the comparison are named so the pair being
+     * described is never in doubt.
      */
     function _renderTeamMovement(data) {
         var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
@@ -524,17 +525,37 @@
         if (!mv || !mv.teams.length) return '';
 
         var SCOPE_NOUN = { ytd: 'year-to-date file', month: 'month', week: 'week' };
+        var SCOPE_PICKED = { ytd: 'YTD', month: 'Monthly', week: 'Weekly' };
 
         var html = '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement , ' +
-            _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) + '</h4>';
+            _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) +
+            (fellBack
+                ? ' <span style="color: #e65100; font-size: 0.78em; font-weight: 600;">(months, not ' +
+                  _escapeHtml(SCOPE_PICKED[scope] || scope) + ')</span>'
+                : '') +
+            '</h4>';
+
+        /* Why this panel is showing months when the buttons above say otherwise.
+           This used to be a clause at the end of the small grey line below, and
+           a panel headed "July 2026 -> August 2026" under a YTD selection reads
+           as a period selector that does nothing rather than as one control
+           that could not answer. So the reason goes first, in its own block,
+           and it says explicitly that the rest of the page did follow the
+           selection, because that is the part being doubted. */
+        if (fellBack) {
+            html += '<p style="margin: 0 0 12px 0; padding: 8px 10px; border-left: 3px solid #e65100; ' +
+                'background: rgba(230,81,0,0.08); border-radius: 0 4px 4px 0; color: #e65100; font-size: 0.85em;">' +
+                _escapeHtml(SCOPE_PICKED[scope] || scope) + ' is selected above, but there is only one ' +
+                _escapeHtml(SCOPE_NOUN[scope] || scope) + ' on record, so there is nothing to compare it ' +
+                'against. This panel alone is showing the last two full months instead. Everything else on ' +
+                'this page is built from the period you picked.' +
+                '</p>';
+        }
+
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
             'Placed on average KPI score across the ' + mv.total + ' associates scored in both. ' +
             'Teams on the same average share a place.' +
-            (fellBack
-                ? ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[scope] || scope) +
-                  ' is available, so there is nothing to compare it against. Showing months instead.</span>'
-                : '') +
             '</p>';
 
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';
@@ -1279,6 +1300,10 @@
         // Same reason: which periods a scope offers, and what it does with fifty
         // of them, is worth asserting and needs no DOM.
         renderScopePeriods: _renderScopePeriods,
+        // Same reason: which pair of periods the movement panel settled on, and
+        // what it says when it could not honour the selection, is string
+        // building over injected data and needs no DOM.
+        renderTeamMovement: _renderTeamMovement,
         setSelectedPeriodForTest: function (key, source) {
             _selectedPeriodKey = key;
             _selectedPeriodSource = source || '';
