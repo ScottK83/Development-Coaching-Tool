@@ -1229,15 +1229,31 @@
      * granularity, so the comparison follows whatever the viewer selected rather
      * than always answering about months.
      */
-    function buildTeamMovementForScope(scope, supervisors, year) {
+    function buildTeamMovementForScope(scope, supervisors, year, opts) {
+        var options = opts || {};
         var yr = year || _year();
         var usable = _periodsForScope(scope, yr).filter(function (p) { return !p.partial; });
         if (usable.length < 2) return null;
 
-        // Same unfinished-month rule as the individual view, so the two surfaces
-        // can never end up describing different pairs of months.
         var curIdx = usable.length - 1;
-        if (usable[curIdx].inProgress && curIdx >= 2) curIdx -= 1;
+        if (options.anchorKey) {
+            /* Measure TO the period the viewer is looking at, the same way the
+               individual view already does. Without this the panel always
+               compared the newest two, so picking June showed July against
+               August: a block describing a period the rest of the page is not
+               showing reads as a selector that does nothing.
+
+               From 1, not 0: the oldest period has nothing behind it, so
+               anchoring there falls back to the newest pair rather than
+               returning a comparison with one side missing. */
+            for (var i = 1; i < usable.length; i++) {
+                if (String(usable[i].key) === String(options.anchorKey)) { curIdx = i; break; }
+            }
+        } else if (usable[curIdx].inProgress && curIdx >= 2) {
+            // Same unfinished-month rule as the individual view, so the two
+            // surfaces can never end up describing different pairs of months.
+            curIdx -= 1;
+        }
         var cur = usable[curIdx];
         var prev = usable[curIdx - 1];
 

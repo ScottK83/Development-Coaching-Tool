@@ -511,7 +511,12 @@
         var scope = _scopeOfPeriod(_selectedPeriodKey) || 'month';
         var mv, fellBack = false;
         try {
-            mv = pc.buildTeamMovementForScope(scope, _getSupervisors());
+            // Anchored to the period that is selected, so picking June compares
+            // May against June rather than always answering about the newest
+            // two. The fallback below is deliberately not anchored: a YTD key
+            // names nothing in the month list.
+            mv = pc.buildTeamMovementForScope(scope, _getSupervisors(), null,
+                { anchorKey: _selectedPeriodKey });
             // A single YTD upload has nothing to compare against. Months are the
             // useful answer there, said out loud rather than shown silently.
             if (!mv && scope !== 'month') {

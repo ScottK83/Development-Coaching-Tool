@@ -449,9 +449,9 @@ suite('period compare: teams level on score share a place', (t) => {
 // case: band scores are whole numbers over a measured count, so two teams land
 // either level or a long way apart, and the near-tie that actually shows up on
 // a floor of 126 comes from averaging different team sizes.
-function loadWithStubRanking(t) {
+function loadWithStubRanking(t, weekly) {
     t.installFakeBrowser();
-    global.weeklyData = {};
+    global.weeklyData = weekly || {};
     global.ytdData = {};
     t.loadModule('modules/period-compare.module.js');
     global.window.DevCoachModules.centerRanking = {
@@ -524,6 +524,74 @@ suite('period compare: an invisible lead changing hands is not movement', (t) =>
     t.equal('neither leader is credited with a move', team('Alpha').placeDelta, 0);
     t.equal('nor the other one', team('Beta').placeDelta, 0);
     t.equal('and the team that did nothing is not shuffled either', team('Gamma').placeDelta, 0);
+});
+
+/**
+ * The panel has to describe the period the rest of the page is showing.
+ *
+ * It always compared the newest two, so picking June showed July against
+ * August, and the movement block sat under a June table describing months that
+ * were not on screen. The individual view took an anchorKey for exactly this
+ * reason and the team view never did.
+ */
+
+// Three weeks over the same twelve people. Alpha climbs unevenly so the pair
+// that was compared can be read straight off the numbers; Beta holds still.
+function anchorWeeks() {
+    const at = (names, rating) => names.map((name) => ({ name, ratingAverage: rating, measuredCount: 5 }));
+    const roster = (alphaRating) => [
+        ...at(['A1', 'A2', 'A3'], alphaRating),
+        ...at(['B1', 'B2', 'B3'], 2.0)
+    ];
+    const week = (end, alphaRating) => [
+        '2026-06-01|' + end,
+        { metadata: { periodType: 'week', endDate: end, label: 'Week ending ' + end }, employees: roster(alphaRating) }
+    ];
+    return Object.fromEntries([
+        week('2026-06-07', 2.0),
+        week('2026-06-14', 2.2),
+        week('2026-06-21', 3.0)
+    ]);
+}
+
+const ANCHOR_SUPS = { A1: 'Alpha', A2: 'Alpha', A3: 'Alpha', B1: 'Beta', B2: 'Beta', B3: 'Beta' };
+
+suite('period compare: team movement measures to the period that was picked', (t) => {
+    const pc = loadWithStubRanking(t, anchorWeeks());
+
+    const newest = pc.buildTeamMovementForScope('week', ANCHOR_SUPS, 2026);
+    t.check('an unanchored call still answers about the newest pair', !!newest);
+    if (!newest) return;
+    t.equal('ending at the newest week', newest.current.key, '2026-06-01|2026-06-21');
+    t.equal('against the one before it', newest.previous.key, '2026-06-01|2026-06-14');
+    t.equal('and Alpha is shown where it now stands',
+        newest.teams.find((x) => x.name === 'Alpha').curAvgRating, 3.0);
+
+    const anchored = pc.buildTeamMovementForScope('week', ANCHOR_SUPS, 2026,
+        { anchorKey: '2026-06-01|2026-06-14' });
+    t.check('anchoring produces a comparison', !!anchored);
+    if (!anchored) return;
+    t.equal('measured to the week that was picked', anchored.current.key, '2026-06-01|2026-06-14');
+    t.equal('from the week before that one', anchored.previous.key, '2026-06-01|2026-06-07');
+
+    // The substance, not just the labels: a different pair means different
+    // numbers, and 3.0 appearing here would mean the anchor moved the caption
+    // and nothing else.
+    const alpha = anchored.teams.find((x) => x.name === 'Alpha');
+    t.equal('and the numbers are the ones from that week', alpha.curAvgRating, 2.2);
+    t.check('with the move it actually made', Math.abs(alpha.ratingDelta - 0.2) < 1e-9);
+});
+
+suite('period compare: anchoring to the oldest period falls back rather than half-answering', (t) => {
+    // Nothing sits behind the oldest week, so there is no pair to build. The
+    // newest one is a real answer; a comparison with one side missing is not.
+    const pc = loadWithStubRanking(t, anchorWeeks());
+    const mv = pc.buildTeamMovementForScope('week', ANCHOR_SUPS, 2026,
+        { anchorKey: '2026-06-01|2026-06-07' });
+
+    t.check('a comparison is still produced', !!mv);
+    if (!mv) return;
+    t.equal('and it is the newest pair', mv.current.key, '2026-06-01|2026-06-21');
 });
 
 suite('period compare: a team too small to judge is left out', (t) => {
