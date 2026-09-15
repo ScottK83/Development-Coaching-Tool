@@ -554,8 +554,16 @@
         }
 
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">' +
-            'Placed on average KPI score across the ' + mv.total + ' associates scored in both. ' +
+            'Placed on average KPI score across the ' + (mv.placed == null ? mv.total : mv.placed) +
+            ' associates scored on at least ' + MIN_MEASURED_FOR_STANDING + ' of the 5 KPIs in both periods. ' +
             'Teams on the same average share a place.' +
+            // Named rather than quietly dropped. The count is the difference
+            // between this panel and the Team Rankings table's population, and
+            // a reader comparing the two should be able to account for it.
+            (mv.thin
+                ? ' ' + mv.thin + ' more were scored in both on fewer KPIs than that and are left out, ' +
+                  'the same as in the Team Rankings table below: a KPI score rises as KPIs go missing.'
+                : '') +
             '</p>';
 
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';

@@ -452,6 +452,55 @@ suite('period compare: a team too small to judge is left out', (t) => {
         res.teams.every((x) => x.count === 3));
 });
 
+/**
+ * A KPI score is scoreSum / measuredCount, so it RISES as KPIs go missing: two
+ * measured at the top of the band is a perfect 3.00, better than anyone scored
+ * on all five can realistically reach. Averaging those into a team places the
+ * team on how little was measured.
+ *
+ * The Team Rankings table on the Matchup screen has gated this since September.
+ * The Team Movement panel directly above it did not, so the two placed the same
+ * teams over the same people and disagreed about the answer.
+ */
+suite('period compare: a thin scorecard cannot carry a team', (t) => {
+    const sups = {
+        A1: 'Alpha', A2: 'Alpha', A3: 'Alpha',
+        B1: 'Beta', B2: 'Beta', B3: 'Beta', B4: 'Beta'
+    };
+    // Measured on two KPIs and perfect on both. Nothing else is populated, so
+    // there is no fifth of a scorecard here to place anybody on.
+    const thinAndPerfect = () => ({
+        name: 'B4', totalCalls: 100, surveyTotal: 10,
+        scheduleAdherence: 100, cxRepOverall: 100
+    });
+    const roster = () => [
+        emp('A1'), emp('A2'), emp('A3'),
+        emp('B1'), emp('B2'), emp('B3'), thinAndPerfect()
+    ];
+
+    const pc = loadWithRanking(t, {});
+    const res = pc.compareTeams(roster(), roster(), sups, 2026, { minShared: 3, minTeamSize: 3 });
+    t.check('a comparison is produced', !!res);
+    if (!res) return;
+
+    const alpha = res.teams.find((x) => x.name === 'Alpha');
+    const beta = res.teams.find((x) => x.name === 'Beta');
+    t.check('both teams are placed', !!alpha && !!beta);
+
+    t.equal('the thin record is left out of its team', beta && beta.count, 3);
+    t.equal('the full team is untouched', alpha && alpha.count, 3);
+    // The whole point: two identical teams, one of which happens to have a
+    // half-measured person on it, must not be separated by that person.
+    t.check('so the two identical teams are level', alpha && beta &&
+        Math.abs(alpha.curAvgRating - beta.curAvgRating) < 1e-9);
+    t.check('and share a place', alpha && beta && alpha.curPlace === beta.curPlace);
+
+    // The caption prints these, so they have to be the real populations.
+    t.equal('the overlap is still reported whole', res.total, 7);
+    t.equal('the placed population is what the averages used', res.placed, 6);
+    t.equal('and the difference is accounted for', res.thin, 1);
+});
+
 suite('period compare: one team alone is not a comparison', (t) => {
     const sups = { A1: 'Alpha', A2: 'Alpha', A3: 'Alpha', B1: 'Beta' };
     const roster = () => [emp('A1'), emp('A2'), emp('A3'), emp('B1')];

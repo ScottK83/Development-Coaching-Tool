@@ -490,6 +490,13 @@
 
     /* ── Rank movement ── */
 
+    /* Mirrors center-ranking's MIN_MEASURED_FOR_SCALED and matchup's
+       MIN_MEASURED_FOR_STANDING, which are the same number for the same reason:
+       below four measured KPIs a score is a mean over too little to place
+       anybody on. Held as a local constant because center-ranking keeps its copy
+       private; if that ever moves, these three move together. */
+    var MIN_MEASURED_FOR_STANDING = 4;
+
     function _rank(employees, year) {
         var cr = window.DevCoachModules && window.DevCoachModules.centerRanking;
         if (!cr || !cr.scoreAndRankEmployees) return null;
@@ -607,11 +614,24 @@
         var ranked = _rankShared(prevEmployees, curEmployees, yr, minShared);
         if (!ranked) return null;
 
-        function group(rankedList) {
+        /* A KPI score is a mean over whatever was populated, so it RISES as KPIs
+           go missing: two measured at Exceeds is a perfect 3.00, better than
+           anyone scored on all five can realistically reach. Averaging those
+           into a team places the team on how little was measured.
+
+           So the same floor the Team Rankings table applies is applied here.
+           The two panels sit on one screen, both claim to place the same teams
+           over the same people, and without this they answer differently: the
+           table gates on measuredCount and this did not. */
+        function group(rankedList, tally) {
             var out = {};
             rankedList.forEach(function (r) {
                 var sup = sups[r.name];
                 if (!sup) return; // unassigned people cannot be attributed to a team
+                if ((r.measuredCount || 0) < MIN_MEASURED_FOR_STANDING) {
+                    if (tally) tally.thin++;
+                    return;
+                }
                 if (!out[sup]) out[sup] = { ratings: [], ranks: [] };
                 if (Number.isFinite(r.ratingAverage)) out[sup].ratings.push(r.ratingAverage);
                 if (Number.isFinite(r.rank)) out[sup].ranks.push(r.rank);
@@ -634,8 +654,9 @@
             return out;
         }
 
+        var curTally = { thin: 0 };
         var prev = summarise(group(ranked.prevRanked));
-        var cur = summarise(group(ranked.curRanked));
+        var cur = summarise(group(ranked.curRanked, curTally));
 
         var names = Object.keys(cur).filter(function (n) { return n in prev; });
         if (names.length < 2) return null;
@@ -678,7 +699,19 @@
             };
         }).sort(function (a, b) { return a.curPlace - b.curPlace; });
 
-        return { total: ranked.shared.length, teamCount: names.length, teams: teams };
+        // `total` is the overlap between the two periods; `placed` is how much of
+        // it the averages were actually computed over, and `thin` is the
+        // difference the floor accounts for. A panel that says "across the 126
+        // scored in both" while placing teams on 108 of them is overstating its
+        // own evidence, so callers are given the number they should print.
+        var placed = names.reduce(function (n, name) { return n + cur[name].count; }, 0);
+        return {
+            total: ranked.shared.length,
+            placed: placed,
+            thin: curTally.thin,
+            teamCount: names.length,
+            teams: teams
+        };
     }
 
     /**
@@ -1112,6 +1145,8 @@
             current: { key: curKey, label: cur.label },
             previous: { key: prevKey, label: prev.label },
             total: compared.total,
+            placed: compared.placed,
+            thin: compared.thin,
             teamCount: compared.teamCount,
             teams: compared.teams
         };
@@ -1203,6 +1238,8 @@
             current: { key: cur.key, label: cur.label },
             previous: { key: prev.key, label: prev.label },
             total: compared.total,
+            placed: compared.placed,
+            thin: compared.thin,
             teamCount: compared.teamCount,
             teams: compared.teams
         };
