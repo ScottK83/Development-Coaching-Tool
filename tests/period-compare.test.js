@@ -429,6 +429,103 @@ suite('period compare: teams level on score share a place', (t) => {
     t.check('and neither gained or lost score', res.teams.every((x) => Math.abs(x.ratingDelta) < 1e-9));
 });
 
+/**
+ * A table cannot show one number against two places.
+ *
+ * The tie test was arithmetic, 1e-9, while every surface renders the average to
+ * two decimals. Two teams a thousandth apart therefore both printed 2.37 and
+ * were placed first and second, which is what got reported: "how is Sarah
+ * first?" is the only possible reaction to that table.
+ *
+ * It is also the failure the place-sharing rule was written to prevent. A gap
+ * that small changes sign on its own, so the next period the same two teams
+ * swap and both are credited with a move nobody made. That is the half this
+ * pins hardest, because a wrong arrow is read as news.
+ */
+
+// The placing rules are what is under test, not the scorer, so the ranker is
+// stubbed and each person carries the KPI score the case needs. Deriving a
+// thousandth of a gap through the real rating bands is not possible in any
+// case: band scores are whole numbers over a measured count, so two teams land
+// either level or a long way apart, and the near-tie that actually shows up on
+// a floor of 126 comes from averaging different team sizes.
+function loadWithStubRanking(t) {
+    t.installFakeBrowser();
+    global.weeklyData = {};
+    global.ytdData = {};
+    t.loadModule('modules/period-compare.module.js');
+    global.window.DevCoachModules.centerRanking = {
+        scoreAndRankEmployees: (employees) => (employees || []).map((e, i) => ({
+            name: e.name,
+            ratingAverage: e.ratingAverage,
+            measuredCount: e.measuredCount === undefined ? 5 : e.measuredCount,
+            rank: i + 1
+        }))
+    };
+    return global.window.DevCoachModules.periodCompare;
+}
+
+const TIE_SUPS = {
+    A1: 'Alpha', A2: 'Alpha', A3: 'Alpha', A4: 'Alpha',
+    B1: 'Beta', B2: 'Beta', B3: 'Beta', B4: 'Beta', B5: 'Beta',
+    G1: 'Gamma', G2: 'Gamma', G3: 'Gamma'
+};
+
+// Alpha and Beta are a five-thousandth apart, which no surface can render.
+// Gamma is genuinely behind. `swap` hands the invisible lead to the other team,
+// which is what a gap this size does on its own between two periods.
+function tieRoster(swap) {
+    const alpha = swap ? 2.512 : 2.514;
+    const beta = swap ? 2.514 : 2.512;
+    const at = (names, rating) => names.map((name) => ({ name, ratingAverage: rating, measuredCount: 5 }));
+    return [
+        ...at(['A1', 'A2', 'A3', 'A4'], alpha),
+        ...at(['B1', 'B2', 'B3', 'B4', 'B5'], beta),
+        ...at(['G1', 'G2', 'G3'], 2.20)
+    ];
+}
+
+suite('period compare: places are decided at the precision the table shows', (t) => {
+    const pc = loadWithStubRanking(t);
+    const res = pc.compareTeams(tieRoster(false), tieRoster(false), TIE_SUPS, 2026,
+        { minShared: 3, minTeamSize: 3 });
+    t.check('a comparison is produced', !!res);
+    if (!res) return;
+
+    const team = (n) => res.teams.find((x) => x.name === n);
+    const shown = (n) => team(n).curAvgRating.toFixed(2);
+
+    // The premise. If these ever print differently the fixture stopped testing
+    // what it was built for and everything below would pass on nothing.
+    t.equal('the two leaders print the same average', shown('Alpha'), shown('Beta'));
+    t.check('but they are not actually level',
+        team('Alpha').curAvgRating !== team('Beta').curAvgRating);
+    t.check('and Gamma prints a different average', shown('Gamma') !== shown('Alpha'));
+
+    t.equal('so the two leaders share a place', team('Alpha').curPlace, team('Beta').curPlace);
+    t.equal('and it is first', team('Alpha').curPlace, 1);
+    // Standard competition placing: two teams sharing 1st puts the next at 3rd.
+    t.equal('the team genuinely behind them takes third', team('Gamma').curPlace, 3);
+});
+
+suite('period compare: an invisible lead changing hands is not movement', (t) => {
+    // The same two teams, the same 2.51 on screen in both periods, and the
+    // thousandth between them falling the other way. Nobody moved.
+    const pc = loadWithStubRanking(t);
+    const res = pc.compareTeams(tieRoster(false), tieRoster(true), TIE_SUPS, 2026,
+        { minShared: 3, minTeamSize: 3 });
+    t.check('a comparison is produced', !!res);
+    if (!res) return;
+
+    const team = (n) => res.teams.find((x) => x.name === n);
+    t.equal('the leaders still print the same average',
+        team('Alpha').curAvgRating.toFixed(2), team('Beta').curAvgRating.toFixed(2));
+
+    t.equal('neither leader is credited with a move', team('Alpha').placeDelta, 0);
+    t.equal('nor the other one', team('Beta').placeDelta, 0);
+    t.equal('and the team that did nothing is not shuffled either', team('Gamma').placeDelta, 0);
+});
+
 suite('period compare: a team too small to judge is left out', (t) => {
     const sups = {
         A1: 'Alpha', A2: 'Alpha', A3: 'Alpha',

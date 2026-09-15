@@ -497,6 +497,18 @@
        private; if that ever moves, these three move together. */
     var MIN_MEASURED_FOR_STANDING = 4;
 
+    /* Places are decided at the precision the average is shown and argued at,
+       which is two decimals everywhere it is rendered.
+
+       The tie test used to be arithmetic, 1e-9, which put two teams both
+       reading 2.37 into first and second. A table showing one number against
+       two places reads as broken, and nobody can act on the difference it is
+       separating them by. It is also the exact failure the sharing rule exists
+       to prevent: a gap that small changes sign on its own and arrives next
+       period as a place move with no performance behind it. The rating-change
+       column already calls anything under 0.005 "no change" for this reason. */
+    var PLACE_DECIMALS = 2;
+
     function _rank(employees, year) {
         var cr = window.DevCoachModules && window.DevCoachModules.centerRanking;
         if (!cr || !cr.scoreAndRankEmployees) return null;
@@ -661,17 +673,16 @@
         var names = Object.keys(cur).filter(function (n) { return n in prev; });
         if (names.length < 2) return null;
 
-        // Standard competition placing (1-2-2-4) with an epsilon tie test. Two teams
-        // on the same average must share a place: assigning them separate places on
-        // sort order alone means a tie breaking the other way next month shows up as
-        // movement, and there is no performance behind it.
+        // Standard competition placing (1-2-2-4). Two teams on the same average
+        // share a place, and "the same" is judged at PLACE_DECIMALS, so what the
+        // table shows and where it places a team can never disagree.
         function placings(stats, keys) {
             var order = keys.slice().sort(function (a, b) { return stats[b].avgRating - stats[a].avgRating; });
             var out = {};
             var lastPlace = 0, lastVal = null;
             order.forEach(function (n, i) {
-                var val = stats[n].avgRating;
-                if (lastVal === null || Math.abs(val - lastVal) >= 1e-9) {
+                var val = Number(stats[n].avgRating.toFixed(PLACE_DECIMALS));
+                if (lastVal === null || val !== lastVal) {
                     lastPlace = i + 1;
                 }
                 out[n] = lastPlace;
