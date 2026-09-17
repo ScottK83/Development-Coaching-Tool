@@ -1125,6 +1125,24 @@ suite('rankings view: the year picture covers January through the data', (t) => 
         scored.some((c) => c.metrics.some((m) => m.meets === true || m.meets === false)));
 });
 
+/* Reported from the card itself: CX Adv had a placing under YTD and nothing
+   under any month. The monthly points carried no survey count, so the three
+   response floor read zero for everyone and placed nobody. */
+suite('rankings view: the year picture places CX Adv in every month, not just YTD', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+    const cx = model.columns.filter((c) => c.present)
+        .map((c) => c.metrics.find((m) => m.label === 'CX Adv'))
+        .filter((m) => m && m.display);
+
+    t.check('there are months with a CX Adv figure', cx.length > 0);
+    t.check('each of them carries a placing',
+        cx.every((m) => Number.isFinite(m.rank) && m.rankTotal > 0));
+    t.check('the YTD column still does',
+        Number.isFinite(model.ytd.metrics.find((m) => m.label === 'CX Adv').rank));
+});
+
 suite('rankings view: the year picture stays inside its own canvas', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();

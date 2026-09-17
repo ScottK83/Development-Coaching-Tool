@@ -1058,6 +1058,11 @@
                     reliability: r.reliability,
                     reliabilityAccrued: r.reliabilityAccrued,
                     associateOverallSource: r.associateOverallSource || null,
+                    // Responses behind CX Adv this month. Without it the year
+                    // card's survey floor saw zero and placed nobody on CX Adv.
+                    associateOverallSurveys: Number.isFinite(r.associateOverallSurveys)
+                        ? r.associateOverallSurveys : null,
+                    surveyTotal: r.surveyTotal,
                     scores: r.scores || {},
                     metricRanks: r.metricRanks || {},
                     // Over the people in this period and the one before it.

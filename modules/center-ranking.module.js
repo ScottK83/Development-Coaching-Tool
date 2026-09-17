@@ -541,6 +541,10 @@
             // has its own denominator.
             repSurveyTotal: parseInt(emp.repSurveyTotal, 10) || 0,
             fcrSurveyTotal: parseInt(emp.fcrSurveyTotal, 10) || 0,
+            // The count the scorer floored CX Adv on. It already knows which
+            // survey stands behind the figure and whether the rep-sat column
+            // was in the export at all, so nothing downstream has to guess.
+            associateOverallSurveys: Number(result.surveyCount) || 0,
             totalCalls: parseInt(emp.totalCalls, 10) || 0
         };
     }
@@ -732,6 +736,7 @@
                 reliabilityAccrued: Number.isFinite(parseFloat(emp.reliabilityAccrued))
                     ? parseFloat(emp.reliabilityAccrued) : null,
                 surveyTotal: score.surveyTotal,
+                associateOverallSurveys: score.associateOverallSurveys,
                 totalCalls: score.totalCalls
             });
         });
@@ -2245,10 +2250,21 @@
             // response at 100% took #1 on CX Adv, in a picture sent to the
             // person it is about, while the projection ladder underneath refused
             // to project the same number.
+            //
+            // The monthly points on that card carried no survey count at all,
+            // so every month counted zero responses and CX Adv was placed in the
+            // YTD column only. A holder that carries the scorer's own count is
+            // read from that; the registry lookup stays for anything that does
+            // not.
             if (_SURVEY_WEIGHTED_AVG[row.registry]) {
-                var responses = typeof window.getSurveyWeight === 'function'
-                    ? window.getSurveyWeight(row.registry, h.holder)
-                    : Number(h.holder.surveyTotal);
+                var responses;
+                if (row.scoreKey === 'associateOverall' && Number.isFinite(h.holder.associateOverallSurveys)) {
+                    responses = h.holder.associateOverallSurveys;
+                } else {
+                    responses = typeof window.getSurveyWeight === 'function'
+                        ? window.getSurveyWeight(row.registry, h.holder)
+                        : Number(h.holder.surveyTotal);
+                }
                 if (!(responses >= MIN_SURVEYS_FOR_RANK)) return;
             }
 
