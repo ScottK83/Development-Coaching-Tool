@@ -1536,9 +1536,10 @@ suite('rankings view: the YTD file wins reliability where it disagrees with the 
 });
 
 /* Reported: "CX Adv, some still don't have numbers." A month under three
-   responses is not placed, on purpose, and the cell was left with nothing
-   under the percentage. It carries the count instead. */
-suite('rankings view: an unplaced CX Adv month shows its survey count', (t) => {
+   responses was left with nothing under its percentage. It is placed against
+   the field now without joining it, so a perfect month reads 1st, and no
+   survey count is printed (Scott, 2026-09-18). */
+suite('rankings view: a thin CX Adv month is placed without moving anyone', (t) => {
     const month = (start, end, p0Surveys) => period(start, end, 'month', roster(40, 0).map((e) =>
         e.name === 'P0' ? Object.assign({}, e, { cxRepOverall: 100, surveyTotal: p0Surveys, repSurveyTotal: p0Surveys }) : e));
     const uploads = Object.assign({},
@@ -1550,13 +1551,12 @@ suite('rankings view: an unplaced CX Adv month shows its survey count', (t) => {
     const cx = (label) => model.columns.find((c) => c.fullLabel && c.fullLabel.indexOf(label) === 0).metrics
         .find((m) => m.label === 'CX Adv');
 
-    t.check('June, on two surveys, is not placed', !cx('June').rank);
-    t.equal('but knows how many there were', cx('June').responses, 2);
-    t.check('July, on five, is placed', Number.isFinite(cx('July').rank));
+    t.equal('June, a perfect month on two surveys, reads 1st', cx('June').rank, 1);
+    t.check('July, on five, is placed as before', Number.isFinite(cx('July').rank));
 
     withRecordingCanvas(t, (rec) => {
         cr.drawYearCard(model);
         const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
-        t.check('the card prints the count where the placing would be', texts.indexOf('2 surveys') !== -1);
+        t.check('no survey count is printed', !texts.some((x) => /^\d+ surveys?$/.test(x)));
     });
 });

@@ -112,10 +112,18 @@ suite('survey floor: the emailed year card does not place a single response', (t
     ];
 
     const cx = cr.rankWithinMetric(holders, { label: 'CX Adv', registry: 'cxRepOverall', scoreKey: 'associateOverall' });
-    t.check('the single response is not placed at all', cx['One Survey'] === undefined);
-    t.equal('the field is the two who qualify', cx['Three Surveys'].total, 2);
-    t.equal('and the best of them leads', cx['Three Surveys'].rank, 1);
-    t.equal('with the larger sample behind', cx['Forty Surveys'].rank, 2);
+    // The single response is placed against the field without joining it
+    // (Scott, 2026-09-18): nobody beats 100%, so it reads 1st, and it moves
+    // nobody who qualified.
+    t.equal('the single perfect response reads 1st', cx['One Survey'].rank, 1);
+    t.equal('the field is still the two who qualify', cx['Three Surveys'].total, 2);
+    t.equal('and the best of them still leads', cx['Three Surveys'].rank, 1);
+    t.equal('with the larger sample behind, not pushed to 3rd', cx['Forty Surveys'].rank, 2);
+
+    const low = cr.rankWithinMetric(holders.concat([{ name: 'One Bad', holder: holder(1, 50) }]),
+        { label: 'CX Adv', registry: 'cxRepOverall', scoreKey: 'associateOverall' });
+    t.equal('a thin low figure is placed after everyone who beat it', low['One Bad'].rank, 3);
+    t.equal('and still moves nobody', low['Forty Surveys'].rank, 2);
 
     // A metric that is not survey-backed must be untouched by the floor.
     const aht = cr.rankWithinMetric(holders, { label: 'AHT', registry: 'aht', scoreKey: 'aht' });

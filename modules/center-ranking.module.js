@@ -2434,6 +2434,7 @@
     function _metricRankMap(holders, row) {
         var reverse = _metricIsReverse(row.registry);
         var scored = [];
+        var thin = [];
 
         holders.forEach(function (h) {
             var value = _trajectoryMetricValue(h.holder, row);
@@ -2462,7 +2463,10 @@
                         ? window.getSurveyWeight(row.registry, h.holder)
                         : Number(h.holder.surveyTotal);
                 }
-                if (!(responses >= MIN_SURVEYS_FOR_RANK)) return;
+                if (!(responses >= MIN_SURVEYS_FOR_RANK)) {
+                    thin.push({ name: h.name, value: Number(value) });
+                    return;
+                }
             }
 
             scored.push({ name: h.name, value: Number(value) });
@@ -2479,21 +2483,22 @@
             lastRank = rank;
             map[entry.name] = { rank: rank, total: scored.length };
         });
+
+        // Under the floor, a figure is placed AGAINST the field without joining
+        // it: its placing is one more than the number who beat it, and nobody
+        // else's placing moves. So a single perfect survey reads "1st", tied
+        // with everyone at 100%, and cannot push a forty-survey leader down.
+        // Scott's call, 2026-09-18: a blank under a 100% read as missing data.
+        thin.forEach(function (entry) {
+            var better = scored.filter(function (other) {
+                return reverse ? other.value < entry.value : other.value > entry.value;
+            }).length;
+            map[entry.name] = { rank: better + 1, total: scored.length, thin: true };
+        });
         return map;
     }
 
     var _SURVEY_WEIGHTED_AVG = { cxRepOverall: true, fcr: true, overallExperience: true };
-
-    /** Responses behind a survey figure, or null for a metric that is not one. */
-    function _surveysBehind(holder, row) {
-        if (!holder || !_SURVEY_WEIGHTED_AVG[row.registry]) return null;
-        if (row.scoreKey === 'associateOverall' && Number.isFinite(holder.associateOverallSurveys)) {
-            return holder.associateOverallSurveys;
-        }
-        var n = typeof window.getSurveyWeight === 'function'
-            ? window.getSurveyWeight(row.registry, holder) : Number(holder.surveyTotal);
-        return Number.isFinite(n) ? n : null;
-    }
 
     /**
      * What the centre actually ran at, for one metric.
@@ -2595,8 +2600,7 @@
                 meets: has ? _meetsTarget(row.registry, value, year) : null,
                 display: has ? _formatMetricDisplay(row.registry, value) : '',
                 rank: has && placing ? placing.rank : null,
-                rankTotal: has && placing ? placing.total : null,
-                responses: has ? _surveysBehind(mine, row) : null
+                rankTotal: has && placing ? placing.total : null
             };
         });
 
@@ -2754,8 +2758,7 @@
                             meets: has ? _meetsTarget(row.registry, value, year) : null,
                             display: has ? _formatMetricDisplay(row.registry, value) : '',
                             rank: placing ? placing.rank : null,
-                            rankTotal: placing ? placing.total : null,
-                            responses: has ? _surveysBehind(pt, row) : null
+                            rankTotal: placing ? placing.total : null
                         };
                     })
                 };
@@ -3080,17 +3083,8 @@
         // is not the same number in every cell and repeating it forty times was
         // the noisiest thing on the card.
         var placing = function (m, cx, ry) {
-            if (!m) return;
-            if (m.rank) {
-                text(_ordinal(m.rank), cx, ry + 13, 10, "#7d8d9d", "600", "center");
-                return;
-            }
-            // A survey figure under the three-response floor is not placed, so
-            // one lucky survey cannot take first. Its count goes where the
-            // placing would be, so the cell is not left empty.
-            if (m.responses > 0) {
-                text(m.responses + (m.responses === 1 ? ' survey' : ' surveys'), cx, ry + 13, 10, "#7d8d9d", "600", "center");
-            }
+            if (!m || !m.rank) return;
+            text(_ordinal(m.rank), cx, ry + 13, 10, "#7d8d9d", "600", "center");
         };
 
         if (ytd) {
