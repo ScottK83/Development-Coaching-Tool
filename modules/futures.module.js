@@ -832,15 +832,31 @@
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border); background: #e3f2fd;">Exceed (' + tfLabel + ')</th>';
             html += '</tr></thead><tbody>';
 
-            var metricKeys = Object.keys(emp.metrics);
+            // The five KPIs lead, marked, and everything else follows under
+            // its own heading. They are the ones a review is scored on, and in
+            // registry order they were scattered through thirteen rows.
+            var kpiKeys = _kpiRegistryKeys();
+            var allKeys = Object.keys(emp.metrics);
+            var metricKeys = kpiKeys.filter(function (k) { return allKeys.indexOf(k) > -1; })
+                .concat(allKeys.filter(function (k) { return kpiKeys.indexOf(k) === -1; }));
             if (metricKeys.length === 0) {
                 html += '<tr><td colspan="6" style="padding: 15px; text-align: center; color: var(--text-tertiary);">No metric data available</td></tr>';
             }
+            var sectionRow = function (label) {
+                return '<tr><td colspan="6" style="padding: 10px 8px 6px; font-size: 0.78em; font-weight: 700; ' +
+                    'letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); ' +
+                    'border-bottom: 1px solid var(--border);">' + label + '</td></tr>';
+            };
+            var shownKpi = false, shownOther = false;
 
             metricKeys.forEach(function (metricKey) {
                 var m = emp.metrics[metricKey];
                 var metric = window.METRICS_REGISTRY[metricKey];
                 if (!metric) return;
+
+                var isKpi = kpiKeys.indexOf(metricKey) > -1;
+                if (isKpi && !shownKpi) { html += sectionRow('The 5 KPIs'); shownKpi = true; }
+                if (!isKpi && !shownOther) { html += sectionRow('Other metrics'); shownOther = true; }
 
                 var icon = metric.icon || '';
                 var label = metric.label || metricKey;
@@ -851,8 +867,12 @@
 
                 html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border);">';
 
-                // Metric name
-                html += '<td style="padding: 8px; font-weight: 500;">' + icon + ' ' + _escapeHtml(label) + '</td>';
+                // Metric name. A KPI gets an accent bar and a tag.
+                html += isKpi
+                    ? '<td style="padding: 8px; font-weight: 700; box-shadow: inset 4px 0 0 #1e88e5;">' + icon + ' ' + _escapeHtml(label) +
+                      ' <span style="display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; font-size: 0.72em; ' +
+                      'font-weight: 700; color: #fff; background: #1e88e5; vertical-align: middle;">KPI</span></td>'
+                    : '<td style="padding: 8px; font-weight: 500;">' + icon + ' ' + _escapeHtml(label) + '</td>';
 
                 // Current YTD value
                 html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.currentAvg) + '</td>';
@@ -969,6 +989,14 @@
                 showCheckInModal(empName, data);
             });
         });
+    }
+
+    /** The five KPIs, as registry keys, in the order rankings uses. */
+    function _kpiRegistryKeys() {
+        var cr = window.DevCoachModules && window.DevCoachModules.centerRanking;
+        var list = cr && cr.KPI_RANK_METRICS;
+        if (list && list.length) return list.map(function (k) { return k.registry; });
+        return ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall', 'reliability'];
     }
 
     /* ── Check-In Summary ── */
@@ -1210,6 +1238,8 @@
         // what a person is told they have to do for the rest of the year, and
         // they are worth pinning down without a DOM in the way.
         calculateRequiredAverage: calculateRequiredAverage,
+        // Exported so the table's order and KPI marking can be read back.
+        renderFuturesTable: renderFuturesTable,
         calculateDailyTarget: calculateDailyTarget,
         weeksCompletedThroughDate: weeksCompletedThroughDate,
         estimateWeekCounts: estimateWeekCounts,

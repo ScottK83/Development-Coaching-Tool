@@ -428,3 +428,32 @@ suite('futures: the survey metrics are weighted like everything else on the row'
             nadia.fcr.meetTarget, nadia.fcr.volume),
         nadia.fcr.requiredToMeet);
 });
+
+suite('futures: the five KPIs lead the table, marked', (t) => {
+    const emp = { name: 'Dana Reed', totalCalls: 6000, surveyTotal: 300, aht: 470, scheduleAdherence: 90,
+        transfers: 6, afterCallWork: 40, overallSentiment: 91, cxRepOverall: 85 };
+    const f = load(t, twelveLightWeeks('Dana Reed'), ytdThrough(206, emp));
+    const data = f.buildFuturesData();
+    // The fixture yields AHT and adherence only. Rows for a non-KPI and two
+    // more KPIs are copied in, in registry order, so the reordering has
+    // something to do.
+    const m = data.employees[0].metrics;
+    const row = m.aht;
+    data.employees[0].metrics = { transfers: Object.assign({}, row), scheduleAdherence: m.scheduleAdherence,
+        overallSentiment: Object.assign({}, row), cxRepOverall: Object.assign({}, row), aht: row };
+    global.document._els.futuresTableContainer = { innerHTML: '', querySelectorAll: () => [] };
+    f.renderFuturesTable(data, '__all__', 'weekly');
+    const html = global.document._els.futuresTableContainer.innerHTML;
+
+    const kpiAt = html.indexOf('The 5 KPIs');
+    const otherAt = html.indexOf('Other metrics');
+    const labelAt = (key) => html.indexOf(global.window.METRICS_REGISTRY[key].label);
+    t.check('the KPIs have a heading, and it comes first', kpiAt > -1 && otherAt > kpiAt);
+    t.check('the KPIs sit under it',
+        ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall']
+            .every((k) => labelAt(k) > kpiAt && labelAt(k) < otherAt));
+    t.check('everything else sits after', labelAt('transfers') > otherAt);
+    t.equal('each KPI is tagged', (html.match(/>KPI<\/span>/g) || []).length,
+        Object.keys(data.employees[0].metrics).filter((k) =>
+            ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall', 'reliability'].indexOf(k) > -1).length);
+});
