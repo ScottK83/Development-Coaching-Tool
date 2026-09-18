@@ -1063,6 +1063,9 @@
                     associateOverallSurveys: Number.isFinite(r.associateOverallSurveys)
                         ? r.associateOverallSurveys : null,
                     surveyTotal: r.surveyTotal,
+                    // Volume, so a centre average for the month can be weighted
+                    // by calls rather than counting every person the same.
+                    totalCalls: Number.isFinite(r.totalCalls) ? r.totalCalls : null,
                     scores: r.scores || {},
                     metricRanks: r.metricRanks || {},
                     // Over the people in this period and the one before it.

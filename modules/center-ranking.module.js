@@ -2310,7 +2310,11 @@
             values.push(Number(value));
 
             var weight;
-            if (_SURVEY_WEIGHTED_AVG[row.registry]) {
+            if (row.scoreKey === 'associateOverall' && Number(h.holder.associateOverallSurveys) > 0) {
+                // The responses behind the figure actually shown, which is not
+                // always rep sat.
+                weight = Number(h.holder.associateOverallSurveys);
+            } else if (_SURVEY_WEIGHTED_AVG[row.registry]) {
                 weight = Number(h.holder.surveyTotal) > 0 ? Number(h.holder.surveyTotal) : 0;
             } else {
                 weight = Number(h.holder.totalCalls) > 0 ? Number(h.holder.totalCalls) : 1;
@@ -2458,6 +2462,19 @@
             targets: TRAJECTORY_METRIC_ROWS.map(function (row) {
                 return { label: row.label, phrase: _targetPhrase(row.registry, year) };
             }).filter(function (tg) { return tg.phrase; }),
+            // One per KPI, for the small charts: which way is better and where
+            // the target line sits.
+            kpis: TRAJECTORY_METRIC_ROWS.map(function (row) {
+                var target = _targetFor(row.registry, year);
+                var tv = target && isFinite(target.value) ? Number(target.value) : null;
+                return {
+                    label: row.label,
+                    registry: row.registry,
+                    reverse: target ? target.type === 'max' : _metricIsReverse(row.registry),
+                    target: tv,
+                    targetDisplay: tv === null ? '' : _formatMetricDisplay(row.registry, tv)
+                };
+            }),
             columns: columns.map(function (col) {
                 var pt = col.point;
                 return {
@@ -2489,9 +2506,17 @@
                         var placing = has && ranksByPeriod[col.key]
                             && ranksByPeriod[col.key][row.label]
                             && ranksByPeriod[col.key][row.label][name];
+                        // What the centre ran at that month, weighted the same
+                        // way as the YTD centre column.
+                        var center = holdersByPeriod[col.key]
+                            ? _centerAverageForMetric(holdersByPeriod[col.key], row) : null;
+                        var hasCenter = !(center === null || center === undefined || isNaN(center));
                         return {
                             label: row.label,
                             registry: row.registry,
+                            value: has ? Number(value) : null,
+                            centerValue: hasCenter ? Number(center) : null,
+                            centerDisplay: hasCenter ? _formatMetricDisplay(row.registry, center) : '',
                             meets: has ? _meetsTarget(row.registry, value, year) : null,
                             display: has ? _formatMetricDisplay(row.registry, value) : '',
                             rank: placing ? placing.rank : null,
@@ -2527,12 +2552,24 @@
         // than worked out.
         var hasAvg = !!(ytd && ytd.centerMetrics);
         var avgW = hasAvg ? 96 : 0;
-        var headerH = 96, chartH = 210, gap = 26, headRowH = 30;
+        var headerH = 96, gap = 26, headRowH = 30;
         // Taller rows than before: every cell now carries a placing under its
         // verdict, and 44px had no room left under the pill.
         var rowH = 46;
         var rows = TRAJECTORY_METRIC_ROWS.length + 1;   // targets-met row + one per metric
         var W = padX * 2 + labelW + ytdW + avgW + colW * n;
+
+        // One small chart per KPI, five across when there is room and wrapping
+        // when a short year makes the card narrow.
+        var kpis = model.kpis || [];
+        var panelGap = 18, panelH = 168, panelMinW = 190;
+        var innerW = W - padX * 2;
+        var panelCols = Math.max(1, Math.min(kpis.length || 1,
+            Math.floor((innerW + panelGap) / (panelMinW + panelGap))));
+        var panelRows = Math.ceil((kpis.length || 1) / panelCols);
+        var panelW = (innerW - panelGap * (panelCols - 1)) / panelCols;
+        var chartH = 22 + panelRows * panelH + (panelRows - 1) * 14 + 30;
+
         var H = headerH + chartH + gap + headRowH + rowH * rows + 84;
 
         // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
@@ -2559,58 +2596,136 @@
         ctx.fillRect(0, 0, W, headerH);
         text(model.title, padX, 38, 26, '#ffffff', '700');
         text(model.subtitle, padX, 68, 14, '#9fc0e4');
-        text('Targets met, month by month', W - padX, 38, 14, '#9fc0e4', '400', 'right');
+        text('Each KPI, month by month', W - padX, 38, 14, '#9fc0e4', '400', 'right');
 
-        // ── Chart: how many targets were met each month ──
-        var chartTop = headerH + 24;
-        var chartBottom = headerH + chartH - 30;
-        var most = model.columns.reduce(function (m, c) {
-            return Math.max(m, c.measuredAgainstTarget || 0);
-        }, 1);
         var x = function (i) { return padX + labelW + ytdW + avgW + colW * (i + 0.5); };
-        var y = function (v) { return chartBottom - (v / most) * (chartBottom - chartTop); };
+        var MEETS_BG = "#e4f3e8", MEETS_INK = "#1a6b32";
+        var BELOW_BG = "#fbe6e4", BELOW_INK = "#a52f26";
 
-        // Up is better, which is the way the word reads.
-        [0, Math.round(most / 2), most].forEach(function (v) {
-            var yy = y(v);
-            ctx.strokeStyle = '#e6ecf3';
-            ctx.lineWidth = 1;
+        // ── Charts: one per KPI ──
+        // The person's line, the centre's line, and the target, with the side
+        // of the target that meets it shaded. Every chart is drawn with better
+        // at the top, so a faster AHT climbs rather than falls, and the key
+        // says so once.
+        var polyline = function (points, color, width, dash) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            if (typeof ctx.setLineDash === 'function') ctx.setLineDash(dash || []);
+            var drawing = false;
             ctx.beginPath();
-            ctx.moveTo(padX + labelW - 8, yy);
-            ctx.lineTo(W - padX, yy);
+            points.forEach(function (pt) {
+                // A month with no upload breaks the line rather than bridging it.
+                if (!pt) { drawing = false; return; }
+                if (!drawing) { ctx.moveTo(pt.x, pt.y); drawing = true; }
+                else ctx.lineTo(pt.x, pt.y);
+            });
             ctx.stroke();
-            text(v, padX + labelW - 14, yy, 11, '#9aa7b4', '400', 'right');
-        });
-        text('All ' + most, padX + labelW - 14, chartTop - 15, 11, '#2e7d32', '700', 'right');
+            if (typeof ctx.setLineDash === 'function') ctx.setLineDash([]);
+        };
 
-        // One run per unbroken stretch, so a month with no upload shows as a gap
-        // rather than a line drawn through it.
-        ctx.strokeStyle = '#1565c0';
-        ctx.lineWidth = 3;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        var drawing = false;
-        ctx.beginPath();
-        model.columns.forEach(function (c, i) {
-            if (!c.present || !Number.isFinite(c.meetsCount)) { drawing = false; return; }
-            if (!drawing) { ctx.moveTo(x(i), y(c.meetsCount)); drawing = true; }
-            else ctx.lineTo(x(i), y(c.meetsCount));
-        });
-        ctx.stroke();
+        var chartsTop = headerH + 22;
+        kpis.forEach(function (kpi, k) {
+            var pcol = k % panelCols, prow = Math.floor(k / panelCols);
+            var px = padX + pcol * (panelW + panelGap);
+            var py = chartsTop + prow * (panelH + 14);
 
-        model.columns.forEach(function (c, i) {
-            if (!c.present || !Number.isFinite(c.meetsCount)) {
-                text('no data', x(i), (chartTop + chartBottom) / 2, 11, '#c3ccd6', '400', 'center');
+            var mine = model.columns.map(function (c) {
+                var m = c.present ? c.metrics[k] : null;
+                return m && Number.isFinite(m.value) ? m : null;
+            });
+            var center = model.columns.map(function (c) {
+                var m = c.present ? c.metrics[k] : null;
+                return m && Number.isFinite(m.centerValue) ? m.centerValue : null;
+            });
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(px, py, panelW, panelH);
+
+            text(kpi.label, px + 10, py + 14, 13, '#0f2a4a', '700');
+            var ym = ytd && ytd.metrics[k];
+            if (ym && ym.display) {
+                text('YTD ' + ym.display, px + panelW - 10, py + 14, 12,
+                    ym.meets === true ? MEETS_INK : ym.meets === false ? BELOW_INK : '#0f2a4a', '700', 'right');
+            }
+            var cm = ytd && ytd.centerMetrics && ytd.centerMetrics[k];
+            var sub = [];
+            if (kpi.targetDisplay) sub.push('Target ' + kpi.targetDisplay);
+            if (cm && cm.display) sub.push('Center ' + cm.display);
+            text(sub.join('   '), px + 10, py + 31, 10.5, '#7a8794');
+
+            var top = py + 46, bottom = py + panelH - 22;
+            var left = px + 8, right = px + panelW - 8;
+            var xAt = function (i) { return left + (right - left) * (i + 0.5) / n; };
+
+            if (!mine.some(Boolean)) {
+                text('no data', (left + right) / 2, (top + bottom) / 2, 11, '#c3ccd6', '400', 'center');
                 return;
             }
-            var all = c.measuredAgainstTarget > 0 && c.meetsCount === c.measuredAgainstTarget;
-            ctx.beginPath();
-            ctx.arc(x(i), y(c.meetsCount), 6, 0, Math.PI * 2);
-            ctx.fillStyle = all ? IMG_MEETS_COLOR : '#1565c0';
-            ctx.fill();
-            text(c.meetsCount + ' of ' + c.measuredAgainstTarget, x(i), y(c.meetsCount) - 17,
-                12, '#0f2a4a', '700', 'center');
+            var all = [];
+            mine.forEach(function (m) { if (m) all.push(m.value); });
+            center.forEach(function (v) { if (v !== null) all.push(v); });
+            if (Number.isFinite(kpi.target)) all.push(kpi.target);
+            var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+            if (hi === lo) { lo -= 1; hi += 1; }
+            var pad = (hi - lo) * 0.12;
+            lo -= pad; hi += pad;
+            var yAt = function (v) {
+                var f = (v - lo) / (hi - lo);
+                return kpi.reverse ? top + f * (bottom - top) : bottom - f * (bottom - top);
+            };
+
+            // Better is always up, so the meets side of the target is always
+            // the band above its line.
+            if (Number.isFinite(kpi.target)) {
+                var ty = yAt(kpi.target);
+                ctx.fillStyle = MEETS_BG;
+                ctx.fillRect(left, top, right - left, Math.max(0, ty - top));
+                polyline([{ x: left, y: ty }, { x: right, y: ty }], IMG_MEETS_COLOR, 1.25, [5, 4]);
+            }
+
+            polyline(center.map(function (v, i) {
+                return v === null ? null : { x: xAt(i), y: yAt(v) };
+            }), '#8a97a6', 1.75, [2, 3]);
+
+            polyline(mine.map(function (m, i) {
+                return m ? { x: xAt(i), y: yAt(m.value) } : null;
+            }), '#1565c0', 2.5);
+
+            mine.forEach(function (m, i) {
+                if (!m) return;
+                ctx.beginPath();
+                ctx.arc(xAt(i), yAt(m.value), 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = m.meets === true ? IMG_MEETS_COLOR : m.meets === false ? IMG_BELOW_COLOR : '#1565c0';
+                ctx.fill();
+            });
+
+            // Month initials when the chart is too narrow for the short names.
+            var narrow = (right - left) / n < 26;
+            model.columns.forEach(function (c, i) {
+                text(narrow ? String(c.label).charAt(0) : c.label, xAt(i), bottom + 12, 9.5,
+                    c.inProgress ? '#b45309' : '#9aa7b4', '600', 'center');
+            });
         });
+
+        // The key, once for all five.
+        var keyY = chartsTop + panelRows * panelH + (panelRows - 1) * 14 + 16;
+        var kx = padX;
+        polyline([{ x: kx, y: keyY }, { x: kx + 22, y: keyY }], '#1565c0', 2.5);
+        text(model.name, kx + 28, keyY, 11, '#26364a', '600');
+        ctx.font = '600 11px ' + IMG_FONT;
+        var nameW = typeof ctx.measureText === 'function' ? ctx.measureText(String(model.name)).width : String(model.name).length * 6.5;
+        kx += 28 + nameW + 22;
+        polyline([{ x: kx, y: keyY }, { x: kx + 22, y: keyY }], '#8a97a6', 1.75, [2, 3]);
+        text('Center average', kx + 28, keyY, 11, '#26364a', '600');
+        kx += 28 + 90 + 22;
+        ctx.fillStyle = MEETS_BG;
+        ctx.fillRect(kx, keyY - 6, 22, 12);
+        polyline([{ x: kx, y: keyY + 6 }, { x: kx + 22, y: keyY + 6 }], IMG_MEETS_COLOR, 1.25, [5, 4]);
+        text('Target, shaded on the side that meets it', kx + 28, keyY, 11, '#26364a', '600');
+        if (W > 900) text('Up is better on every chart', W - padX, keyY, 11, '#7a8794', '600', 'right');
+        else text('Up is better on every chart', padX, keyY + 16, 11, '#7a8794', '600');
 
         // ── Grid ──
         var gridTop = headerH + chartH + gap;
@@ -2621,9 +2736,7 @@
         // A placing, drawn small and grey under the verdict it belongs to.
         // The verdict is the cell colour now. A pill inside a shaded cell was
         // saying the same thing twice and spending the row height to do it.
-        var MEETS_BG = "#e4f3e8", MEETS_INK = "#1a6b32";
-        var BELOW_BG = "#fbe6e4", BELOW_INK = "#a52f26";
-
+        // The colours are declared with the charts above, which use them too.
         var shade = function (m, left, width, ry) {
             if (!m || m.meets === null) return;
             ctx.fillStyle = m.meets ? MEETS_BG : BELOW_BG;

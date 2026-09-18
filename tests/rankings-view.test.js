@@ -1175,11 +1175,16 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
            The chart is targets met instead. */
         t.check('nothing on it is a placing', !texts.some((s) => /^#\d+$/.test(s)));
         t.check('and no row is labelled Rank', texts.indexOf('Rank') === -1);
-        t.check('the chart is targets met',
-            texts.indexOf('Targets met, month by month') !== -1 &&
-            texts.indexOf('Targets met') !== -1);
-        t.check('with the count spelled out on each month',
-            texts.some((s) => /^\d+ of \d+$/.test(s)));
+        // One small chart per KPI now, each against the centre and the
+        // target. Targets met stays as the first row of the grid.
+        t.check('the charts are the five KPIs',
+            texts.indexOf('Each KPI, month by month') !== -1 &&
+            ['AHT', 'Adherence', 'Sentiment', 'CX Adv', 'Reliability'].every((l) => texts.indexOf(l) !== -1));
+        t.check('each against the centre average and the target',
+            texts.indexOf('Center average') !== -1 && texts.some((s) => /^Target \S/.test(s)));
+        t.check('and says which way is better', texts.indexOf('Up is better on every chart') !== -1);
+        t.check('targets met is still a row',
+            texts.indexOf('Targets met') !== -1 && texts.some((s) => /^\d+ of \d+$/.test(s)));
 
         t.check('the targets are named, so meets can be checked',
             texts.some((s) => /^Target:/.test(s)));
@@ -1190,7 +1195,7 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
             texts.some((str) => /Green meets the target/.test(str)));
         t.check('and the placings say what they are measured against',
             texts.some((str) => /not an overall ranking/.test(str)));
-        t.check('a month with no data says so', texts.indexOf('no data') !== -1);
+        t.check('a month with no data is left blank in the grid', texts.indexOf('.') !== -1);
     });
 });
 
@@ -1198,26 +1203,54 @@ suite('rankings view: a better month is drawn higher in the year picture', (t) =
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
     const model = cr.buildYearImageModel('P0');
-    const scored = model.columns.filter((c) => c.present);
-    const counts = new Set(scored.map((c) => c.meetsCount));
-    if (scored.length < 2 || counts.size < 2) {
-        t.check('skipped - this fixture has no spread in targets met', true);
-        return;
-    }
+
+    // Month values each KPI chart plots, in drawing order.
+    const plotted = model.kpis.map((kpi, k) => model.columns
+        .filter((c) => c.present && Number.isFinite(c.metrics[k].value))
+        .map((c) => c.metrics[k].value));
 
     withRecordingCanvas(t, (rec) => {
         cr.drawYearCard(model);
-        // The month markers are the filled circles on the chart line.
-        const markers = rec.ops.filter((o) => o.op === 'arc' && o.r === 6);
-        t.equal('one marker per scored month', markers.length, scored.length);
+        const markers = rec.ops.filter((o) => o.op === 'arc' && o.r === 3.5);
+        t.equal('one marker per month on every chart', markers.length,
+            plotted.reduce((sum, list) => sum + list.length, 0));
 
-        // Up is better, the way the word reads: meeting more targets must sit
-        // higher on the canvas, which means a smaller y.
-        const pairs = scored.map((c, i) => ({ met: c.meetsCount, y: markers[i].y }));
-        const best = pairs.reduce((a, b) => (a.met >= b.met ? a : b));
-        const worst = pairs.reduce((a, b) => (a.met <= b.met ? a : b));
-        t.check('the best month is drawn above the worst', best.y < worst.y);
+        // Better sits higher on every chart, which for AHT means a smaller
+        // number, so a faster month climbs rather than falls.
+        let at = 0;
+        let checked = 0;
+        model.kpis.forEach((kpi, k) => {
+            const values = plotted[k];
+            const ys = markers.slice(at, at + values.length).map((m) => m.y);
+            at += values.length;
+            if (new Set(values).size < 2) return;
+            const better = (a, b) => (kpi.reverse ? a < b : a > b);
+            let bi = 0, wi = 0;
+            values.forEach((v, i) => {
+                if (better(v, values[bi])) bi = i;
+                if (better(values[wi], v)) wi = i;
+            });
+            t.check(kpi.label + ': the best month is drawn above the worst', ys[bi] < ys[wi]);
+            checked += 1;
+        });
+        t.check('at least one chart had a spread to check', checked > 0);
     });
+});
+
+suite('rankings view: every month carries the centre average it is charted against', (t) => {
+    const { cr } = loadRankings(t, WEEKS, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+    const scored = model.columns.filter((c) => c.present);
+
+    t.check('each scored month has a centre figure for AHT',
+        scored.every((c) => Number.isFinite(c.metrics[0].centerValue)));
+    t.check('with a display that matches',
+        scored.every((c) => !!c.metrics[0].centerDisplay));
+    t.check('every KPI knows its target and direction',
+        model.kpis.length === 5 && model.kpis.every((k) => Number.isFinite(k.target)));
+    t.check('AHT and Reliability read lower as better',
+        model.kpis[0].reverse === true && model.kpis[4].reverse === true && model.kpis[1].reverse === false);
 });
 
 suite('rankings view: the year picture is on screen, not only on the clipboard', (t) => {
