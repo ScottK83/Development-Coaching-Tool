@@ -1450,3 +1450,38 @@ suite('rankings view: a month still running is never presented as finished', (t)
 
     t.equal('nobody with no data gets a mail', cr.buildMonthlyStatsEmail('Nobody Here'), null);
 });
+
+/* Reported: "Reliability needs to be a TOTAL. It's TOTAL HOURS MISSED FOR THE
+   YEAR." The year card plotted each month's own hours against the annual
+   18 hour budget, so the points read as an average and a month could never
+   fail. It is the running total from January now, on the card and in the
+   email, and the centre is the average person's running total. */
+suite('rankings view: reliability on the year card is the running total for the year', (t) => {
+    const withHours = (shift, hoursP0, hoursOthers) => roster(40, shift).map((e) =>
+        Object.assign({}, e, { reliability: e.name === 'P0' ? hoursP0 : hoursOthers }));
+    const weeks = Object.assign({},
+        period('2026-06-01', '2026-06-07', 'week', withHours(0, 2, 1), 'Week ending Jun 7'),
+        period('2026-06-08', '2026-06-14', 'week', withHours(1, 2, 1), 'Week ending Jun 14'),
+        period('2026-06-15', '2026-06-21', 'week', withHours(2, 2, 1), 'Week ending Jun 21'),
+        period('2026-06-22', '2026-06-28', 'week', withHours(3, 2, 1), 'Week ending Jun 28'),
+        period('2026-07-06', '2026-07-12', 'week', withHours(5, 3, 1), 'Week ending Jul 12'),
+        period('2026-07-13', '2026-07-19', 'week', withHours(8, 3, 1), 'Week ending Jul 19'),
+        period('2026-07-20', '2026-07-26', 'week', withHours(11, 3, 1), 'Week ending Jul 26'));
+    const { cr } = loadRankings(t, weeks, YTD);
+    cr.renderCenterRanking();
+
+    const model = cr.buildYearImageModel('P0');
+    const rel = (label) => model.columns.find((c) => c.fullLabel && c.fullLabel.indexOf(label) === 0).metrics
+        .find((m) => m.label === 'Reliability');
+    t.equal('June is the hours so far', rel('June').value, 8);
+    t.equal('July adds its own to June', rel('July').value, 17);
+    t.check('and is judged on the total against the annual budget', rel('July').meets === true);
+    // 39 people at 4 + 3 hours, and P0 at 17.
+    t.check('the centre is the average person\'s total, not a month',
+        Math.abs(rel('July').centerValue - (39 * 7 + 17) / 40) < 1e-9);
+
+    const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });
+    t.check('the email gives the year\'s total and what the month added',
+        /Reliability 17\.0 hrs missed this year, 9\.0 hrs of it in July/.test(mail.body));
+    t.check('never "better by" on a total', !/Reliability[^\n]*better by/.test(mail.body));
+});

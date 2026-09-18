@@ -1921,6 +1921,23 @@
             var has = function (v) { return !(v === null || v === undefined || isNaN(v)); };
             if (!has(before) || !has(after)) return;
 
+            // Reliability is the year's running total, which only ever goes up,
+            // so "better by" has no meaning. What is worth saying is the total
+            // and how much of it this month added.
+            if (row.registry === 'reliability') {
+                var added = Number(after) - Number(before);
+                var total = _formatMetricDisplay(row.registry, Number(after));
+                var onTarget = _meetsTarget(row.registry, Number(after), year) === true;
+                var month = String(cur.label || '').split(' ')[0];
+                lines.push(added > 0.05
+                    ? '📉 Reliability ' + total + ' missed this year, ' +
+                      _formatMetricDisplay(row.registry, added) + ' of it in ' + month +
+                      (onTarget ? ', still inside the budget' : '')
+                    : '🎉 Reliability ' + total + ' missed this year, nothing added in ' + month +
+                      (onTarget ? ', and inside the budget' : ''));
+                return;
+            }
+
             var delta = Number(after) - Number(before);
             var reverse = _metricIsReverse(row.registry);
             var better = reverse ? delta < 0 : delta > 0;
@@ -1969,6 +1986,23 @@
         var end = scored.length - 1;
         if (scored[end].inProgress && end >= 2) end -= 1;
         return [scored[end - 1], scored[end]];
+    }
+
+    /**
+     * The same series with reliability as the year's running total, on copies.
+     * The timeline carries each month's own hours; the year card and the email
+     * both talk about the total, because the budget it is judged on is annual.
+     */
+    function _runningReliability(series) {
+        var total = 0, any = false;
+        return (series || []).slice().sort(function (a, b) {
+            return String(a && a.key).localeCompare(String(b && b.key));
+        }).map(function (pt) {
+            if (!pt) return pt;
+            var hours = Number(pt.reliability);
+            if (Number.isFinite(hours)) { total += hours; any = true; }
+            return Object.assign({}, pt, { reliability: any ? Math.round(total * 100) / 100 : null });
+        });
     }
 
     /**
@@ -2079,7 +2113,7 @@
             // No YTD upload to read: the month story is the useful answer.
         }
 
-        var pair = _lastTwoScored(_timelineFor(name), win.anchor);
+        var pair = _lastTwoScored(_runningReliability(_timelineFor(name)), win.anchor);
 
         if (pair) {
             var prev = pair[0], cur = pair[1];
@@ -2542,12 +2576,30 @@
         // Everybody who has a point in a month, so the placing inside each
         // metric is worked out against the whole centre for that same month
         // rather than against whoever happens to be on screen.
+        //
+        // Reliability is carried as a RUNNING TOTAL on this card: hours missed
+        // from January through the end of each month. It is hours against an
+        // annual budget, so a month's own hours set against 18 said nothing,
+        // and the monthly points read as though the year were being averaged.
+        // The timeline's points are per-month hours (the period rule set on
+        // 2026-09-08), so each person's months are summed in order here, on
+        // copies, leaving the timeline itself alone.
         var holdersByPeriod = {};
+        var runningByName = {};
         Object.keys((tl && tl.byName) || {}).forEach(function (who) {
-            (tl.byName[who] || []).forEach(function (point) {
-                if (!point || !point.key) return;
+            var total = 0, any = false;
+            var points = (tl.byName[who] || []).filter(function (point) { return point && point.key; })
+                .slice().sort(function (a, b) { return String(a.key).localeCompare(String(b.key)); });
+            runningByName[who] = {};
+            points.forEach(function (point) {
+                var hours = Number(point.reliability);
+                if (Number.isFinite(hours)) { total += hours; any = true; }
+                var copy = Object.assign({}, point, {
+                    reliability: any ? Math.round(total * 100) / 100 : null
+                });
+                runningByName[who][point.key] = copy;
                 (holdersByPeriod[point.key] = holdersByPeriod[point.key] || [])
-                    .push({ name: who, holder: point });
+                    .push({ name: who, holder: copy });
             });
         });
         var ranksByPeriod = {};
@@ -2593,7 +2645,9 @@
                 };
             }),
             columns: columns.map(function (col) {
-                var pt = col.point;
+                var pt = col.point
+                    ? ((runningByName[name] && runningByName[name][col.key]) || col.point)
+                    : null;
                 return {
                     key: col.key,
                     label: _shortPeriodLabel(col.label),
