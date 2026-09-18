@@ -1949,10 +1949,76 @@
         return lines;
     }
 
-    function _lastTwoScored(series) {
+    /**
+     * The two months the email compares, oldest first, or null.
+     *
+     * Measured TO the month picked on the page when one was. Otherwise the
+     * newest two FINISHED months: the newest two used to include a month still
+     * running, so on the 18th of September the email set half a September
+     * against all of August and then said the numbers were complete through
+     * August 31.
+     */
+    function _lastTwoScored(series, anchorMonth) {
         var scored = (series || []).filter(function (pt) { return pt && Number.isFinite(pt.rank); });
         if (scored.length < 2) return null;
-        return [scored[scored.length - 2], scored[scored.length - 1]];
+        if (anchorMonth) {
+            for (var i = 1; i < scored.length; i++) {
+                if (String(scored[i].key) === String(anchorMonth)) return [scored[i - 1], scored[i]];
+            }
+        }
+        var end = scored.length - 1;
+        if (scored[end].inProgress && end >= 2) end -= 1;
+        return [scored[end - 1], scored[end]];
+    }
+
+    /**
+     * What the email should be about, read off the period picked on the page.
+     *
+     * A year to date pick gets the year so far. A month, or a week, gets that
+     * month against the one before it. Nothing picked gets the newest two
+     * finished months.
+     */
+    function _emailWindow() {
+        if (!_selectedRankingPeriodKey) return { scope: 'month', anchor: null };
+        if (_scopeForSelectedPeriod() === 'ytd') return { scope: 'ytd' };
+        return { scope: 'month', anchor: _movementAnchorKey('month') };
+    }
+
+    /**
+     * The year so far as an email body, for when year to date is what was
+     * picked. One line per KPI against its target, with the centre beside it,
+     * the same numbers the YTD and Center avg columns of the picture carry.
+     */
+    function _ytdEmailLines(model) {
+        var ytd = model.ytd;
+        if (!ytd || !ytd.metrics) return null;
+        var lines = [];
+        var met = 0, judged = 0;
+
+        ytd.metrics.forEach(function (m, k) {
+            if (!m || !m.display) return;
+            var phrase = _targetPhrase(m.registry, model.year);
+            var cm = ytd.centerMetrics && ytd.centerMetrics[k];
+            var center = cm && cm.display ? ' (center ' + cm.display + ')' : '';
+            if (m.meets !== null) judged += 1;
+            if (m.meets === true) {
+                met += 1;
+                lines.push('🎉 ' + m.label + ' ' + m.display + ', on target' + center);
+            } else if (m.meets === false) {
+                lines.push('🔸 ' + m.label + ' ' + m.display + ', target is ' + phrase + center);
+            } else {
+                lines.push('➡️ ' + m.label + ' ' + m.display + center);
+            }
+        });
+        if (!lines.length) return null;
+
+        var close;
+        if (judged && met === judged) close = 'On target across the board for the year. That is a brilliant year so far 🌟';
+        else if (met * 2 > judged) close = 'More on target than not this year, keep it going 💪';
+        else if (met > 0) close = 'Some of these are already there. Plenty of year left to bring the rest along.';
+        else close = 'Plenty of year left to move these. Worth picking one to go at.';
+
+        return { lines: lines, met: met, judged: judged, close: close };
     }
 
     /* ── The message ──
@@ -1969,19 +2035,51 @@
        and how the month went. And the grid goes in as the picture, which is the
        one form that keeps its shape wherever it lands. */
 
-    function buildMonthOverMonthEmail(name) {
+    function buildMonthOverMonthEmail(name, windowOpts) {
         var model = buildYearImageModel(name);
         if (!model) return null;
         var scored = model.columns.filter(function (c) { return c.present; });
         if (!scored.length) return null;
 
-        var pair = _lastTwoScored(_timelineFor(name));
+        var win = windowOpts || _emailWindow();
         var firstName = String(name || '').trim().split(/\s+/)[0] || name;
 
         var lines = [];
         lines.push('Hi ' + firstName + ',');
         lines.push('');
         lines.push('Here is how your numbers have landed each month this year, against target.');
+
+        if (win.scope === 'ytd') {
+            var year = _ytdEmailLines(model);
+            if (year) {
+                lines.push('');
+                lines.push('Your ' + model.year + ' so far, year to date:');
+                lines.push('');
+                year.lines.forEach(function (line) { lines.push(line); });
+                lines.push('');
+                lines.push(year.close);
+
+                var ytdThrough = model.ytd.through ? _longDate(model.ytd.through) : '';
+                if (ytdThrough) {
+                    lines.push('');
+                    lines.push('These year to date numbers run through ' + ytdThrough + '.');
+                }
+                lines.push('');
+                lines.push('Happy to walk through any of it.');
+
+                return {
+                    to: _apsEmailFor(name),
+                    cc: COACHING_CC,
+                    subject: 'Your ' + model.year + ' numbers, year to date',
+                    body: lines.join('\n'),
+                    monthCount: scored.length,
+                    scope: 'ytd'
+                };
+            }
+            // No YTD upload to read: the month story is the useful answer.
+        }
+
+        var pair = _lastTwoScored(_timelineFor(name), win.anchor);
 
         if (pair) {
             var prev = pair[0], cur = pair[1];
@@ -2017,9 +2115,19 @@
         // knows what it covers a year from now. Read off the last FINISHED
         // month, never a month still running: a part month dated as though it
         // were complete is the one thing this email must not do.
+        //
+        // Dated to the month the email compares up to, so a July pick is not
+        // captioned with August. A month still running says so instead.
+        var curCol = pair ? scored.filter(function (c) { return c.key === pair[1].key; })[0] : null;
         var complete = scored.filter(function (c) { return !c.inProgress && c.spanEnd; });
+        if (curCol && !curCol.inProgress) {
+            complete = complete.filter(function (c) { return String(c.key) <= String(curCol.key); });
+        }
         var through = complete.length ? _longDate(complete[complete.length - 1].spanEnd) : '';
-        if (through) {
+        if (curCol && curCol.inProgress) {
+            lines.push('');
+            lines.push(curCol.fullLabel + ' is still running, so its numbers are the month so far.');
+        } else if (through) {
             lines.push('');
             lines.push('These numbers are complete through ' + through + '.');
         }
@@ -2027,17 +2135,20 @@
         lines.push('');
         lines.push('Happy to walk through any of it.');
 
+        var throughLabel = curCol && !curCol.inProgress ? curCol.fullLabel : model.lastClosedLabel;
+
         return {
             to: _apsEmailFor(name),
             cc: COACHING_CC,
             // The month, not the date. A subject line is read in a list and
             // "through August" is the part somebody scans for; the exact day
             // belongs in the body, where they are filing it.
-            subject: model.lastClosedLabel
-                ? 'Your ' + model.year + ' numbers, through ' + model.lastClosedLabel.split(' ')[0]
+            subject: throughLabel
+                ? 'Your ' + model.year + ' numbers, through ' + String(throughLabel).split(' ')[0]
                 : 'Your ' + model.year + ' numbers, month by month',
             body: lines.join('\n'),
-            monthCount: scored.length
+            monthCount: scored.length,
+            scope: 'month'
         };
     }
 
@@ -2399,9 +2510,13 @@
             };
         });
 
+        var ytdMeta = (_getYtdData()[key] || {}).metadata || {};
+        var ytdEnd = ytdMeta.endDate || (String(key).indexOf('|') > -1 ? String(key).split('|')[1] : '');
+
         return {
             label: 'YTD',
             present: true,
+            through: ytdEnd || '',
             metrics: metrics,
             centerMetrics: centerMetrics,
             meetsCount: metrics.filter(function (m) { return m.meets === true; }).length,
@@ -2652,11 +2767,14 @@
             var cm = ytd && ytd.centerMetrics && ytd.centerMetrics[k];
             var sub = [];
             if (kpi.targetDisplay) sub.push('Target ' + kpi.targetDisplay);
-            if (cm && cm.display) sub.push('Center ' + cm.display);
+            if (cm && cm.display) sub.push('Center YTD ' + cm.display);
             text(sub.join('   '), px + 10, py + 31, 10.5, '#7a8794');
 
             var top = py + 46, bottom = py + panelH - 22;
-            var left = px + 8, right = px + panelW - 8;
+            // A strip on the right carries the numbers the lines end on, so the
+            // chart says what it is showing rather than leaving it to the grid.
+            var gutter = 50;
+            var left = px + 8, right = px + panelW - 8 - gutter;
             var xAt = function (i) { return left + (right - left) * (i + 0.5) / n; };
 
             if (!mine.some(Boolean)) {
@@ -2699,6 +2817,34 @@
                 ctx.arc(xAt(i), yAt(m.value), 3.5, 0, Math.PI * 2);
                 ctx.fillStyle = m.meets === true ? IMG_MEETS_COLOR : m.meets === false ? IMG_BELOW_COLOR : '#1565c0';
                 ctx.fill();
+            });
+
+            // Where each line finishes, as a number: this person's latest month,
+            // the centre's same month, and the target. Nudged apart when they
+            // land close, and held inside the panel.
+            var lastI = -1;
+            mine.forEach(function (m, i) { if (m) lastI = i; });
+            var ends = [];
+            if (lastI > -1) {
+                ends.push({ y: yAt(mine[lastI].value), s: mine[lastI].display, color: '#1565c0', weight: '700' });
+                var lastCenter = model.columns[lastI].metrics[k];
+                if (lastCenter && Number.isFinite(lastCenter.centerValue) && lastCenter.centerDisplay) {
+                    ends.push({ y: yAt(lastCenter.centerValue), s: lastCenter.centerDisplay, color: '#6b7887', weight: '600' });
+                }
+            }
+            if (Number.isFinite(kpi.target) && kpi.targetDisplay) {
+                ends.push({ y: yAt(kpi.target), s: kpi.targetDisplay, color: IMG_MEETS_COLOR, weight: '700' });
+            }
+            ends.sort(function (a, b) { return a.y - b.y; });
+            var minGap = 12;
+            for (var e = 0; e < ends.length; e++) {
+                ends[e].y = Math.max(ends[e].y, top + 5, e ? ends[e - 1].y + minGap : -Infinity);
+            }
+            for (var f = ends.length - 1; f >= 0; f--) {
+                ends[f].y = Math.min(ends[f].y, bottom - 5, f < ends.length - 1 ? ends[f + 1].y - minGap : Infinity);
+            }
+            ends.forEach(function (end) {
+                text(end.s, right + 8, end.y, 10.5, end.color, end.weight, 'left');
             });
 
             // Month initials when the chart is too narrow for the short names.
@@ -3003,7 +3149,8 @@
             '<div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">' +
                 '<button id="rankTrajectoryEmail" style="padding: 8px 16px; background: #2e7d32; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
-                'Email month over month summary</button>' +
+                (_emailWindow().scope === 'ytd' ? 'Email year to date summary' : 'Email month over month summary') +
+                '</button>' +
                 (monthlyMail
                     ? '<button id="rankTrajectoryMonthEmail" style="padding: 8px 16px; background: #00695c; color: white; ' +
                       'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +

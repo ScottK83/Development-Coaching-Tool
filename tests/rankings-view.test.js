@@ -987,7 +987,9 @@ suite('rankings view: a rebuilt year says which month it really starts in', (t) 
 suite('rankings view: the mail body says where the month moved', (t) => {
     const { cr } = loadRankings(t, WEEKS, YTD);
     cr.renderCenterRanking();
-    const mail = cr.buildMonthOverMonthEmail('P0');
+    // Months asked for outright: the page opens on the YTD file, which gets
+    // the year to date email instead (see the suite below).
+    const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: null });
 
     t.check('there is a draft', !!mail);
     t.equal('addressed first.last at aps', mail.to, 'p0@aps.com');
@@ -1058,6 +1060,67 @@ suite('rankings view: meets is measured against the published target', (t) => {
     t.check('every target is quotable', model.targets.length === 5);
     t.check('and reads as a sentence',
         model.targets.every((tg) => /(or lower|or higher)$/.test(tg.phrase)));
+});
+
+// May through the middle of August. The suite clock sits on August 18, so
+// August is the month still running.
+const LONG_WEEKS = Object.assign({}, WEEKS,
+    period('2026-05-04', '2026-05-10', 'week', roster(40, 6), 'Week ending May 10'),
+    period('2026-05-11', '2026-05-17', 'week', roster(40, 7), 'Week ending May 17'),
+    period('2026-05-18', '2026-05-24', 'week', roster(40, 9), 'Week ending May 24'),
+    period('2026-08-03', '2026-08-09', 'week', roster(40, 12), 'Week ending Aug 9'),
+    period('2026-08-10', '2026-08-16', 'week', roster(40, 13), 'Week ending Aug 16')
+);
+
+suite('rankings view: the email follows the period picked', (t) => {
+    const { dom, cr } = loadRankings(t, LONG_WEEKS, YTD);
+    cr.renderCenterRanking();
+
+    /* Reported: the YTD file was picked and the email came out as "September
+       2026 next to August 2026". The draft always compared the newest two
+       months, whatever was on screen. */
+    const ytd = cr.buildMonthOverMonthEmail('P0');
+    t.check('the page opens on YTD, and the draft is year to date', !!ytd && ytd.scope === 'ytd');
+    if (!ytd) return;
+    t.check('it says it is the year so far', /so far, year to date:/.test(ytd.body));
+    t.check('no month is set against another', !/ next to /.test(ytd.body));
+    t.check('each KPI is judged against target', /(on target|target is )/.test(ytd.body));
+    t.check('with the centre beside it', /\(center [^)]+\)/.test(ytd.body));
+    t.check('the subject says year to date', /year to date$/.test(ytd.subject));
+    t.check('it dates the file', /run through July 31, 2026\./.test(ytd.body));
+    t.check('still no rank or placing', !/place|rank|#\d/.test(ytd.body));
+    t.check('no em dashes', ytd.body.indexOf(String.fromCharCode(8212)) === -1);
+
+    // Picking June on the page measures June against May.
+    dom.els.rankingPeriodSelect.value = 'month:2026-06';
+    dom.els.rankingPeriodSelect.fire('change');
+    const june = cr.buildMonthOverMonthEmail('P0');
+    t.check('a picked month gets the month story', !!june && june.scope === 'month');
+    if (!june) return;
+    t.check('measured to the month picked', june.body.indexOf('June 2026 next to May 2026:') > -1);
+    t.check('dated to that month, not the newest',
+        /complete through June \d{1,2}, 2026\./.test(june.body));
+    t.equal('and the subject stops there', june.subject, 'Your 2026 numbers, through June');
+});
+
+suite('rankings view: the email never sets a month still running against a whole one', (t) => {
+    const { cr } = loadRankings(t, LONG_WEEKS, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+    t.check('August is the month still running',
+        model.columns.some((c) => c.present && c.inProgress && /August/.test(c.fullLabel)));
+
+    const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: null });
+    t.check('unpicked, the newest two finished months are compared',
+        mail.body.indexOf('July 2026 next to June 2026:') > -1);
+    t.check('August is not set against July', mail.body.indexOf('August 2026 next to') === -1);
+    t.check('and the date matches the month compared', /complete through July \d{1,2}, 2026\./.test(mail.body));
+
+    // Picked on purpose, it is compared, and said to be the month so far.
+    const picked = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-08' });
+    t.check('a picked running month is compared', picked.body.indexOf('August 2026 next to July 2026:') > -1);
+    t.check('and said to be the month so far', /August 2026 is still running/.test(picked.body));
+    t.check('never dated as complete', !/complete through/.test(picked.body));
 });
 
 suite('rankings view: one month is not a month-over-month story', (t) => {
