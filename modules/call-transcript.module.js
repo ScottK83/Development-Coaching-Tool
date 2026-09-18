@@ -338,7 +338,12 @@
     const AGENT_TURN_CUE = /thank you for (?:being|calling|choosing)|can i have your|may i (?:place|put) you|i'?m just gonna place you|one moment please|allow me a moment|thank you (?:so much )?for holding|let me pull up|i'?d like to recap|the (?:first|second|third) plan|plans available|our email address|for the identity check|verify your name|is that right|what'?s the address|deposit of|we (?:do )?need (?:to )?(?:either|your)|do you have any questions|is there anything else/i;
     // Phrases only a customer says. These are the ones the coaching rules care
     // about most, so they are matched outright rather than left to flow order.
-    const CUSTOMER_TURN_CUE = /^(?:hello )?hi my name'?s|i'?m just trying to|i don'?t know what my|do you have any recommendations|i just have the address|we'?ll get that back|i have both|this is (?:ridiculous|unacceptable|the (?:second|third|fourth|\d+)(?:st|nd|rd|th)? time)|i (?:want|need) to (?:speak|talk) (?:to|with) (?:a|your) (?:supervisor|manager)|get me a (?:supervisor|manager)|like i (?:said|told you|mentioned)|as i (?:said|mentioned|explained)|i already (?:said|told|explained)|i(?:'?m| am) (?:so |really )?(?:frustrated|fed up|angry|upset)|my bill (?:is|went|doubled)|(?:i was|you) charged (?:me )?twice|(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful)|i (?:really )?appreciate (?:you|your|it)|(?:can'?t|cannot) afford|i(?:'?m| am) past due|behind on (?:my|the) bill/i;
+    //
+    // Not "i appreciate your patience", which is the advisor coming back from
+    // a hold, and not a bare "can't afford": "if you can't afford the full
+    // amount" is the advisor too. Both put the advisor's next words, often the
+    // balance, on the caller's side.
+    const CUSTOMER_TURN_CUE = /^(?:hello )?hi my name'?s|i'?m just trying to|i don'?t know what my|do you have any recommendations|i just have the address|we'?ll get that back|i have both|this is (?:ridiculous|unacceptable|the (?:second|third|fourth|\d+)(?:st|nd|rd|th)? time)|i (?:want|need) to (?:speak|talk) (?:to|with) (?:a|your) (?:supervisor|manager)|get me a (?:supervisor|manager)|like i (?:said|told you|mentioned)|as i (?:said|mentioned|explained)|i already (?:said|told|explained)|i(?:'?m| am) (?:so |really )?(?:frustrated|fed up|angry|upset)|my bill (?:is|went|doubled)|(?:i was|you) charged (?:me )?twice|(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful)|i (?:really )?appreciate (?:you\b|your(?! patience)|it)|i (?:can'?t|cannot) afford|i(?:'?m| am) past due|behind on (?:my|the) bill/i;
 
     // "Agent:" or "Customer:" at the front of a timestamped line. Verint's
     // plain text export has no labels, but its transcript is colour coded, and

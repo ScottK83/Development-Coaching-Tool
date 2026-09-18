@@ -155,7 +155,9 @@
         const reader = window.DevCoachModules?.callVerification;
         if (!read?.ok || typeof reader?.describe !== 'function') {
             return check('verification', VERIFICATION_QUESTION, VERDICT.unknown,
-                'The verification read is not available, so listen for this one yourself.');
+                read?.reason === 'unsegmented' && reader?.describe
+                    ? reader.describe(read).detail
+                    : 'The verification read is not available, so listen for this one yourself.');
         }
 
         const said = reader.describe(read);

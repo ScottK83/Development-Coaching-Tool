@@ -1,0 +1,526 @@
+{
+ "probes": [
+  {
+   "name": "F1 failed-then-filler-then-balance",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to know how much i owe\n00:10\nsure for security purposes can you verify the last four digits of your social\n00:15\noh i do not have it on me\n00:19\nokay no problem\n00:22\nso your balance is two hundred twelve dollars and it is due on the twentieth",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "F1b failed-then-filler-then-balance LABELED",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, I need to know how much I owe.\nAgent: Sure, for security purposes can you verify the last four digits of your social?\nCustomer: Oh, I don't have it on me.\nAgent: Okay, no problem.\nCustomer: Okay.\nAgent: So your balance is two hundred twelve dollars.",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "F2 failed-ssn then address \"that matches\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i got a shut off notice and need to know what i owe\n00:10\nokay for security purposes can you verify the last four digits of your social\n00:15\ni do not know it\n00:18\nokay can you verify the service address then\n00:22\ntwo four one five west camelback road\n00:28\nokay that matches so the past due amount is two hundred forty dollars",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "F3 no-match outside window",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhat do i owe on my bill\n00:10\nfor security purposes can you verify the last four digits of your social\n00:14\none two three four\n00:17\nokay one moment\n00:25\nokay\n00:31\ni am sorry that does not match what we have on the account\n00:36\noh well can you just tell me the balance\n00:40\nsure the balance is two hundred dollars",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "F4 \"that is not correct\" then shares",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni want to know what i owe\n00:10\nokay and for security purposes can you verify your date of birth\n00:14\nmarch fifth nineteen eighty\n00:18\nhmm that is not correct do you have another date it could be\n00:24\nno that is it\n00:28\nokay well your balance is ninety dollars",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "F5 caller refuses to verify",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nyeah i just need my balance\n00:10\nsure for security purposes can you verify the last four of your social\n00:14\nwhy do you need that i just want to know what i owe\n00:19\nit is just to protect the account\n00:23\ni am not giving that out over the phone\n00:27\nokay well the balance is one hundred ten dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "F6 card security code counted as verification",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i want to make a payment and find out what i owe\n00:10\nsure can i have the address on the account\n00:14\none two three main street\n00:20\nand what card would you like to use\n00:24\nvisa four one one one one one one one one one one one one one one one\n00:34\nand the expiration date and the security code on the back\n00:40\noh four twenty eight and three two one\n00:46\nokay and your balance is one hundred eighty dollars how much would you like to pay",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "F7 social security income question counted as verification",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to set up a payment arrangement\n00:10\nokay can i have the address on the account\n00:14\nfive five west adams\n00:20\nokay and when does your social security come in each month\n00:24\non the third\n00:29\nokay so you have a past due balance of three hundred dollars and i can split that over three months",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "F8 caller claims already verified",
+   "transcript": "00:02\nthank you for holding my name is oceane i understand you were transferred how can i help\n00:08\nyeah i already verified with the other lady i just need to know what i owe\n00:14\nokay let me pull up the account can i have the address\n00:18\none two three main street\n00:24\nokay your balance is two hundred dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "F9 claimed-verified then failed check ignored",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni already verified in the phone system i just need my balance\n00:10\ni do not see that here so for security purposes can you verify the last four digits of your social\n00:15\ni do not know it\n00:19\nokay your balance is two hundred dollars",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "P1 \"cannot tell you what the balance is until i verify you\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\ni can tell you what the balance is as soon as i verify you can i have the last four of your social\n00:15\none two three four\n00:19\nthank you for verifying your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "P1b refusal worded \"i can't tell you what the balance is\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my dad's bill what does he owe\n00:10\nare you listed on the account\n00:13\nno\n00:16\ni am sorry i can't tell you what the balance is unless he is on the line with us\n00:22\nokay i will have him call",
+   "expected": "held-back"
+  },
+  {
+   "name": "P2 \"do you know what your account number is\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i want to check on my bill\n00:10\nsure do you know what your account number is\n00:14\nno i do not have it\n00:18\nthat is okay for security purposes can you verify the last four digits of your social\n00:23\nfive five six seven\n00:27\nthank you so your balance is one hundred ten dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "P3 caller says \"the name on the account is maria lopez\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to make a payment arrangement\n00:10\nsure what is the name on the account\n00:14\nthe name on the account is maria lopez\n00:18\nokay maria for security purposes can you verify your date of birth\n00:23\njune second nineteen seventy\n00:27\nthank you your balance is three hundred dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "P4 caller: \"i got a text saying the power is scheduled to be disconnected\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i got a text saying the power is scheduled to be disconnected on friday\n00:12\ni am sorry to hear that for security purposes can you verify the last four digits of your social\n00:18\nfour four five five\n00:22\nthank you for verifying so the past due amount is one hundred twenty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "P4b caller: \"the app is showing a past due amount\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi yeah the app is showing a past due amount but i made a payment on friday\n00:12\nokay let me look into that for security purposes can you verify your date of birth\n00:18\napril ninth nineteen eighty eight\n00:22\nthank you i do see the payment from friday it just has not posted yet",
+   "expected": "verified"
+  },
+  {
+   "name": "P5 caller \"i don't remember\" about the payment date after verifying",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i made a payment and it is not showing\n00:10\nokay for security purposes can you please verify the last four digits of your social\n00:15\nthree three four four\n00:18\nthank you and when did you make the payment\n00:21\ni do not remember maybe tuesday\n00:26\nokay i see a payment of fifty dollars on tuesday it just posted today",
+   "expected": "verified"
+  },
+  {
+   "name": "P5b advisor \"i don't have any record of that\" right after a clean check",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi they told me last week they would waive my late fee and it is still on the bill\n00:12\nokay for security purposes can you please verify your date of birth\n00:17\nmay first nineteen sixty\n00:21\nthank you i do not have any notes about a waiver on here\n00:27\nwell that is what they said\n00:31\nokay so your balance is eighty five dollars including the late fee",
+   "expected": "verified"
+  },
+  {
+   "name": "P5c caller \"not sure\" about something else after a clean check",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i have a question about my account\n00:09\nsure for security purposes can you verify your date of birth\n00:13\nmarch fifth nineteen eighty\n00:17\nthank you so much what can i help you with today\n00:21\ni am not sure what happened with the bill\n00:26\nokay let me look your balance is two hundred dollars and your usage went up in july",
+   "expected": "verified"
+  },
+  {
+   "name": "P6 hardship: \"my husband passed away\" but account is hers",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi my husband passed away last month and money has been really tight i need a payment arrangement\n00:14\ni am so sorry for your loss for security purposes can you verify the last four digits of your social\n00:20\nsix six seven seven\n00:24\nthank you for verifying so you have a past due balance of two hundred eighty dollars and i can split that",
+   "expected": "verified"
+  },
+  {
+   "name": "P7 \"are you the account holder\" \"yes\" \"no problem...\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check the balance\n00:09\nsure are you the account holder\n00:12\nyes i am\n00:14\nno problem and for security purposes can you verify the last four digits of your social\n00:19\none one two two\n00:23\nthank you for verifying your balance is forty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "P8 authorized user, advisor confirms listed and verifies",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check the balance on our account\n00:09\nsure are you the account holder\n00:12\nno my husband is but i am an authorized user\n00:16\nokay i do see you listed as an authorized user for security purposes can you verify your date of birth\n00:22\napril third nineteen seventy five\n00:26\nthank you your balance is one hundred forty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "P9 handoff \"put your dad on the phone\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my dad's account he got a high bill\n00:10\nokay are you listed on the account\n00:13\nno i am not\n00:16\nokay i would need to speak with the account holder can you put your dad on the phone\n00:22\nyeah hold on\n00:35\nhello this is frank\n00:38\nhi frank for security purposes can you verify the last four digits of your social\n00:44\nfive five six seven\n00:48\nthank you for verifying your balance is three hundred twenty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "R1 \"thank you for holding i appreciate your patience\" + balance, never verified",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\ncan i have the address on the account\n00:13\none two three main street\n00:18\nokay one moment please\n01:05\nthank you for holding i appreciate your patience so your balance is one hundred eighty seven dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "R2 advisor \"like i said the past due amount is\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni got a disconnect notice\n00:09\nokay can i have the address on the account\n00:13\none two three main street\n00:18\nokay the past due amount is one hundred twenty dollars\n00:24\nwait how much\n00:27\nlike i said the past due amount is one hundred twenty dollars and the disconnect is scheduled for friday",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "R3 advisor \"if you can't afford the full amount\" + past due, never verified",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni need a payment arrangement\n00:09\nokay can i have the address on the account\n00:13\none two three main street\n00:20\nokay so the past due amount is two hundred dollars and if you can't afford the full amount we can split it",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "R4 identity ask on a line cued as customer",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\nokay one moment please\n00:40\nthank you for holding i appreciate your patience for security purposes can you verify the last four digits of your social\n00:47\none two three four\n00:50\nthank you your balance is one hundred eighty seven dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "R5 advisor \"you mentioned\" + balance, never verified",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi my bill is really high this month\n00:10\nokay can i have the address on the account\n00:14\none two three main street\n00:20\nokay you mentioned the bill was high so it looks like you have a balance of three hundred twelve dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "P5c2 \"i'm not sure what happened\" after clean check",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i have a question about my account\n00:09\nsure for security purposes can you verify your date of birth\n00:13\nmarch fifth nineteen eighty\n00:17\nthank you so much what can i help you with today\n00:21\ni'm not sure what happened\n00:26\nokay let me look your balance is two hundred dollars and your usage went up in july",
+   "expected": "verified"
+  },
+  {
+   "name": "P9b handoff \"can you put your dad on the phone\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my dad's account he got a high bill\n00:10\nokay are you listed on the account\n00:13\nno i am not\n00:16\nokay can you put your dad on the phone\n00:22\nyeah hold on\n00:35\nhello this is frank\n00:38\nhi frank for security purposes can you verify the last four digits of your social\n00:44\nfive five six seven\n00:48\nthank you for verifying your balance is three hundred twenty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "T1 \"are you the account holder\" -> \"it's my mom's\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to know the balance\n00:09\nsure are you the account holder\n00:12\nit's my mom's\n00:14\nokay can you verify the last four of her social\n00:19\none two three four\n00:23\nthank you the balance is two hundred dollars",
+   "expected": "breach(denied)|breach(unauthorized)"
+  },
+  {
+   "name": "T1b \"this is his wife\" third party, verified with his social, no authorization",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi this is his wife i need to know what we owe on the power\n00:10\nokay for security purposes can you verify the last four of the social on the account\n00:15\none two three four\n00:19\nthank you for verifying your balance is ninety dollars",
+   "expected": "breach(unauthorized)"
+  },
+  {
+   "name": "T1c \"my mom asked me to call\" third party, verified with her social, no authorization",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi my mom asked me to call and find out what she owes\n00:10\nokay for security purposes can you verify the last four of the social on the account\n00:15\none two three four\n00:19\nthank you for verifying the balance is ninety dollars",
+   "expected": "breach(unauthorized)"
+  },
+  {
+   "name": "T2 \"she gave me permission\" from the caller clears everything",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my mom's account she gave me permission to call\n00:12\nokay for security purposes can you verify the last four of the social on the account\n00:17\none two three four\n00:21\nthank you for verifying the balance is ninety dollars",
+   "expected": "breach(unauthorized)"
+  },
+  {
+   "name": "T3 \"unless he has given verbal authorization\" clears the denial",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my dad's account\n00:10\nare you listed on the account\n00:13\nno i am not\n00:16\nokay unless he has given verbal authorization i cannot discuss the account can you verify the last four of his social\n00:24\none two three four\n00:28\nokay thank you the balance is two hundred dollars",
+   "expected": "breach(denied)"
+  },
+  {
+   "name": "T4 \"i'm her power of attorney\" self-authorizes",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am her power of attorney and i need to know what my mother owes\n00:12\nokay for security purposes can you verify the last four of the social on the account\n00:17\none two three four\n00:21\nthank you for verifying the balance is ninety dollars",
+   "expected": "breach(unauthorized)"
+  },
+  {
+   "name": "G1 stop service: \"if there's a balance ... final bill\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am moving out and need to stop service\n00:10\nokay i can help with that what is the address\n00:14\none two three main street\n00:20\nokay and what date would you like it stopped\n00:24\nthe thirtieth\n00:28\nokay so if there's a balance after that it will be on your final bill and if there's a credit we will mail you a check",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G2 policy: \"a payment arrangement lets you pay what you owe over time\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhat options do you have if i cannot pay the whole thing\n00:10\nwe have payment arrangements where you can pay what you owe over a few months",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G2b policy: \"if you have a past due balance\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhat help is out there if money is tight\n00:10\nif you have a past due balance we can set up a payment arrangement and there are crisis bill assistance programs too",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G3 offer: \"once you're enrolled in budget billing\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhow does budget billing work\n00:10\nonce you're enrolled in budget billing your payment is the same every month and we true it up once a year",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G3b offer: \"do you have autopay\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni keep forgetting to pay my bill on time\n00:10\ndo you currently have autopay set up it takes the payment out on the due date",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G4 advice: \"in the summer your bill will be higher\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhy do bills go up so much in arizona\n00:10\nin the summer your bill will be higher because the ac is running most of the day",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G5 payment by phone confirmed \"has been applied\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni want to make a payment\n00:09\nsure can i have the address on the account\n00:13\none two three main street\n00:20\nand what card would you like to use\n00:24\nvisa four one one one one one one one\n00:30\nand how much would you like to pay\n00:33\nfifty dollars\n00:40\nokay your payment of fifty dollars has been applied and your confirmation number is one two three",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "G6 caller offers an amount after failed check; advisor held back",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\ni can help with that for security purposes can you verify the last four digits of your social\n00:14\ni do not have it can i just pay fifty dollars\n00:19\nyes anybody can make a payment what card would you like to use",
+   "expected": "held-back"
+  },
+  {
+   "name": "G7 advisor asks \"how much was the payment\", caller answers",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni made a payment last week and it is not showing on the app\n00:10\nokay how much was the payment and when did you make it\n00:14\nit was a hundred dollars on monday\n00:19\nokay let me look into that for security purposes can you verify your date of birth\n00:24\njune second\n00:28\nthank you i do see the payment it posted today",
+   "expected": "verified"
+  },
+  {
+   "name": "N2 \"how much do i need to pay to keep the lights on\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni got a shut off notice how much do i need to pay to keep the lights on\n00:10\ncan i have the address on the account\n00:14\none two three main street\n00:20\nokay you would need to pay one hundred forty two dollars today to stop the disconnect",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "N3 \"the minimum you need to pay is\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhat do i owe to avoid the shut off\n00:10\ncan i have the address on the account\n00:14\none two three main street\n00:20\nokay the minimum you need to pay today is one hundred forty two dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "N4 \"it's due the fifteenth\" / \"you have until friday\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhen is my bill due\n00:10\ncan i have the address on the account\n00:14\none two three main street\n00:20\nokay you have until the fifteenth to pay the one hundred twenty before the disconnect",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "N5 \"yes it came through on monday for a hundred\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni made a payment on monday did it go through\n00:10\nwhat is the address on the account\n00:14\none two three main street\n00:20\nyes that payment came through on monday for a hundred dollars you are all good",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "I1 \"last four on the card you're using\" counted as verification",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni want to pay my bill and see what i owe\n00:09\nsure can i have the address on the account\n00:13\none two three main street\n00:20\nokay and can you confirm the last four digits on the card you want to use\n00:25\none one one one\n00:30\nthank you your balance is one hundred ten dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "I1b \"last four of your debit card\" counted as verification",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\ni want to pay my bill\n00:09\nsure can i have the address on the account\n00:13\none two three main street\n00:20\nokay can you verify the last four of your debit card\n00:25\none one one one\n00:30\nthank you your balance is one hundred ten dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "I2 \"verbal password\" not recognised",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what is my balance\n00:09\nsure for security purposes can you verify the password on the account\n00:14\nsunshine\n00:17\nthank you for verifying your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "I3 ask contains \"i don't have a pin on file\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what is my balance\n00:09\ni do not have a pin on the account so for security purposes can you verify the last four of your social\n00:15\none two three four\n00:18\nperfect your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "I4 caller \"i couldn't verify my account online\" after a clean check",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need help with my account\n00:09\nsure for security purposes can you verify your date of birth\n00:13\nmarch fifth nineteen eighty\n00:17\nthank you what can i help with\n00:20\ni couldn't verify my account on the website so i could not see the bill\n00:26\nokay no problem your balance is two hundred dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "I5 \"the last four digits are not matching\" counts as verified",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nwhat do i owe\n00:09\nfor security purposes can you verify the last four digits of your social\n00:13\none two three four\n00:17\nhmm the last four digits are not matching what we have\n00:22\nthat is weird well what do i owe\n00:26\nthe balance is two hundred dollars",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "PL2 plain paste with a dash",
+   "transcript": "thank you for calling a p s my name is oceane how can i help you\nhi what do i owe\nfor security purposes can you verify the last four digits of your social\nuh - one two three four\nthank you for verifying your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "L1 advisor reads the last four: \"is the last four of your social one two three four\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\ncan i have the address on the account\n00:13\none two three main street\n00:18\nokay and is the last four of your social one two three four\n00:22\nyes\n00:25\nokay great your balance is ninety dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "L1b advisor reads the date of birth: \"i have march fifth for your date of birth is that correct\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\ncan i have the address on the account\n00:13\none two three main street\n00:18\nokay i have march fifth nineteen eighty for your date of birth is that correct\n00:22\nyes\n00:25\nokay great your balance is ninety dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "C1 refusal then cave, third party with her social",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my mom's account i need to know what she owes\n00:11\ni am sorry i can only discuss the account with the account holder\n00:16\nbut i have all her information i have her social\n00:20\nokay can you verify the last four of her social then\n00:24\none two three four\n00:28\nokay thank you the balance is two hundred dollars",
+   "expected": "breach(unauthorized)"
+  },
+  {
+   "name": "V1 \"you did not get verified through the phone system\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe\n00:09\nokay it looks like you did not get verified through the phone system can i have the address\n00:14\none two three main street\n00:18\nokay your balance is ninety dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "S1 start service, advisor reads back the new number",
+   "transcript": "00:03\nthank you for being a valued customer my name is melissa who do i have the pleasure of speaking with\n00:10\nhi this is elliot i need to start new service\n00:14\nokay what is the address where you would like to start service\n00:20\none seven five zero zero north sixty seventh avenue\n00:30\nand what is the best phone number for you\n00:34\nsix zero two five five five one two one two\n00:40\nokay i have your phone number as six zero two five five five one two one two\n00:48\nyes\n00:52\nalright and to finish your account we do need your social security number",
+   "expected": "verified|nothing-shared"
+  },
+  {
+   "name": "A1 \"yes i am i'm not sure why it's so high\" after \"are you the account holder\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi my bill is really high\n00:09\nokay are you the account holder\n00:12\nyes i am i'm not sure why it doubled though\n00:16\nokay for security purposes can you verify your date of birth\n00:21\nmarch fifth nineteen eighty\n00:25\nthank you your balance is three hundred dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "A2 \"i'm the tenant at this address\" (account holder)",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am the tenant at one two three main street and i want to set up a payment arrangement\n00:12\nokay for security purposes can you verify the last four digits of your social\n00:18\none two three four\n00:22\nthank you for verifying so you have a past due balance of two hundred dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "A3 handoff worded \"can she come to the phone\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling about my mom's bill\n00:09\nare you on the account\n00:12\nno\n00:14\nokay can she come to the phone\n00:18\nyes one second\n00:30\nhi this is maria\n00:33\nhi maria for security purposes can you verify your date of birth\n00:38\njune second nineteen fifty\n00:42\nthank you your balance is one hundred ten dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "D1 \"is she available\" -> \"yes she is right here\" -> \"not a problem...\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i am calling for my mother\n00:09\nokay is she available to come to the phone\n00:12\nyes she is right here\n00:14\nnot a problem go ahead and put her on\n00:25\nhello this is maria\n00:28\nhi maria for security purposes can you verify your date of birth\n00:33\njune second nineteen fifty\n00:37\nthank you your balance is one hundred ten dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "C01 high bill, clean",
+   "transcript": "00:02\nthank you for calling a p s my name is jasmine how can i help you today\n00:07\nhi yeah i just got my bill and it is almost four hundred dollars and it is usually like two hundred\n00:14\ni am sorry to hear that i can definitely take a look can i have the account number or the service address\n00:20\nit is four four one two west indian school road\n00:28\nthank you and for security purposes can you please verify the last four digits of your social\n00:33\neight eight one two\n00:37\nthank you so much for verifying\n00:40\nokay so looking at the account your july bill was three hundred ninety one dollars and your usage went up about forty percent from june\n00:52\nwow okay why\n00:55\nit was the hottest july on record and it looks like you are on the fixed energy charge plan so every hour costs the same",
+   "expected": "verified"
+  },
+  {
+   "name": "C02 payment arrangement, clean",
+   "transcript": "00:02\nthank you for calling a p s this is marcus how can i help you\n00:06\ni got a disconnect notice and i can not pay the whole thing right now\n00:12\nokay i can help you with that can i have the address on the account\n00:16\ntwo two zero one east thomas road\n00:22\nand for security purposes can you verify the last four digits of your social\n00:27\nfive five one nine\n00:31\nthank you for verifying so you do have a past due balance of two hundred sixty dollars and the disconnect is scheduled for friday\n00:40\nokay what can i do\n00:43\nwe can do a payment arrangement where you pay what you owe over the next few months",
+   "expected": "verified"
+  },
+  {
+   "name": "C03 outage, nothing shared",
+   "transcript": "00:02\nthank you for calling a p s my name is kayla how can i help\n00:05\nhi my power just went out\n00:08\ni am sorry about that can i have the address\n00:12\nthree three one north seventh street\n00:20\nokay it looks like there is an outage in your area affecting about two hundred customers and the estimated restoration is four thirty",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "C04 start service, new customer",
+   "transcript": "00:02\nthank you for calling a p s my name is lena how can i help you\n00:06\nhi i need to start service at my new apartment\n00:10\ni can help with that what is the address where you would like to start service\n00:16\neight eight zero one south rural road apartment two twelve\n00:24\nokay and can i have your first and last name\n00:27\ndevon price\n00:30\nthank you devon and to set up the account we do need your social security number\n00:36\nfive five five one two one two one two\n00:44\nthank you and there is a deposit of one hundred eighty dollars that will be on your first bill\n00:52\nokay\n00:54\nand once you are signed up for autopay the payment comes out on the due date each month",
+   "expected": "verified"
+  },
+  {
+   "name": "C05 stop service, clean",
+   "transcript": "00:02\nthank you for calling a p s my name is aaron how can i help you\n00:06\ni am moving out and need to stop my service\n00:10\nsure can i have the service address\n00:13\none one zero west main street\n00:19\nand for security purposes can you verify your date of birth\n00:23\noctober third nineteen ninety\n00:27\nthank you what day would you like it stopped\n00:30\nthe thirtieth\n00:33\nokay and your final bill will be mailed to the forwarding address and if there is a credit we will send you a check",
+   "expected": "verified"
+  },
+  {
+   "name": "C06 autopay enrollment, clean",
+   "transcript": "00:02\nthank you for calling a p s my name is priya how can i help\n00:05\ni want to set up autopay\n00:08\ni can help with that can i have the account number or the address\n00:12\nnine nine two north central avenue\n00:18\nokay and for security purposes can you please verify the last four digits of your social\n00:24\nseven seven three one\n00:27\nthank you for verifying and what bank account would you like to use\n00:31\nmy checking account\n00:34\nokay you are all set up for autopay and your first draft will be on the due date which is the twelfth",
+   "expected": "verified"
+  },
+  {
+   "name": "C07 budget billing general info, unverified",
+   "transcript": "00:02\nthank you for calling a p s my name is priya how can i help\n00:05\ni heard about budget billing how does that work\n00:09\nso with budget billing we average your last twelve months so your bill is about the same every month and once a year we true it up\n00:20\nokay how do i sign up\n00:23\nyou can sign up online at a p s dot com or i can do it for you now",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "C08 rate plan change, clean",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\ni want to change my rate plan\n00:08\nsure can i have the address on the account\n00:12\ntwo four zero one east camelback\n00:18\nand to verify can i have your date of birth\n00:22\njanuary ninth nineteen eighty two\n00:26\nthank you so right now you are on the time of use four to seven plan and based on your usage the fixed plan would cost you about the same",
+   "expected": "verified"
+  },
+  {
+   "name": "C09 returned payment, breach",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\ni got a letter saying my payment was returned\n00:09\nokay can i have the address on the account\n00:13\ntwo four zero one east camelback\n00:19\nokay yes i see the payment of one hundred fifty dollars was returned by your bank and there is a fifteen dollar returned payment fee",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "C10 deceased holder, spouse, handled",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\nhi my husband passed away and the account is in his name i need to put it in mine\n00:12\ni am so sorry for your loss we can help with that we will need a copy of the death certificate\n00:20\nokay i can send that\n00:23\nand to start the account in your name can i have your social security number\n00:28\nfive five five one two one two one two\n00:35\nthank you i will get that started for you",
+   "expected": "held-back|verified|nothing-shared"
+  },
+  {
+   "name": "C11 landlord asks about tenant, refused",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\nhi i am the landlord at one two three main and i want to know if my tenant has paid the bill\n00:12\ni am sorry i am not able to discuss the account with anyone but the account holder\n00:18\nokay i understand",
+   "expected": "held-back"
+  },
+  {
+   "name": "C12 transfer with verified flag, clean",
+   "transcript": "00:02\nthank you for holding my name is chris i see you have already been verified how can i help\n00:08\nthe other rep said you could help me with the payment arrangement\n00:12\nyes so your past due balance is two hundred and i can split it into three payments",
+   "expected": "verified"
+  },
+  {
+   "name": "C13 caregiver, balance given",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\nhi i take care of mrs johnson and i handle her bills i need to know what she owes\n00:12\nokay can i have the address\n00:15\nfour four north central\n00:20\nokay her balance is eighty five dollars and it is due on the tenth",
+   "expected": "breach(unverified,unauthorized)|breach(unverified)"
+  },
+  {
+   "name": "C14 deposit question, clean",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\ni want to know when i get my deposit back\n00:08\nsure can i have the address on the account\n00:12\none one one west adams\n00:16\nand for verification the last four of the social please\n00:20\ntwo three four five\n00:24\nthank you so your deposit of two hundred dollars will be credited after twelve months of on time payments",
+   "expected": "verified"
+  },
+  {
+   "name": "C15 paperless, clean",
+   "transcript": "00:02\nthank you for calling a p s my name is chris how can i help\n00:05\ni want to stop getting paper bills\n00:08\nsure can i get the address\n00:11\none one one west adams\n00:15\nand for security purposes can you please verify the last four digits of your social\n00:20\ntwo three four five\n00:24\nthank you for verifying and what email would you like to use\n00:28\ndana at gmail dot com\n00:33\nperfect you are enrolled in paperless billing now and the email we have on file is dana at gmail dot com",
+   "expected": "verified"
+  },
+  {
+   "name": "W1 \"for verification the last four of the social please\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check the balance\n00:09\nsure can i have the address\n00:12\none one one west adams\n00:16\nand for verification the last four of the social please\n00:20\ntwo three four five\n00:24\nthank you your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "W2 \"last four of the social on the account please\" (no lead)",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check the balance\n00:09\nsure can i have the address\n00:12\none one one west adams\n00:16\nperfect last four of the social on the account please\n00:20\ntwo three four five\n00:24\nthank you your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "M1 answer merged with the disclosure segment",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check the balance\n00:09\nsure for security purposes can you please verify the last four digits of your social\n00:14\ntwo three four five okay perfect so your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "V2 caller mentions \"and the last four of the social\", advisor only takes the account number",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need my balance i have the account number and the last four of the social ready\n00:12\nokay go ahead with the account number\n00:15\nfive six seven eight nine one two three four\n00:22\nokay your balance is sixty dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "V3 caller \"do you need his social\" counted as the advisor asking",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to pay my husband's bill do you need his social\n00:11\nno i just need the address\n00:14\none one one west adams\n00:20\nokay the balance is sixty dollars",
+   "expected": "breach(unverified,unauthorized)"
+  },
+  {
+   "name": "LB-F2 failed ssn, address \"that matches\"",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, I got a shut off notice and need to know what I owe.\nAgent: Okay, for security purposes can you verify the last four digits of your social?\nCustomer: I don't know it.\nAgent: Okay, can you verify the service address then?\nCustomer: 2415 West Camelback Road.\nAgent: Okay, that matches. So the past due amount is two hundred forty dollars.",
+   "expected": "breach(failed)"
+  },
+  {
+   "name": "LB-F6 card security code",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: I want to make a payment and find out what I owe.\nAgent: Sure, can I have the address on the account?\nCustomer: 123 Main Street.\nAgent: And the expiration date and the security code on the back of the card?\nCustomer: 04/28, 321.\nAgent: Okay, and your balance is one hundred eighty dollars. How much would you like to pay?",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "LB-P1 \"i can tell you what the balance is as soon as i verify you\"",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, what do I owe?\nAgent: I can tell you what the balance is as soon as I verify you. Can I have the last four of your social?\nCustomer: 1234.\nAgent: Thank you for verifying. Your balance is sixty dollars.",
+   "expected": "verified"
+  },
+  {
+   "name": "LB-P5 caller \"i do not remember maybe tuesday\" after clean check",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, I made a payment and it is not showing.\nAgent: Okay, for security purposes can you please verify the last four digits of your social?\nCustomer: 3344.\nAgent: Thank you, and when did you make the payment?\nCustomer: I don't remember, maybe Tuesday.\nAgent: Okay, I see a payment of fifty dollars on Tuesday, it just posted today.",
+   "expected": "verified"
+  },
+  {
+   "name": "LB-P6 \"my husband passed away\", account is hers",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, my husband passed away last month and money has been really tight. I need a payment arrangement.\nAgent: I am so sorry for your loss. For security purposes can you verify the last four digits of your social?\nCustomer: 6677.\nAgent: Thank you for verifying. So you have a past due balance of two hundred eighty dollars and I can split that.",
+   "expected": "verified"
+  },
+  {
+   "name": "LB-P8 authorized user done right",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, I need to check the balance on our account.\nAgent: Sure, are you the account holder?\nCustomer: No, my husband is, but I am an authorized user.\nAgent: Okay, I do see you listed as an authorized user. For security purposes can you verify your date of birth?\nCustomer: April 3rd, 1975.\nAgent: Thank you, your balance is one hundred forty dollars.",
+   "expected": "verified"
+  },
+  {
+   "name": "LB-G2b \"if you have a past due balance\"",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: What help is out there if money is tight?\nAgent: If you have a past due balance we can set up a payment arrangement, and there are crisis bill assistance programs too.",
+   "expected": "nothing-shared"
+  },
+  {
+   "name": "LB-T2 caller \"she gave me permission\"",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, I'm calling about my mom's account, she gave me permission to call.\nAgent: Okay, for security purposes can you verify the last four of the social on the account?\nCustomer: 1234.\nAgent: Thank you for verifying, the balance is ninety dollars.",
+   "expected": "breach(unauthorized)"
+  },
+  {
+   "name": "LB-L1 advisor reads the last four",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, what do I owe?\nAgent: Can I have the address on the account?\nCustomer: 123 Main Street.\nAgent: Okay, and is the last four of your social 1234?\nCustomer: Yes.\nAgent: Okay great, your balance is ninety dollars.",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "LB-A3 handoff \"can she come to the phone\"",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Hi, I'm calling about my mom's bill.\nAgent: Are you on the account?\nCustomer: No.\nAgent: Okay, can she come to the phone?\nCustomer: Yes, one second.\nCustomer: Hi, this is Maria.\nAgent: Hi Maria, for security purposes can you verify your date of birth?\nCustomer: June 2nd, 1950.\nAgent: Thank you, your balance is one hundred ten dollars.",
+   "expected": "verified"
+  },
+  {
+   "name": "LB-F5 caller refuses",
+   "transcript": "Agent: Thank you for calling APS, my name is Oceane, how can I help you?\nCustomer: Yeah I just need my balance.\nAgent: Sure, for security purposes can you verify the last four of your social?\nCustomer: Why do you need that? I just want to know what I owe.\nAgent: It is just to protect the account.\nCustomer: I'm not giving that out over the phone.\nAgent: Okay, well the balance is one hundred ten dollars.",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "X1 combined ask, missing account number, last four given next",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check my balance\n00:09\nsure can i have the account number and the last four of your social\n00:14\ni do not have the account number\n00:18\nbut it is one two three four\n00:22\nthank you your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "X2 cannot then finds it",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i need to check my balance\n00:09\nfor security purposes can you verify the last four digits of your social\n00:14\nhold on i do not have it in front of me\n00:25\nokay here it is five five six seven\n00:29\nperfect your balance is sixty dollars",
+   "expected": "verified"
+  }
+ ],
+ "knownLimits": [
+  {
+   "name": "P4c caller: \"this month's bill is three hundred forty dollars\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi yeah this month's bill is three hundred forty dollars and it is never been that high\n00:12\ni understand for security purposes can you please verify the last four digits of your social\n00:18\ntwo two one one\n00:22\nthank you for verifying let me take a look at the usage",
+   "expected": "verified"
+  },
+  {
+   "name": "R2b advisor \"like i mentioned\" is the only disclosure",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi i got a disconnect notice what do i need to pay\n00:09\nokay can i have the address on the account\n00:13\none two three main street\n00:18\nokay give me one moment to pull that up\n00:30\nokay\n00:34\nso like i mentioned you are behind on the bill the past due amount is one hundred twenty dollars",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "R6 caller answer cued as agent then balance",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what is my balance\n00:09\nfor security purposes can you verify your date of birth\n00:13\none moment please it is march fifth nineteen eighty\n00:18\nthank you your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "N1 bare amount with no \"dollars\"",
+   "transcript": "00:02\nthank you for calling a p s my name is oceane how can i help you\n00:06\nhi what do i owe right now\n00:09\ncan i have the address on the account\n00:13\none two three main street\n00:18\none moment\n00:25\nokay it is one eighty seven twenty two",
+   "expected": "breach(unverified)"
+  },
+  {
+   "name": "PL1 plain paste, verified call, no timestamps",
+   "transcript": "thank you for calling a p s my name is oceane how can i help you\nhi what do i owe\nfor security purposes can you verify the last four digits of your social\none two three four\nthank you for verifying your balance is sixty dollars",
+   "expected": "verified"
+  },
+  {
+   "name": "PL3 two-segment excerpt",
+   "transcript": "00:09\nfor security purposes can you verify the last four digits of your social\n00:13\none two three four\nthank you for verifying your balance is sixty dollars",
+   "expected": "verified"
+  }
+ ]
+}

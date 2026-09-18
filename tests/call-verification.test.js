@@ -553,6 +553,104 @@ suite('call verification: it reaches every place the call is read', (t) => {
         !/Nothing here is a concern/.test(message));
 });
 
+/*
+ * An adversarial review ran 107 calls at the first version of this and found
+ * it wrong on phrasings as ordinary as "okay no problem" after a caller who
+ * could not give the last four (read as verified, and praised), "thank you
+ * for holding i appreciate your patience so your balance is" (the whole turn
+ * cued as the caller, so nothing was shared), and "we have payment
+ * arrangements where you can pay what you owe" (a red flag for policy talk).
+ * Every call it wrote is kept here, with what it should read as, so none of
+ * those comes back.
+ *
+ * Six are known limits, listed in the fixture and checked below so a change
+ * in them is noticed either way. No wording rule separates them: a caller
+ * saying "this month's bill is three hundred forty dollars" uses the same
+ * words an advisor does, and a bare "it is one eighty seven twenty two" is
+ * also how a caller reads out digits.
+ */
+const PROBES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'verification-probes.json'), 'utf8'));
+
+function verdictOf(result) {
+    const types = (result.breach?.types || []).join(',');
+    return result.status + (types ? `(${types})` : '');
+}
+
+suite('call verification: the review\'s calls read as they should', (t) => {
+    const modules = load(t);
+
+    PROBES.probes.forEach((probe) => {
+        const result = read(modules, probe.transcript);
+        const got = verdictOf(result);
+        const accepted = String(probe.expected).split('|');
+        t.check(`${probe.name}: ${got}`, accepted.includes(got) || accepted.includes(result.status));
+    });
+
+    t.check('the corpus is all there', PROBES.probes.length >= 90);
+});
+
+suite('call verification: the known limits are still the known limits', (t) => {
+    const modules = load(t);
+
+    // If one of these starts reading correctly, move it into the probes. If
+    // it starts reading some third way, look at why before anything else.
+    const now = {};
+    PROBES.knownLimits.forEach((probe) => {
+        now[probe.name.split(' ')[0]] = read(modules, probe.transcript);
+    });
+    t.equal('a caller reading out their bill is indistinguishable from an advisor', now.P4c.status, 'breach');
+    t.equal('a bare amount with no "dollars" is not caught', now.N1.status, 'nothing-shared');
+    t.equal('a transcript that is one block cannot be read', now.PL1.reason, 'unsegmented');
+    t.check('and says so, rather than going quiet',
+        /one block/.test(modules.callVerification.describe(now.PL1).detail)
+        && /call-alert-quiet/.test(modules.callVerification.buildAlertHtml(now.PL1)));
+});
+
+suite('call verification: answers in words, and callers offering', (t) => {
+    const modules = load(t);
+
+    // A security question is answered in words. Requiring a number there
+    // would flag every call verified that way.
+    const secret = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'sure for security purposes can you answer your security question what was your first pet'],
+        ['00:15', 'rex'],
+        ['00:18', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('a one word answer to a security question verifies', secret.status, 'verified');
+
+    // But not a refusal dressed as an answer.
+    const refusedAnswer = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'sure for security purposes can you answer your security question'],
+        ['00:15', 'why do you need that'],
+        ['00:18', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('"why do you need that" is not an answer', refusedAnswer.status, 'breach');
+
+    // The advisor saying they have the account up, then asking, is asking.
+    const haveItUp = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'okay i have the account up now can you verify your date of birth'],
+        ['00:14', 'march fifth nineteen eighty'],
+        ['00:18', 'thank you your balance is sixty dollars']
+    ]));
+    t.equal('"i have the account up, can you verify" is the advisor asking', haveItUp.status, 'verified');
+
+    // A website password mentioned in passing is not the identity check.
+    const website = read(modules, verint([
+        GREETING,
+        ['00:06', 'i cannot get into the website'],
+        ['00:10', 'okay you can reset your password on a p s dot com'],
+        ['00:15', 'okay'],
+        ['00:18', 'and your balance is sixty dollars']
+    ]));
+    t.equal('"you can reset your password" does not verify anybody', website.status, 'breach');
+});
+
 suite('call verification: the coaching bridge keeps it first and counts it once', (t) => {
     const modules = load(t);
     t.loadModule('modules/call-qa.module.js');

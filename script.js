@@ -8071,7 +8071,9 @@ function renderCallVerificationAlert(transcript, associateName, analysis) {
     const verifier = window.DevCoachModules?.callVerification;
     const read = analysis?.verification
         || (transcript ? verifier?.readVerificationFromText?.(transcript, { associateName }) : null);
-    const html = read?.ok ? (verifier?.buildAlertHtml?.(read, escapeHtml) || '') : '';
+    // Passed through even when the read failed: a transcript that came in as
+    // one block says so, rather than leaving the space silently empty.
+    const html = read ? (verifier?.buildAlertHtml?.(read, escapeHtml) || '') : '';
 
     host.innerHTML = html;
     host.style.display = html ? 'block' : 'none';

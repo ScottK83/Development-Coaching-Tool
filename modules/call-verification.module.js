@@ -69,17 +69,17 @@
             // proof of anything, and "the last four months" is usage talk.
             // Read as an identity question, that one would have let a balance
             // shared a minute later pass as verified.
-            source: "last (?:four|4)(?: digits)?(?! (?:digits )?of (?:the |your |that |this )?(?:account|phone|card|bank|routing|check|meter))(?! (?:months|weeks|days|years|bills|statements|payments|times|calls)\\b)"
+            source: "last (?:four|4)(?: digits)?(?! (?:digits )?(?:of|on) (?:the |your |that |this )?(?:(?:credit|debit) )?(?:account|phone|card|bank|routing|check|meter|visa|mastercard))(?! (?:months|weeks|days|years|bills|statements|payments|times|calls)\\b)"
         },
         {
             what: 'the social',
             // Not the benefits: "are you getting your social security" on an
             // assistance call is a question about income, not identity.
-            source: "social(?! media| security (?:benefits|income|check|office|administration|disability)| (?:worker|services))(?: security| insurance)?(?: number)?\\b|security number\\b|s ?s ?n\\b"
+            source: "social(?! media| security (?:benefits|income|checks?|office|administration|disability|comes?|deposits?|payments?|money|pays?)| (?:worker|services))(?: security| insurance)?(?: number)?\\b|security number\\b|s ?s ?n\\b"
         },
         { what: 'the date of birth', source: 'date of birth\\b|birth ?date\\b|birthday\\b|d o b\\b' },
-        { what: 'a PIN or passcode', source: 'pin(?: number)?\\b|pass ?code\\b' },
-        { what: 'a security question', source: 'security (?:word|code|answer|question)s?\\b' },
+        { what: 'a PIN or passcode', source: 'pin(?: number)?\\b|pass ?code\\b|pass ?word\\b' },
+        { what: 'a security question', source: 'security (?:word|answer|question)s?\\b' },
         { what: 'an ID number', source: "driver'?s? licen[cs]e\\b|passport\\b|i ?d number\\b|state i ?d\\b" }
     ].map(item => ({ ...item, pattern: new RegExp(`\\b(?:${item.source})`, 'i') }));
 
@@ -97,17 +97,25 @@
         'go ahead and (?:verify|confirm|give|provide)',
         'verify',
         'confirm',
-        'provide'
+        'provide',
+        'for (?:security|verification)(?: purposes)?'
     ].join('|');
 
     // Asked with a verb, or asked the way people actually talk: "okay and
     // your date of birth", "and the last four of your social". The second
     // person on an identifier is advisor voice; the caller says "my".
+    const ASKED_OUTRIGHT = new RegExp(`\\b(?:${ASK_LEAD})\\b[a-z0-9' -]{0,45}?\\b(?:${IDENTIFIER_SOURCE})`, 'i');
+
     const IDENTITY_ASK = new RegExp([
-        `\\b(?:${ASK_LEAD})\\b[a-z0-9' -]{0,45}?\\b(?:${IDENTIFIER_SOURCE})`,
+        ASKED_OUTRIGHT.source,
         `\\b(?:your|the account holder'?s|his|her|their) (?:${IDENTIFIER_SOURCE})`,
-        `\\b(?:and|okay|alright|now|next)(?: then)? the (?:${IDENTIFIER_SOURCE})`
+        `\\b(?:and|okay|alright|now|next)(?: then)? the (?:${IDENTIFIER_SOURCE})`,
+        `\\b(?:${IDENTIFIER_SOURCE})[a-z ]{0,40}\\bplease\\b`
     ].join('|'), 'i');
+
+    const CALLER_OFFERS = new RegExp(`\\bdo you (?:need|want) (?:the|my|his|her|their|a|an)\\b|\\bi have (?:the|his|her|their|all|my)\\b[a-z' ]{0,40}?\\b(?:${IDENTIFIER_SOURCE})`, 'i');
+    const ASKING_OUTRIGHT = /\b(?:can|could|may|would) (?:you|i)\b|\bwhat(?:'s| is)\b|\bplease\b/i;
+    const CONFIRMATION_NUMBER = /\bconfirmation (?:number|code)\b/i;
 
     // The caller reading their own out: "the last four of my social is".
     const GIVES_IDENTIFIER = /\b(?:the )?last (?:four|4)(?: digits)?(?: of)?(?: my| the)?(?: social| ssn| s s n)?(?: number)? (?:is|are)\b|\bmy (?:social(?: security)?|ssn|date of birth|birth ?date|birthday|pin|pass ?code)(?: number)? (?:is|would be)\b/i;
@@ -121,6 +129,12 @@
     // same trap as the address itself.
     const IVR_VERIFIED = /\b(?:verified|authenticated) (?:in|through|by|with|on|over) the (?:system|phone(?: system)?|automated(?: system| line)?|ivr|i v r|prompts?)\b|\b(?:i|we) (?:see|show) (?:that )?you(?:'ve| have)? (?:already )?(?:been )?(?:verified|authenticated)\b|\balready (?:been )?(?:verified|authenticated)\b|\b(?:previous|last|other) (?:agent|advisor|rep|representative|person) (?:already )?verified\b/i;
 
+    // The caller saying so ("i already verified with the other lady") is a
+    // claim, not the system, and "you did not get verified through the phone
+    // system" is the opposite of verified. Either one used to count, and a
+    // false "verified" also silenced a real failed check later in the call.
+    const NOT_THE_PHONE_SYSTEM = /\b(?:not|n'?t|never|unable)\b(?: \w+){0,3} (?:verified|authenticated)\b|\bi(?:'ve| have| was| got)?(?: already)?(?: been)? (?:verified|authenticated)\b|\bverified me\b/i;
+
     // Said after an identity question that went through. It settles a check
     // that was asked for; it never stands in for one.
     const CONFIRMED = /\bthank(?:s| you)(?: (?:so|very) much)? for (?:verifying|confirming)\b|\byou(?:'re| are)(?: all)? verified\b|\b(?:that|it|everything) (?:matches|checks out)\b/i;
@@ -133,17 +147,32 @@
     // don't know why my bill is so high", three turns after a clean check,
     // is the caller explaining why they rang.
     const CANNOT_CORE = /\b(?:i (?:still |even |actually |just |really )?(?:do not|don'?t|dont|did not|didn'?t) (?:know|have|remember|recall)|i (?:still |even |actually |just )?(?:have not|haven'?t|never) (?:got|gotten|had|received|been given|been issued)|i (?:can'?t|cannot|can not) (?:remember|recall|find)|no idea|not sure)\b/i;
-    const CANNOT_OBJECT = new RegExp(`\\b(?:know|have|remember|recall|got|gotten|had|received|given|issued|find|idea|sure)(?: (?:what|of|about))? (?:it|that|them|this|those|one|any|the (?:number|numbers|digits|answer|info(?:rmation)?)|(?:his|her|their|my|the|a|an) (?:[a-z']+ ){0,3}?(?:${IDENTIFIER_SOURCE}))`, 'i');
+    const CANNOT_OBJECT = new RegExp(`\\b(?:know|have|remember|recall|got|gotten|had|received|given|issued|find|idea|sure)(?: (?:what|of|about))? (?:it|that|them|this|those|one|the (?:number|numbers|digits|answer|info(?:rmation)?)|(?:his|her|their|my|the|a|an) (?:[a-z']+ ){0,3}?(?:${IDENTIFIER_SOURCE}))`, 'i');
     const SHORT_ANSWER_WORDS = 8;
 
     function callerCannot(text) {
         if (!CANNOT_CORE.test(text)) return false;
         return CANNOT_OBJECT.test(text) || collapse(text).split(' ').length <= SHORT_ANSWER_WORDS;
     }
-    const NO_MATCH = /\b(?:does not|doesn'?t|did not|didn'?t) (?:match|line up)\b|\b(?:not|isn'?t|wasn'?t) (?:matching|a match|what (?:i|we) (?:have|show|see))\b|\b(?:not|n'?t) (?:be )?able to verify\b|\b(?:unable|can'?t|cannot|couldn'?t|could not|can not) (?:to )?verify\b/i;
+    const NO_MATCH = /\b(?:that|it)(?:'s| is) (?:not correct|incorrect)\b|\b(?:does not|doesn'?t|did not|didn'?t) (?:match|line up)\b|\b(?:not|isn'?t|wasn'?t) (?:matching|a match|what (?:i|we) (?:have|show|see))\b|\b(?:not|n'?t) (?:be )?able to verify\b(?! my\b)|\b(?:unable|can'?t|cannot|couldn'?t|could not|can not) (?:to )?verify\b(?! my\b)/i;
 
     // How many turns after the question a failed answer still belongs to it.
     const FAILURE_WINDOW = 3;
+    const NO_MATCH_WINDOW = FAILURE_WINDOW + 2;
+
+    /* ── What counts as answering ──
+     *
+     * Any reply used to count, so "why do you need that", or "okay no problem"
+     * after "i do not have it on me", answered the question and the balance
+     * that followed read as verified, with the associate praised for it. The
+     * social, the date of birth and an ID number are read out as numbers or a
+     * date, so the answer has to carry one. A security question or a password
+     * is answered in words, so when one was asked outright a short reply that
+     * is not a refusal is taken as the answer.
+     */
+    const ANSWER_VALUE = new RegExp('\\b(?:' + MONTH + ')\\b|\\d{3,}|\\b(?:' + SPOKEN_NUMBER + '|\\d+)\\b.*\\b(?:' + SPOKEN_NUMBER + '|\\d+)\\b', 'i');
+    const WORD_ANSWER_WORDS = 6;
+    const NOT_AN_ANSWER = /\b(?:why|not|no|don'?t|what|hold on|one (?:sec|second|moment))\b/i;
 
     // Finding the account. Asked for, these explain a verdict; they never
     // make one.
@@ -165,17 +194,17 @@
             key: 'balance',
             what: 'the balance',
             pattern: new RegExp([
-                "\\b(?:balance|amount due|total due|amount owed|past due amount|past due balance|payoff amount)(?: on (?:the|your) account)?(?: right now| today| currently)? (?:of|is|was|comes to|came to|comes out to|would be|will be|as of|showing)\\b",
-                "\\b(?:you have|you(?:'ve| have) got|there(?:'s| is)|i (?:do )?see|i (?:do )?show|it(?:'s| is) showing|it shows|showing) (?:a |an |the |your )?(?:current |remaining |outstanding |total |zero |previous )?(?:balance|amount due|past due|credit(?! card| check| score| report))\\b",
+                "(?<!\\b(?:know|tell you|tell me|find out|see|check|share|give you|go over) what (?:the |your |my )?(?:current )?)\\b(?:balance|amount due|total due|amount owed|past due amount|past due balance|payoff amount)(?: on (?:the|your) account)?(?: right now| today| currently)? (?:of|is|was|comes to|came to|comes out to|would be|will be|as of|showing)\\b",
+                "(?<!\\b(?:if|when|once|do|does) )\\b(?:you have|you(?:'ve| have) got|there(?:'s| is)|i (?:do )?see|i (?:do )?show|it(?:'s| is) showing|it shows|showing) (?:a |an |the |your )?(?:current |remaining |outstanding |total |zero |previous )?(?:balance|amount due|past due|credit(?! card| check| score| report))\\b",
                 "(?<!\\bif )\\byou(?:'re| are) (?:currently |still )?(?:past due|behind(?: on)?|in arrears|paid up|all paid up|current on)\\b",
                 "\\b(?:your|the) account is (?:currently |still )?(?:past due|behind|in arrears|paid up|current)\\b",
-                '(?<!\\bif )\\byou (?:still )?(?:owe|do not owe|don\'?t owe)\\b'
+                '(?<!\\bif )(?<!\\b(?:pay|cover|split) (?:what|whatever|everything) )\\byou (?:still )?(?:owe|do not owe|don\'?t owe)\\b'
             ].join('|'), 'i')
         },
         {
             key: 'dueDate',
             what: 'the due date',
-            pattern: /\b(?:it(?:'s| is)|that(?:'s| is)|bill is|payment is|balance is|amount is|which is) due (?:on|by|the|today|tomorrow|this|next|in)\b|\bdue date (?:is|was|would be|will be|of|on (?:the|your) account)\b/i
+            pattern: /\b(?:it(?:'s| is)|that(?:'s| is)|bill is|payment is|balance is|amount is|which is) due (?:on|by|the|today|tomorrow|this|next|in)\b|\bdue date (?:is|was|would be|will be|of|on (?:the|your) account)\b|\byou have until (?:the |this |next )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|january|february|march|april|may|june|july|august|september|october|november|december|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|twentieth|thirtieth|\d)/i
         },
         {
             key: 'payment',
@@ -183,7 +212,7 @@
             // Payments already on the account. "Your payment went through",
             // said about the one the caller just made on the phone, is not
             // telling them anything, and anybody may pay a bill.
-            pattern: /\b(?:your|the) (?:last|most recent|previous|latest|recent) payment (?:was|of|is|came|posted|went|for|on)\b|\b(?:your|a|the) payment (?:of [a-z0-9 ]{1,40} )?(?:posted|was received|was applied|has been applied|has posted|is showing|shows|came in)\b|\b(?:i|we) (?:do )?(?:see|show) (?:a |your |the |that )?(?:recent |last )?payment\b(?! (?:arrangement|plan|option|extension))/i
+            pattern: /\b(?:your|the) (?:last|most recent|previous|latest|recent) payment (?:was|of|is|came|posted|went|for|on)\b|\b(?:your|a|the) payment (?:of [a-z0-9 ]{1,40} )?(?:posted|was received|was applied|has been applied|has posted|is showing|shows|came in)\b|\b(?:that|the|your) payment (?:came|went) through (?:on|last) (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|the|week)\b|\b(?:i|we) (?:do )?(?:see|show) (?:a |your |the |that )?(?:recent |last )?payment\b(?! (?:arrangement|plan|option|extension))/i
         },
         {
             key: 'disconnect',
@@ -201,17 +230,17 @@
         {
             key: 'bill',
             what: 'the bill amount',
-            pattern: new RegExp(`\\byour (?:current |last |latest |most recent |next |new |${MONTH} )?(?:bill|statement)(?: this month| last month| for (?:this|last) month| for ${MONTH})? (?:is|was|came to|comes to|came out to|will be|would be|totals|totaled) (?:about |around |roughly |only |just )?(?:${VALUE}|higher|lower|more|less|up|down|double)|\\b(?:this|last|the)(?: last| latest| previous| current| next)? (?:month'?s )?(?:bill|statement) (?:is|was|came to|comes to|came out to) ${VALUE}`, 'i')
+            pattern: new RegExp(`\\byour (?:current |last |latest |most recent |next |new |${MONTH} )?(?:bill|statement)(?: this month| last month| for (?:this|last) month| for ${MONTH})? (?:(?:is|was|came to|comes to|came out to|will be|would be|totals|totaled) (?:about |around |roughly |only |just )?${VALUE}|(?:is|was) (?:higher|lower|more|less|up|down|double))|\\b(?:this|last|the)(?: last| latest| previous| current| next)? (?:month'?s )?(?:bill|statement) (?:is|was|came to|comes to|came out to) ${VALUE}`, 'i')
         },
         {
             key: 'plan',
             what: 'the plan on the account',
-            pattern: /\byour (?:current )?(?:rate )?plan is\b|(?<!\bif )\byou(?:'re| are) (?:currently |already |still )?(?:on|enrolled (?:in|on)|signed up for|set up (?:on|for)) (?:the |a |our )?(?:[a-z]+ ){0,4}(?:plan|program|autopay|auto pay|budget billing|paperless)\b|\byou (?:currently |already )?have (?:autopay|auto pay|budget billing|paperless)\b/i
+            pattern: /\byour (?:current )?(?:rate )?plan is\b|(?<!\b(?:if|once|when|after|until) )\byou(?:'re| are) (?:currently |already |still )?(?:on|enrolled (?:in|on)|signed up for|set up (?:on|for)) (?:the |a |our )?(?:[a-z]+ ){0,4}(?:plan|program|autopay|auto pay|budget billing|paperless)\b|(?<!\b(?:do|if) )\byou (?:currently |already )?have (?:autopay|auto pay|budget billing|paperless)\b/i
         },
         {
             key: 'accountNumber',
             what: 'the account number',
-            pattern: new RegExp(`\\b(?:your|the) account number is\\b|\\baccount number is (?:\\d|${SPOKEN_NUMBER})\\b`, 'i')
+            pattern: new RegExp(`(?<!\\b(?:know|tell me|remember|find) what )\\b(?:your|the) account number is\\b|\\baccount number is (?:\\d|${SPOKEN_NUMBER})\\b`, 'i')
         },
         {
             key: 'onFile',
@@ -228,12 +257,12 @@
         {
             key: 'holderName',
             what: 'the name on the account',
-            pattern: /\bname on the account is\b|\baccount is (?:in|under) the name\b|\b(?:it'?s|it is) (?:in|under) the name (?:of )?\b/i
+            pattern: /(?<!\bwhat (?:the |is the )?)\bname on the account is\b|\baccount is (?:in|under) the name\b|\b(?:it'?s|it is) (?:in|under) the name (?:of )?\b/i
         },
         {
             key: 'identifiers',
             what: 'a date of birth or social on the account',
-            pattern: new RegExp(`\\b(?:is|was) (?:your|the|his|her) (?:date of birth|birthday|birth date|social|last four)(?: on the account)? (?:${MONTH}|\\d|${SPOKEN_NUMBER})\\b|\\byour (?:date of birth|birthday|birth date|social|last four)(?: on file)? (?:is|was) (?:${MONTH}|\\d|${SPOKEN_NUMBER})\\b`, 'i')
+            pattern: new RegExp(`\\b(?:is|was) (?:your|the|his|her) (?:date of birth|birthday|birth date|social|last four)(?: of (?:your|the|his|her) social)?(?: on the account)? (?:${MONTH}|\\d|${SPOKEN_NUMBER})\\b|\\b(?:i have|i show|i see|we have) (?:${MONTH}|\\d|${SPOKEN_NUMBER})\\b[a-z0-9 ]{0,40} (?:for|as) (?:your|the|his|her) (?:date of birth|birthday|birth date|social|last four)\\b|\\byour (?:date of birth|birthday|birth date|social|last four)(?: on file)? (?:is|was) (?:${MONTH}|\\d|${SPOKEN_NUMBER})\\b`, 'i')
         }
     ];
 
@@ -245,9 +274,9 @@
      * the caller asking what they owe counts as sharing the balance. Fees,
      * rates, deposits and monthly estimates are not the account's balance.
      */
-    const AMOUNT_QUESTION = /\b(?:what do i owe|how much (?:do i owe|i owe|is (?:my|the) (?:bill|balance|total)|do i have to pay|is due|was (?:my|the) (?:last )?(?:bill|payment))|what(?:'s| is| was) (?:my|the) (?:balance|bill|amount(?: due)?|total|payoff)|(?:tell me|know) (?:my|the) balance|what(?:'s| is) owed)\b/i;
+    const AMOUNT_QUESTION = /\b(?:what do i owe|how much (?:do i owe|i owe|is (?:my|the) (?:bill|balance|total)|do i have to pay|is due|was my (?:last )?(?:bill|payment))|what(?:'s| is| was) (?:my|the) (?:balance|bill|amount(?: due)?|total|payoff)|(?:tell me|know) (?:my|the) balance|what(?:'s| is) owed|how much (?:do|would|will) i (?:need|have) to pay|how much is it)\b/i;
     const MONEY = new RegExp(`\\b(?:\\d+|${SPOKEN_NUMBER}|a hundred|a thousand)\\b[a-z0-9 ]{0,40}?\\b(?:dollars?|bucks|cents)\\b|\\$\\s?\\d`, 'i');
-    const NOT_THE_BALANCE = /\bfees?\b|\bconvenience\b|\bminimum\b|\bup to\b|\bdeposit\b|\bper (?:month|kilowatt|kwh|k w h)\b|\bcents per\b|\ba month\b|\beach month\b/i;
+    const NOT_THE_BALANCE = /\bfees?\b|\bconvenience\b|\bup to\b|\bdeposit\b|\bper (?:month|kilowatt|kwh|k w h)\b|\bcents per\b|\ba month\b|\beach month\b/i;
     const AMOUNT_WINDOW = 6;
     const AMOUNT_ANSWER = { key: 'balance', what: 'the balance' };
 
@@ -258,7 +287,7 @@
     // Deliberately narrow. "It says here" and "i got your account up" are how
     // an advisor reads the screen, so neither may appear in this list: each
     // would hide exactly the disclosure this module exists to catch.
-    const CALLER_VOICE = /\bmy (?:balance|bill|account|payment|usage|power|service|due date|statement|plan|meter|deposit|social|date of birth|birthday)\b|\bi (?:owe|paid|pay|used|was charged|got charged|was billed|got billed|was told)\b|\bi(?:'m| am) (?:past due|behind)\b|\b(?:they|someone|somebody|the (?:letter|notice|app|website|email|text|last person|other (?:rep|lady|guy|person))) (?:told me|said|sent me)\b|\byou(?:'re| are) saying\b|\byou (?:said|mentioned)\b/i;
+    const CALLER_VOICE = /\bmy (?:balance|bill|account|payment|usage|power|service|due date|statement|plan|meter|deposit|social|date of birth|birthday)\b|\bi (?:owe|paid|pay|used|was charged|got charged|was billed|got billed|was told)\b|\bi(?:'m| am) (?:past due|behind)\b|\b(?:they|someone|somebody|the (?:letter|notice|app|website|email|text|last person|other (?:rep|lady|guy|person))) (?:told me|said|sent me)\b|\byou(?:'re| are) saying\b|\b(?:the|a|an) (?:letter|notice|text|email|app|website) (?:says|saying|said|shows|showing|is showing|that says)\b|\bi got a (?:letter|notice|text|email|call)\b|\bcan i (?:just )?pay\b|\bi(?:'ll| will| can| want to| wanna) (?:just )?pay\b/i;
 
     /* ── Somebody else's account ──
      *
@@ -279,10 +308,11 @@
         // First person only. The advisor asking "are you calling on behalf
         // of the account holder" is checking, not being told.
         /\bi(?:'m| am)(?: just| actually)? (?:calling )?on behalf of\b/i,
+        new RegExp(`\\b(?:it'?s|its|that'?s|it is|that is) my ${RELATION}(?:'s| s)\\b|\\bthis is (?:his|her|their) ${RELATION}\\b|\\bmy ${RELATION} (?:asked|wants|told|needs) me to\\b`, 'i'),
         /\bi(?:'m| am) not (?:the account holder|on the account|listed on the account|the one on the account|the primary)\b/i,
         /\b(?:it'?s|it is|the account is|account'?s|account is) not (?:in|under) my name\b/i,
-        new RegExp(`\\bi(?:'m| am) (?:his|her|their|the) (?:${RELATION}|caregiver|care giver|power of attorney|p o a|property manager|landlord|executor)\\b`, 'i'),
-        /\bpassed away\b|\bdeceased\b/i
+        new RegExp(`\\bi(?:'m| am) (?:his|her|their) ${RELATION}\\b|\\bi(?:'m| am) (?:his|her|their|the) (?:caregiver|care giver|power of attorney|p o a|property manager|landlord|executor)\\b`, 'i'),
+        /^(?=.*\b(?:passed away|deceased)\b)(?=.*\b(?:account|bill|name|service|owed?|balance)\b)(?=.*\b(?:his|her|their|he|she|they)\b)/i
     ];
 
     // Questions that settle whether this caller may be told anything.
@@ -294,19 +324,33 @@
     // said they were not on it.
     const ON_BEHALF_QUESTION = /\bare you (?:calling )?(?:on behalf of|for) (?:someone|somebody|the account holder|another person|a family member)\b|\bis (?:this|the account) (?:for|under|in) (?:someone|somebody) else(?:'s name)?\b/i;
     const AFFIRM = /^\s*(?:yes|yeah|yep|yup|i am|correct|that'?s right)\b/i;
-    const HANDOFF = /\bis (?:he|she|they|the account holder|your (?:mom|mother|dad|father|husband|wife)) (?:there|available|with you|home|around|able to (?:come|get) to the phone)\b|\b(?:put|get|have) (?:him|her|them|the account holder) on\b|\b(?:speak|talk) (?:with|to) (?:him|her|them|the account holder)\b/i;
+    const HANDOFF = /\bis (?:he|she|they|the account holder|your (?:mom|mother|dad|father|husband|wife)) (?:there|available|with you|home|around|able to (?:come|get) to the phone)\b|\b(?:put|get|have) (?:him|her|them|the account holder) on\b|\b(?:speak|talk) (?:with|to) (?:him|her|them|the account holder)\b|\b(?:put|get|have) your (?:mom|mother|dad|father|husband|wife|son|daughter) on\b|\b(?:can|could) (?:he|she|they) (?:come|get) (?:to|on) the (?:phone|line)\b/i;
     // Permission actually asked of the account holder, or given. Present tense
     // "gives" is left out on purpose: "not unless the account holder gives
     // verbal authorization" is the advisor refusing, and reading it as a grant
     // would clear the very refusal it states.
     // The object is required: "can you give me the last four" is a question
     // about identity, and read as permission it hid an authorization miss.
-    const PERMISSION = /\b(?:do you|does (?:he|she|the account holder)|will you|would you|can you) (?:give|grant)(?: [a-z']+){0,3} (?:permission|authorization|consent)\b|\b(?:do you|does (?:he|she|the account holder)) authorize\b|\b(?:gave|granted|given|giving) (?:you |them |him |her |us |me )?(?:verbal )?(?:permission|authorization|consent)\b|\bi (?:give|grant) (?:you |them |him |her )?(?:verbal )?(?:permission|authorization|consent)\b|\badd(?:ed)? (?:you|them|him|her) (?:to|on|as) (?:the account|an authorized)\b|\b(?:this is|i(?:'m| am)) the account holder\b/i;
+    const PERMISSION = /\b(?:do you|does (?:he|she|the account holder)|will you|would you|can you) (?:give|grant)(?: [a-z']+){0,3} (?:permission|authorization|consent)\b|\b(?:do you|does (?:he|she|the account holder)) authorize\b|(?<!\bunless (?:he|she|they|the account holder) (?:has |have |had )?)\b(?:gave|granted|given|giving) (?:you |them |him |her |us )?(?:verbal )?(?:permission|authorization|consent)\b|\bi (?:give|grant) (?:you |them |him |her )?(?:verbal )?(?:permission|authorization|consent)\b|\badd(?:ed)? (?:you|them|him|her) (?:to|on|as) (?:the account|an authorized)\b|\b(?:this is|i(?:'m| am)) the account holder\b/i;
     // Authorization being dealt with, without settling it either way.
     const AUTHORIZATION_OTHER = /\b(?:i|we) (?:do )?(?:see|have|show) you (?:listed|on the account|as (?:an? )?(?:authorized|joint|secondary|additional))\b|\byou(?:'re| are) (?:listed|authorized|an authorized)\b|\bauthorized (?:user|party|contact|person|caller|representative)\b|\b(?:verbal|written) (?:authorization|permission|consent)\b|\bthird party\b|\bpower of attorney\b|\bdeath certificate\b|\bjoint account holder\b/i;
-    const REFUSAL = /\b(?:can'?t|cannot|can not|not able to|unable to|not allowed to|won'?t be able to) (?:discuss|release|share|give (?:out|you)|go over|provide|disclose|talk about|speak about)\b(?: [a-z']+){0,4} (?:account|information|info|details|balance|any of (?:that|it))\b|\b(?:can|am able to) only (?:discuss|speak|talk|release|share)\b|\bonly (?:discuss|speak|talk) (?:about )?(?:the account )?(?:with|to) the (?:account holder|person on the account|authorized)\b/i;
-    const DENIAL = /^\s*(?:no|nope|nah|not really|unfortunately not)\b|\bno (?:i(?:'m| am)|she(?:'s| is)|he(?:'s| is)|they(?:'re| are)|it(?:'s| is))\b|\bi(?:'m| am) not\b|\b(?:she|he|they)(?:'s| is|'re| are) not\b|\bnot (?:on|listed on) (?:the|it)\b/i;
+    const REFUSAL = /\b(?:can'?t|cannot|can not|not able to|unable to|not allowed to|won'?t be able to) (?:discuss|release|share|give (?:out|you)|go over|provide|disclose|talk about|speak about|tell you)\b(?: [a-z']+){0,4} (?:account|information|info|details|balance|any of (?:that|it))\b|\b(?:can|am able to) only (?:discuss|speak|talk|release|share)\b|\bonly (?:discuss|speak|talk) (?:about )?(?:the account )?(?:with|to) the (?:account holder|person on the account|authorized)\b/i;
+    const DENIAL = /^\s*(?:no|nope|nah|not really|unfortunately not)\b(?! (?:problem|worries|worry)\b)|\bno (?:i(?:'m| am)|she(?:'s| is)|he(?:'s| is)|they(?:'re| are)|it(?:'s| is))\b|\bi(?:'m| am) not(?! sure\b| certain\b| able\b| gonna\b| going\b| trying\b)\b|\b(?:she|he|they)(?:'s| is|'re| are) not\b|\bnot (?:on|listed on) (?:the|it)\b/i;
     const DENIAL_WINDOW = 2;
+    // The advisor finding the caller on the account settles a "no, but i'm
+    // an authorized user" as surely as permission does.
+    const SEES_CALLER_LISTED = /\b(?:i|we) (?:do )?(?:see|have|show) you (?:listed|on the account|as (?:an? )?(?:authorized|joint|secondary|additional))\b/i;
+
+    // Disclosures a caller's answer to a lookup question can look like.
+    const ANSWERS_A_LOOKUP = ['holderName', 'accountNumber', 'onFile'];
+    // Enough of a number that repeating it back is a read-back, not a match
+    // on a stray "one".
+    const READ_BACK_MIN_CHARS = 7;
+    const SPOKEN_DIGIT = new RegExp(`\\b(?:${SPOKEN_NUMBER}|\\d+)\\b`, 'gi');
+
+    function spokenDigits(text) {
+        return (String(text || '').match(SPOKEN_DIGIT) || []).join(' ');
+    }
 
     const TRUNCATED = /\[transcript truncated(?: for storage)?\]/i;
 
@@ -373,8 +417,21 @@
             const cannot = callerCannot(text);
             const firstPerson = CALLER_VOICE.test(text);
 
-            const disclosure = advisor && !firstPerson ? firstDisclosure(text) : null;
-            const asksIdentity = advisor && !cannot && !FIRST_PERSON_IDENTIFIER.test(text) && IDENTITY_ASK.test(text);
+            // A payment confirmed with its confirmation number is the one the
+            // caller has just made on the phone, not history being read out.
+            const found = advisor && !firstPerson ? firstDisclosure(text) : null;
+            const disclosure = found && found.key === 'payment' && CONFIRMATION_NUMBER.test(text) ? null : found;
+
+            // The caller offering an identifier is not the advisor asking for
+            // one ("do you need his social", "i have the account number and
+            // the last four ready"), unless somebody is actually being asked:
+            // "i have the account up, can you verify your date of birth" is
+            // the advisor. An "i don't have a pin on file, so can you verify"
+            // is the advisor too, so a question outweighs the "don't have".
+            const asked = ASKING_OUTRIGHT.test(text);
+            const callerOffers = CALLER_OFFERS.test(text) && !asked;
+            const asksIdentity = advisor && !callerOffers && (!cannot || asked)
+                && !FIRST_PERSON_IDENTIFIER.test(text) && IDENTITY_ASK.test(text);
             const lookup = advisor && !disclosure && !asksIdentity && ASKING.test(text)
                 ? LOOKUPS.filter(item => item.pattern.test(text)).map(item => item.what)
                 : [];
@@ -388,8 +445,8 @@
                 disclosure,
                 asksIdentity,
                 identityWhat: asksIdentity ? identifierWhat(text) : '',
-                givesIdentity: caller && !cannot && GIVES_IDENTIFIER.test(text),
-                ivr: IVR_VERIFIED.test(text),
+                givesIdentity: caller && !cannot && !NO_MATCH.test(text) && GIVES_IDENTIFIER.test(text),
+                ivr: IVR_VERIFIED.test(text) && !NOT_THE_PHONE_SYSTEM.test(text),
                 confirmed: advisor && CONFIRMED.test(text),
                 cannot: caller && cannot,
                 noMatch: advisor && NO_MATCH.test(text),
@@ -410,6 +467,25 @@
         });
     }
 
+    /**
+     * Does this reply answer the identity question that is waiting?
+     *
+     * Verint sometimes runs the caller's answer into the advisor's next
+     * segment ("two three four five okay perfect so your balance is..."), so
+     * on a turn that also shares something, only the words before the sharing
+     * are looked at.
+     */
+    function answersCheck(mark, ask) {
+        const said = mark.disclosure
+            ? mark.text.slice(0, mark.disclosure.pattern.exec(mark.text).index)
+            : mark.text;
+        if (ANSWER_VALUE.test(said)) return true;
+
+        const inWords = /security question|PIN or passcode/.test(ask.identityWhat) && ASKED_OUTRIGHT.test(ask.text);
+        const words = collapse(said).split(' ').filter(Boolean).length;
+        return inWords && !mark.disclosure && words > 0 && words <= WORD_ANSWER_WORDS && !NOT_AN_ANSWER.test(said);
+    }
+
     function event(turn, extra) {
         return {
             index: turn.index,
@@ -425,10 +501,14 @@
      * every caller shares one idea of who said what.
      */
     function readVerification(parsed) {
-        const turns = Array.isArray(parsed?.turns) ? parsed.turns : [];
+        const turns = Array.isArray(parsed?.turns) ? parsed.turns.filter(Boolean) : [];
         if (!turns.length) return { ok: false, reason: 'empty' };
 
+        // A paste with no timestamps and no labels comes through as one turn,
+        // and one turn has no order to read. Judging it anyway flagged a
+        // clean call, because the check and the balance sat in the same turn.
         const labeled = Boolean(parsed.labeled);
+        if (!labeled && turns.length === 1) return { ok: false, reason: 'unsegmented' };
         const marks = annotate(turns, labeled);
 
         // A trimmed transcript lost its middle. A disclosure after the cut
@@ -451,6 +531,22 @@
         const disclosures = [];
         let breach = null;
 
+        // Two kinds of line read like sharing and are not. The caller
+        // answering "what is the name on the account" with "the name on the
+        // account is maria lopez" is the caller talking, whichever side the
+        // parse gave it. And the advisor reading back a number the caller has
+        // just given ("okay i have your phone number as six zero two...") is
+        // repeating it, not telling them anything.
+        marks.forEach((mark, index) => {
+            const previous = marks[index - 1];
+            if (!mark.disclosure || !previous) return;
+            const answeringLookup = ANSWERS_A_LOOKUP.includes(mark.disclosure.key) && previous.lookup.length;
+            const readBack = mark.disclosure.key === 'onFile'
+                && spokenDigits(previous.text).length >= READ_BACK_MIN_CHARS
+                && spokenDigits(mark.text).includes(spokenDigits(previous.text));
+            if (answeringLookup || readBack) mark.disclosure = null;
+        });
+
         marks.forEach(mark => {
             // Identity: asked, answered, failed, settled.
             //
@@ -469,16 +565,23 @@
                 }
             } else if (pendingAsk && mark.caller && mark.index > pendingAsk.mark.index) {
                 const onTheStandingCheck = !identity || identity.index === pendingAsk.mark.index;
-                if (mark.cannot && onTheStandingCheck && mark.index - pendingAsk.mark.index <= FAILURE_WINDOW) {
+                // Once it has been answered, only a "cannot" about the thing
+                // asked for undoes it. "I do not remember, maybe tuesday",
+                // about when a payment was made two turns after a clean check,
+                // was undoing the check.
+                const undoes = !pendingAsk.answered || CANNOT_OBJECT.test(mark.text);
+                if (mark.cannot && onTheStandingCheck && undoes && mark.index - pendingAsk.mark.index <= FAILURE_WINDOW) {
                     failure = event(mark);
                     identity = null;
-                } else if (!pendingAsk.answered && !mark.disclosure) {
+                } else if (!pendingAsk.answered && answersCheck(mark, pendingAsk.mark)) {
                     pendingAsk.answered = true;
                     identity = event(pendingAsk.mark, { what: pendingAsk.mark.identityWhat });
                 }
             }
 
-            if (mark.noMatch && pendingAsk && mark.index - pendingAsk.mark.index <= FAILURE_WINDOW
+            // "That doesn't match" comes after the answer and usually a beat
+            // on the screen, so it is given longer than the answer itself.
+            if (mark.noMatch && pendingAsk && mark.index - pendingAsk.mark.index <= NO_MATCH_WINDOW
                 && (!identity || identity.index === pendingAsk.mark.index)) {
                 failure = event(mark);
                 identity = null;
@@ -504,7 +607,10 @@
 
             if (mark.authQuestion) lastAuthQuestion = mark.index;
             if (mark.onBehalfQuestion) lastOnBehalfQuestion = mark.index;
-            if (mark.authQuestion || mark.onBehalfQuestion || mark.handoff || mark.permission || mark.authOther || mark.refusal) {
+            // A refusal is not on this list. "I can only discuss the account
+            // with the account holder", followed by giving in when the caller
+            // pushed, counted as having dealt with authorization.
+            if (mark.authQuestion || mark.onBehalfQuestion || mark.handoff || mark.permission || mark.authOther) {
                 authorizations.push(event(mark));
             }
 
@@ -522,13 +628,19 @@
 
             if (denial && mark.index > denial.index) {
                 if (mark.handoff) handoffAfterDenial = true;
-                // The account holder came to the phone and was verified, or
-                // gave permission for this caller. Either settles it.
-                if (mark.permission || (handoffAfterDenial && mark.asksIdentity)) denial = null;
+                // The account holder came to the phone and was verified, gave
+                // permission for this caller, or the advisor found the caller
+                // listed ("no, my husband is, but i'm an authorized user").
+                const foundListed = mark.advisor && SEES_CALLER_LISTED.test(mark.text);
+                if (mark.permission || (handoffAfterDenial && mark.asksIdentity) || foundListed) denial = null;
             }
 
             if (mark.refusal && !refusal) refusal = event(mark);
 
+            // Falling back to the address after a failed check abandons the
+            // check. Without this, "okay that matches" about the address
+            // brought the failed social back to life.
+            if (mark.lookup.length && failure) pendingAsk = null;
             if (mark.lookup.length && !disclosures.length) {
                 lookups.push(event(mark, { what: mark.lookup }));
             }
@@ -539,7 +651,10 @@
             const disclosure = mark.disclosure || (answersAmount ? AMOUNT_ANSWER : null);
 
             if (!disclosure) return;
-            if (cutAt >= 0 && mark.index > cutAt) return;
+            // The turn holding the marker counts as past the cut: the first
+            // line of the kept tail is merged into it when it begins with
+            // speech rather than a timestamp.
+            if (cutAt >= 0 && mark.index >= cutAt) return;
 
             const shared = event(mark, { key: disclosure.key, what: disclosure.what });
             disclosures.push(shared);
@@ -553,8 +668,11 @@
                 if (denial) {
                     types.push('denied');
                 } else {
+                    // The caller's own line cannot settle it: "she gave me
+                    // permission to call" and "i'm her power of attorney" are
+                    // what the advisor then has to check, not the check.
                     const addressed = authorizations.some(step => step.index >= thirdParty.index - DENIAL_WINDOW
-                        && step.index < mark.index);
+                        && step.index < mark.index && step.index !== thirdParty.index);
                     if (!addressed) types.push('unauthorized');
                 }
             }
@@ -651,6 +769,14 @@
      * One or two sentences for the QA row, plus the quote that proves it.
      */
     function describe(read) {
+        if (read?.reason === 'unsegmented') {
+            return {
+                tone: 'neutral',
+                headline: 'Verification could not be read from this transcript',
+                detail: 'It came through as one block, with no timestamps or speaker labels to split it into turns, so the order things were said in cannot be read. Listen for this one.',
+                evidence: ''
+            };
+        }
         if (!read?.ok) {
             return { tone: 'neutral', headline: '', detail: 'The transcript could not be read for verification.', evidence: '' };
         }
@@ -777,13 +903,16 @@
      */
     function buildAlertHtml(read, escapeHtml) {
         const safe = typeof escapeHtml === 'function' ? escapeHtml : (value) => String(value || '');
-        if (!read?.ok) return '';
         const said = describe(read);
+        if (!read?.ok && !said.headline) return '';
 
         if (said.tone !== 'red') {
             const icon = said.tone === 'green' ? '✅' : 'ℹ️';
+            const detail = said.tone === 'green' || !read?.ok
+                ? said.detail
+                : 'Nothing to verify for, as far as the transcript shows.';
             return `<div class="call-alert call-alert-${said.tone === 'green' ? 'ok' : 'quiet'}">
-                <strong>${icon} ${safe(said.headline)}.</strong> <span>${safe(said.tone === 'green' ? said.detail : 'Nothing to verify for, as far as the transcript shows.')}</span>
+                <strong>${icon} ${safe(said.headline)}.</strong> <span>${safe(detail)}</span>
             </div>`;
         }
 
