@@ -1480,7 +1480,6 @@ suite('rankings view: reliability on the year card is the running total for the 
     cr.renderCenterRanking();
 
     const model = cr.buildYearImageModel('P0');
-    t.check('months and file agree, so there is no correction note', !model.reliabilityCorrection);
     const rel = (label) => model.columns.find((c) => c.fullLabel && c.fullLabel.indexOf(label) === 0).metrics
         .find((m) => m.label === 'Reliability');
     t.equal('June is the hours so far', rel('June').value, 8);
@@ -1521,14 +1520,12 @@ suite('rankings view: the YTD file wins reliability where it disagrees with the 
         .find((m) => m.label === 'Reliability');
     t.equal('June is still the months so far', rel('June').value, 0.4);
     t.equal('July is the YTD file, not the 9.0 the months add up to', rel('July').value, 1.7);
-    t.check('the card knows the two disagreed', !!model.reliabilityCorrection
-        && model.reliabilityCorrection.summed === 9 && model.reliabilityCorrection.ytd === 1.7);
 
+    // Nothing is printed about it. Scott: "I hate the disclaimer."
     withRecordingCanvas(t, (rec) => {
         cr.drawYearCard(model);
         const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
-        t.check('and says so, with both numbers',
-            texts.some((x) => /monthly files add up to 9\.0 hrs, the YTD file through July 31, 2026 says 1\.7 hrs\. Hours were corrected/.test(x)));
+        t.check('the card carries no correction note', !texts.some((x) => /monthly files add up to/.test(x)));
     });
 
     const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });

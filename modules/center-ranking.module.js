@@ -2644,26 +2644,13 @@
         var holdersByPeriod = {};
         var runningByName = {};
         var relAnchor = _ytdReliabilityAnchor(year);
-        var relCorrection = null;
         Object.keys((tl && tl.byName) || {}).forEach(function (who) {
             var points = (tl.byName[who] || []).filter(function (point) { return point && point.key; });
-            var summed = who === name ? _runningReliability(points, null, null) : null;
-            var running = _runningReliability(points, who, relAnchor);
             runningByName[who] = {};
-            running.forEach(function (copy, i) {
+            _runningReliability(points, who, relAnchor).forEach(function (copy) {
                 runningByName[who][copy.key] = copy;
                 (holdersByPeriod[copy.key] = holdersByPeriod[copy.key] || [])
                     .push({ name: who, holder: copy });
-                if (summed && summed[i] && Number.isFinite(summed[i].reliability)
-                    && Number.isFinite(copy.reliability)
-                    && Math.abs(summed[i].reliability - copy.reliability) >= 0.05
-                    && _anchorPointIndex(running, relAnchor) === i) {
-                    relCorrection = {
-                        summed: summed[i].reliability,
-                        ytd: copy.reliability,
-                        through: relAnchor.through
-                    };
-                }
             });
         });
         var ranksByPeriod = {};
@@ -2683,10 +2670,6 @@
         return {
             name: name,
             ytd: _buildYtdColumn(name, year),
-            // Set when the monthly files and the YTD file disagree on this
-            // person's hours. The card says so rather than showing a drop with
-            // no reason.
-            reliabilityCorrection: relCorrection,
             title: name,
             year: year,
             // The last month with finished data, for the email subject. Null
@@ -2821,8 +2804,7 @@
         var keyInSlot = kpis.length % panelCols !== 0;
         var chartH = 22 + panelRows * panelH + (panelRows - 1) * 14 + (keyInSlot ? 8 : 30);
 
-        var correction = model.reliabilityCorrection || null;
-        var H = headerH + chartH + gap + headRowH + rowH * rows + 84 + (correction ? 16 : 0);
+        var H = headerH + chartH + gap + headRowH + rowH * rows + 84;
 
         // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
         // display and still sharp on a high-DPI one.
@@ -3189,15 +3171,6 @@
         text('Green meets the target, red is below it.', padX + 6, lastRow + 48, 11, '#7a8794');
         text('Placings are within that one metric, against everyone measured in that column. '
             + 'They are not an overall ranking.', padX + 6, lastRow + 64, 11, '#7a8794');
-        if (correction) {
-            var relUnit = function (v) { return _formatMetricDisplay('reliability', v); };
-            text('Reliability: the monthly files add up to ' + relUnit(correction.summed)
-                + ', the YTD file through ' + _longDate(correction.through) + ' says ' + relUnit(correction.ytd)
-                + '. ' + (correction.ytd < correction.summed
-                    ? 'Hours were corrected after the monthly files were pulled, so the YTD file is used.'
-                    : 'The YTD file has hours the monthly files do not, so it is used.'),
-                padX + 6, lastRow + 80, 11, '#b45309', '600');
-        }
 
         return canvas;
     }
