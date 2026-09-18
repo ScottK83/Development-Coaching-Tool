@@ -21,6 +21,7 @@ const { suite, ROOT } = require('./harness');
 function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     return global.window.DevCoachModules.callTranscript;
 }
 
@@ -60,8 +61,62 @@ function coachingLines(T) {
             'Agent: Um, uh, erm, I guess it should be fine, hopefully.',
             'Agent: I am going to transfer you to the billing department.',
             'Customer: Can I speak to a supervisor?'
+        ].join('\n'),
+        // Account details to somebody else's account, never verified.
+        [
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Customer: I am calling about my mom\'s account, she got a shut off notice.',
+            'Agent: Can I have the address on the account?',
+            'Customer: 12 Main Street.',
+            'Agent: I do see a past due amount of two hundred dollars.'
+        ].join('\n'),
+        // Verification that did not go through, and the balance anyway.
+        [
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Customer: What do I owe?',
+            'Agent: For verification, can you give me the last four of the social?',
+            'Customer: I do not know it.',
+            'Agent: That is fine, your balance is two hundred dollars.'
+        ].join('\n'),
+        // Told no, shared anyway.
+        [
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Agent: Are you the account holder?',
+            'Customer: No, it is my husband\'s account.',
+            'Agent: Okay, the balance is ninety dollars.'
+        ].join('\n'),
+        // Verified, but only after.
+        [
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Customer: What do I owe?',
+            'Agent: Your balance is two hundred dollars.',
+            'Agent: For security purposes can you verify your date of birth?',
+            'Customer: May 4th.'
+        ].join('\n'),
+        // A caller who was not on the account, and was told no.
+        [
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Customer: I am calling about my son\'s account.',
+            'Agent: Are you listed on the account?',
+            'Customer: No.',
+            'Agent: I am not able to discuss the account unless he is on the line.'
         ].join('\n')
     ];
+
+    // A real Verint export, timestamps and all. The lines built from measured
+    // silence only exist on a timed call, and none of the calls above has
+    // one, which is how "Dead air: about 1m 04s" reached emails unseen.
+    CALLS.push(fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'verint-export.txt'), 'utf8'));
+
+    // A customer who does nearly all the talking, which is the only way the
+    // talk share line appears, and it opened with "Call control:".
+    CALLS.push([
+        'Agent: Thank you for calling APS, my name is Jamie.',
+        'Customer: ' + 'I have been trying to get this sorted for weeks and every time I call somebody tells me something different about the bill and the meter and the usage and nobody writes anything down. '.repeat(4),
+        'Agent: Okay.',
+        'Customer: ' + 'And then the letter came saying the payment was late when I paid it on time from my bank and I have the confirmation right here in front of me with the date on it. '.repeat(3),
+        'Agent: I see.'
+    ].join('\n'));
 
     const lines = [];
     CALLS.forEach((transcript) => {
@@ -86,6 +141,13 @@ suite('coaching voice: no QA vocabulary reaches the associate', (t) => {
     const lines = coachingLines(T);
 
     t.check('the engine produced lines to check', lines.length > 15);
+
+    // The verification lines are the most serious thing she can read, and
+    // the most likely to arrive sounding like a report. They are in the sweep.
+    t.check('every kind of verification miss produced a line to check',
+        lines.filter((line) => /before verifying|anyway|authorized on it|only after/.test(line)).length >= 4);
+    t.check('and the refusal produced its praise', lines.some((line) => /kept its details back/.test(line)));
+    t.check('no verification line says "red flag"', !lines.some((line) => /red flag/i.test(line)));
 
     // Words and phrases an associate would never use about her own call. Each
     // one was in this file's output at some point.

@@ -9,6 +9,7 @@ const VERINT_EXPORT = fs.readFileSync(path.join(__dirname, 'fixtures', 'verint-e
 function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-qa.module.js');
     t.loadModule('modules/call-listening.module.js');
     return global.window.DevCoachModules;

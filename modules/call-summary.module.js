@@ -75,7 +75,12 @@
         // a name, a social, a phone number and a previous address and none of
         // it was recognised, so the recap reported one action on a call with
         // six in it. Verint's own words are not the ones anybody says.
-        { key: 'verified', label: 'took the customer through verification', pattern: /verif(?:y|ication|ying)|identity check|date of birth|last four|confirm(?:ing)? your (?:name|address|identity)|(?:may|can|could) i (?:please )?(?:get|have) your(?: full)?(?: first and last)? (?:name|social|address|phone|cell)|full social|social security/i },
+        // Placed by call-verification when it is loaded, which knows an
+        // address from an identity check. This pattern is only the fallback,
+        // and it is kept to the identifiers for the same reason: "can i have
+        // your address" was recapped as taking the customer through
+        // verification on the very calls where nobody was verified.
+        { key: 'verified', label: 'took the customer through verification', pattern: /\blast (?:four|4)\b|\bsocial security\b|\bfull social\b|\byour social\b|\bdate of birth\b|\bbirthday\b|\bpin number\b|\bpass ?code\b|\bsecurity question/i },
         { key: 'createdAccount', label: 'set the account up', pattern: /create an account|creat(?:ed|ing) (?:your|the|an) account|start(?:ed)? (?:your|the) service|set (?:you|your account) up/i },
         { key: 'disclosed', label: 'went over the rate plan details', pattern: /fixed energy charge plan|time of use|off peak|super off peak|demand charge|kilowatt hour|comparison tool|change your rate plan/i },
         { key: 'explained', label: 'walked through what was on the bill', pattern: /the reason (?:is|for that)|what that means|the way (?:it|that) works|this (?:charge|amount) is|that is why your/i },
@@ -86,7 +91,10 @@
         { key: 'setUpService', label: 'got the service set up', pattern: /service is (?:set|created|started)|got you set up|set up your service|start date/i },
         { key: 'changedPlan', label: 'changed the plan', pattern: /changed your plan|switched you to|applied .{0,25}plan/i },
         { key: 'submitted', label: 'submitted a request', pattern: /i(?:'?ve| have) submitted|put in a request|open(?:ed)? a case|case number|sent (?:it|that) (?:over|through)/i },
-        { key: 'scheduled', label: 'booked an appointment', pattern: /scheduled for|appointment (?:on|for)|technician will/i },
+        // Not a disconnect. "The disconnect is scheduled for friday" is the
+        // account's status, and recapping it as booking an appointment told
+        // the supervisor something happened that did not.
+        { key: 'scheduled', label: 'booked an appointment', pattern: /scheduled for|appointment (?:on|for)|technician will/i, not: /disconnect|shut ?off|cut off/i },
         { key: 'educated', label: 'showed them how to do it themselves next time', pattern: /on the (?:app|website|portal)|online you can|once you are registered|for future reference/i },
         { key: 'transferred', label: 'passed the call to another team', pattern: /transfer(?:ring)? you|let me transfer|get you (?:over )?to (?:the|another)/i }
     ];
@@ -232,15 +240,30 @@
         // which is the only way this goes wrong.
         const substantive = turns.filter(longEnough);
         const second = substantive[1];
-        if (second && !AGENT_OPENING.test(second.text)) return clip(second.text);
+        if (second && !AGENT_OPENING.test(second.text) && !readsOutAccount(second.text)) return clip(second.text);
         return '';
     }
 
-    function findActions(turns) {
-        const agentTurns = turns.filter(turn => turn.role !== 'customer');
+    // "Your balance is two hundred dollars" is the advisor reading the
+    // account, and on a short call it was the second long turn, so the recap
+    // said the customer opened with it.
+    function readsOutAccount(text) {
+        const disclosures = window.DevCoachModules?.callVerification?.DISCLOSURES || [];
+        return disclosures.some(item => item.pattern.test(text));
+    }
+
+    // `at` is the turn's place in the whole call, so an action placed by the
+    // verification read and one found by pattern sort against each other.
+    function findActions(turns, verification) {
         return AGENT_ACTIONS
             .map(action => {
-                const index = agentTurns.findIndex(turn => action.pattern.test(turn.text));
+                if (action.key === 'verified' && verification?.ok) {
+                    const first = verification.identityAsks?.[0];
+                    return first ? { ...action, at: first.index } : null;
+                }
+                const index = turns.findIndex(turn => turn.role !== 'customer'
+                    && action.pattern.test(turn.text)
+                    && !(action.not && action.not.test(turn.text)));
                 return index < 0 ? null : { ...action, at: index };
             })
             .filter(Boolean)
@@ -304,7 +327,8 @@
             lengthPhrase: minutesLabel(meta.durationLabel),
             topic: findTopic(meta, customerText, findTopicSource(turns, parsed.labeled)),
             openingAsk: findOpeningAsk(turns, parsed.labeled),
-            actions: findActions(turns),
+            actions: findActions(turns, analysis?.verification
+                || window.DevCoachModules?.callVerification?.readVerification?.(parsed)),
             silence: describeSilence(analysis?.silenceGaps),
             resolved: RESOLVED.test(agentText),
             leftOpen: LEFT_OPEN.test(agentText),

@@ -9,6 +9,7 @@ const VERINT_EXPORT = fs.readFileSync(path.join(__dirname, 'fixtures', 'verint-e
 function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-listening.module.js');
     return global.window.DevCoachModules;
 }
@@ -133,8 +134,26 @@ suite('call transcript: missing behaviours become coaching', (t) => {
 
     t.check('missing recap is coached', found.includes('recap'));
     t.check('missing next steps is coached', found.includes('nextSteps'));
-    t.check('missing verification is coached', found.includes('verification'));
+    // Nothing on the account was said, so there was nothing to verify for.
+    // The old rule coached "confirm who you are talking to" on every call
+    // without the word verify in it, outage reports included, and praised
+    // the ones that asked for an address and then read out the balance.
+    t.check('verification is not coached when nothing on the account came up', !found.includes('verification'));
     t.check('empathy outranks the courtesy close', found.indexOf('empathy') < found.indexOf('courtesyClose'));
+
+    // What it is coached for now: the account going out unverified, first.
+    const leaked = callTranscript.analyzeTranscript([
+        'Agent: Thank you for calling, my name is Jamie. How can I help?',
+        'Customer: What do I owe?',
+        'Agent: Can I have the address on the account?',
+        'Customer: 12 Main Street.',
+        'Agent: Your balance is two hundred dollars.',
+        'Agent: To recap, you owe two hundred. Is there anything else I can help with?'
+    ].join('\n'));
+    t.equal('account detail before verification leads the coaching', leaked.improvements[0].key, 'verification');
+    t.check('and nothing praises verifying on that call',
+        !keys(leaked.allStrengths).includes('verification'));
+    t.equal('and it does not open by calling it a good call', leaked.headline, '');
 });
 
 suite('call transcript: frustration raises the empathy call', (t) => {
@@ -323,7 +342,9 @@ suite('call transcript: silence measured from timestamps', (t) => {
 
     const hold = analysis.allImprovements.find((item) => item.key === 'longHold');
     t.check('flags the long hold', Boolean(hold));
-    t.check('says how long it ran', /2m 21s/.test(hold.text));
+    // In words, the way it would be said: the note goes into her email as is.
+    t.check('says how long it ran', /ran about two minutes/.test(hold.text));
+    t.check('with no report label in front', !/^Long hold:/.test(hold.text));
     t.check('says when it started', /at 4:30/.test(hold.text));
     // Second person, like every other line here: it is her own action.
     // Named rather than pronouned: the message strips the "Long hold:" label
@@ -334,6 +355,7 @@ suite('call transcript: silence measured from timestamps', (t) => {
     const deadAir = analysis.allImprovements.find((item) => item.key === 'deadAirGap');
     t.check('flags the unannounced gap', Boolean(deadAir));
     t.check('says when it happened', /at 7:56/.test(deadAir.text));
+    t.check('without the words she would never use', !/dead air/i.test(deadAir.text));
 
     t.check('short pauses are not flagged', found.filter((k) => k === 'deadAirGap').length === 1);
 

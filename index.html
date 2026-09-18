@@ -608,6 +608,10 @@ Box 2 - Future Improvement Areas:
                             </details>
                             <div id="callPasteDiagnosis" class="call-note" style="display: none; margin-top: var(--space-3);"></div>
                             <div id="callTranscriptAnalysisSummary" class="call-note call-note-success" style="display: none; margin-top: var(--space-3);"></div>
+                            <!-- Verified and authorized before account details
+                                 went out. Not folded like the other reads: a
+                                 red flag here cannot wait to be looked for. -->
+                            <div id="callVerificationAlert" style="display: none; margin-top: var(--space-3);"></div>
                             <div id="callSummaryPanel" style="display: none; margin-top: var(--space-4);"></div>
                         </div>
 
@@ -1809,6 +1813,10 @@ Box 2 - Future Improvement Areas:
                 'modules/coaching.module.js',
                 'modules/verint-paste.module.js',
                 'modules/call-transcript.module.js',
+                // Verified and authorized before account details went out.
+                // Read by call-transcript, call-qa and call-summary at call
+                // time, so it only has to be loaded before anyone analyzes.
+                'modules/call-verification.module.js',
                 'modules/call-qa.module.js',
                 'modules/call-word-choice.module.js',
                 'modules/call-summary.module.js',

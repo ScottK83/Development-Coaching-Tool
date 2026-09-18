@@ -4070,7 +4070,12 @@ function buildCallListeningQaCells(entry) {
     const qa = scoreCallListeningQa(entry.transcript, entry.employeeName, analysis);
     if (!qa?.ok) return blank;
 
-    const verdict = (id) => CALL_QA_CSV_WORD[qa.checks.find(item => item.id === id)?.verdict] || '';
+    const verdict = (id) => {
+        const found = qa.checks.find(item => item.id === id);
+        // "Opportunity" in a verification column undersells a No.
+        if (found?.severity === 'red') return 'No (red flag)';
+        return CALL_QA_CSV_WORD[found?.verdict] || '';
+    };
     const labels = (items) => (items || []).map(item => item.label).join('; ');
 
     return [
@@ -7225,8 +7230,18 @@ function buildCallListeningWordChoiceText(entry) {
     return window.DevCoachModules?.callWordChoice?.buildWordChoiceText?.(scan) || '';
 }
 
+// The red flag, if the call has one, for the top of the Verint note: the one
+// finding that should not have to be found in the QA list at the bottom.
+function buildCallListeningVerificationAlertText(entry) {
+    if (!entry?.transcript) return '';
+    const verifier = window.DevCoachModules?.callVerification;
+    const read = verifier?.readVerificationFromText?.(entry.transcript, { associateName: entry.employeeName });
+    return read?.ok ? (verifier.buildAlertText?.(read) || '') : '';
+}
+
 function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
+    const alertText = buildCallListeningVerificationAlertText(entry);
     const qaText = buildCallListeningQaText(entry);
     const wordChoiceText = buildCallListeningWordChoiceText(entry);
     const moment = window.DevCoachModules?.callTranscript?.formatCallMoment?.(entry.listenedOn, entry.callTime);
@@ -7239,6 +7254,7 @@ function buildCallListeningVerintSummary(entry) {
         ...(moment ? [`Call Taken: ${moment}`] : []),
         `Associate: ${entry.employeeName || ''}`,
         `Call Reference: ${entry.callReference || 'N/A'}`,
+        ...(alertText ? ['', alertText] : []),
         ...(recap ? ['', 'Call summary:', recap] : []),
         '',
         'What went well:',
@@ -7430,9 +7446,15 @@ function renderCallQaScorecard(transcript, associateName, analysis) {
     // says the form ran; "3 opportunities" says whether to open it.
     const counts = qa?.counts || {};
     const answered = (counts.met || 0) + (counts.opportunity || 0) + (counts.unknown || 0);
-    setCallFoldCount('callQaCount', counts.opportunity
-        ? `${answered} answered, ${counts.opportunity} opportunit${counts.opportunity === 1 ? 'y' : 'ies'}`
-        : `${answered} answered, nothing flagged`);
+    // A red flag is counted apart from the opportunities, so the folded line
+    // does not file it next to a missed rate script.
+    const red = counts.redFlags || 0;
+    const opportunities = Math.max(0, (counts.opportunity || 0) - red);
+    const parts = [`${answered} answered`];
+    if (red) parts.push(`🚩 ${red} red flag${red === 1 ? '' : 's'}`);
+    if (opportunities) parts.push(`${opportunities} opportunit${opportunities === 1 ? 'y' : 'ies'}`);
+    if (!red && !opportunities) parts.push('nothing flagged');
+    setCallFoldCount('callQaCount', parts.join(', '));
     return qa;
 }
 
@@ -8029,7 +8051,30 @@ function buildCallListeningAnalysisSummary(analysis, associateName) {
     return `${base} Ordered for the KPIs ${associateName} is missing: ${labels}.`;
 }
 
+/**
+ * The verification read, straight under the Analyze button.
+ *
+ * Everything else the app reads off a call sits folded below the email. This
+ * does not: account information given to somebody who was not shown to be
+ * entitled to it is the one finding that cannot wait for a fold to be opened.
+ * A clean call gets one quiet line, so it is visible that the check ran.
+ */
+function renderCallVerificationAlert(transcript, associateName, analysis) {
+    const host = document.getElementById('callVerificationAlert');
+    if (!host) return null;
+
+    const verifier = window.DevCoachModules?.callVerification;
+    const read = analysis?.verification
+        || (transcript ? verifier?.readVerificationFromText?.(transcript, { associateName }) : null);
+    const html = read?.ok ? (verifier?.buildAlertHtml?.(read, escapeHtml) || '') : '';
+
+    host.innerHTML = html;
+    host.style.display = html ? 'block' : 'none';
+    return read || null;
+}
+
 function renderCallListeningReadPanels(transcript, associateName, analysis) {
+    renderCallVerificationAlert(transcript, associateName, analysis);
     renderCallSummaryPanel(transcript, associateName, analysis);
     renderCallQaScorecard(transcript, associateName, analysis);
     renderCallWordChoicePanel(transcript, associateName, analysis);
@@ -8271,6 +8316,13 @@ function clearCallListeningTranscript() {
     transcriptField.value = '';
     const summary = document.getElementById('callTranscriptAnalysisSummary');
     if (summary) summary.style.display = 'none';
+    // A red box left up over an empty transcript reads as a verdict on
+    // whatever gets pasted next.
+    const alert = document.getElementById('callVerificationAlert');
+    if (alert) {
+        alert.style.display = 'none';
+        alert.innerHTML = '';
+    }
 }
 
 function buildCallListeningPrompt(entry) {
@@ -8724,12 +8776,17 @@ function renderAllSavedCalls() {
         : `${total} saved call${total === 1 ? '' : 's'} for ${scope.employeeName}.`)
         + (duplicates ? ` ${duplicates} look${duplicates === 1 ? 's' : ''} like the same call saved more than once.` : '');
 
-    const describe = window.DevCoachModules?.callListening?.describeCallMoment;
+    const listening = window.DevCoachModules?.callListening;
+    const describe = listening?.describeCallMoment;
 
     container.innerHTML = groups.map(group => {
         const rows = group.rows.map(({ entry, duplicate }) => {
             const moment = (typeof describe === 'function' ? describe(entry) : '') || entry.listenedOn || 'date unknown';
+            // So the everyone view answers "is anybody giving accounts away"
+            // without opening a single call.
+            const flagged = Boolean(listening?.hasVerificationRedFlag?.({ ...entry, employeeName: group.employeeName }));
             const bits = [
+                flagged ? listening.RED_FLAG_TAG : '',
                 entry.callReference ? `Ref ${entry.callReference}` : '',
                 entry.transcript ? 'transcript saved' : 'no transcript',
                 duplicate ? 'looks like a duplicate' : ''

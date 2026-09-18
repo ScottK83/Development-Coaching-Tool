@@ -18,12 +18,14 @@
 
     const VERDICT = { met: 'met', opportunity: 'opportunity', unknown: 'unknown' };
 
-    /* ── What the rules listen for ── */
-
-    const VERIFICATION = /verif(?:y|ication|ying)|identity check|date of birth|last four|security question|name as it appears on your i ?d|can i have your .{0,40}account number or the address|confirm(?:ing)? your (?:name|address|identity)/i;
-
-    // Reading account detail back to the caller. Asking for it does not count.
-    const ACCOUNT_INFO_SHARED = /your account number is|account number is [a-z0-9]|your balance|your bill is|amount due|you owe|the charge (?:posted|on your)|your (?:current )?plan is|your usage (?:is|was)|deposit of/i;
+    /* ── What the rules listen for ──
+     *
+     * Verification is not in here. It was two patterns, "verify" anywhere and
+     * "your balance" anywhere, compared by position, and on the calls it most
+     * needed to catch it answered Yes: asking for the address counted as the
+     * identity check. call-verification reads it as a sequence instead, and
+     * this form asks that module for its answer.
+     */
 
     const APPRECIATION = /(?:very|really|so) helpful|you'?ve been (?:so |really |very )?(?:helpful|great|wonderful|amazing)|i (?:really )?appreciate (?:you|your|it|that)|you'?re the best|thank you so much(?! for (?:holding|waiting|calling|your patience))/i;
     const APS_FEEDBACK = /(?:aps|a p s|a t s) (?:has been|is|was) (?:really |very |so )?(?:great|good|terrible|awful|helpful|useless)|love (?:aps|a p s)|hate (?:aps|a p s)/i;
@@ -60,8 +62,12 @@
         {
             key: 'verification',
             label: 'Identity verification',
-            applies: () => true,
-            pattern: VERIFICATION
+            // Credited here when it was done. When it was not, the form's own
+            // verification question says so, with the time and the line; this
+            // row listing it as well put the same miss in her email twice.
+            applies: (text, context) => Boolean(context.verification?.identityAsks?.length),
+            heard: () => true,
+            quote: (context) => context.verification?.identityAsks?.[0]?.quote || ''
         },
         {
             key: 'depositAmount',
@@ -134,42 +140,42 @@
 
     /* ── The five form questions ── */
 
-    function checkVerification(turns, agentText) {
-        const verifiedAt = firstIndexMatching(turns, VERIFICATION);
-        const sharedAt = firstIndexMatching(turns, ACCOUNT_INFO_SHARED);
+    const VERIFICATION_QUESTION = 'Did advisor verify caller before sharing account information?';
 
-        if (verifiedAt < 0 && sharedAt < 0) {
-            return check('verification', 'Did advisor verify caller before sharing account information?',
-                VERDICT.unknown,
-                'No verification and no account detail were heard, so there was nothing to protect. Worth an ear if this was an account call.');
+    /**
+     * The form's verification question, answered by call-verification.
+     *
+     * A failure here is not an "opportunity" like a missed rate script: it is
+     * account information given to somebody who was not shown to be entitled
+     * to it. So it keeps the form's verdict, which is what the Verint form and
+     * the exports expect, and carries a severity the screen and the text use
+     * to say so plainly.
+     */
+    function checkVerification(read) {
+        const reader = window.DevCoachModules?.callVerification;
+        if (!read?.ok || typeof reader?.describe !== 'function') {
+            return check('verification', VERIFICATION_QUESTION, VERDICT.unknown,
+                'The verification read is not available, so listen for this one yourself.');
         }
 
-        if (verifiedAt < 0) {
-            return check('verification', 'Did advisor verify caller before sharing account information?',
-                VERDICT.opportunity,
-                'Account detail was discussed but no verification was heard first.',
-                quoteFor(turns, ACCOUNT_INFO_SHARED));
-        }
-
-        if (sharedAt >= 0 && sharedAt < verifiedAt) {
-            return check('verification', 'Did advisor verify caller before sharing account information?',
-                VERDICT.opportunity,
-                'Account detail came before the verification did. Verify first, every time.',
-                clip(turns[sharedAt].text));
-        }
-
-        return check('verification', 'Did advisor verify caller before sharing account information?',
-            VERDICT.met,
-            sharedAt >= 0
-                ? 'Verified before any account detail was shared.'
-                : 'Verification completed, and no account detail went out before it.',
-            quoteFor(turns, VERIFICATION));
+        const said = reader.describe(read);
+        return Object.assign(
+            check('verification', VERIFICATION_QUESTION, read.verdict, said.detail, said.evidence),
+            { severity: read.redFlag ? 'red' : '' }
+        );
     }
 
-    function checkDisclosures(turns, agentText) {
-        const applicable = DISCLOSURES.filter(item => item.applies(agentText));
-        const heard = applicable.filter(item => item.pattern.test(agentText));
-        const missed = applicable.filter(item => !item.pattern.test(agentText));
+    function checkDisclosures(turns, agentText, context) {
+        const isHeard = (item) => (typeof item.heard === 'function'
+            ? item.heard(agentText, context)
+            : item.pattern.test(agentText));
+        const quoteOf = (item) => (typeof item.quote === 'function'
+            ? item.quote(context)
+            : quoteFor(turns, item.pattern));
+
+        const applicable = DISCLOSURES.filter(item => item.applies(agentText, context));
+        const heard = applicable.filter(isHeard);
+        const missed = applicable.filter(item => !isHeard(item));
 
         const detail = missed.length
             ? `Heard ${heard.length} of ${applicable.length}. Not heard: ${missed.map(item => item.label.toLowerCase()).join('; ')}.`
@@ -179,7 +185,7 @@
             check('disclosures', 'Did advisor cover all required disclosures and scripts?',
                 missed.length ? VERDICT.opportunity : VERDICT.met,
                 detail,
-                heard.length ? quoteFor(turns, heard[heard.length - 1].pattern) : ''),
+                heard.length ? quoteOf(heard[heard.length - 1]) : ''),
             { heard: heard.map(item => item.label), missed: missed.map(item => item.label) }
         );
     }
@@ -314,11 +320,15 @@
         const turns = parsed.turns || [];
         const agentText = parsed.agentText || '';
         const customerText = parsed.customerText || '';
-        const context = options.context || {};
+
+        // Read once, from the same parse every other check uses.
+        const reader = window.DevCoachModules?.callVerification;
+        const verification = reader?.readVerification ? reader.readVerification(parsed) : null;
+        const context = { ...(options.context || {}), verification };
 
         const checks = [
-            checkVerification(turns, agentText),
-            checkDisclosures(turns, agentText),
+            checkVerification(verification),
+            checkDisclosures(turns, agentText, context),
             checkProcessExplained(turns, agentText),
             checkResolved(turns, agentText, customerText),
             checkNotation()
@@ -327,13 +337,16 @@
         return {
             ok: true,
             checks,
+            verification,
+            redFlag: checks.some(item => item.severity === 'red'),
             kudos: buildKudos(turns, customerText),
             callOpportunities: buildCallOpportunities(turns, agentText, customerText, context),
             techOpportunities: buildTechOpportunities(turns, agentText),
             counts: {
                 met: checks.filter(item => item.verdict === VERDICT.met).length,
                 opportunity: checks.filter(item => item.verdict === VERDICT.opportunity).length,
-                unknown: checks.filter(item => item.verdict === VERDICT.unknown).length
+                unknown: checks.filter(item => item.verdict === VERDICT.unknown).length,
+                redFlags: checks.filter(item => item.severity === 'red').length
             }
         };
     }
@@ -345,6 +358,13 @@
         opportunity: 'Opportunity',
         unknown: 'Cannot tell from transcript'
     };
+
+    // A red flag is a plain No on the form, not an opportunity.
+    const RED_FLAG_WORD = 'No, red flag';
+
+    function verdictWord(item) {
+        return item.severity === 'red' ? RED_FLAG_WORD : VERDICT_WORD[item.verdict];
+    }
 
     function listOrNone(items) {
         if (!items.length) return 'None';
@@ -360,7 +380,7 @@
         const lines = ['QA read from the transcript (verify before you submit):'];
         qa.checks.forEach(item => {
             const evidence = item.evidence ? ` ("${item.evidence}")` : '';
-            lines.push(`- ${item.question} ${VERDICT_WORD[item.verdict]}. ${item.detail}${evidence}`);
+            lines.push(`- ${item.question} ${verdictWord(item)}. ${item.detail}${evidence}`);
         });
         lines.push(`- Kudos/Compliments: ${listOrNone(qa.kudos)}`);
         lines.push(`- Call Opportunities: ${listOrNone(qa.callOpportunities)}`);
@@ -372,7 +392,8 @@
     const VERDICT_STYLE = {
         met: { background: 'var(--green-soft)', color: 'var(--green-text)', border: 'var(--green)' },
         opportunity: { background: 'var(--yellow-soft)', color: 'var(--yellow-text)', border: 'var(--yellow)' },
-        unknown: { background: 'var(--bg-surface-sunken)', color: 'var(--text-secondary)', border: 'var(--border-strong)' }
+        unknown: { background: 'var(--bg-surface-sunken)', color: 'var(--text-secondary)', border: 'var(--border-strong)' },
+        red: { background: 'var(--red-soft)', color: 'var(--red-text)', border: 'var(--red)' }
     };
 
     function buildQaHtml(qa, escapeHtml) {
@@ -380,12 +401,12 @@
         if (!qa?.ok) return '';
 
         const row = (item) => {
-            const style = VERDICT_STYLE[item.verdict] || VERDICT_STYLE.unknown;
+            const style = (item.severity === 'red' ? VERDICT_STYLE.red : VERDICT_STYLE[item.verdict]) || VERDICT_STYLE.unknown;
             const evidence = item.evidence
                 ? `<div class="call-qa-evidence">"${safe(item.evidence)}"</div>`
                 : '';
             return `<li class="call-qa-row">
-                <span class="call-qa-chip" style="background: ${style.background}; color: ${style.color}; border-color: ${style.border};">${safe(VERDICT_WORD[item.verdict])}</span>
+                <span class="call-qa-chip" style="background: ${style.background}; color: ${style.color}; border-color: ${style.border};">${safe(verdictWord(item))}</span>
                 <div>
                     <div class="call-qa-question">${safe(item.question)}</div>
                     <div class="call-qa-detail">${safe(item.detail)}</div>
@@ -411,6 +432,7 @@
         scoreCall,
         buildQaText,
         buildQaHtml,
+        verdictWord,
         VERDICT
     };
 })();

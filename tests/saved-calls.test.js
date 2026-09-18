@@ -25,6 +25,7 @@ function load(t) {
     global.window.formatMetricDisplay = (key, value) => String(value);
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-word-choice.module.js');
     t.loadModule('modules/call-coaching-bridge.module.js');
     return global.window.DevCoachModules;

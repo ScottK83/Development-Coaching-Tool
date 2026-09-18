@@ -40,6 +40,7 @@ function load(t, extra, pool) {
     Object.assign(global.window, extra || {});
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-word-choice.module.js');
     t.loadModule('modules/call-coaching-bridge.module.js');
     return global.window.DevCoachModules;
@@ -60,6 +61,7 @@ function loadWithQa(t) {
     global.window.formatMetricDisplay = (key, value) => String(value);
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-qa.module.js');
     t.loadModule('modules/call-word-choice.module.js');
     t.loadModule('modules/call-coaching-bridge.module.js');

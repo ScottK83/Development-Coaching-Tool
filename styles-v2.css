@@ -1063,6 +1063,76 @@ textarea:focus-visible {
     background: var(--yellow-soft);
 }
 
+.panel-section .call-trend-red {
+    border-left-color: var(--red);
+    background: var(--red-soft);
+}
+
+/* Verification read, under the Analyze button.
+ *
+ * The red one is the only call read that is not folded away: account
+ * information given to somebody not shown to be entitled to it. The clean
+ * states are a single quiet line, there to show the check ran. */
+.panel-section .call-alert {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--border-strong);
+    background: var(--bg-surface-sunken);
+    color: var(--text-primary);
+    font-size: 0.88em;
+    line-height: var(--leading-normal);
+}
+
+.panel-section .call-alert-ok {
+    border-left-color: var(--green);
+    background: var(--green-soft);
+}
+
+.panel-section .call-alert-red {
+    border: 1px solid var(--red);
+    border-left-width: 4px;
+    background: var(--red-soft);
+    font-size: 0.92em;
+}
+
+.panel-section .call-alert-title {
+    font-weight: 700;
+    color: var(--red-text);
+    font-size: 1.05em;
+}
+
+.panel-section .call-alert-detail {
+    margin-top: var(--space-2);
+}
+
+.panel-section .call-alert-timeline {
+    margin: var(--space-3) 0 0 0;
+    padding-left: 20px;
+}
+
+.panel-section .call-alert-timeline li + li {
+    margin-top: var(--space-2);
+}
+
+.panel-section .call-alert-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    margin-right: var(--space-2);
+}
+
+.panel-section .call-alert-quote {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.95em;
+    margin-top: 2px;
+}
+
+.panel-section .call-alert-note {
+    margin-top: var(--space-3);
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
 .panel-section .call-trend-title {
     font-weight: 650;
     font-size: 0.85em;

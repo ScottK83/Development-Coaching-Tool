@@ -14,6 +14,7 @@ function load(t) {
     global.getMetricTips = () => [];
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-qa.module.js');
     t.loadModule('modules/call-word-choice.module.js');
     t.loadModule('modules/call-coaching-bridge.module.js');

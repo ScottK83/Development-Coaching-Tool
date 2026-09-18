@@ -16,9 +16,14 @@
      * close".
      */
 
+    // Account security, counted from a single call, and always shown first.
+    const SECURITY_LABELS = {
+        verification: 'account information shared before the caller was verified or authorized'
+    };
+
     const COACHING_LABELS = {
         empathy: 'empathy not acknowledged',
-        verification: 'verification not heard',
+        verification: 'account information shared before verifying',
         recap: 'no recap at the close',
         nextSteps: 'next steps not set',
         courtesyClose: 'no offer of further help',
@@ -66,6 +71,10 @@
         const of = `of the last ${summary.callsReviewed} call${summary.callsReviewed === 1 ? '' : 's'}`;
         const lines = [];
 
+        (summary.securityFlags || []).forEach(item => {
+            lines.push(`- RED FLAG, ${describe(item, SECURITY_LABELS)}: ${item.count} ${of}.`);
+        });
+
         summary.consistentStrengths.slice(0, 3).forEach(item => {
             lines.push(`- ${describe(item, STRENGTH_LABELS)}: ${item.count} ${of}. This is a habit, not a one off.`);
         });
@@ -96,6 +105,7 @@
         };
 
         const groups = [
+            group('🚩 Account security', summary.securityFlags || [], SECURITY_LABELS, 'red'),
             group('Doing consistently well', summary.consistentStrengths, STRENGTH_LABELS, 'good'),
             group('Repeat QA opportunities', summary.repeatOpportunities, null, 'warn'),
             group('Repeat coaching themes', summary.repeatCoaching, COACHING_LABELS, 'warn')
@@ -117,6 +127,7 @@
         buildTrendText,
         buildTrendHtml,
         COACHING_LABELS,
-        STRENGTH_LABELS
+        STRENGTH_LABELS,
+        SECURITY_LABELS
     };
 })();

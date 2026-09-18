@@ -492,9 +492,18 @@
         // twice and two tallies that only agree while both are maintained.
         const strengthRows = {};
         const opportunityRows = {};
+        // Calls where account information went to somebody not shown to be
+        // entitled to it. Counted from one, not two: a single one is not a
+        // coincidence worth waiting for a second of.
+        const securityRow = { label: 'verification', count: 0, dates: [] };
 
         scored.forEach(({ entry, analysis, scan, qa }) => {
             const date = entry.listenedOn || '';
+
+            if (analysis.verification?.redFlag) {
+                securityRow.count += 1;
+                if (date) securityRow.dates.push(date);
+            }
 
             (analysis.allImprovements || []).forEach(item => {
                 bump(item.key, 'behaviour', item.text, {
@@ -516,8 +525,10 @@
             };
             (qa?.callOpportunities || []).forEach(item => noteOpportunity(item.label));
             (qa?.techOpportunities || []).forEach(item => noteOpportunity(item.label));
+            // A red flag has its own row above, counted from one. Listing it
+            // here as well said the same thing twice in two different tones.
             (qa?.checks || [])
-                .filter(check => check.verdict === 'opportunity')
+                .filter(check => check.verdict === 'opportunity' && check.severity !== 'red')
                 .forEach(check => noteOpportunity(String(check.question || '').replace(/\?$/, '')));
 
             // The QA findings become coaching, not just a tally for the trends
@@ -526,7 +537,10 @@
             const addQaFinding = (findingKey, qaKey, detail, check, quote) => {
                 const said = describeQaPoint('qa', qaKey, detail, check);
                 if (!said) return;
-                bump(findingKey, 'qa', said, { date, quote: quote || '', weight: 8 });
+                const weight = check?.severity === 'red'
+                    ? (window.DevCoachModules?.callVerification?.RED_FLAG_WEIGHT || 20)
+                    : 8;
+                bump(findingKey, 'qa', said, { date, quote: quote || '', weight });
             };
 
             (qa?.checks || [])
@@ -576,6 +590,13 @@
             delete rows.emotionUnanswered;
         }
 
+        // Same again for verification: the engine's row and the QA form's row
+        // come out of one read, and the engine's is the one written for her.
+        // The QA wording is the supervisor's ("the balance was shared at 0:31").
+        if (rows.verification && rows.qaVerification) {
+            delete rows.qaVerification;
+        }
+
         // Which calls this read covers, newest first and in words the associate
         // can place. Carried out of here because only this function knows which
         // entries were actually scored.
@@ -600,7 +621,8 @@
         // wording on them, so it needs the key as the label.
         const coachingRows = {};
         Object.values(rows)
-            .filter(row => row.kind === 'behaviour')
+            // Verification has its own row in securityFlags.
+            .filter(row => row.kind === 'behaviour' && row.key !== 'verification')
             .forEach(row => { coachingRows[row.key] = { label: row.key, count: row.count, dates: row.dates }; });
 
         return {
@@ -614,6 +636,7 @@
             consistentStrengths: repeating(strengthRows),
             repeatOpportunities: repeating(opportunityRows),
             repeatCoaching: repeating(coachingRows),
+            securityFlags: securityRow.count ? [securityRow] : [],
             findings: Object.values(rows).map(row => ({
                 ...row,
                 weight: row.weight || 5,
@@ -690,6 +713,11 @@
         if (!missed.size) return (items || []).slice();
 
         const relevance = (item) => {
+            // Account information given to somebody not shown to be entitled
+            // to it leads whatever her numbers are. Ranked by KPI it sat under
+            // every handle time point and could be the one the five bullet
+            // draft trimmed.
+            if (item.severity === 'red') return -1;
             const metrics = metricsForFinding(item.key);
             if (!metrics.length) return 2;
             return metrics.some(metricKey => missed.has(metricKey)) ? 0 : 1;

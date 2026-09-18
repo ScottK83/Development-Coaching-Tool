@@ -6,6 +6,7 @@ function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-word-choice.module.js');
     return global.window.DevCoachModules;
 }

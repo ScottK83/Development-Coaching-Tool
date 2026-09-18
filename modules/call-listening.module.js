@@ -270,13 +270,20 @@ Requirements:
      * correction with some praise stapled to the front. Getting this backwards
      * is the difference between a message that lands and one that stings.
      */
-    function toneFor(wellCount, workCount) {
+    function toneFor(wellCount, workCount, serious) {
         if (!workCount && wellCount) return 'clean';
         if (!wellCount && workCount) return 'work';
-        if (wellCount > workCount) return 'strong';
+        // Four strengths and one verification miss is not "nothing here is a
+        // concern". The count cannot see which point it is, so the notes are
+        // asked directly.
+        if (wellCount > workCount) return serious ? 'even' : 'strong';
         if (workCount > wellCount) return 'mixed';
         return 'even';
     }
+
+    // A point about verifying or authorizing the caller, as Analyze writes it
+    // or as a supervisor would type it.
+    const ACCOUNT_SECURITY_NOTE = /\bverif(?:y|ied|ying|ication)\b|\bauthori[sz]ed\b/i;
 
     const OPENERS = {
         clean: 'It was a good listen and there is nothing I need you to change.',
@@ -315,7 +322,7 @@ Requirements:
         const fullName = String(record.employeeName || '').trim();
         const name = String(nickname || '').trim() || fullName.split(/\s+/)[0] || '';
 
-        const tone = toneFor(wellCount, workCount);
+        const tone = toneFor(wellCount, workCount, ACCOUNT_SECURITY_NOTE.test(record.improvementAreas || ''));
         const moment = describeCallMoment(record);
         const lines = [];
 
@@ -450,14 +457,34 @@ Requirements:
      * one intention. The row is the control in both places now; Copy Verint
      * and Delete stay, because those are different intentions.
      */
+    /**
+     * Whether a saved call gave account details to somebody not shown to be
+     * entitled to them.
+     *
+     * Read fresh from the transcript every time and never stored, so a fix to
+     * the reader reaches every call already saved without a migration, and a
+     * list of somebody's calls answers "is she verifying" at a glance.
+     */
+    function hasVerificationRedFlag(entry) {
+        if (!entry?.transcript) return false;
+        const read = window.DevCoachModules?.callVerification?.readVerificationFromText?.(entry.transcript, {
+            associateName: entry.employeeName
+        });
+        return Boolean(read?.redFlag);
+    }
+
+    const RED_FLAG_TAG = '🚩 account details shared before verifying';
+
     function buildHistoryItemHtml(entry, escapeHtml) {
         const safeEscapeHtml = typeof escapeHtml === 'function' ? escapeHtml : (value) => String(value || '');
         const createdAt = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '';
-        const transcriptTag = entry.transcript ? ' • transcript saved' : ' • no transcript';
+        const flagged = hasVerificationRedFlag(entry);
+        const transcriptTag = (entry.transcript ? ' • transcript saved' : ' • no transcript')
+            + (flagged ? ` • ${RED_FLAG_TAG}` : '');
         const moment = describeCallMoment(entry) || entry.listenedOn || '';
         return `<li class="call-history-item">
             <button type="button" class="call-history-open" data-call-action="load" data-entry-id="${safeEscapeHtml(entry.id)}" title="Load this call into the form">
-                <span class="call-history-title">${safeEscapeHtml(moment)}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</span>
+                <span class="call-history-title">${flagged ? '🚩 ' : ''}${safeEscapeHtml(moment)}${entry.callReference ? ` • Ref: ${safeEscapeHtml(entry.callReference)}` : ''}</span>
                 <span style="display: block; margin-top: 4px;"><strong>✅ Went well:</strong> ${safeEscapeHtml(entry.whatWentWell || 'N/A')}</span>
                 <span style="display: block; margin-top: 2px;"><strong>⚠️ Improve:</strong> ${safeEscapeHtml(entry.improvementAreas || 'N/A')}</span>
                 <span class="call-history-meta" style="display: block;">Saved: ${safeEscapeHtml(createdAt)}${transcriptTag}</span>
@@ -480,6 +507,8 @@ Requirements:
         describeCallFeedbackMessage,
         splitNote,
         buildHistorySummaryText,
-        buildHistoryItemHtml
+        buildHistoryItemHtml,
+        hasVerificationRedFlag,
+        RED_FLAG_TAG
     };
 })();

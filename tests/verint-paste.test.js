@@ -24,6 +24,7 @@ function load(t) {
     t.loadModule('modules/verint-paste.module.js');
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     return global.window.DevCoachModules;
 }
 

@@ -24,6 +24,7 @@ function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/sentiment.module.js');
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-summary.module.js');
     return t.loadModule('modules/call-listening.module.js').callListening;
 }

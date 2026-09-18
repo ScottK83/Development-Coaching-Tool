@@ -22,6 +22,7 @@ const VERINT_EXPORT = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'veri
 function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-qa.module.js');
     t.loadModule('modules/call-listening.module.js');
     return global.window.DevCoachModules;
@@ -131,6 +132,7 @@ suite('call moment: the metric prompt names its calls', (t) => {
     global.window.METRICS_REGISTRY = { aht: { label: 'Average Handle Time' } };
     global.window.formatMetricDisplay = (key, value) => String(value);
     t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-verification.module.js');
     t.loadModule('modules/call-word-choice.module.js');
     t.loadModule('modules/call-coaching-bridge.module.js');
     const bridge = global.window.DevCoachModules.callCoachingBridge;

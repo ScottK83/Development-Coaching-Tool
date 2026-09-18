@@ -97,12 +97,16 @@
         return trimmed ? trimmed.split(' ').length : 0;
     }
 
-    function formatDuration(totalSeconds) {
+    // "About two minutes", not "2m 21s": the associate reads these in an
+    // email, and a stopwatch reading is what makes a message look generated.
+    // Rounded the same way the metric message rounds, so the two agree.
+    const DURATION_WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+    function spokenDuration(totalSeconds) {
         const seconds = Math.max(0, Math.round(totalSeconds));
-        const minutes = Math.floor(seconds / 60);
-        const remainder = seconds % 60;
-        if (!minutes) return `${remainder}s`;
-        return `${minutes}m ${String(remainder).padStart(2, '0')}s`;
+        if (seconds < 60) return `${seconds} seconds`;
+        const minutes = Math.floor(seconds / 60) + (seconds % 60 >= 30 ? 1 : 0);
+        return `${DURATION_WORDS[minutes] || minutes} minute${minutes === 1 ? '' : 's'}`;
     }
 
     function formatClock(totalSeconds) {
@@ -685,7 +689,10 @@
             // is usually a self-correction mid-sentence, not empathy.
             pattern: /i (?:completely |totally |really |absolutely )?understand|i (?:can )?(?:hear|see) (?:why|how|that)|i(?:'?m| am) (?:so|really|very|terribly) sorry|i(?:'?m| am) sorry (?:about|for|to hear|that|you)|i apologi[sz]e|that (?:sounds|must be) (?:frustrating|stressful|difficult|annoying)|i can imagine/i,
             made: 'Real empathy. You acknowledged where the customer was before moving into the fix.',
-            missing: 'Empathy: acknowledge the customer\'s situation in your own words before jumping into troubleshooting.',
+            // No "Empathy:" in front. It only showed on a call with a problem
+            // and no raised voice, which the voice sweep never had, so the
+            // label went out on every calm shut off notice call.
+            missing: 'Acknowledge what the customer is dealing with, in your own words, before jumping into the fix.',
             missingWeight: 9
         },
         {
@@ -694,14 +701,10 @@
             pattern: /i(?:'?ll| will) take care of|let me take care of|i(?:'?ll| will) make sure|let me handle|i(?:'?ll| will) get (?:this|that) (?:sorted|fixed|taken care of)|leave (?:it|that) with me|i(?:'?ll| will) (?:own|personally)/i,
             made: 'Strong ownership. You took the outcome on yourself instead of handing the problem back.'
         },
-        {
-            key: 'verification',
-            praise: 7,
-            pattern: /verif(?:y|ication|ying)|identity check|confirm(?:ing)? your (?:name|address|account|identity)|date of birth|last four|security question|account number or the address/i,
-            made: 'You confirmed who you were talking to before anything on the account came up. That is the one that protects everybody.',
-            missing: 'Confirm who you are talking to before anything on the account comes up.',
-            missingWeight: 8
-        },
+        // Verification is not a phrase rule any more. It used to be one, and
+        // it praised "can i have your account number or the address" followed
+        // by the balance as "you confirmed who you were talking to". It lives
+        // in call-verification now, which reads the order things happened in.
         {
             key: 'holdEtiquette',
             praise: 6,
@@ -1050,6 +1053,17 @@
             }
         });
 
+        // Was the caller verified, and authorized, before anything on the
+        // account went out. Praised when it was, coached above everything else
+        // when it was not, and silent when the call never touched the account:
+        // "confirm who you are talking to" on an outage call is noise.
+        const verifier = window.DevCoachModules?.callVerification;
+        const verification = verifier?.readVerification ? verifier.readVerification(parsed) : null;
+        const verificationPraise = verifier?.praiseFor?.(verification);
+        const verificationCoaching = verifier?.coachingFor?.(verification);
+        if (verificationPraise) strengths.push(verificationPraise);
+        if (verificationCoaching) improvements.push(verificationCoaching);
+
         const frustrated = FRUSTRATION.test(customerText);
         const emotionalCall = frustrated || TROUBLE.test(customerText);
         const empathyGapIndex = improvements.findIndex(item => item.key === 'empathy');
@@ -1080,7 +1094,10 @@
             strengths.push({
                 key: 'positiveExperience',
                 praise: 4,
-                text: `Verint's advisor positive experience category fired ${positiveCategory.count} time${positiveCategory.count === 1 ? '' : 's'} on this call. The system heard it too.`,
+                // Not "the category fired N times on this call": that is a
+                // report talking, and "on this call" contradicts the "On all
+                // 4 calls" the multi-call message puts in front of a finding.
+                text: `Verint's own scoring picked up your positive language ${positiveCategory.count} time${positiveCategory.count === 1 ? '' : 's'}, so the system heard it too.`,
                 quote: ''
             });
         }
@@ -1112,7 +1129,11 @@
                 // "The hold" rather than "it". The label prefix used to supply
                 // the antecedent, and the message strips labels, so "you did
                 // announce it" arrived referring to nothing.
-                text: `Long hold: about ${formatDuration(longestHold.silence)} of silence starting at ${formatClock(longestHold.at)}. You did announce the hold, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
+                // Said the way a person says it. "Long hold: about 2m 21s"
+                // went into the email word for word, label and stopwatch
+                // reading included; the metric message had learned to strip
+                // those and the email built from these notes never did.
+                text: `The hold at ${formatClock(longestHold.at)} ran about ${spokenDuration(longestHold.silence)}. You did announce the hold, which is right, but check back in every 45 seconds or so rather than leaving them there.`,
                 quote: ''
             });
         }
@@ -1122,7 +1143,9 @@
             improvements.push({
                 key: 'deadAirGap',
                 weight: 6,
-                text: `Dead air: about ${formatDuration(longestDeadAir.silence)} with nothing said at ${formatClock(longestDeadAir.at)}. Narrate what you are doing while the system loads so the quiet does not stack up.`,
+                // Not "Dead air:", which is on the list of words she would
+                // never use about her own call.
+                text: `About ${spokenDuration(longestDeadAir.silence)} went by at ${formatClock(longestDeadAir.at)} with nothing said. Tell the customer what you are doing while the system loads so the quiet does not stack up.`,
                 quote: ''
             });
         }
@@ -1144,7 +1167,7 @@
             improvements.push({
                 key: 'callControl',
                 weight: 4,
-                text: `Call control: the customer drove about ${Math.round((1 - agentShare) * 100)}% of the conversation. Set the agenda early and steer with focused questions.`,
+                text: `The customer drove about ${Math.round((1 - agentShare) * 100)}% of the conversation. Set the agenda early and steer with focused questions.`,
                 quote: ''
             });
         }
@@ -1162,13 +1185,19 @@
         improvements.sort((a, b) => b.weight - a.weight);
 
         const heavyIssues = improvements.filter(item => item.weight >= 8).length;
+        const redFlag = Boolean(verification?.redFlag);
 
         return {
             ok: true,
             meta,
             // Handed to the QA scorer so silence is measured once, not twice.
             silenceGaps: gaps,
-            headline: buildHeadline(strengths.length, heavyIssues, meta),
+            // The verification read, for the red box and anything else that
+            // needs it without reading the call a second time.
+            verification,
+            // A call that gave an account away does not open with "Solid
+            // call", however much else went well on it.
+            headline: redFlag ? '' : buildHeadline(strengths.length, heavyIssues, meta),
             // The drafts are capped so the email stays focused; the full lists
             // stay on the result so nothing is dropped without a trace.
             strengths: strengths.slice(0, MAX_STRENGTH_BULLETS),
@@ -1184,6 +1213,7 @@
                 customerWords: parsed.customerWords,
                 agentTalkShare: agentShare,
                 customerFrustrated: frustrated,
+                redFlag,
                 strengthsFound: strengths.length,
                 improvementsFound: improvements.length,
                 heavyIssues
