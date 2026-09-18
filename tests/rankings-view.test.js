@@ -1274,8 +1274,12 @@ suite('rankings view: a better month is drawn higher in the year picture', (t) =
     cr.renderCenterRanking();
     const model = cr.buildYearImageModel('P0');
 
-    // Month values each KPI chart plots, in drawing order.
-    const plotted = model.kpis.map((kpi, k) => model.columns
+    // Month values each KPI chart plots, in drawing order. Reliability has no
+    // chart: its running total is rewritten by corrected hours, so it stays a
+    // table row only.
+    const charted = model.kpis.map((kpi, k) => Object.assign({}, kpi, { k }))
+        .filter((kpi) => kpi.registry !== 'reliability');
+    const plotted = charted.map(({ k }) => model.columns
         .filter((c) => c.present && Number.isFinite(c.metrics[k].value))
         .map((c) => c.metrics[k].value));
 
@@ -1289,7 +1293,9 @@ suite('rankings view: a better month is drawn higher in the year picture', (t) =
         // number, so a faster month climbs rather than falls.
         let at = 0;
         let checked = 0;
-        model.kpis.forEach((kpi, k) => {
+        const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
+        t.check('there is no reliability chart', texts.indexOf('Target 18.0 hrs or lower') === -1);
+        charted.forEach((kpi, k) => {
             const values = plotted[k];
             const ys = markers.slice(at, at + values.length).map((m) => m.y);
             at += values.length;

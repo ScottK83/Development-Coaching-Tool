@@ -2802,8 +2802,15 @@
         // its value in small print, and five across left each month about
         // seventeen pixels, less than "93.8" needs. A short year that makes the
         // card narrow wraps further.
-        var kpis = model.kpis || [];
-        var panelGap = 18, panelH = 184, panelMinW = 330;
+        // Reliability is left out of the charts. It is a running total that
+        // hours re-coded after the fact rewrite, so a line of it needed a
+        // footnote to be read at all. It keeps its row in the table below.
+        // Each chart keeps the index of its KPI, which is where its numbers
+        // sit in every column's metrics.
+        var kpis = (model.kpis || []).map(function (kpi, k) {
+            return Object.assign({}, kpi, { index: k });
+        }).filter(function (kpi) { return kpi.registry !== 'reliability'; });
+        var panelGap = 18, panelH = 184, panelMinW = 260;
         var innerW = W - padX * 2;
         var panelCols = Math.max(1, Math.min(kpis.length || 1,
             Math.floor((innerW + panelGap) / (panelMinW + panelGap))));
@@ -2877,8 +2884,9 @@
         };
 
         var chartsTop = headerH + 22;
-        kpis.forEach(function (kpi, k) {
-            var pcol = k % panelCols, prow = Math.floor(k / panelCols);
+        kpis.forEach(function (kpi, slotIndex) {
+            var k = kpi.index;
+            var pcol = slotIndex % panelCols, prow = Math.floor(slotIndex / panelCols);
             var px = padX + pcol * (panelW + panelGap);
             var py = chartsTop + prow * (panelH + 14);
 
