@@ -586,6 +586,47 @@ suite('contest: a single day is read whichever store it landed in', (t) => {
     t.equal('a YTD upload gives no days', ytdOnly.counts.days, 0);
 });
 
+suite('contest: dailies a weekly upload archived are still read', (t) => {
+    const contest = load(t);
+
+    // Upload 9/16, 9/17, then the week: the week moves both dailies from
+    // dailyData to dailyArchive, and the pull found nothing for either day.
+    const stores = {
+        dailyData: {},
+        dailyArchive: {
+            '2026-09-16|2026-09-16': {
+                metadata: { startDate: '2026-09-16', endDate: '2026-09-16', periodType: 'daily' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 95 }]
+            },
+            '2026-09-17|2026-09-17': {
+                metadata: { startDate: '2026-09-17', endDate: '2026-09-17', periodType: 'daily' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 88 }]
+            }
+        },
+        weeklyData: {
+            '2026-09-14|2026-09-17': {
+                metadata: { startDate: '2026-09-14', endDate: '2026-09-17', periodType: 'week-in-progress' },
+                employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 92 }]
+            }
+        },
+        ytdData: {}
+    };
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    t.equal('9/16 is read from the archive', preview.days['2026-09-16']['Alyssa Dimes'].adherence, 95);
+    t.equal('9/17 is read from the archive', preview.days['2026-09-17']['Alyssa Dimes'].adherence, 88);
+    t.equal('the week itself is still not spread across days', preview.counts.days, 2);
+
+    // A live daily beats an archived copy of the same day.
+    stores.dailyData['2026-09-17|2026-09-17'] = {
+        metadata: { startDate: '2026-09-17', endDate: '2026-09-17' },
+        employees: [{ name: 'Alyssa Dimes', scheduleAdherence: 90 }]
+    };
+    const again = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    t.equal('the live daily wins over the archive', again.days['2026-09-17']['Alyssa Dimes'].adherence, 90);
+    t.equal('and it is counted once', again.counts.adherenceValues, 2);
+});
+
 suite('contest: a day held in two stores is counted once', (t) => {
     const contest = load(t);
 

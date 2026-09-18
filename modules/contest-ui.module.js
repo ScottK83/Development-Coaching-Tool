@@ -292,7 +292,9 @@
         var stores = {
             dailyData: typeof dailyData !== 'undefined' ? dailyData : {},
             weeklyData: typeof weeklyData !== 'undefined' ? weeklyData : {},
-            ytdData: typeof ytdData !== 'undefined' ? ytdData : {}
+            ytdData: typeof ytdData !== 'undefined' ? ytdData : {},
+            // Where a weekly upload moves the dailies it covers.
+            dailyArchive: typeof getDailyArchive === 'function' ? getDailyArchive() : {}
         };
 
         var preview = api.buildImportPreview(stores, {

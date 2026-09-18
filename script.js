@@ -4938,6 +4938,11 @@ function makeRoomInDailyArchive(storage, archive, protectedKeys) {
  * "days not yet covered by a weekly upload". Nothing on screen changes; the
  * rows simply still exist.
  */
+/** The dailies a weekly upload has moved out of dailyData, read only. */
+function getDailyArchive() {
+    return window.DevCoachModules?.storage?.readStore?.('dailyArchive') || {};
+}
+
 function purgeDailiesCoveredBy(rangeStart, rangeEnd) {
     if (!rangeStart || !rangeEnd) return 0;
 

@@ -1483,11 +1483,17 @@
         // a day wherever it was filed. Spans are still refused, by the same
         // test as before, so nothing is spread across dates it did not cover.
         //
+        // The daily archive too. Uploading a week moves the dailies it covers
+        // out of dailyData into dailyArchive, so uploading 9/16, 9/17 and then
+        // the week left the pull with nothing for either day. The archived
+        // rows are the same uploads, untouched, and still pin to one day each.
+        //
         // Daily goes last so that when the same day sits in two stores, the
-        // purpose built one wins.
+        // purpose built one wins, and the live daily beats its archived copy.
         var sources = [
             (stores && stores.weeklyData) || {},
             (stores && stores.ytdData) || {},
+            (stores && stores.dailyArchive) || {},
             (stores && stores.dailyData) || {}
         ];
         var seenSpan = {};
