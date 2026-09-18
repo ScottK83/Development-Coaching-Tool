@@ -533,7 +533,7 @@
         var SCOPE_PICKED = { ytd: 'YTD', month: 'Monthly', week: 'Weekly' };
 
         var html = '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement , ' +
+        html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement: ' +
             _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) +
             (fellBack
                 ? ' <span style="color: #e65100; font-size: 0.78em; font-weight: 600;">(months, not ' +
@@ -780,7 +780,7 @@
 
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #e65100;">';
-        html += '<strong>🥊 Team Matchup</strong> , ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
+        html += '<strong>🥊 Team Matchup</strong>: ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + '</span>';
         html += '</div>';
 

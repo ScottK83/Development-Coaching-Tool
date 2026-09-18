@@ -582,6 +582,54 @@ suite('period compare: team movement measures to the period that was picked', (t
     t.check('with the move it actually made', Math.abs(alpha.ratingDelta - 0.2) < 1e-9);
 });
 
+/**
+ * The matchup page names a month "month:2026-07"; this module names it
+ * "2026-07". They were compared as they came, so picking a month never
+ * matched, and Team Movement showed August against an unfinished September
+ * whichever month was picked.
+ */
+function anchorMonths() {
+    // Carried as AHT, because a month is rolled up from its rows and the
+    // roll-up keeps metrics, not a rating. The stub below reads it back.
+    const at = (names, rating) => names.map((name) => ({ name, aht: rating * 100, totalCalls: 100, measuredCount: 5 }));
+    const month = (start, end, alphaRating) => [
+        start + '|' + end,
+        { metadata: { startDate: start, endDate: end, periodType: 'month' },
+          employees: [...at(['A1', 'A2', 'A3'], alphaRating), ...at(['B1', 'B2', 'B3'], 2.0)] }
+    ];
+    // The suite clock sits in August, so August is the month still running.
+    return Object.fromEntries([
+        month('2026-05-01', '2026-05-31', 2.0),
+        month('2026-06-01', '2026-06-30', 2.2),
+        month('2026-07-01', '2026-07-31', 2.5),
+        month('2026-08-01', '2026-08-17', 3.0)
+    ]);
+}
+
+suite('period compare: team movement follows a month picked on the matchup page', (t) => {
+    const pc = loadWithStubRanking(t, anchorMonths());
+    global.window.DevCoachModules.centerRanking.scoreAndRankEmployees = (employees) =>
+        (employees || []).map((e, i) => ({ name: e.name, ratingAverage: Number(e.aht) / 100, measuredCount: 5, rank: i + 1 }));
+
+    const june = pc.buildTeamMovementForScope('month', ANCHOR_SUPS, 2026, { anchorKey: 'month:2026-06' });
+    t.check('a comparison is produced', !!june);
+    if (!june) return;
+    t.equal('measured to the month that was picked', june.current.key, '2026-06');
+    t.equal('from the month before it', june.previous.key, '2026-05');
+    t.equal('with that month\'s numbers', june.teams.find((x) => x.name === 'Alpha').curAvgRating, 2.2);
+
+    const july = pc.buildTeamMovementForScope('month', ANCHOR_SUPS, 2026, { anchorKey: 'month:2026-07' });
+    t.equal('picking July measures to July', july && july.current.key, '2026-07');
+
+    // A pick that names nothing in the list must still step over the month
+    // that is not over, rather than comparing against it.
+    const stray = pc.buildTeamMovementForScope('month', ANCHOR_SUPS, 2026, { anchorKey: 'no-such-period' });
+    t.equal('an unmatched pick does not land on the unfinished month', stray && stray.current.key, '2026-07');
+
+    const people = pc.buildMovementForScope('month', { year: 2026, anchorKey: 'month:2026-06' });
+    t.equal('the individual view reads the same spelling', people && people.current && people.current.key, '2026-06');
+});
+
 suite('period compare: anchoring to the oldest period falls back rather than half-answering', (t) => {
     // Nothing sits behind the oldest week, so there is no pair to build. The
     // newest one is a real answer; a comparison with one side missing is not.

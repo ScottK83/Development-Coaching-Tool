@@ -757,12 +757,9 @@
 
         var curIdx = usable.length - 1;
         var steppedOverInProgress = null;
-        if (options.anchorKey) {
-            // From 1, not 0: the oldest period has nothing behind it to compare
-            // against, so anchoring there falls back to the newest pair.
-            for (var i = 1; i < usable.length; i++) {
-                if (String(usable[i].key) === String(options.anchorKey)) { curIdx = i; break; }
-            }
+        var anchored = _anchorIndex(usable, options.anchorKey);
+        if (anchored > -1) {
+            curIdx = anchored;
         } else if (usable[curIdx].inProgress && curIdx >= 2) {
             /* A month still being lived in is not a month. Two weeks of August
                against four weeks of July moves people tens of ranks on nothing but
@@ -1233,6 +1230,29 @@
     }
 
     /**
+     * Where the viewer's selected period sits in a list of comparable ones, or
+     * -1 when it is not there.
+     *
+     * The pages name a month "month:2026-07" and this module names it
+     * "2026-07". Compared as they came, a picked month never matched, so the
+     * matchup's Team Movement ignored the month selector and fell through to
+     * the newest pair, which was an unfinished month. Both spellings are read.
+     *
+     * From 1, not 0: the oldest period has nothing behind it to compare
+     * against, so anchoring there falls back to the newest pair rather than
+     * returning a comparison with one side missing.
+     */
+    function _anchorIndex(usable, anchorKey) {
+        if (!anchorKey) return -1;
+        var want = String(anchorKey);
+        if (want.indexOf(MONTH_KEY_PREFIX) === 0) want = want.slice(MONTH_KEY_PREFIX.length);
+        for (var i = 1; i < usable.length; i++) {
+            if (String(usable[i].key) === want) return i;
+        }
+        return -1;
+    }
+
+    /**
      * Team movement between the last two comparable periods of a given
      * granularity, so the comparison follows whatever the viewer selected rather
      * than always answering about months.
@@ -1244,19 +1264,14 @@
         if (usable.length < 2) return null;
 
         var curIdx = usable.length - 1;
-        if (options.anchorKey) {
-            /* Measure TO the period the viewer is looking at, the same way the
-               individual view already does. Without this the panel always
-               compared the newest two, so picking June showed July against
-               August: a block describing a period the rest of the page is not
-               showing reads as a selector that does nothing.
-
-               From 1, not 0: the oldest period has nothing behind it, so
-               anchoring there falls back to the newest pair rather than
-               returning a comparison with one side missing. */
-            for (var i = 1; i < usable.length; i++) {
-                if (String(usable[i].key) === String(options.anchorKey)) { curIdx = i; break; }
-            }
+        /* Measure TO the period the viewer is looking at, the same way the
+           individual view already does. Without this the panel always compared
+           the newest two, so picking June showed July against August: a block
+           describing a period the rest of the page is not showing reads as a
+           selector that does nothing. */
+        var anchored = _anchorIndex(usable, options.anchorKey);
+        if (anchored > -1) {
+            curIdx = anchored;
         } else if (usable[curIdx].inProgress && curIdx >= 2) {
             // Same unfinished-month rule as the individual view, so the two
             // surfaces can never end up describing different pairs of months.
