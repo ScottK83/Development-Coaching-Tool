@@ -1246,6 +1246,10 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
         t.check('each against the centre average and the target',
             texts.indexOf('Center average') !== -1 && texts.some((s) => /^Target \S/.test(s)));
         t.check('and says which way is better', texts.indexOf('Up is better on every chart') !== -1);
+        // The strip beside each chart carries the year, so the card says what
+        // date the year runs to rather than leaving it to "Jan to Jul".
+        t.check('the YTD date is on the card', texts.indexOf('YTD figures run through July 31, 2026') !== -1);
+        t.check('and the strip is captioned as the year', texts.filter((s) => s === 'YTD').length >= 5);
         t.check('targets met is still a row',
             texts.indexOf('Targets met') !== -1 && texts.some((s) => /^\d+ of \d+$/.test(s)));
 

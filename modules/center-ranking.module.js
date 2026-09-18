@@ -2494,6 +2494,7 @@
             return {
                 label: row.label,
                 registry: row.registry,
+                value: has ? Number(value) : null,
                 meets: has ? _meetsTarget(row.registry, value, year) : null,
                 display: has ? _formatMetricDisplay(row.registry, value) : '',
                 rank: has && placing ? placing.rank : null,
@@ -2503,10 +2504,11 @@
 
         var centerMetrics = TRAJECTORY_METRIC_ROWS.map(function (row) {
             var avg = _centerAverageForMetric(holders, row);
+            var hasAvg = !(avg === null || avg === undefined || isNaN(avg));
             return {
                 label: row.label,
-                display: (avg === null || avg === undefined || isNaN(avg))
-                    ? '' : _formatMetricDisplay(row.registry, avg)
+                value: hasAvg ? Number(avg) : null,
+                display: hasAvg ? _formatMetricDisplay(row.registry, avg) : ''
             };
         });
 
@@ -2712,6 +2714,12 @@
         text(model.title, padX, 38, 26, '#ffffff', '700');
         text(model.subtitle, padX, 68, 14, '#9fc0e4');
         text('Each KPI, month by month', W - padX, 38, 14, '#9fc0e4', '400', 'right');
+        // The months and the YTD file need not end together: a YTD pulled on
+        // the 13th covers part of a month the subtitle does not claim. Said
+        // here so the YTD numbers are never read as Jan to Aug.
+        if (ytd && ytd.through) {
+            text('YTD figures run through ' + _longDate(ytd.through), W - padX, 68, 12, '#9fc0e4', '400', 'right');
+        }
 
         var x = function (i) { return padX + labelW + ytdW + avgW + colW * (i + 0.5); };
         var MEETS_BG = "#e4f3e8", MEETS_INK = "#1a6b32";
@@ -2764,11 +2772,12 @@
                 text('YTD ' + ym.display, px + panelW - 10, py + 14, 12,
                     ym.meets === true ? MEETS_INK : ym.meets === false ? BELOW_INK : '#0f2a4a', '700', 'right');
             }
-            var cm = ytd && ytd.centerMetrics && ytd.centerMetrics[k];
-            var sub = [];
-            if (kpi.targetDisplay) sub.push('Target ' + kpi.targetDisplay);
-            if (cm && cm.display) sub.push('Center YTD ' + cm.display);
-            text(sub.join('   '), px + 10, py + 31, 10.5, '#7a8794');
+            // Just the rule. The centre's year and the target's number sit in
+            // the strip on the right, beside the lines they belong to.
+            if (kpi.targetDisplay) {
+                text('Target ' + kpi.targetDisplay + (kpi.reverse ? ' or lower' : ' or higher'),
+                    px + 10, py + 31, 10.5, '#7a8794');
+            }
 
             var top = py + 46, bottom = py + panelH - 22;
             // A strip on the right carries the numbers the lines end on, so the
@@ -2785,6 +2794,10 @@
             mine.forEach(function (m) { if (m) all.push(m.value); });
             center.forEach(function (v) { if (v !== null) all.push(v); });
             if (Number.isFinite(kpi.target)) all.push(kpi.target);
+            var ytdMine = ytd && ytd.metrics && ytd.metrics[k];
+            var ytdCenter = ytd && ytd.centerMetrics && ytd.centerMetrics[k];
+            if (ytdMine && Number.isFinite(ytdMine.value)) all.push(ytdMine.value);
+            if (ytdCenter && Number.isFinite(ytdCenter.value)) all.push(ytdCenter.value);
             var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
             if (hi === lo) { lo -= 1; hi += 1; }
             var pad = (hi - lo) * 0.12;
@@ -2819,22 +2832,26 @@
                 ctx.fill();
             });
 
-            // Where each line finishes, as a number: this person's latest month,
-            // the centre's same month, and the target. Nudged apart when they
-            // land close, and held inside the panel.
-            var lastI = -1;
-            mine.forEach(function (m, i) { if (m) lastI = i; });
+            // The numbers in the strip are the YEAR, the same figures as the
+            // header, the YTD column and the email: this person's year, the
+            // centre's year, and the target, each set at its level on the
+            // chart with a tick. They used to be the last month's values, so a
+            // running September read 93.2% beside a YTD of 92.4% and the card
+            // looked like it disagreed with itself.
             var ends = [];
-            if (lastI > -1) {
-                ends.push({ y: yAt(mine[lastI].value), s: mine[lastI].display, color: '#1565c0', weight: '700' });
-                var lastCenter = model.columns[lastI].metrics[k];
-                if (lastCenter && Number.isFinite(lastCenter.centerValue) && lastCenter.centerDisplay) {
-                    ends.push({ y: yAt(lastCenter.centerValue), s: lastCenter.centerDisplay, color: '#6b7887', weight: '600' });
-                }
+            if (ytdMine && Number.isFinite(ytdMine.value) && ytdMine.display) {
+                ends.push({ y: yAt(ytdMine.value), s: ytdMine.display, color: '#1565c0', weight: '700' });
+            }
+            if (ytdCenter && Number.isFinite(ytdCenter.value) && ytdCenter.display) {
+                ends.push({ y: yAt(ytdCenter.value), s: ytdCenter.display, color: '#6b7887', weight: '600' });
             }
             if (Number.isFinite(kpi.target) && kpi.targetDisplay) {
                 ends.push({ y: yAt(kpi.target), s: kpi.targetDisplay, color: IMG_MEETS_COLOR, weight: '700' });
             }
+            ends.forEach(function (end) {
+                polyline([{ x: right + 1, y: end.y }, { x: right + 6, y: end.y }], end.color, 2);
+            });
+            if (ends.length) text('YTD', right + 8, top - 9, 9, '#9aa7b4', '700', 'left');
             ends.sort(function (a, b) { return a.y - b.y; });
             var minGap = 12;
             for (var e = 0; e < ends.length; e++) {
@@ -2844,7 +2861,7 @@
                 ends[f].y = Math.min(ends[f].y, bottom - 5, f < ends.length - 1 ? ends[f + 1].y - minGap : Infinity);
             }
             ends.forEach(function (end) {
-                text(end.s, right + 8, end.y, 10.5, end.color, end.weight, 'left');
+                text(end.s, right + 9, end.y, 10.5, end.color, end.weight, 'left');
             });
 
             // Month initials when the chart is too narrow for the short names.
