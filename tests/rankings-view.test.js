@@ -1467,10 +1467,14 @@ suite('rankings view: reliability on the year card is the running total for the 
         period('2026-07-06', '2026-07-12', 'week', withHours(5, 3, 1), 'Week ending Jul 12'),
         period('2026-07-13', '2026-07-19', 'week', withHours(8, 3, 1), 'Week ending Jul 19'),
         period('2026-07-20', '2026-07-26', 'week', withHours(11, 3, 1), 'Week ending Jul 26'));
-    const { cr } = loadRankings(t, weeks, YTD);
+    // A YTD file that agrees with the months: P0 17 hours, everyone else 7.
+    const ytdAgrees = period('2026-01-01', '2026-07-31', 'ytd', roster(40, 4).map((e) =>
+        Object.assign({}, e, { reliability: e.name === 'P0' ? 17 : 7 })), 'YTD through Jul 31');
+    const { cr } = loadRankings(t, weeks, ytdAgrees);
     cr.renderCenterRanking();
 
     const model = cr.buildYearImageModel('P0');
+    t.check('months and file agree, so there is no correction note', !model.reliabilityCorrection);
     const rel = (label) => model.columns.find((c) => c.fullLabel && c.fullLabel.indexOf(label) === 0).metrics
         .find((m) => m.label === 'Reliability');
     t.equal('June is the hours so far', rel('June').value, 8);
@@ -1484,4 +1488,46 @@ suite('rankings view: reliability on the year card is the running total for the 
     t.check('the email gives the year\'s total and what the month added',
         /Reliability 17\.0 hrs missed this year, 9\.0 hrs of it in July/.test(mail.body));
     t.check('never "better by" on a total', !/Reliability[^\n]*better by/.test(mail.body));
+});
+
+/* Reported on Robert's card: his monthly files add up to 9.2 hours and his
+   YTD file says 1.7. Hours re-coded after a monthly file is pulled only reach
+   the YTD file, and the YTD file is the year's truth, so it wins at the month
+   it covers and the card says why the line drops. */
+suite('rankings view: the YTD file wins reliability where it disagrees with the months', (t) => {
+    const withHours = (shift, hoursP0) => roster(40, shift).map((e) =>
+        Object.assign({}, e, { reliability: e.name === 'P0' ? hoursP0 : 0 }));
+    const weeks = Object.assign({},
+        period('2026-06-01', '2026-06-07', 'week', withHours(0, 0), 'Week ending Jun 7'),
+        period('2026-06-08', '2026-06-14', 'week', withHours(1, 0), 'Week ending Jun 14'),
+        period('2026-06-15', '2026-06-21', 'week', withHours(2, 0), 'Week ending Jun 21'),
+        period('2026-06-22', '2026-06-28', 'week', withHours(3, 0.4), 'Week ending Jun 28'),
+        period('2026-07-06', '2026-07-12', 'week', withHours(5, 8.6), 'Week ending Jul 12'),
+        period('2026-07-13', '2026-07-19', 'week', withHours(8, 0), 'Week ending Jul 19'),
+        period('2026-07-20', '2026-07-26', 'week', withHours(11, 0), 'Week ending Jul 26'));
+    const corrected = period('2026-01-01', '2026-07-31', 'ytd', roster(40, 4).map((e) =>
+        Object.assign({}, e, { reliability: e.name === 'P0' ? 1.7 : 0 })), 'YTD through Jul 31');
+    const { cr } = loadRankings(t, weeks, corrected);
+    cr.renderCenterRanking();
+
+    const model = cr.buildYearImageModel('P0');
+    const rel = (label) => model.columns.find((c) => c.fullLabel && c.fullLabel.indexOf(label) === 0).metrics
+        .find((m) => m.label === 'Reliability');
+    t.equal('June is still the months so far', rel('June').value, 0.4);
+    t.equal('July is the YTD file, not the 9.0 the months add up to', rel('July').value, 1.7);
+    t.check('the card knows the two disagreed', !!model.reliabilityCorrection
+        && model.reliabilityCorrection.summed === 9 && model.reliabilityCorrection.ytd === 1.7);
+
+    withRecordingCanvas(t, (rec) => {
+        cr.drawYearCard(model);
+        const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
+        t.check('and says so, with both numbers',
+            texts.some((x) => /monthly files add up to 9\.0 hrs, the YTD file through July 31, 2026 says 1\.7 hrs\. Hours were corrected/.test(x)));
+    });
+
+    const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });
+    t.check('the email uses the YTD file too', /Reliability 1\.7 hrs missed this year/.test(mail.body));
+    t.check('and a total below the month before reads as a correction, not a month',
+        /Reliability 1\.7 hrs missed this year, after hours were corrected/.test(mail.body)
+        || /1\.3 hrs of it in July/.test(mail.body));
 });

@@ -1929,6 +1929,13 @@
                 var total = _formatMetricDisplay(row.registry, Number(after));
                 var onTarget = _meetsTarget(row.registry, Number(after), year) === true;
                 var month = String(cur.label || '').split(' ')[0];
+                // A total that went DOWN was corrected: hours re-coded after
+                // the monthly file were taken off in the YTD file.
+                if (added < -0.05) {
+                    lines.push('🎉 Reliability ' + total + ' missed this year, after hours were corrected' +
+                        (onTarget ? ', and inside the budget' : ''));
+                    return;
+                }
                 lines.push(added > 0.05
                     ? '📉 Reliability ' + total + ' missed this year, ' +
                       _formatMetricDisplay(row.registry, added) + ' of it in ' + month +
@@ -1989,18 +1996,62 @@
     }
 
     /**
+     * The newest YTD file's reliability per person, and the month it ends in.
+     *
+     * The YTD file is the year's truth for hours missed. Hours re-coded after
+     * a monthly file was pulled show up in the YTD file and nowhere else, so a
+     * running total summed from the months can overstate the year, and the
+     * YTD file has to win where the two meet.
+     */
+    function _ytdReliabilityAnchor(year) {
+        var key = _latestYtdKeyForYear(year);
+        if (!key) return null;
+        var entry = _getYtdData()[key] || {};
+        var meta = entry.metadata || {};
+        var end = String(meta.endDate || (String(key).indexOf('|') > -1 ? String(key).split('|')[1] : ''));
+        if (!end) return null;
+        var byName = {};
+        (entry.employees || []).forEach(function (emp) {
+            if (!emp || !emp.name) return;
+            var rel = parseFloat(emp.reliability);
+            if (Number.isFinite(rel)) byName[emp.name] = rel;
+        });
+        return { month: end.slice(0, 7), through: end, byName: byName };
+    }
+
+    /**
+     * Which point in a person's sorted series the YTD file speaks for: the
+     * month it ends in, or the newest month before that when that month has
+     * no point. -1 when none.
+     */
+    function _anchorPointIndex(sortedPoints, anchor) {
+        if (!anchor) return -1;
+        var at = -1;
+        sortedPoints.forEach(function (pt, i) {
+            if (pt && String(pt.key) <= anchor.month) at = i;
+        });
+        return at;
+    }
+
+    /**
      * The same series with reliability as the year's running total, on copies.
      * The timeline carries each month's own hours; the year card and the email
      * both talk about the total, because the budget it is judged on is annual.
      */
-    function _runningReliability(series) {
+    function _runningReliability(series, name, anchor) {
         var total = 0, any = false;
-        return (series || []).slice().sort(function (a, b) {
+        var sorted = (series || []).slice().sort(function (a, b) {
             return String(a && a.key).localeCompare(String(b && b.key));
-        }).map(function (pt) {
+        });
+        var anchorAt = anchor && name && Number.isFinite(anchor.byName[name])
+            ? _anchorPointIndex(sorted, anchor) : -1;
+        return sorted.map(function (pt, i) {
             if (!pt) return pt;
             var hours = Number(pt.reliability);
             if (Number.isFinite(hours)) { total += hours; any = true; }
+            // The YTD file wins at the month it covers, and the months after
+            // carry on from its figure rather than from the summed one.
+            if (i === anchorAt) { total = anchor.byName[name]; any = true; }
             return Object.assign({}, pt, { reliability: any ? Math.round(total * 100) / 100 : null });
         });
     }
@@ -2113,7 +2164,8 @@
             // No YTD upload to read: the month story is the useful answer.
         }
 
-        var pair = _lastTwoScored(_runningReliability(_timelineFor(name)), win.anchor);
+        var pair = _lastTwoScored(_runningReliability(_timelineFor(name), name,
+            _ytdReliabilityAnchor(model.year)), win.anchor);
 
         if (pair) {
             var prev = pair[0], cur = pair[1];
@@ -2584,22 +2636,34 @@
         // The timeline's points are per-month hours (the period rule set on
         // 2026-09-08), so each person's months are summed in order here, on
         // copies, leaving the timeline itself alone.
+        //
+        // Where the YTD file ends, its figure replaces the summed one, for
+        // everybody, so the centre line and the placings in that month stand on
+        // the same numbers. Hours re-coded after a monthly file was pulled are
+        // in the YTD file and nowhere else.
         var holdersByPeriod = {};
         var runningByName = {};
+        var relAnchor = _ytdReliabilityAnchor(year);
+        var relCorrection = null;
         Object.keys((tl && tl.byName) || {}).forEach(function (who) {
-            var total = 0, any = false;
-            var points = (tl.byName[who] || []).filter(function (point) { return point && point.key; })
-                .slice().sort(function (a, b) { return String(a.key).localeCompare(String(b.key)); });
+            var points = (tl.byName[who] || []).filter(function (point) { return point && point.key; });
+            var summed = who === name ? _runningReliability(points, null, null) : null;
+            var running = _runningReliability(points, who, relAnchor);
             runningByName[who] = {};
-            points.forEach(function (point) {
-                var hours = Number(point.reliability);
-                if (Number.isFinite(hours)) { total += hours; any = true; }
-                var copy = Object.assign({}, point, {
-                    reliability: any ? Math.round(total * 100) / 100 : null
-                });
-                runningByName[who][point.key] = copy;
-                (holdersByPeriod[point.key] = holdersByPeriod[point.key] || [])
+            running.forEach(function (copy, i) {
+                runningByName[who][copy.key] = copy;
+                (holdersByPeriod[copy.key] = holdersByPeriod[copy.key] || [])
                     .push({ name: who, holder: copy });
+                if (summed && summed[i] && Number.isFinite(summed[i].reliability)
+                    && Number.isFinite(copy.reliability)
+                    && Math.abs(summed[i].reliability - copy.reliability) >= 0.05
+                    && _anchorPointIndex(running, relAnchor) === i) {
+                    relCorrection = {
+                        summed: summed[i].reliability,
+                        ytd: copy.reliability,
+                        through: relAnchor.through
+                    };
+                }
             });
         });
         var ranksByPeriod = {};
@@ -2619,6 +2683,10 @@
         return {
             name: name,
             ytd: _buildYtdColumn(name, year),
+            // Set when the monthly files and the YTD file disagree on this
+            // person's hours. The card says so rather than showing a drop with
+            // no reason.
+            reliabilityCorrection: relCorrection,
             title: name,
             year: year,
             // The last month with finished data, for the email subject. Null
@@ -2746,7 +2814,8 @@
         var keyInSlot = kpis.length % panelCols !== 0;
         var chartH = 22 + panelRows * panelH + (panelRows - 1) * 14 + (keyInSlot ? 8 : 30);
 
-        var H = headerH + chartH + gap + headRowH + rowH * rows + 84;
+        var correction = model.reliabilityCorrection || null;
+        var H = headerH + chartH + gap + headRowH + rowH * rows + 84 + (correction ? 16 : 0);
 
         // Drawn at 2x and scaled down, so it is not a blurry paste on a normal
         // display and still sharp on a high-DPI one.
@@ -3112,6 +3181,15 @@
         text('Green meets the target, red is below it.', padX + 6, lastRow + 48, 11, '#7a8794');
         text('Placings are within that one metric, against everyone measured in that column. '
             + 'They are not an overall ranking.', padX + 6, lastRow + 64, 11, '#7a8794');
+        if (correction) {
+            var relUnit = function (v) { return _formatMetricDisplay('reliability', v); };
+            text('Reliability: the monthly files add up to ' + relUnit(correction.summed)
+                + ', the YTD file through ' + _longDate(correction.through) + ' says ' + relUnit(correction.ytd)
+                + '. ' + (correction.ytd < correction.summed
+                    ? 'Hours were corrected after the monthly files were pulled, so the YTD file is used.'
+                    : 'The YTD file has hours the monthly files do not, so it is used.'),
+                padX + 6, lastRow + 80, 11, '#b45309', '600');
+        }
 
         return canvas;
     }
