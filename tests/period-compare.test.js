@@ -626,6 +626,13 @@ suite('period compare: team movement follows a month picked on the matchup page'
     const stray = pc.buildTeamMovementForScope('month', ANCHOR_SUPS, 2026, { anchorKey: 'no-such-period' });
     t.equal('an unmatched pick does not land on the unfinished month', stray && stray.current.key, '2026-07');
 
+    // The months Scott actually has are uploaded files, picked by store key.
+    // Reported as "Scott is still 2.06 in every month" after the first fix,
+    // which only read the rebuilt-month spelling.
+    const uploaded = pc.buildTeamMovementForScope('month', ANCHOR_SUPS, 2026, { anchorKey: '2026-06-01|2026-06-30' });
+    t.equal('an uploaded month picked by its store key is followed', uploaded && uploaded.current.key, '2026-06');
+    t.equal('with its own numbers', uploaded && uploaded.teams.find((x) => x.name === 'Alpha').curAvgRating, 2.2);
+
     const people = pc.buildMovementForScope('month', { year: 2026, anchorKey: 'month:2026-06' });
     t.equal('the individual view reads the same spelling', people && people.current && people.current.key, '2026-06');
 });

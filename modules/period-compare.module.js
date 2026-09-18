@@ -1233,10 +1233,11 @@
      * Where the viewer's selected period sits in a list of comparable ones, or
      * -1 when it is not there.
      *
-     * The pages name a month "month:2026-07" and this module names it
+     * The pages name a month "month:2026-07" when it was rebuilt from weeks and
+     * "2026-07-01|2026-07-31" when it was uploaded; this module names it
      * "2026-07". Compared as they came, a picked month never matched, so the
      * matchup's Team Movement ignored the month selector and fell through to
-     * the newest pair, which was an unfinished month. Both spellings are read.
+     * the newest pair. All three spellings are read.
      *
      * From 1, not 0: the oldest period has nothing behind it to compare
      * against, so anchoring there falls back to the newest pair rather than
@@ -1244,10 +1245,19 @@
      */
     function _anchorIndex(usable, anchorKey) {
         if (!anchorKey) return -1;
-        var want = String(anchorKey);
-        if (want.indexOf(MONTH_KEY_PREFIX) === 0) want = want.slice(MONTH_KEY_PREFIX.length);
-        for (var i = 1; i < usable.length; i++) {
-            if (String(usable[i].key) === want) return i;
+        var raw = String(anchorKey);
+        // Tried in order. The key as given first, which is how weeks match.
+        // Then a rebuilt month's "month:" spelling. Then the month an uploaded
+        // file ends in: an uploaded month is picked by its store key,
+        // "2026-07-01|2026-07-31", and without this step every uploaded month
+        // missed and Team Movement showed the same pair whatever was picked.
+        var wants = [raw];
+        if (raw.indexOf(MONTH_KEY_PREFIX) === 0) wants.push(raw.slice(MONTH_KEY_PREFIX.length));
+        if (raw.indexOf('|') > -1) wants.push(raw.split('|')[1].slice(0, 7));
+        for (var w = 0; w < wants.length; w++) {
+            for (var i = 1; i < usable.length; i++) {
+                if (String(usable[i].key) === wants[w]) return i;
+            }
         }
         return -1;
     }
