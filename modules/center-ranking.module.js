@@ -2676,16 +2676,21 @@
         var rows = TRAJECTORY_METRIC_ROWS.length + 1;   // targets-met row + one per metric
         var W = padX * 2 + labelW + ytdW + avgW + colW * n;
 
-        // One small chart per KPI, five across when there is room and wrapping
-        // when a short year makes the card narrow.
+        // One chart per KPI. Three across rather than five: every month carries
+        // its value in small print, and five across left each month about
+        // seventeen pixels, less than "93.8" needs. A short year that makes the
+        // card narrow wraps further.
         var kpis = model.kpis || [];
-        var panelGap = 18, panelH = 168, panelMinW = 190;
+        var panelGap = 18, panelH = 184, panelMinW = 330;
         var innerW = W - padX * 2;
         var panelCols = Math.max(1, Math.min(kpis.length || 1,
             Math.floor((innerW + panelGap) / (panelMinW + panelGap))));
         var panelRows = Math.ceil((kpis.length || 1) / panelCols);
         var panelW = (innerW - panelGap * (panelCols - 1)) / panelCols;
-        var chartH = 22 + panelRows * panelH + (panelRows - 1) * 14 + 30;
+        // The key takes the empty slot a short last row leaves, when there is
+        // one, rather than a line of its own under the charts.
+        var keyInSlot = kpis.length % panelCols !== 0;
+        var chartH = 22 + panelRows * panelH + (panelRows - 1) * 14 + (keyInSlot ? 8 : 30);
 
         var H = headerH + chartH + gap + headRowH + rowH * rows + 84;
 
@@ -2779,7 +2784,7 @@
                     px + 10, py + 31, 10.5, '#7a8794');
             }
 
-            var top = py + 46, bottom = py + panelH - 22;
+            var top = py + 54, bottom = py + panelH - 24;
             // A strip on the right carries the numbers the lines end on, so the
             // chart says what it is showing rather than leaving it to the grid.
             var gutter = 50;
@@ -2832,6 +2837,24 @@
                 ctx.fill();
             });
 
+            // Each month's value, small, over its dot. The unit is left off
+            // because the chart's title and target already say it. Set under
+            // the dot instead when the dot is a dip, so the number sits in the
+            // open rather than on the line climbing out of it.
+            var short = function (display) {
+                return String(display || '').replace(/\s*hrs$/, '').replace(/[%s]$/, '');
+            };
+            mine.forEach(function (m, i) {
+                if (!m) return;
+                var y0 = yAt(m.value);
+                var near = [mine[i - 1], mine[i + 1]].filter(Boolean).map(function (o) { return yAt(o.value); });
+                var dip = near.length && near.every(function (ny) { return ny < y0; });
+                var ly = dip ? y0 + 11 : y0 - 10;
+                if (ly < top - 4) ly = y0 + 11;
+                if (ly > bottom + 2) ly = y0 - 10;
+                text(short(m.display), xAt(i), ly, 9, '#3d4b5c', '600', 'center');
+            });
+
             // The numbers in the strip are the YEAR, the same figures as the
             // header, the YTD column and the email: this person's year, the
             // centre's year, and the target, each set at its level on the
@@ -2872,23 +2895,43 @@
             });
         });
 
-        // The key, once for all five.
-        var keyY = chartsTop + panelRows * panelH + (panelRows - 1) * 14 + 16;
-        var kx = padX;
-        polyline([{ x: kx, y: keyY }, { x: kx + 22, y: keyY }], '#1565c0', 2.5);
-        text(model.name, kx + 28, keyY, 11, '#26364a', '600');
-        ctx.font = '600 11px ' + IMG_FONT;
-        var nameW = typeof ctx.measureText === 'function' ? ctx.measureText(String(model.name)).width : String(model.name).length * 6.5;
-        kx += 28 + nameW + 22;
-        polyline([{ x: kx, y: keyY }, { x: kx + 22, y: keyY }], '#8a97a6', 1.75, [2, 3]);
-        text('Center average', kx + 28, keyY, 11, '#26364a', '600');
-        kx += 28 + 90 + 22;
-        ctx.fillStyle = MEETS_BG;
-        ctx.fillRect(kx, keyY - 6, 22, 12);
-        polyline([{ x: kx, y: keyY + 6 }, { x: kx + 22, y: keyY + 6 }], IMG_MEETS_COLOR, 1.25, [5, 4]);
-        text('Target, shaded on the side that meets it', kx + 28, keyY, 11, '#26364a', '600');
-        if (W > 900) text('Up is better on every chart', W - padX, keyY, 11, '#7a8794', '600', 'right');
-        else text('Up is better on every chart', padX, keyY + 16, 11, '#7a8794', '600');
+        // The key, once for all five. In the empty slot beside the last row
+        // when there is one, stacked; otherwise in a line under the charts.
+        var keyItem = function (kind, label, kx, ky) {
+            if (kind === 'mine') polyline([{ x: kx, y: ky }, { x: kx + 22, y: ky }], '#1565c0', 2.5);
+            if (kind === 'center') polyline([{ x: kx, y: ky }, { x: kx + 22, y: ky }], '#8a97a6', 1.75, [2, 3]);
+            if (kind === 'target') {
+                ctx.fillStyle = MEETS_BG;
+                ctx.fillRect(kx, ky - 6, 22, 12);
+                polyline([{ x: kx, y: ky + 6 }, { x: kx + 22, y: ky + 6 }], IMG_MEETS_COLOR, 1.25, [5, 4]);
+            }
+            if (kind) text(label, kx + 30, ky, 11.5, '#26364a', '600');
+            else text(label, kx, ky, 11.5, '#7a8794', '600');
+        };
+        var keyRows = [
+            ['mine', model.name],
+            ['center', 'Center average, month by month'],
+            ['target', 'Target, shaded on the side that meets it'],
+            ['', 'Up is better on every chart'],
+            ['', 'The strip on the right of each chart is the year to date']
+        ];
+        if (keyInSlot) {
+            var slot = kpis.length % panelCols;
+            var sx = padX + slot * (panelW + panelGap) + 14;
+            var sy = chartsTop + (panelRows - 1) * (panelH + 14) + 30;
+            keyRows.forEach(function (row, r) { keyItem(row[0], row[1], sx, sy + r * 24); });
+        } else {
+            var keyY = chartsTop + panelRows * panelH + (panelRows - 1) * 14 + 16;
+            var kx = padX;
+            keyRows.slice(0, 3).forEach(function (row) {
+                keyItem(row[0], row[1], kx, keyY);
+                ctx.font = '600 11.5px ' + IMG_FONT;
+                var w = typeof ctx.measureText === 'function' ? ctx.measureText(String(row[1])).width : String(row[1]).length * 6.5;
+                kx += 30 + w + 24;
+            });
+            if (W > 900) text('Up is better on every chart', W - padX, keyY, 11, '#7a8794', '600', 'right');
+            else text('Up is better on every chart', padX, keyY + 16, 11, '#7a8794', '600');
+        }
 
         // ── Grid ──
         var gridTop = headerH + chartH + gap;

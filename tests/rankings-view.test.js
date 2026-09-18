@@ -1244,12 +1244,15 @@ suite('rankings view: the year picture stays inside its own canvas', (t) => {
             texts.indexOf('Each KPI, month by month') !== -1 &&
             ['AHT', 'Adherence', 'Sentiment', 'CX Adv', 'Reliability'].every((l) => texts.indexOf(l) !== -1));
         t.check('each against the centre average and the target',
-            texts.indexOf('Center average') !== -1 && texts.some((s) => /^Target \S/.test(s)));
+            texts.some((s) => /^Center average/.test(s)) && texts.some((s) => /^Target \S/.test(s)));
         t.check('and says which way is better', texts.indexOf('Up is better on every chart') !== -1);
         // The strip beside each chart carries the year, so the card says what
         // date the year runs to rather than leaving it to "Jan to Jul".
         t.check('the YTD date is on the card', texts.indexOf('YTD figures run through July 31, 2026') !== -1);
         t.check('and the strip is captioned as the year', texts.filter((s) => s === 'YTD').length >= 5);
+        // Every month's value is printed on its chart, without the unit.
+        const aht = model.columns.filter((c) => c.present && c.metrics[0].display).map((c) => c.metrics[0].display.replace(/s$/, ''));
+        t.check('each month carries its value on the chart', aht.length > 0 && aht.every((v) => texts.indexOf(v) !== -1));
         t.check('targets met is still a row',
             texts.indexOf('Targets met') !== -1 && texts.some((s) => /^\d+ of \d+$/.test(s)));
 
