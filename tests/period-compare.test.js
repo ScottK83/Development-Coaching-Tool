@@ -828,6 +828,24 @@ suite('period compare: a week nobody answered is not a zero', (t) => {
         Math.round(real.cxRepOverall * 10) / 10, 66.7);
 });
 
+/* Reported on Johnathan's card: September CX Adv blank, while he had 100%.
+   A rate with no usable count behind it weighed 0 and dropped out, so a
+   month built from weeks lost it entirely. */
+suite('period compare: a real score with no count behind it is kept', (t) => {
+    const pc = loadPure(t, {});
+    const row = (over) => ({ employees: [Object.assign({ name: 'A', totalCalls: 100 }, over)] });
+
+    const noOe = pc.aggregateEmployeesFrom([row({ cxRepOverall: 100, repSurveyTotal: 0, surveyTotal: 0 })])[0];
+    t.equal('a 100% whose counts read 0 is not lost', noOe.cxRepOverall, 100);
+
+    const noCounts = pc.aggregateEmployeesFrom([row({ cxRepOverall: 100 })])[0];
+    t.equal('a 100% with no count columns at all is not lost', noCounts.cxRepOverall, 100);
+    t.equal('and stands for one response', noCounts.repSurveyTotal, 1);
+
+    const fromFcr = pc.aggregateEmployeesFrom([row({ cxRepOverall: 100, surveyTotal: 0, fcrSurveyTotal: 2 })])[0];
+    t.equal('a count from another question is borrowed before guessing', fromFcr.repSurveyTotal, 2);
+});
+
 suite('period compare: an export without the extra counts behaves as it always did', (t) => {
     const pc = loadPure(t, {});
     // Older uploads carry only the OE survey total. Falling back to it is exactly

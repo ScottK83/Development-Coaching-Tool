@@ -1534,3 +1534,29 @@ suite('rankings view: the YTD file wins reliability where it disagrees with the 
         /Reliability 1\.7 hrs missed this year, after hours were corrected/.test(mail.body)
         || /1\.3 hrs of it in July/.test(mail.body));
 });
+
+/* Reported: "CX Adv, some still don't have numbers." A month under three
+   responses is not placed, on purpose, and the cell was left with nothing
+   under the percentage. It carries the count instead. */
+suite('rankings view: an unplaced CX Adv month shows its survey count', (t) => {
+    const month = (start, end, p0Surveys) => period(start, end, 'month', roster(40, 0).map((e) =>
+        e.name === 'P0' ? Object.assign({}, e, { cxRepOverall: 100, surveyTotal: p0Surveys, repSurveyTotal: p0Surveys }) : e));
+    const uploads = Object.assign({},
+        month('2026-06-01', '2026-06-30', 2),
+        month('2026-07-01', '2026-07-31', 5));
+    const { cr } = loadRankings(t, uploads, YTD);
+    cr.renderCenterRanking();
+    const model = cr.buildYearImageModel('P0');
+    const cx = (label) => model.columns.find((c) => c.fullLabel && c.fullLabel.indexOf(label) === 0).metrics
+        .find((m) => m.label === 'CX Adv');
+
+    t.check('June, on two surveys, is not placed', !cx('June').rank);
+    t.equal('but knows how many there were', cx('June').responses, 2);
+    t.check('July, on five, is placed', Number.isFinite(cx('July').rank));
+
+    withRecordingCanvas(t, (rec) => {
+        cr.drawYearCard(model);
+        const texts = rec.ops.filter((o) => o.op === 'text').map((o) => o.s);
+        t.check('the card prints the count where the placing would be', texts.indexOf('2 surveys') !== -1);
+    });
+});

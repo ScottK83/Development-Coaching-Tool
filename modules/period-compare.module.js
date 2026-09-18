@@ -312,15 +312,32 @@
                 // A rate's own denominator, or the Overall Experience count when
                 // the export never carried one. Null and undefined both mean
                 // "column absent", not "nobody answered".
+                //
+                // A rate that came back with no usable count is never thrown
+                // away. It used to weigh 0 and drop out, so a week where the
+                // only survey answered the rep question (the OE count reading
+                // 0) lost its 100% and the month showed CX Adv blank. The count
+                // falls back to the other questions' counts, and to one
+                // response when the export carried none at all: a rate exists,
+                // so at least one survey stands behind it.
+                var countOf = function (value) {
+                    var n = parseInt(value, 10);
+                    return Number.isInteger(n) && n > 0 ? n : 0;
+                };
                 var surveyWeightFor = function (metricKey) {
                     var field = SURVEY_WEIGHT_FIELD[metricKey];
                     if (!field) return 0;
-                    var own = emp[field];
-                    if (own === null || own === undefined || own === '') {
-                        return Number.isInteger(surveyTotal) && surveyTotal > 0 ? surveyTotal : 0;
-                    }
-                    var n = parseInt(own, 10);
-                    return Number.isInteger(n) && n > 0 ? n : 0;
+                    var own = countOf(emp[field]);
+                    if (own > 0) return own;
+                    // An explicit zero count on a zero rate is a week nobody
+                    // answered, and it stays out. Only a real score with no
+                    // count behind it is rescued.
+                    var rate = parseFloat(emp[metricKey]);
+                    var ownGiven = !(emp[field] === null || emp[field] === undefined || emp[field] === '');
+                    if (ownGiven && !(rate > 0)) return 0;
+                    var other = Math.max(countOf(surveyTotal), countOf(emp.repSurveyTotal), countOf(emp.fcrSurveyTotal));
+                    if (other > 0) return other;
+                    return rate > 0 ? 1 : 0;
                 };
 
                 a._periodsSeen += 1;

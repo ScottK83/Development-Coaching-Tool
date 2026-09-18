@@ -2484,6 +2484,17 @@
 
     var _SURVEY_WEIGHTED_AVG = { cxRepOverall: true, fcr: true, overallExperience: true };
 
+    /** Responses behind a survey figure, or null for a metric that is not one. */
+    function _surveysBehind(holder, row) {
+        if (!holder || !_SURVEY_WEIGHTED_AVG[row.registry]) return null;
+        if (row.scoreKey === 'associateOverall' && Number.isFinite(holder.associateOverallSurveys)) {
+            return holder.associateOverallSurveys;
+        }
+        var n = typeof window.getSurveyWeight === 'function'
+            ? window.getSurveyWeight(row.registry, holder) : Number(holder.surveyTotal);
+        return Number.isFinite(n) ? n : null;
+    }
+
     /**
      * What the centre actually ran at, for one metric.
      *
@@ -2584,7 +2595,8 @@
                 meets: has ? _meetsTarget(row.registry, value, year) : null,
                 display: has ? _formatMetricDisplay(row.registry, value) : '',
                 rank: has && placing ? placing.rank : null,
-                rankTotal: has && placing ? placing.total : null
+                rankTotal: has && placing ? placing.total : null,
+                responses: has ? _surveysBehind(mine, row) : null
             };
         });
 
@@ -2742,7 +2754,8 @@
                             meets: has ? _meetsTarget(row.registry, value, year) : null,
                             display: has ? _formatMetricDisplay(row.registry, value) : '',
                             rank: placing ? placing.rank : null,
-                            rankTotal: placing ? placing.total : null
+                            rankTotal: placing ? placing.total : null,
+                            responses: has ? _surveysBehind(pt, row) : null
                         };
                     })
                 };
@@ -3067,8 +3080,17 @@
         // is not the same number in every cell and repeating it forty times was
         // the noisiest thing on the card.
         var placing = function (m, cx, ry) {
-            if (!m || !m.rank) return;
-            text(_ordinal(m.rank), cx, ry + 13, 10, "#7d8d9d", "600", "center");
+            if (!m) return;
+            if (m.rank) {
+                text(_ordinal(m.rank), cx, ry + 13, 10, "#7d8d9d", "600", "center");
+                return;
+            }
+            // A survey figure under the three-response floor is not placed, so
+            // one lucky survey cannot take first. Its count goes where the
+            // placing would be, so the cell is not left empty.
+            if (m.responses > 0) {
+                text(m.responses + (m.responses === 1 ? ' survey' : ' surveys'), cx, ry + 13, 10, "#7d8d9d", "600", "center");
+            }
         };
 
         if (ytd) {
