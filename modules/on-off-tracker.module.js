@@ -778,6 +778,13 @@
             }
         });
 
+        // How the year has moved so far, quarter by quarter. A mid-year
+        // checkpoint built off the latest snapshot alone cannot tell someone
+        // who has climbed all year from someone who started there and stalled,
+        // and those are different conversations.
+        var progression = window.DevCoachModules?.quarterReview
+            ?.buildProgressionBlock?.(employeeName, reviewYear) || '';
+
         return {
             firstName: firstName,
             strengths: strengths,
@@ -785,7 +792,8 @@
             reviewYear: reviewYear,
             metCount: metCount,
             totalScored: totalScored,
-            notMetCount: Math.max(0, totalScored - metCount)
+            notMetCount: Math.max(0, totalScored - metCount),
+            progression: progression
         };
     }
 
@@ -900,6 +908,12 @@
         var prompt = 'I am a call center supervisor writing mid-year review comments for ' + firstName + ' that I will paste into our Success Factors review system. This is a mid-year checkpoint for ' + reviewYear + ', not a final review, so the year is still in progress and there is time to grow.\n\n';
 
         prompt += 'Performance so far this year:\n';
+
+        if (ctx.progression) {
+            prompt += '\n' + ctx.progression + '\n';
+            prompt += '\nWhere a measure has moved across the quarters, say so with the quarters rather than'
+                + ' quoting only where it stands today.\n';
+        }
 
         if (strengths.length) {
             prompt += '\nStrengths and progress to recognize:\n';

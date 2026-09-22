@@ -30,13 +30,27 @@
             + ' performance, and frame the improvement areas as the next step up rather than as failures.';
     }
 
+    /* The quarter by quarter block, when one could be built.
+     *
+     * Kept as its own paragraph with its own instruction, because a model
+     * handed four numbers per metric and no direction will quote the last one
+     * and drop the rest, which is the snapshot this is meant to replace. */
+    function progressionSection(supportData) {
+        var block = (supportData && supportData.progression) || '';
+        if (!block) return '';
+        return '\n' + block
+            + '\n\nWhen a measure moved across the year, say so with the quarters rather than quoting'
+            + ' only where it finished. A year that climbed and a year that faded read the same'
+            + ' from a closing figure alone.\n';
+    }
+
     function buildCopilotPrompt(inputData, supportData, headerData) {
         return `I'm a supervisor preparing year-end review responses for ${headerData.preferredName} (${inputData.employeeName}) for ${inputData.reviewYear}.
 
 Use this data source: ${headerData.sourceLabel} (${headerData.periodLabel}).
 ${toneFromStanding(headerData.trackLabel)}
 Metric targets to apply: ${headerData.targetProfileLabel}.
-
+${progressionSection(supportData)}
 Positives to highlight:
 ${inputData.positivesText || supportData.fallbackPositives || '- Positive impact and steady contribution to the team.'}
 

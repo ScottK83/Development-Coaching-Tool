@@ -453,11 +453,23 @@
             ? annualGoals.notMetGoals.map(line => `- ${line}`).join('\n')
             : '- None';
 
+        // How the year actually moved, quarter by quarter.
+        //
+        // The prompt asks for metric values and their goals but never supplied
+        // any, so every figure in a year-end review came from whatever the
+        // supervisor happened to type into the two boxes. A closing snapshot
+        // also cannot tell the difference between a year that started strong
+        // and faded and one that climbed all year, which is most of what a
+        // year-end review is for.
+        const progression = window.DevCoachModules?.quarterReview
+            ?.buildProgressionBlock?.(employeeName, reviewYear) || '';
+
         return {
             fallbackPositives,
             fallbackImprovements,
             annualMetText,
-            annualNotMetText
+            annualNotMetText,
+            progression
         };
     }
 

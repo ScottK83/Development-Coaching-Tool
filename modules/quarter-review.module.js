@@ -649,6 +649,58 @@
         return lines.join('\n');
     }
 
+    /* ── The facts, as lines ──
+     *
+     * One line per measure, quarter by quarter, with the goal and where it
+     * stands. Shared rather than inlined into the prompt because the year-end
+     * generator wants the same block: a year-end review that says how the year
+     * MOVED is a better record than one that quotes a single closing figure.
+     */
+    function factLines(ctx) {
+        var out = [];
+        ctx.metrics.forEach(function (m) {
+            var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
+            if (!points.length) return;
+            var line = '- ' + m.label + ': '
+                + points.map(function (p) { return p.name + ' ' + _display(m.metricKey, p.value); }).join(', ');
+            if (m.target) {
+                line += ' (goal ' + _display(m.metricKey, m.target.value)
+                    + (m.target.type === 'min' ? ' or better)' : ' or lower)');
+            }
+            if (m.meetsTarget === true) line += ', at goal';
+            else if (m.meetsTarget === false && m.gap) line += ', ' + _display(m.metricKey, m.gap.size) + ' off goal';
+            out.push(line);
+        });
+
+        var rel = ctx.reliability;
+        if (rel.hasValue) {
+            var relLine = '- ' + _label(RELIABILITY) + ': ' + _display(RELIABILITY, rel.yearToDate)
+                + ' missed for the year';
+            if (rel.target) relLine += ' (allowance ' + _display(RELIABILITY, rel.target.value) + ' for the year)';
+            var pts = rel.checkpoints.filter(function (c) { return c.runningTotal !== null; });
+            if (pts.length >= 2) {
+                relLine += ', running at ' + pts.map(function (c) {
+                    return _display(RELIABILITY, c.runningTotal) + ' through ' + c.name;
+                }).join(', ');
+            }
+            out.push(relLine);
+        }
+        return out;
+    }
+
+    /* The same block as a ready made string, for a prompt built elsewhere.
+     * Returns an empty string when there is nothing to say, so a caller can
+     * append it unconditionally.
+     */
+    function buildProgressionBlock(employeeName, year, options) {
+        var ctx = buildContext(employeeName, year, options);
+        if (!ctx) return '';
+        var lines = factLines(ctx);
+        if (!lines.length) return '';
+        return 'How each measure moved across the quarters of ' + ctx.year + ':\n'
+            + lines.join('\n');
+    }
+
     /* ── The Copilot prompt ──
      *
      * Same facts, handed over for rewording. First person, help me polish my
@@ -668,34 +720,7 @@
             + 'This is a ' + ctx.quarterLabel + ' check in, so the year is still running.');
         out.push('');
         out.push('Here is how each measure has moved across the quarters this year:');
-
-        ctx.metrics.forEach(function (m) {
-            var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
-            if (!points.length) return;
-            var line = '- ' + m.label + ': '
-                + points.map(function (p) { return p.name + ' ' + _display(m.metricKey, p.value); }).join(', ');
-            if (m.target) {
-                line += ' (goal ' + _display(m.metricKey, m.target.value)
-                    + (m.target.type === 'min' ? ' or better)' : ' or lower)');
-            }
-            if (m.meetsTarget === true) line += ', at goal now';
-            else if (m.meetsTarget === false && m.gap) line += ', ' + _display(m.metricKey, m.gap.size) + ' off goal';
-            out.push(line);
-        });
-
-        var rel = ctx.reliability;
-        if (rel.hasValue) {
-            var relLine = '- ' + _label(RELIABILITY) + ': ' + _display(RELIABILITY, rel.yearToDate)
-                + ' missed for the year to date';
-            if (rel.target) relLine += ' (allowance ' + _display(RELIABILITY, rel.target.value) + ' for the year)';
-            var pts = rel.checkpoints.filter(function (c) { return c.runningTotal !== null; });
-            if (pts.length >= 2) {
-                relLine += ', running at ' + pts.map(function (c) {
-                    return _display(RELIABILITY, c.runningTotal) + ' through ' + c.name;
-                }).join(', ');
-            }
-            out.push(relLine);
-        }
+        factLines(ctx).forEach(function (line) { out.push(line); });
 
         out.push('');
         out.push('What I want recognised:');
@@ -758,6 +783,8 @@
         reliabilitySentence: reliabilitySentence,
         buildHeader: buildHeader,
         buildNotes: buildNotes,
-        buildPrompt: buildPrompt
+        buildPrompt: buildPrompt,
+        factLines: factLines,
+        buildProgressionBlock: buildProgressionBlock
     };
 })();
