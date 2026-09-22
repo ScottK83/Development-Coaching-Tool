@@ -1922,7 +1922,13 @@ function bindNavigationHandlers() {
     document.getElementById('subNavRpQuarterly')?.addEventListener('click', () => {
         ensureReviewPrepMounted('subSectionQ1Review');
         showReviewPrepSubSection('subSectionQ1Review', 'subNavRpQuarterly');
-        if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
+        // renderQuarterReview replaced renderQ1Review here. The old view was
+        // Q1 only, and once any year-to-date file existed it printed that
+        // file's figures under a column headed "Q1 Avg" whatever the month.
+        // The fallback stays so the tab still renders if the new module is
+        // ever missing from the loader.
+        if (typeof window.renderQuarterReview === 'function') window.renderQuarterReview();
+        else if (typeof window.renderQ1Review === 'function') window.renderQ1Review();
     });
     document.getElementById('subNavRpMidYear')?.addEventListener('click', () => {
         ensureReviewPrepMounted('subSectionMidYear');

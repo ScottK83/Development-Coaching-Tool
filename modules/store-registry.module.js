@@ -92,6 +92,11 @@
         { name: 'celebrationsHistory', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'oneOnOneMeetings', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
         { name: 'midYearMeta', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        // What the supervisor typed about an associate for a quarterly check
+        // in, keyed by name, year and quarter. Hand written and not
+        // recomputable from any upload, so it belongs on the server with the
+        // 1:1 and mid-year notes rather than in one browser.
+        { name: 'quarterReviewNotes', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
 
         // --- This machine only. Never leaves it. ---
         // callListeningSyncConfig holds the shared secret. Syncing it would put

@@ -1843,6 +1843,13 @@ Box 2 - Future Improvement Areas:
                 'modules/team-snapshot.module.js',
                 'modules/center-ranking.module.js',
                 'modules/period-compare.module.js',
+                // Assembles a quarter out of whichever uploads cover it, using
+                // period-compare's weighting, so it loads after it.
+                'modules/quarter-trend.module.js',
+                // Writes the check-in document off those quarters.
+                'modules/quarter-review.module.js',
+                // The Quarterly tab itself, so it loads after both.
+                'modules/quarter-review-ui.module.js',
                 'modules/matchup.module.js',
                 'modules/yoy-comparison.module.js',
                 'modules/futures.module.js',
