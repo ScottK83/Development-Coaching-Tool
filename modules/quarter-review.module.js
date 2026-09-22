@@ -300,6 +300,7 @@
     function splitForBoxes(ctx) {
         var strengths = [];
         var focus = [];
+        var watch = [];
 
         ctx.metrics.forEach(function (m) {
             var moved = m.movedAcross;
@@ -310,6 +311,16 @@
                 strengths.push(Object.assign({}, m, {
                     why: improving ? 'improved-and-met' : 'met'
                 }));
+                // At goal and still sliding is worth raising in the meeting
+                // even though nothing is missed yet. A quarter of the same
+                // again and it is a miss, and the supervisor who says so now
+                // is not the one writing it up in January.
+                if (declining) {
+                    var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
+                    if (points.length >= 2 && _pathShape(m, points).kind === 'falling') {
+                        watch.push(Object.assign({}, m, { why: 'met-but-falling' }));
+                    }
+                }
                 return;
             }
             if (m.meetsTarget === false) {
@@ -353,7 +364,14 @@
             return ra - rb;
         });
 
-        return { strengths: strengths, focus: focus };
+        // Biggest slide first: if only one is going to be raised, raise that.
+        watch.sort(function (a, b) {
+            var sa = a.movedAcross ? a.movedAcross.size : 0;
+            var sb = b.movedAcross ? b.movedAcross.size : 0;
+            return sb - sa;
+        });
+
+        return { strengths: strengths, focus: focus, watch: watch };
     }
 
     /* ── The sentences ── */
@@ -410,6 +428,69 @@
         return { shape: 'mixed', points: points, met: met };
     }
 
+    /* The SHAPE of the path, not just its endpoints.
+     *
+     * Direction is computed from the first quarter against the last, which is
+     * the right thing for a headline and the wrong thing for a sentence. An
+     * associate who went 420, 470, 418 has a first and last two seconds apart,
+     * so endpoint logic called that "came down in each quarter this year" and
+     * called 95, 88, 95 "held steady". Both of those are false statements in a
+     * personnel record, and the second one erases the quarter worth talking
+     * about.
+     *
+     * So the steps are walked. A claim about every quarter is only made when
+     * every quarter supports it, and a path that reversed is described as a
+     * path that reversed.
+     */
+    function _pathShape(m, points) {
+        var mm = (window.DevCoachModules || {}).metricMovement;
+        var band = _stableBand(m.metricKey);
+        var steps = [];
+        for (var i = 1; i < points.length; i++) {
+            var better = mm && typeof mm.performanceDelta === 'function'
+                ? mm.performanceDelta(m.metricKey, points[i].value, points[i - 1].value)
+                : points[i].value - points[i - 1].value;
+            steps.push(Number.isFinite(better) ? better : 0);
+        }
+
+        var values = points.map(function (p) { return p.value; });
+        var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
+        if (spread <= band) return { kind: 'steady', steps: steps, spread: spread };
+
+        var improvedAny = steps.some(function (s) { return s > 0; });
+        var worsenedAny = steps.some(function (s) { return s < 0; });
+        if (improvedAny && !worsenedAny) return { kind: 'climbing', steps: steps, spread: spread };
+        if (worsenedAny && !improvedAny) return { kind: 'falling', steps: steps, spread: spread };
+
+        // It reversed. The quarter worth naming is the one furthest the wrong
+        // way, and it is only worth naming when it is not an endpoint: an
+        // endpoint is already the start or the finish of the sentence.
+        var worstIdx = 0;
+        for (var j = 1; j < points.length; j++) {
+            var cmp = mm && typeof mm.performanceDelta === 'function'
+                ? mm.performanceDelta(m.metricKey, points[j].value, points[worstIdx].value)
+                : points[j].value - points[worstIdx].value;
+            if (Number.isFinite(cmp) && cmp < 0) worstIdx = j;
+        }
+        return {
+            kind: 'swung',
+            steps: steps,
+            spread: spread,
+            worst: points[worstIdx],
+            worstIsInterior: worstIdx > 0 && worstIdx < points.length - 1
+        };
+    }
+
+    function _stableBand(metricKey) {
+        var mm = (window.DevCoachModules || {}).metricMovement;
+        var bands = (mm && mm.DEFAULT_STABLE_BAND) || { percent: 1, sec: 8, hrs: 0.5, fallback: 1 };
+        var unit = (_registry()[metricKey] || {}).unit;
+        if (unit === '%') return bands.percent;
+        if (unit === 'sec') return bands.sec;
+        if (unit === 'hrs') return bands.hrs;
+        return bands.fallback;
+    }
+
     /* One metric, as prose.
      *
      * Three depths, because a box that gives every metric the same three
@@ -436,17 +517,28 @@
             return lines.join(' ');
         }
 
+        var path = _pathShape(m, points);
         var movementWord;
-        if (!moved || moved.size === 0) movementWord = 'held steady';
-        else if (moved.improved === true) movementWord = m.isReverse ? 'came down in each quarter this year' : 'improved across the year';
-        else if (moved.improved === false) movementWord = m.isReverse ? 'climbed across the year' : 'slipped across the year';
-        else movementWord = 'moved across the year';
+        if (path.kind === 'steady') movementWord = 'held steady';
+        else if (path.kind === 'climbing') movementWord = m.isReverse ? 'came down in each quarter this year' : 'improved in each quarter this year';
+        else if (path.kind === 'falling') movementWord = m.isReverse ? 'climbed in each quarter this year' : 'slipped in each quarter this year';
+        else movementWord = 'moved around this year';
 
         if (style === 'brief') {
-            lines.push(_cap(label) + ' went from '
-                + _display(m.metricKey, points[0].value) + ' in ' + points[0].name
-                + ' to ' + _display(m.metricKey, points[points.length - 1].value)
-                + ' in ' + points[points.length - 1].name + _goalTail(story, m, 'brief') + '.');
+            // "Went from 90% to 90%" is a sentence nobody writes. A metric
+            // that did not move gets said as a metric that did not move.
+            if (path.kind === 'steady') {
+                // "Both inside the goal" needs two readings to refer to. A
+                // metric that held gets the singular tail instead.
+                lines.push(_cap(label) + ' held at '
+                    + _display(m.metricKey, points[points.length - 1].value)
+                    + ' across the year' + _goalTail(story, m, 'steady') + '.');
+            } else {
+                lines.push(_cap(label) + ' went from '
+                    + _display(m.metricKey, points[0].value) + ' in ' + points[0].name
+                    + ' to ' + _display(m.metricKey, points[points.length - 1].value)
+                    + ' in ' + points[points.length - 1].name + _goalTail(story, m, 'brief') + '.');
+            }
             return lines.join(' ');
         }
 
@@ -462,17 +554,33 @@
         lines.push(_cap(label) + ' ' + movementWord + ', '
             + progressionPhrase(m.metricKey, points) + '.');
 
-        if (moved && moved.size > 0) {
+        // A path that reversed gets its outlier named rather than a net change
+        // that hides it. Two seconds between January and September is not the
+        // story when one quarter was fifty seconds off.
+        if (path.kind === 'swung' && path.worstIsInterior) {
+            lines.push(_cap(_swingNote(m, path, ctx)) + _goalTail(story, m, 'lead') + '.');
+        } else if (moved && moved.size > 0) {
             lines.push('That is ' + _movementAmount(m.metricKey, moved.size)
                 + (moved.improved === true ? ' better than' : ' off')
                 + ' where ' + ctx.firstName + ' started the year'
                 + _goalTail(story, m, 'lead') + '.');
         } else {
             var tail = _goalTail(story, m, 'support');
-            if (tail) lines.push(_cap(tail.replace(/^,\s*(and\s+)?/, '')) + '.');
+            // Appended, not promoted into its own sentence: on its own it reads
+            // "Every quarter of it inside the goal", which has no verb.
+            if (tail) {
+                lines[lines.length - 1] = lines[lines.length - 1].replace(/\.$/, '') + tail + '.';
+            }
         }
 
         return lines.join(' ');
+    }
+
+    function _swingNote(m, path, ctx) {
+        var worst = path.worst;
+        var word = m.isReverse ? 'a spike to ' : 'a dip to ';
+        return ctx.firstName + ' finished close to where the year started, after '
+            + word + _display(m.metricKey, worst.value) + ' in ' + worst.name;
     }
 
     /* The clause that says where the movement left it against goal.
@@ -488,14 +596,19 @@
 
         switch (story.shape) {
             case 'always':
+                if (style === 'steady') return ', inside the ' + goal + ' goal';
                 if (style === 'brief') return ', both inside the ' + goal + ' goal';
                 if (style === 'support') return ', every quarter of it inside the ' + goal + ' goal';
                 return ', and it has stayed inside the ' + goal + ' goal all year';
             case 'never':
-                var short = _movementAmount(m.metricKey, m.gap ? m.gap.size : 0);
-                if (style === 'brief') return ', still short of the ' + goal + ' goal';
-                if (style === 'support') return ', leaving it ' + short + ' short of the ' + goal + ' goal';
-                return ', and it is still ' + short + ' short of the ' + goal + ' goal';
+                var off = _movementAmount(m.metricKey, m.gap ? m.gap.size : 0);
+                // "Short of" means below, which is the wrong word entirely for
+                // a metric where lower is better: handle time at 475 against a
+                // 426 goal is 49 seconds ABOVE it, not short of it.
+                var side = m.isReverse ? ' above the ' : ' short of the ';
+                if (style === 'brief') return ', still outside the ' + goal + ' goal';
+                if (style === 'support') return ', leaving it ' + off + side + goal + ' goal';
+                return ', and it is still ' + off + side + goal + ' goal';
             case 'crossed-up':
                 if (style === 'brief') return ', clearing the ' + goal + ' goal in ' + story.at.name;
                 if (style === 'support') return ', and it has been inside the ' + goal + ' goal since ' + story.at.name;
@@ -574,9 +687,17 @@
         var split = splitForBoxes(ctx);
         var name = ctx.firstName;
 
+        // A metric raised as a slide in the focus box is not also given the
+        // full treatment in the strengths box. Saying the same three
+        // sentences twice in one document is how a reader stops reading.
+        var raisedAsSlide = (!split.focus.length && split.watch.length)
+            ? split.watch[0].metricKey : null;
+
         // Depth falls away down the list. The first strength is the one the
         // supervisor would lead with in the room, and the fourth is a clause.
-        var strengthLines = split.strengths.slice(0, 4)
+        var strengthLines = split.strengths
+            .filter(function (m) { return m.metricKey !== raisedAsSlide; })
+            .slice(0, 4)
             .map(function (m, i) {
                 return metricSentence(m, ctx, i === 0 ? 'lead' : i === 1 ? 'support' : 'brief');
             })
@@ -593,6 +714,15 @@
         if (focusLines.length) {
             box2Parts.push(focusLines.join(' '));
             box2Parts.push(_focusClose(split.focus, ctx));
+        } else if (split.watch.length) {
+            // Nothing missed, but something is sliding toward a miss. That is
+            // the conversation worth having now, and "everything is at goal"
+            // would bury it.
+            var slide = split.watch[0];
+            box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel + '.');
+            box2Parts.push(metricSentence(slide, ctx, 'lead'));
+            box2Parts.push('It is still at goal, so this is one to watch rather than fix, and the aim is to stop the slide over '
+                + _quartersLeftPhrase(ctx) + '.');
         } else {
             box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel
                 + '. The focus for the rest of the year is holding that through '

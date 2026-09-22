@@ -160,6 +160,94 @@ suite('quarter review: a slipping metric is named plainly', (t) => {
     t.check('not in the strengths box', !/slipped/.test(notes.box1));
 });
 
+/* ── A claim about every quarter needs every quarter behind it ──
+ *
+ * Direction is computed from the first quarter against the last, which is
+ * right for a headline and wrong for a sentence. Endpoint logic called
+ * 420, 470, 418 "came down in each quarter this year" and called 95, 88, 95
+ * "held steady". Both are false statements, and they were going into
+ * personnel records.
+ */
+
+suite('quarter review: a path that reversed is not called a steady climb', (t) => {
+    t.pinClock('2026-09-22');
+    const swung = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Dip Recovery', { aht: 420, scheduleAdherence: 95 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Dip Recovery', { aht: 470, scheduleAdherence: 88 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Dip Recovery', { aht: 418, scheduleAdherence: 95 })])
+    );
+    const { qr, ctx } = ctxFor(t, swung, 'Dip Recovery');
+
+    const aht = qr.metricSentence(ctx.metrics.find((m) => m.metricKey === 'aht'), ctx, 'lead');
+    t.check('it is not claimed to have fallen every quarter', !/came down in each quarter/.test(aht));
+    t.check('the reversal is described as one', /moved around this year/.test(aht));
+    t.check('and the quarter it went wrong in is named', /spike to 470s in Q2/.test(aht));
+    t.check('all three readings are still shown',
+        /420s in Q1/.test(aht) && /470s in Q2/.test(aht) && /418s in Q3/.test(aht));
+
+    // 95, 88, 95 nets to zero, which is how it came out as "held steady" and
+    // erased the one quarter worth talking about.
+    const adh = qr.metricSentence(ctx.metrics.find((m) => m.metricKey === 'scheduleAdherence'), ctx, 'support');
+    t.check('a seven point drop and recovery is not "held steady"', !/held steady/.test(adh));
+    t.check('the middle quarter is still on the record', /88% in Q2/.test(adh));
+});
+
+suite('quarter review: only a real monotonic run claims every quarter', (t) => {
+    t.pinClock('2026-09-22');
+    const steady = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('True Climb', { aht: 451 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('True Climb', { aht: 438 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('True Climb', { aht: 421 })])
+    );
+    const { qr, ctx } = ctxFor(t, steady, 'True Climb');
+    const sentence = qr.metricSentence(ctx.metrics.find((m) => m.metricKey === 'aht'), ctx, 'lead');
+    t.check('a genuine run every quarter says so', /came down in each quarter this year/.test(sentence));
+});
+
+suite('quarter review: a lower-is-better metric is over goal, not short of it', (t) => {
+    t.pinClock('2026-09-22');
+    const behind = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Slow Talker', { aht: 480, scheduleAdherence: 88 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Slow Talker', { aht: 478, scheduleAdherence: 88 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Slow Talker', { aht: 475, scheduleAdherence: 89 })])
+    );
+    const { qr, ctx } = ctxFor(t, behind, 'Slow Talker');
+
+    // 475 against a 426 goal is 49 seconds ABOVE it. "Short of" means below,
+    // which is the opposite of what is wrong with the number.
+    const aht = qr.metricSentence(ctx.metrics.find((m) => m.metricKey === 'aht'), ctx, 'support');
+    t.check('handle time over goal reads as above it', /49 seconds above the 426s goal/.test(aht));
+    t.check('and never as short of it', !/short of/.test(aht));
+
+    // Adherence below a minimum genuinely is short of it.
+    const adh = qr.metricSentence(ctx.metrics.find((m) => m.metricKey === 'scheduleAdherence'), ctx, 'support');
+    t.check('a min-type metric under goal is short of it', /short of the 93% goal/.test(adh));
+});
+
+suite('quarter review: a metric sliding while still at goal is raised', (t) => {
+    t.pinClock('2026-09-22');
+    const sliding = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Slow Slide', { aht: 395 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Slow Slide', { aht: 405 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Slow Slide', { aht: 415 })])
+    );
+    const { qr, ctx } = ctxFor(t, sliding, 'Slow Slide');
+    const split = qr.splitForBoxes(ctx);
+
+    t.equal('nothing is actually missed', split.focus.length, 0);
+    t.check('but the slide is flagged', split.watch.length > 0);
+    t.equal('and it is the handle time', split.watch[0].metricKey, 'aht');
+
+    const notes = qr.buildNotes(ctx);
+    t.check('the focus box says everything is at goal', /at goal for Q3 2026/.test(notes.box2));
+    t.check('and still raises the slide', /395s in Q1/.test(notes.box2));
+    t.check('framed as watching rather than fixing', /watch rather than fix/.test(notes.box2));
+
+    // Raised in one box, not both. The same three sentences twice in one
+    // document is how a reader stops reading.
+    t.check('it is not repeated in the strengths box', !/395s in Q1/.test(notes.box1));
+});
+
 /* ── Reliability is the year, never the quarter ── */
 
 suite('quarter review: missed hours are the year running total', (t) => {
