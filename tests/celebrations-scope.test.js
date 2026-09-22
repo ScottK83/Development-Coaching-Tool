@@ -1236,3 +1236,22 @@ suite('celebrations: an unknown period is treated as still running', (t) => {
     t.check('and so has a quarter',
         loadWithPeriod(t, '2026-04-01|2026-06-30', 'quarter').periodIsComplete('2026-04-01|2026-06-30') === true);
 });
+
+/* Every shout-out line is its own bullet, so no stem may open as though it
+   were finishing the sentence before it. "That is 83.8% on First Call
+   Resolution!" read as a fragment in the channel post. Scott, 2026-09-21. */
+suite('celebrations: no line opens mid-sentence', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(ROOT, 'modules/celebrations.module.js'), 'utf8');
+    const block = src.slice(src.indexOf('var BATCH_METRIC_STEMS'), src.indexOf('var BATCH_LINE_ICONS'));
+    t.check('the stem blocks were found', block.length > 200);
+
+    const openers = (block.match(/return '([A-Za-z][^']*?)'/g) || [])
+        .map((m) => m.replace(/^return '/, ''));
+    t.check('there are stems to check', openers.length > 5);
+
+    // A stem starting with one of these needs a sentence in front of it.
+    const leaning = openers.filter((s) => /^(That|This|It|Which|And|Also|Plus)\b/i.test(s));
+    t.check('no stem leans on a previous sentence, ' + JSON.stringify(leaning), leaning.length === 0);
+});

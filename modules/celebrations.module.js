@@ -1594,7 +1594,11 @@
         function(label, val) { return 'Took ' + label + ' to ' + val + '!'; },
         function(label, val) { return val + ' on ' + label + ', and it holds up!'; },
         function(label, val) { return label + ' is at ' + val + '!'; },
-        function(label, val) { return 'That is ' + val + ' on ' + label + '!'; }
+        // No stem that leans on a sentence before it. "That is 83.8% on First
+        // Call Resolution!" opens a bullet as though it were finishing one,
+        // and every one of these has to stand on its own. Scott, 2026-09-21.
+        function(label, val) { return 'Hit ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Posted ' + val + ' on ' + label + '!'; }
     ];
 
     // Only drawn from once the period has actually ended. "Finished the period
