@@ -97,11 +97,14 @@
         var host = document.getElementById(CONTENT_ID);
         if (!host) return;
 
-        var qt = _qt();
-        if (!qt) {
-            host.innerHTML = '<p style="padding:24px;color:var(--text-tertiary);">Quarter data is unavailable.</p>';
+        // Both are needed to draw anything. Guarding only the first left the
+        // second to throw halfway through a render, on a blank panel.
+        if (!_qt() || !_qr()) {
+            host.innerHTML = '<p style="padding:24px;color:var(--text-tertiary);">'
+                + 'The quarterly review modules did not load. Reload the page, and if it persists the app needs a look.</p>';
             return;
         }
+        var qt = _qt();
 
         if (state.year === null) state.year = _defaultYear();
         if (!Object.keys(state.notes).length) state.notes = _loadNotes();
@@ -449,43 +452,63 @@
     }
 
     function _bindAssociateControls() {
-        // Redrawn on blur rather than on every keystroke: the notes feed the
-        // generated text, and rebuilding the document mid-word moves the
-        // caret out from under whoever is typing.
+        // Saved on blur, and the two boxes are rewritten in place rather than
+        // the panel being re-rendered.
+        //
+        // A full render here destroyed the element that was about to receive
+        // the click that caused the blur, so typing a note and then clicking
+        // Copy did nothing at all: the button was replaced between mousedown
+        // and mouseup. Rewriting the text of two divs leaves every control
+        // where it was.
         _on('quarterReviewNotes', 'blur', function (e) {
             var value = e.target.value || '';
             if (value === (state.notes[_noteKey()] || '')) return;
             state.notes[_noteKey()] = value;
             _saveNotes();
-            render();
+            _refreshBoxes();
         });
 
-        var built = _currentDocument();
-        if (!built) return;
-
+        // Rebuilt at click time rather than captured now, so a note typed
+        // since the last render is in whatever gets copied.
         _on('quarterReviewCopyAll', 'click', function () {
-            _copy(built.notes.full, 'Check-in document copied.');
+            var built = _currentDocument();
+            if (built) _copy(built.notes.full, 'Check-in document copied.');
         });
         _on('quarterReviewCopy1', 'click', function () {
-            _copy(built.notes.box1, 'Progress and strengths copied.');
+            var built = _currentDocument();
+            if (built) _copy(built.notes.box1, 'Progress and strengths copied.');
         });
         _on('quarterReviewCopy2', 'click', function () {
-            _copy(built.notes.box2, 'Areas of focus copied.');
+            var built = _currentDocument();
+            if (built) _copy(built.notes.box2, 'Areas of focus copied.');
         });
         _on('quarterReviewCopyPrompt', 'click', function () {
-            _copy(built.prompt, 'Copilot prompt copied.');
+            var built = _currentDocument();
+            if (built) _copy(built.prompt, 'Copilot prompt copied.');
         });
         _on('quarterReviewCopilot', 'click', function () {
-            _copy(built.prompt, 'Prompt copied. Paste it into Copilot.');
+            var built = _currentDocument();
+            if (!built) return;
+            // openCopilotWithPrompt copies the prompt and raises its own
+            // toast. Copying here as well put the same text on the clipboard
+            // twice and stacked two notifications saying different things.
             if (typeof window.openCopilotWithPrompt === 'function') {
                 window.openCopilotWithPrompt(built.prompt,
-                    state.quarters && state.quarter
-                        ? 'Q' + state.quarter + ' check-in for ' + built.ctx.firstName
-                        : 'Quarterly check-in');
+                    'Q' + state.quarter + ' check-in for ' + built.ctx.firstName);
             } else {
-                _toast('Copilot could not be opened. The prompt is on your clipboard.');
+                _copy(built.prompt, 'Prompt copied. Paste it into Copilot.');
             }
         });
+    }
+
+    /* Rewrite just the two boxes, leaving every control in place. */
+    function _refreshBoxes() {
+        var built = _currentDocument();
+        if (!built) return;
+        var one = document.getElementById('quarterReviewBox1');
+        var two = document.getElementById('quarterReviewBox2');
+        if (one) one.textContent = built.notes.box1;
+        if (two) two.textContent = built.notes.box2;
     }
 
     function _currentDocument() {

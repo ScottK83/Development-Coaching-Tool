@@ -488,6 +488,51 @@ suite('quarter review: a survey quarter resting on two responses is not quoted',
     t.check('the solid quarters are', /84%/.test(sentence) && /85%/.test(sentence));
 });
 
+suite('quarter review: a thin quarter does not decide the verdict either', (t) => {
+    t.pinClock('2026-09-22');
+    // The floor kept a two response quarter out of the prose but not out of
+    // the verdict, so the newest quarter set "at goal" for the whole document
+    // off two people while the sentence under it quoted the real quarters.
+    const thinLatest = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Late Thin', {
+            cxRepOverall: 70, repSurveyTotal: 40, surveyTotal: 40
+        })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Late Thin', {
+            cxRepOverall: 71, repSurveyTotal: 40, surveyTotal: 40
+        })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Late Thin', {
+            cxRepOverall: 99, repSurveyTotal: 2, surveyTotal: 2
+        })])
+    );
+    const { ctx } = ctxFor(t, thinLatest, 'Late Thin');
+    const rep = ctx.metrics.find((m) => m.metricKey === 'cxRepOverall');
+
+    t.equal('the verdict comes from the newest solid quarter', rep.latestQuarter, 'Q2');
+    t.equal('which is 71%', rep.latestValue, 71);
+    t.equal('so it is below the 82% goal', rep.meetsTarget, false);
+    t.check('and not read as at goal off two surveys', rep.meetsTarget !== true);
+});
+
+suite('quarter review: a metric with no solid quarter is left out', (t) => {
+    t.pinClock('2026-09-22');
+    const allThin = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('All Thin', {
+            cxRepOverall: 99, repSurveyTotal: 1, surveyTotal: 1
+        })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('All Thin', {
+            cxRepOverall: 20, repSurveyTotal: 2, surveyTotal: 2
+        })])
+    );
+    const { qr, ctx } = ctxFor(t, allThin, 'All Thin');
+
+    t.check('rep satisfaction is not in the document at all',
+        !ctx.metrics.some((m) => m.metricKey === 'cxRepOverall'));
+
+    const notes = qr.buildNotes(ctx);
+    const body = notes.box1 + ' ' + notes.box2;
+    t.check('so neither reading reaches the record', !/99%/.test(body) && !/20%/.test(body));
+});
+
 suite('quarter review: one quarter of data makes no claim about a year', (t) => {
     t.pinClock('2026-09-22');
     const { qr, ctx } = ctxFor(t, period('quarter', '2026-07-01', '2026-09-30',
@@ -512,6 +557,32 @@ suite('quarter review: a missing quarter is reported, not invented', (t) => {
     t.equal('two quarters carried data', ctx.coverage.quartersWithData, 2);
     t.equal('three were asked for', ctx.coverage.quartersRequested, 3);
     t.equal('and the empty one is named', ctx.coverage.missing.join(','), 'Q1');
+});
+
+suite('quarter review: the header covers this associate, not the team', (t) => {
+    t.pinClock('2026-09-22');
+    // A quarter is not empty as soon as anyone is in it, so a header built off
+    // that claimed a full year for somebody who started in July. Dates in a
+    // file note are the part a reader trusts without checking.
+    const joinedLate = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Been Here')]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Been Here')]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Been Here'), person('Joined July')])
+    );
+    const { qr, ctx } = ctxFor(t, joinedLate, 'Joined July');
+
+    t.equal('only the quarter they were here for counts', ctx.coverage.quartersWithData, 1);
+    t.equal('and the ones before are named as missing',
+        ctx.coverage.missing.join(','), 'Q1,Q2');
+
+    const header = qr.buildHeader(ctx);
+    t.check('the span starts in July', /07\/01\/2026/.test(header));
+    t.check('not in January', !/01\/01\/2026/.test(header));
+
+    // Somebody who was here all year still reads as all year.
+    const full = ctxFor(t, joinedLate, 'Been Here');
+    t.equal('a full year is still a full year', full.ctx.coverage.quartersWithData, 3);
+    t.check('and its header says so', /01\/01\/2026/.test(full.qr.buildHeader(full.ctx)));
 });
 
 /* ── The prompt ── */

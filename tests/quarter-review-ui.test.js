@@ -14,7 +14,9 @@
  * sitting in the store alongside the quarters must not reach the table.
  */
 
-const { suite } = require('./harness');
+const fs = require('fs');
+const path = require('path');
+const { suite, ROOT } = require('./harness');
 
 const PREFIX = 'devCoachingTool_';
 
@@ -206,6 +208,50 @@ suite('quarterly tab: the rendered copy holds the house rules', (t) => {
     [/off[- ]track/i, /on[- ]track/i, /\bexceptional\b/i, /\btier\b/i].forEach((re) => {
         t.check(`no rating vocabulary matching ${re}`, !re.test(html));
     });
+});
+
+suite('quarterly tab: typing a note does not destroy the button you click next', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/quarter-review-ui.module.js'), 'utf8');
+
+    // A full render on blur replaced the panel between mousedown and mouseup,
+    // so typing a note and then clicking Copy did nothing at all. The two
+    // boxes are rewritten in place instead.
+    const blur = src.slice(src.indexOf("'quarterReviewNotes', 'blur'"));
+    const handler = blur.slice(0, blur.indexOf('});'));
+    t.check('the blur handler does not re-render', !/\brender\(\)/.test(handler));
+    t.check('it refreshes the boxes in place', /_refreshBoxes\(\)/.test(handler));
+    t.check('and still saves the note', /_saveNotes\(\)/.test(handler));
+    t.check('_refreshBoxes writes text, not markup',
+        /one\.textContent = built\.notes\.box1/.test(src));
+});
+
+suite('quarterly tab: the Copilot button copies once', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/quarter-review-ui.module.js'), 'utf8');
+    const exec = fs.readFileSync(path.join(ROOT, 'modules/executive-summary.module.js'), 'utf8');
+
+    // openCopilotWithPrompt copies the prompt and raises its own toast, so
+    // copying here too put the same text on the clipboard twice and stacked
+    // two notifications saying different things.
+    t.check('the shared opener copies for itself',
+        /function openCopilotWithPrompt[\s\S]{0,700}copyToClipboard\(prompt/.test(exec));
+
+    const btn = src.slice(src.indexOf("'quarterReviewCopilot', 'click'"));
+    const handler = btn.slice(0, btn.indexOf('\n        });'));
+    const copiesItself = (handler.match(/_copy\(/g) || []).length;
+    t.equal('this handler copies only on the fallback path', copiesItself, 1);
+    t.check('and that path is the one where the opener is missing',
+        /if \(typeof window\.openCopilotWithPrompt === 'function'\)[\s\S]*\} else \{[\s\S]*_copy\(/.test(handler));
+});
+
+suite('quarterly tab: the tab never falls back to the view it replaced', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const handler = script.slice(script.indexOf("subNavRpQuarterly')?.addEventListener"));
+    const body = handler.slice(0, handler.indexOf('});'));
+
+    // Quietly reverting to the old view would put year-to-date numbers under a
+    // quarter heading again, and the supervisor reading it could not tell.
+    t.check('the quarter review is called', /renderQuarterReview\(\)/.test(body));
+    t.check('and nothing calls the old one', !/renderQ1Review\(\)/.test(body));
 });
 
 suite('quarterly tab: a name with markup in it cannot break the page', (t) => {

@@ -154,8 +154,26 @@
             if (!series.measuredCount) return;
 
             var target = _targetFor(metricKey, year);
-            var latest = series.last;
             var usable = _usablePoints(metricKey, series);
+
+            // Standing is read off the newest quarter solid enough to quote,
+            // not simply the newest one there is.
+            //
+            // The floor already kept a two response quarter out of the prose.
+            // It did not keep it out of the verdict, so a quarter where two
+            // people happened to answer set "at goal" for the whole document
+            // while the sentence beneath quoted the quarters that actually had
+            // surveys behind them. When no quarter clears the floor, nothing
+            // is claimed either way rather than falling back to the thinnest
+            // reading available.
+            var isSurvey = !!(window.SURVEY_WEIGHT_FIELD || {})[metricKey];
+            var latest = usable.length ? usable[usable.length - 1]
+                : (isSurvey ? null : series.last);
+
+            // Every quarter too thin to quote leaves nothing to say. The
+            // metric is dropped rather than carried through with a null
+            // verdict for each box to interpret on its own.
+            if (isSurvey && !usable.length) return;
 
             metrics.push({
                 metricKey: metricKey,
@@ -184,7 +202,7 @@
             current: current,
             metrics: metrics,
             reliability: _reliabilityFacts(employeeName, year, scoped),
-            coverage: _coverageFacts(scoped),
+            coverage: _coverageFacts(scoped, employeeName),
             preparedOn: opts.preparedOn || _today()
         };
     }
@@ -313,15 +331,25 @@
         return Number.isFinite(value) ? value : NaN;
     }
 
-    function _coverageFacts(quarters) {
-        var measured = quarters.filter(function (q) { return !q.empty; });
+    /* What this associate's document actually covers.
+     *
+     * Per associate, not per quarter. A quarter is "not empty" as soon as
+     * anyone is in it, so a header built off that claimed the document covered
+     * January through September for somebody who joined in July, and the dates
+     * in a file note are the part a reader trusts without checking.
+     */
+    function _coverageFacts(quarters, employeeName) {
+        var mine = quarters.filter(function (q) {
+            return q.employees && q.employees[employeeName];
+        });
         return {
-            quartersWithData: measured.length,
+            quartersWithData: mine.length,
             quartersRequested: quarters.length,
-            missing: quarters.filter(function (q) { return q.empty; })
-                .map(function (q) { return q.name; }),
-            spanStart: measured.length ? measured[0].spanStart || measured[0].startDate : null,
-            spanEnd: measured.length ? measured[measured.length - 1].spanEnd || measured[measured.length - 1].endDate : null
+            missing: quarters.filter(function (q) {
+                return !(q.employees && q.employees[employeeName]);
+            }).map(function (q) { return q.name; }),
+            spanStart: mine.length ? mine[0].spanStart || mine[0].startDate : null,
+            spanEnd: mine.length ? mine[mine.length - 1].spanEnd || mine[mine.length - 1].endDate : null
         };
     }
 
