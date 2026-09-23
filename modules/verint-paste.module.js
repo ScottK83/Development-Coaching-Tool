@@ -31,7 +31,12 @@
 
     // A run of text and the colour it was wearing.
     const BLOCK_TAGS = new Set(['br', 'p', 'div', 'tr', 'li', 'h1', 'h2', 'h3', 'h4', 'table', 'tbody']);
-    const SKIP_TAGS = new Set(['style', 'script', 'head', 'meta', 'title']);
+    // Tags whose contents are never speech. Only tags that close belong here:
+    // <meta> used to be listed, and since it never closes, the <meta
+    // charset="utf-8"> that Edge puts at the front of a copy switched the
+    // skipping on for the rest of the paste. Every paste from Outlook on the
+    // web came out empty.
+    const SKIP_TAGS = new Set(['style', 'script', 'head', 'title', 'xml']);
     // Tags that never close. Written as <br> far more often than <br/>, and the
     // slash is the only thing the loop below used to check -- so a plain <br>
     // pushed a style frame that nothing ever popped. The next real </span> then
@@ -82,21 +87,35 @@
      * class based styling is common enough to be worth catching.
      */
     function styleKeyOf(attributes) {
-        const attrs = String(attributes || '');
-
-        const inline = attrs.match(/style\s*=\s*["']([^"']*)["']/i);
+        const inline = attributeValue(attributes, 'style');
         if (inline) {
-            const colour = inline[1].match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+            const colour = decode(inline).match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
             if (colour) return `c:${normalizeColour(colour[1])}`;
         }
 
-        const fontColour = attrs.match(/\bcolor\s*=\s*["']?([^"'\s>]+)/i);
-        if (fontColour) return `c:${normalizeColour(fontColour[1])}`;
+        const fontColour = attributeValue(attributes, 'color');
+        if (fontColour) return `c:${normalizeColour(fontColour)}`;
 
-        const className = attrs.match(/class\s*=\s*["']([^"']*)["']/i);
-        if (className && className[1].trim()) return `k:${className[1].trim().toLowerCase()}`;
+        const className = attributeValue(attributes, 'class');
+        if (className && className.trim()) return `k:${className.trim().toLowerCase()}`;
 
         return '';
+    }
+
+    /**
+     * One attribute's value, however it was quoted.
+     *
+     * Desktop Outlook writes style='font-family:"Calibri",sans-serif;color:#0070C0'.
+     * Double quotes inside single quotes, and class=MsoNormal with no quotes at
+     * all. The old pattern stopped at the first quote of either kind, so it read
+     * the style as far as the font name and never reached the colour. Every
+     * line of a paste from Outlook then looked the same.
+     */
+    function attributeValue(attributes, name) {
+        const pattern = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i');
+        const match = String(attributes || '').match(pattern);
+        if (!match) return '';
+        return match[1] ?? match[2] ?? match[3] ?? '';
     }
 
     // One colour written three ways has to group as one, and a transcript
@@ -139,7 +158,9 @@
      * and font tags carrying a colour.
      */
     function extractRuns(html) {
-        const source = String(html || '');
+        // The Windows clipboard header ("Version:0.9 StartHTML:...") arrives
+        // in front of the markup when a browser hands it over raw.
+        const source = String(html || '').replace(/^\s*Version:\d[\s\S]*?(?=<)/, '');
         const runs = [];
         const stack = [];
         let index = 0;
@@ -167,6 +188,14 @@
                 break;
             }
             if (open > index) push(source.slice(index, open));
+
+            // A comment ends at -->, not at the first >. Outlook's are full of
+            // markup ("<!--[if gte mso 9]><xml>...</xml><![endif]-->").
+            if (source.startsWith('<!--', open)) {
+                const end = source.indexOf('-->', open + 4);
+                index = end === -1 ? source.length : end + 3;
+                continue;
+            }
 
             const close = source.indexOf('>', open);
             if (close === -1) break;
@@ -217,7 +246,22 @@
      * the advisor and the other one is the customer. When the greeting cannot
      * be found in exactly one group, this gives up rather than guessing.
      */
-    function attribute(runs, options = {}) {
+    // Where the transcript sits inside a whole Interaction Review email. The
+    // same markers call-transcript cuts the boilerplate on.
+    const BODY_START = /No visual indicators/i;
+    const BODY_END = /^(?:Did advisor |Additional Comments$|Notes on Soft Skills$|Kudos\/Compliments$|Call Opportunities$)|This message is for the designated recipient/i;
+
+    /**
+     * The runs as lines, and which of those lines are somebody speaking.
+     *
+     * Copying the whole email brings the header and the QA form with it, in
+     * the email's own text colour. Counted in with the speech, that colour
+     * was a third speaker and every such paste declined. So only the
+     * transcript body is counted: after Verint's "No visual indicators" line,
+     * before the form, and where the call is timestamped, only the line under
+     * each timestamp. Everything else passes through as it was.
+     */
+    function readLines(runs) {
         const lines = [];
         let current = null;
 
@@ -238,16 +282,37 @@
             }))
             .filter((line) => line.text);
 
-        if (!spoken.length) return null;
+        let start = 0;
+        spoken.forEach((line, i) => { if (BODY_START.test(line.text)) start = i + 1; });
+        let end = spoken.length;
+        for (let i = start; i < spoken.length; i++) {
+            if (BODY_END.test(spoken[i].text)) { end = i; break; }
+        }
+
+        const timestamped = spoken.slice(start, end).some((line) => TIMESTAMP.test(line.text));
+        spoken.forEach((line, i) => {
+            line.inBody = i >= start && i < end;
+            line.speech = line.inBody
+                && !TIMESTAMP.test(line.text)
+                && /[a-z]{2}/i.test(line.text)
+                && (!timestamped || (i > 0 && TIMESTAMP.test(spoken[i - 1].text)));
+        });
 
         // Two groups is what a two sided conversation looks like. One means the
         // colour never came through; three or more means this is not speaker
         // colouring and reading it as such would be inventing attribution.
         const weight = {};
         spoken.forEach((line) => {
-            if (TIMESTAMP.test(line.text) || !line.key) return;
+            if (!line.speech || !line.key) return;
             weight[line.key] = (weight[line.key] || 0) + line.text.length;
         });
+
+        return { spoken, weight };
+    }
+
+    function attribute(runs, options = {}) {
+        const { spoken, weight } = readLines(runs);
+        if (!spoken.length) return null;
 
         const keys = Object.keys(weight).sort((a, b) => weight[b] - weight[a]);
         if (keys.length !== 2) return null;
@@ -257,10 +322,20 @@
             .split(/[\s,]+/)
             .filter((part) => part.length > 2);
 
+        // The greeting only counts near the front of a side's turns. Customers
+        // say "my name is" too, and on the sample export one did, so matching it
+        // anywhere gave both sides the same score and the paste declined. The
+        // side that greets first wins a tie: the advisor opens the call. Opening
+        // without a greeting proves nothing, because a paste can start anywhere.
+        const speech = spoken.filter((line) => line.speech && keys.includes(line.key));
+        const opener = speech.length ? speech[0].key : '';
+
         const scoreFor = (key) => {
-            const said = spoken.filter((line) => line.key === key).map((line) => line.text).join(' ');
-            let score = AGENT_GREETING.test(said) ? 10 : 0;
-            if (named.some((part) => said.toLowerCase().includes(part))) score += 4;
+            const turns = speech.filter((line) => line.key === key).map((line) => line.text);
+            let score = 0;
+            if (AGENT_GREETING.test(turns.slice(0, 2).join(' '))) score += key === opener ? 13 : 10;
+            const said = ` ${turns.join(' ').toLowerCase()} `;
+            if (named.some((part) => said.includes(` ${part} `))) score += 4;
             return score;
         };
 
@@ -273,7 +348,7 @@
 
         const agentKey = first > second ? keys[0] : keys[1];
 
-        return { spoken, agentKey };
+        return { spoken, agentKey, speakerKeys: keys };
     }
 
     /**
@@ -290,7 +365,7 @@
             const attributed = attribute(runs, options);
             if (!attributed) return null;
 
-            const { spoken, agentKey } = attributed;
+            const { spoken, agentKey, speakerKeys } = attributed;
             const out = [];
             let labelled = 0;
 
@@ -299,7 +374,10 @@
                     out.push(line.text.trim());
                     return;
                 }
-                if (!line.key) {
+                // The email header and the QA form keep their own text as it
+                // was. "Customer: Date/Time:" is how they came out before, and
+                // then nothing downstream could read the call date.
+                if (!line.inBody || !speakerKeys.includes(line.key)) {
                     out.push(line.text);
                     return;
                 }
@@ -351,34 +429,14 @@
         try { runs = extractRuns(source); } catch (error) { runs = []; }
         out.runs = runs.length;
 
-        // The same grouping attribute() does, kept close to it on purpose.
-        const lines = [];
-        let current = null;
-        runs.forEach((run) => {
-            if (run.newline) { current = null; return; }
-            if (!current) { current = { text: '', keys: {} }; lines.push(current); }
-            current.text = `${current.text}${run.text}`;
-            if (run.key) current.keys[run.key] = (current.keys[run.key] || 0) + run.text.trim().length;
-        });
-
-        const spoken = lines
-            .map((line) => ({
-                text: line.text.replace(/\s+/g, ' ').trim(),
-                key: Object.keys(line.keys).sort((a, b) => line.keys[b] - line.keys[a])[0] || ''
-            }))
-            .filter((line) => line.text);
+        // The same grouping attribute() does, so the two cannot disagree.
+        const { spoken, weight } = readLines(runs);
         out.lines = spoken.length;
-
-        const weight = {};
-        spoken.forEach((line) => {
-            if (TIMESTAMP.test(line.text) || !line.key) return;
-            weight[line.key] = (weight[line.key] || 0) + line.text.length;
-        });
         out.groups = Object.keys(weight)
             .sort((a, b) => weight[b] - weight[a])
             .map((key) => ({ key, characters: weight[key] }));
 
-        out.greeting = spoken.some((line) => AGENT_GREETING.test(line.text));
+        out.greeting = spoken.some((line) => line.speech && AGENT_GREETING.test(line.text));
 
         const converted = toLabelledTranscript(source, options);
         if (converted) {

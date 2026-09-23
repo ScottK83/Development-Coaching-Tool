@@ -568,7 +568,7 @@
             });
 
             scan.unusedPositives.forEach(item => {
-                bump('positiveUnused', 'unused', `Never says "${item.phrase}"${item.zone ? `, and the call had ${item.zone} to say it on` : ''}.`, {
+                bump('positiveUnused', 'unused', `Never says "${item.phrase}"${item.zone ? `, which would have fit ${item.zone}` : ''}.`, {
                     date, phrase: item.phrase, weight: 4
                 });
             });

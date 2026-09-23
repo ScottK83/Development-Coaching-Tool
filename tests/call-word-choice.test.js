@@ -218,3 +218,26 @@ suite('call word choice: the phrase lists', (t) => {
     // so no tip may coach against it.
     t.check('"no problem" is still on the positive list', db.positive.A.some(p => /^no problem$/i.test(p)));
 });
+
+suite('call word choice: a close she made is not a close she missed', (t) => {
+    const { callWordChoice } = load(t);
+
+    // She said "anything else". Its relatives on the list ("anything else
+    // help", "anything else you") used to be reported as never said, and the
+    // metric message told her so.
+    const CLOSED = [
+        'Agent: Thank you for calling, my name is Jamie, how can I help?',
+        'Customer: I need to change my due date.',
+        'Agent: That is updated for the 20th.',
+        'Customer: Great, thanks.',
+        'Agent: You are welcome, is there anything else I can help you with today?',
+        'Customer: No, that is it.'
+    ].join('\n');
+
+    const scan = callWordChoice.scanTranscript(CLOSED, { associateName: 'Jamie' });
+    t.check('she is credited with the close', scan.positiveA.some(hit => /anything else/i.test(hit.phrase)));
+    t.equal('no phrase from the anything-else family is suggested',
+        scan.unusedPositives.filter(item => /anything else/i.test(item.phrase)).map(item => item.phrase).join(', ') || '(none)', '(none)');
+    t.check('nothing is suggested for the close she already made',
+        !scan.unusedPositives.some(item => item.zone === 'closing the call'));
+});

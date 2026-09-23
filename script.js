@@ -8279,6 +8279,12 @@ function handleTranscriptPaste(event) {
         catch (error) { return ''; }
     })();
 
+    // A new call pasted over the whole box: what was read off the old one no
+    // longer describes anything on screen.
+    const replacesAll = !field.value.trim()
+        || (field.selectionStart === 0 && field.selectionEnd === field.value.length);
+    if (replacesAll) resetCallListeningReadPanels();
+
     // Kept whether or not it converts, because the one that does not convert
     // is the one somebody needs to be able to look at.
     lastTranscriptPasteHtml = html;

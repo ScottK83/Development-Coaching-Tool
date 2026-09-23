@@ -297,9 +297,19 @@
     function findUnusedPositives(positiveList, usedRaw, missingRuleKeys) {
         const used = new Set(usedRaw);
         const missing = new Set(missingRuleKeys || []);
+        const usedPadded = [...used].map(phrase => ` ${normalize(phrase)} `);
+        // A moment she already filled with a scored phrase is not a moment
+        // she missed. Saying "anything else" and being told she never says
+        // "anything else help" was a false statement in a message to her.
+        const coveredZones = new Set([...used].map(phrase => zoneFor(phrase)?.key).filter(Boolean));
 
         return (Array.isArray(positiveList) ? positiveList : [])
             .filter(phrase => !used.has(phrase))
+            .filter(phrase => {
+                const padded = ` ${normalize(phrase)} `;
+                return !usedPadded.some(other => padded.includes(other) || other.includes(padded));
+            })
+            .filter(phrase => !coveredZones.has(zoneFor(phrase)?.key))
             .map(phrase => {
                 const zone = zoneFor(phrase);
                 return {

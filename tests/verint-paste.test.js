@@ -243,7 +243,7 @@ suite('verint paste: wiring', (t) => {
     t.check('the default paste is only prevented after a successful read',
         /if \(!converted\?\.text\) return;[\s\S]{0,200}event\.preventDefault\(\)/.test(script));
     t.check('and the associate name is passed in to help identify the advisor',
-        /handleTranscriptPaste[\s\S]{0,900}advisorName/.test(script));
+        /handleTranscriptPaste[\s\S]{0,1400}advisorName/.test(script));
     t.check('it says what it did', /Read the colour coding/.test(script));
 
     // The button exists, is wired, and the markup is kept even when the
@@ -270,4 +270,56 @@ suite('verint paste: wiring', (t) => {
         /rolesFromTimestampedLabels\(timestamped\), true/.test(transcript));
     t.check('and a mostly unlabelled one still infers',
         /inferRolesByFlow\(attributeByCue\(timestamped\)\), false/.test(transcript));
+});
+
+suite('verint paste: the shapes a copy from Outlook actually takes', (t) => {
+    const { verintPaste } = load(t);
+
+    const turns = [
+        ['00:03', 'A', 'thank you for being a valued customer my name is melissa who do i have the pleasure of speaking with'],
+        ['00:10', 'C', 'hello hi my name is elliot'],
+        ['00:13', 'A', 'alright and can i have your account number or the address on your account'],
+        ['00:19', 'C', 'i just have the address of the new apartment'],
+        ['00:27', 'A', 'okay have you called in to set up service']
+    ];
+    const header = ['Interaction Review', 'Date/Time:', '08/04/2026 12:38:26 PM', 'Dimes, Alyssa', '00:00', '/', '18:24', 'X 1.0', 'No visual indicators selected for display in transcription'];
+    const footer = ['Did advisor verify caller before sharing account information?', 'This message is for the designated recipient only.'];
+
+    // Outlook on the web in Edge: a <meta charset> first, the email's own text
+    // colour on the header and footer, and the speakers in rgb().
+    const owaColour = { A: 'rgb(0, 112, 192)', C: 'rgb(84, 130, 53)' };
+    const owa = '<meta charset="utf-8"><div style="font-family: &quot;Segoe UI&quot;; color: rgb(36, 36, 36);">'
+        + header.map((h) => `<div>${h}</div>`).join('')
+        + turns.map(([ts, s, x]) => `<div><span style="color: ${owaColour[s]};">${ts}</span></div><div><span style="color: ${owaColour[s]};">${x}</span></div>`).join('')
+        + footer.map((f) => `<div>${f}</div>`).join('') + '</div>';
+
+    const fromOwa = verintPaste.toLabelledTranscript(owa);
+    t.check('a paste that starts with <meta charset> still reads', !!fromOwa);
+    t.equal('every spoken line is labelled', fromOwa && fromOwa.labelled, 5);
+    t.check('the advisor is the side that greeted first, though the customer gave a name too',
+        !!fromOwa && /Agent: thank you for being a valued customer/.test(fromOwa.text)
+            && /Customer: hello hi my name is elliot/.test(fromOwa.text));
+    t.check('the header is left as it was, so the date still reads',
+        !!fromOwa && /^Date\/Time:$/m.test(fromOwa.text) && /^Dimes, Alyssa$/m.test(fromOwa.text));
+    t.check('the QA form is not put in anybody\'s mouth',
+        !!fromOwa && /^Did advisor verify/m.test(fromOwa.text));
+
+    // Classic Outlook: single quoted styles holding double quoted font names,
+    // unquoted classes, conditional comments full of markup.
+    const deskColour = { A: '#0070C0', C: '#548235' };
+    const desktop = 'Version:0.9\r\nStartHTML:0000000105\r\n'
+        + '<html><head><meta http-equiv=Content-Type content="text/html; charset=utf-8"><style><!-- p.MsoNormal {font-family:"Calibri",sans-serif;} --></style>'
+        + '<!--[if gte mso 9]><xml><o:shapedefaults v:ext="edit" /></xml><![endif]--></head><body lang=EN-US><!--StartFragment--><div class=WordSection1>'
+        + header.map((h) => `<p class=MsoNormal><span style='font-family:"Calibri",sans-serif'>${h}<o:p></o:p></span></p>`).join('')
+        + turns.map(([ts, s, x]) => `<p class=MsoNormal><span style='font-size:11.0pt;font-family:"Calibri",sans-serif;color:${deskColour[s]}'>${ts}<o:p></o:p></span></p>`
+            + `<p class=MsoNormal><span style='font-size:11.0pt;font-family:"Calibri",sans-serif;color:${deskColour[s]}'>${x}<o:p></o:p></span></p>`).join('')
+        + '</div><!--EndFragment--></body></html>';
+
+    const fromDesktop = verintPaste.toLabelledTranscript(desktop);
+    t.check('a paste from desktop Outlook reads its colours', !!fromDesktop);
+    t.equal('every spoken line is labelled', fromDesktop && fromDesktop.labelled, 5);
+    t.check('no clipboard header or comment leaks into the text',
+        !!fromDesktop && !/Version:|StartHTML|shapedefaults|MsoNormal/.test(fromDesktop.text));
+    t.equal('the style reader gets past a quoted font name',
+        verintPaste.styleKeyOf(` style='font-family:"Calibri",sans-serif;color:#0070C0'`), 'c:0,112,192');
 });
