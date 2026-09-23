@@ -723,7 +723,10 @@
         }
     }
 
-    function openRepoExcelFile(fileName) {
+    // The worker only hands a stored file over with the shared secret, which a
+    // bare link cannot send. So the file is fetched with the header and saved
+    // from the bytes. Only ever runs from a button the user clicks.
+    async function openRepoExcelFile(fileName) {
         const config = loadCallListeningSyncConfig();
         const endpoint = String(config?.endpoint || '').trim().replace(/\/+$/, '');
         if (!endpoint) {
@@ -739,7 +742,33 @@
             }
         }
 
-        window.open(fileUrl, '_blank');
+        let response;
+        try {
+            response = await fetch(fileUrl, {
+                method: 'GET',
+                cache: 'no-store',
+                headers: buildRepoSyncHeaders(config.sharedSecret)
+            });
+        } catch (error) {
+            showToast(`Could not reach the sync worker: ${error.message}`, 4500);
+            return;
+        }
+        if (!response.ok) {
+            const reason = response.status === 404 ? 'the file has not been uploaded yet'
+                : response.status === 401 ? 'the sync secret was refused'
+                : `HTTP ${response.status}`;
+            showToast(`Could not open ${fileName}: ${reason}.`, 4500);
+            return;
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     }
 
     async function fetchReferenceCsvFromWorkspaceOrRepo(fileName) {

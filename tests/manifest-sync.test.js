@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const { suite, ROOT } = require('./harness');
-const { createFakeR2, loadWorker, post } = require('./fake-r2');
+const { createFakeR2, loadWorker, post, TEST_SECRET } = require('./fake-r2');
 
 const PREFIX = 'devCoachingTool_';
 const worker = loadWorker(ROOT, path, fs);
@@ -33,7 +33,7 @@ function machine(t, bucket, deviceSeed) {
         const body = JSON.parse(opts.body);
         const response = await worker.fetch(post(body), {
             COACHING_BUCKET: bucket,
-            ALLOWED_ORIGIN: 'https://development-coaching-tool.pages.dev'
+            ALLOWED_ORIGIN: 'https://development-coaching-tool.pages.dev', SYNC_SHARED_SECRET: TEST_SECRET
         });
         const text = await response.text();
         return { ok: response.status === 200, status: response.status, json: async () => JSON.parse(text) };

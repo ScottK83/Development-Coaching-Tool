@@ -20,7 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const { suite, ROOT } = require('./harness');
-const { createFakeR2, loadWorker, post } = require('./fake-r2');
+const { createFakeR2, loadWorker, post, TEST_SECRET } = require('./fake-r2');
 
 const PREFIX = 'devCoachingTool_';
 
@@ -69,7 +69,7 @@ suite('sync: pulls go through applyRemoteStore, and a full pull refetches everyt
         global.window.DevCoachConstants = Object.assign({}, global.window.DevCoachConstants, { STORAGE_PREFIX: PREFIX });
         global.fetch = async (url, opts) => {
             const response = await worker.fetch(post(JSON.parse(opts.body)), {
-                COACHING_BUCKET: bucket, ALLOWED_ORIGIN: 'https://development-coaching-tool.pages.dev'
+                COACHING_BUCKET: bucket, ALLOWED_ORIGIN: 'https://development-coaching-tool.pages.dev', SYNC_SHARED_SECRET: TEST_SECRET
             });
             const text = await response.text();
             return { ok: response.status === 200, status: response.status, json: async () => JSON.parse(text) };

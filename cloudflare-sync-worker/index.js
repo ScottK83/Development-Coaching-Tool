@@ -11,30 +11,44 @@ export default {
       });
     }
 
-    // GET /files/<name> serves uploaded files from R2 uploads/.
-    // Top-level navigations (window.open) don't send Origin, so we accept
-    // either Origin or Referer matching ALLOWED_ORIGIN.
+    // Every request needs the shared secret. With none configured the worker
+    // refuses everything rather than falling back to the Origin check, which
+    // any client outside a browser can fake.
+    const expectedSyncSecret = String(env.SYNC_SHARED_SECRET || '').trim();
+    const hasValidSecret = () => {
+      const provided = String(request.headers.get('x-sync-secret') || '').trim();
+      return !!expectedSyncSecret && !!provided && timingSafeEqual(provided, expectedSyncSecret);
+    };
+
+    // GET /files/<name> serves uploaded files from R2 uploads/. The app fetches
+    // it with the secret header and hands the bytes to the browser itself, so a
+    // bare link, or a forged Origin or Referer, gets nothing.
     if (request.method === 'GET') {
       const url = new URL(request.url);
       const filesMatch = url.pathname.match(/^\/files\/(.+)$/);
       if (!filesMatch) {
         return new Response('Not Found', { status: 404 });
       }
-      const refererOrigin = safeOrigin(request.headers.get('referer'));
       const requestOrigin = String(request.headers.get('origin') || '').trim();
-      const sourceOrigin = requestOrigin || refererOrigin;
-      if (!isAllowedOrigin(sourceOrigin, allowedOrigin)) {
-        return new Response('Forbidden', { status: 403 });
+      const cors = corsHeaders(requestOrigin, allowedOrigin);
+      if (!isAllowedOrigin(requestOrigin, allowedOrigin)) {
+        return new Response('Forbidden', { status: 403, headers: cors });
+      }
+      if (!expectedSyncSecret) {
+        return new Response('Sync secret not configured', { status: 503, headers: cors });
+      }
+      if (!hasValidSecret()) {
+        return new Response('Unauthorized', { status: 401, headers: cors });
       }
       if (!env.COACHING_BUCKET) {
-        return new Response('Bucket not configured', { status: 500 });
+        return new Response('Bucket not configured', { status: 500, headers: cors });
       }
       const fileName = decodeURIComponent(filesMatch[1]).split(/[\\/]/).pop();
       const obj = await env.COACHING_BUCKET.get(`uploads/${fileName}`);
       if (!obj) {
-        return new Response('File not found', { status: 404 });
+        return new Response('File not found', { status: 404, headers: cors });
       }
-      const headers = new Headers();
+      const headers = new Headers(cors);
       headers.set('Content-Type', obj.httpMetadata?.contentType || guessContentType(fileName));
       headers.set('Cache-Control', 'no-store');
       return new Response(obj.body, { status: 200, headers });
@@ -52,12 +66,11 @@ export default {
       return json({ error: 'Forbidden origin.' }, 403, corsHeaders(requestOrigin, allowedOrigin));
     }
 
-    const expectedSyncSecret = String(env.SYNC_SHARED_SECRET || '').trim();
-    if (expectedSyncSecret) {
-      const providedSyncSecret = String(request.headers.get('x-sync-secret') || '').trim();
-      if (!providedSyncSecret || !timingSafeEqual(providedSyncSecret, expectedSyncSecret)) {
-        return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401, corsHeaders(requestOrigin, allowedOrigin));
-      }
+    if (!expectedSyncSecret) {
+      return json({ error: 'Sync secret is not configured on the worker.', code: 'NO_SECRET' }, 503, corsHeaders(requestOrigin, allowedOrigin));
+    }
+    if (!hasValidSecret()) {
+      return json({ error: 'Unauthorized sync request (invalid or missing shared secret).' }, 401, corsHeaders(requestOrigin, allowedOrigin));
     }
 
     if (!env.COACHING_BUCKET) {
@@ -543,39 +556,25 @@ function corsHeaders(requestOrigin = '', allowedOrigin = '') {
   const origin = isAllowedOrigin(safeRequest, allowedOrigin) ? safeRequest : String(allowedOrigin || '').trim();
   if (!origin) {
     return {
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret',
       'Vary': 'Origin'
     };
   }
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Secret',
     'Vary': 'Origin'
   };
 }
 
-function safeOrigin(referer) {
-  try {
-    if (!referer) return '';
-    return new URL(referer).origin;
-  } catch (e) {
-    return '';
-  }
-}
-
 function isAllowedOrigin(requestOrigin, allowedOrigin) {
-  const safeAllowed = String(allowedOrigin || '').trim();
+  // Exact match only. Every *.pages.dev branch and preview deploy used to
+  // pass, which gave any stale or experimental build full sync access.
+  const safeAllowed = String(allowedOrigin || '').trim().replace(/\/+$/, '');
   if (!safeAllowed) return false;
-  const safeRequest = String(requestOrigin || '').trim();
-  if (safeRequest === safeAllowed) return true;
-  try {
-    const allowedHost = new URL(safeAllowed).hostname;
-    const requestHost = new URL(safeRequest).hostname;
-    if (requestHost.endsWith('.' + allowedHost)) return true;
-  } catch (e) { /* invalid URL, fall through */ }
-  return false;
+  return String(requestOrigin || '').trim().replace(/\/+$/, '') === safeAllowed;
 }
 
 function timingSafeEqual(a, b) {

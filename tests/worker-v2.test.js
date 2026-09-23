@@ -16,12 +16,12 @@
 const fs = require('fs');
 const path = require('path');
 const { suite, ROOT } = require('./harness');
-const { createFakeR2, loadWorker, post } = require('./fake-r2');
+const { createFakeR2, loadWorker, post, TEST_SECRET } = require('./fake-r2');
 
 const worker = loadWorker(ROOT, path, fs);
 
 function env(bucket) {
-    return { COACHING_BUCKET: bucket, ALLOWED_ORIGIN: 'https://development-coaching-tool.pages.dev' };
+    return { COACHING_BUCKET: bucket, ALLOWED_ORIGIN: 'https://development-coaching-tool.pages.dev', SYNC_SHARED_SECRET: TEST_SECRET };
 }
 
 async function call(bucket, body) {

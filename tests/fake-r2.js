@@ -78,16 +78,24 @@ function loadWorker(ROOT, path, fs) {
     return new Function(src)();
 }
 
-/** A POST the worker will accept: right origin, right method, JSON body. */
-function post(body, origin = 'https://development-coaching-tool.pages.dev') {
+/** The shared secret every test worker is configured with and every test request carries. */
+const TEST_SECRET = 'test-sync-secret';
+
+/** A POST the worker will accept: right origin, right secret, right method, JSON body. */
+function post(body, origin = 'https://development-coaching-tool.pages.dev', secret = TEST_SECRET) {
     return {
         method: 'POST',
         url: 'https://sync.example.workers.dev/',
         headers: {
-            get: (name) => (String(name).toLowerCase() === 'origin' ? origin : null)
+            get: (name) => {
+                const key = String(name).toLowerCase();
+                if (key === 'origin') return origin;
+                if (key === 'x-sync-secret') return secret;
+                return null;
+            }
         },
         json: async () => body
     };
 }
 
-module.exports = { createFakeR2, loadWorker, post };
+module.exports = { createFakeR2, loadWorker, post, TEST_SECRET };
