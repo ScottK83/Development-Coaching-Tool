@@ -34,7 +34,7 @@ const RAW_WRITE_ALLOWED = [
     'v2SyncState', 'v2DeviceId', 'ccEmail'
 ];
 
-const RAW_PREFIX_ALLOWED = ['smartDefault_', 'supervisorSeeded_', 'supervisorRenamed_'];
+const RAW_PREFIX_ALLOWED = ['smartDefault_', 'supervisorSeeded_', 'supervisorRenamed_', 'quarantine_'];
 
 function sourceFiles() {
     const files = [path.join(ROOT, 'script.js')];

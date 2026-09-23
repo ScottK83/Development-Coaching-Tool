@@ -2523,7 +2523,9 @@ function startCloudSyncBackground() {
     storage?.onBackendProblem?.((kind, key) => {
         showSyncReloadBanner(kind === 'writeFailed'
             ? `A change to ${key} could not be saved in this browser. Reload now; the cloud copy will be brought back down.`
-            : 'Your saved data could not be opened in this browser. Changes and sync are paused so nothing older is saved over it. Reload to try again.');
+            : kind === 'unreadable'
+                ? `The saved copy of ${key} in this browser is damaged, so changes to it are paused. Use Re-download everything in Sync & Backup to repair it.`
+                : 'Your saved data could not be opened in this browser. Changes and sync are paused so nothing older is saved over it. Reload to try again.');
     });
 
     storage?.onOtherTabWrite?.((key) => {

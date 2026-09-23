@@ -54,9 +54,33 @@
         }
         const raw = localStorage.getItem(STORAGE_PREFIX + key);
         if (raw === null || raw === undefined) return undefined;
-        // A parse failure propagates to the caller's catch, which is where the
-        // decision about what an unreadable store means already lives.
-        return JSON.parse(raw);
+        // A parse failure still propagates to the caller's catch. But most
+        // callers answer it with an empty store, and the next save then wrote
+        // that empty store over the unreadable text and pushed it to the cloud.
+        // So the text is kept aside and saves of the store are refused until a
+        // pull from the cloud replaces it.
+        try {
+            return JSON.parse(raw);
+        } catch (error) {
+            quarantineUnreadableStore(key, raw);
+            throw error;
+        }
+    }
+
+    const unreadableStores = new Set();
+
+    function quarantineUnreadableStore(key, raw) {
+        if (unreadableStores.has(key)) return;
+        unreadableStores.add(key);
+        console.error(`[storage] ${key} could not be read. Its text is kept as quarantine_${key}; saves of it are paused until a pull from the cloud replaces it.`);
+        try { localStorage.setItem(STORAGE_PREFIX + 'quarantine_' + key, raw); } catch (_) { /* full: the original text is still in place */ }
+        try { window.DevCoachModules?.manifestSync?.forgetApplied?.(key); } catch (_) { /* no sync in this build */ }
+        // Listeners are registered later in boot; report once they can hear it.
+        setTimeout(() => reportBackendProblem('unreadable', key), 0);
+    }
+
+    function unreadableStoreNames() {
+        return Array.from(unreadableStores);
     }
 
     /**
@@ -177,6 +201,7 @@
         if (ok) {
             dirtyStores.delete(key);
             staleStores.add(key);
+            unreadableStores.delete(key);
         }
         return ok;
     }
@@ -568,6 +593,11 @@
 
     function saveWithSizeCheck(key, data) {
         if (refuseBulkWriteWhileUnavailable(key)) return false;
+        if (unreadableStores.has(key)) {
+            console.error(`[storage] Refused to save ${key}: the stored copy could not be read, and saving now would replace it with whatever this page rebuilt.`);
+            reportBackendProblem('unreadable', key);
+            return false;
+        }
         if (staleStores.has(key)) {
             console.error(`[storage] Refused to save ${key}: another machine changed it and this page still holds the older copy. Reload first.`);
             staleWriteListeners.forEach((listener) => {
@@ -1385,6 +1415,7 @@
         onBackendProblem,
         isBackendUnavailable,
         failedDurableWriteNames,
+        unreadableStoreNames,
         // Weekly data
         loadWeeklyData,
         saveWeeklyData,

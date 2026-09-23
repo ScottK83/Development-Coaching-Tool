@@ -93,3 +93,19 @@ suite('backend: sync stops while the local copy is untrustworthy', async (t) => 
     const state = JSON.parse(global.localStorage.getItem(PREFIX + 'v2SyncState'));
     t.check('forgetApplied drops only that store', !('weeklyData' in state.applied) && state.applied.ytdData === 'h2');
 });
+
+suite('backend: a damaged store is kept aside, not saved over', async (t) => {
+    const storage = load(t, { [PREFIX + 'someNotes']: '{"broken": ' }, null);
+
+    let threw = false;
+    try { storage.readStore('someNotes'); } catch (_) { threw = true; }
+    t.check('reading it still fails for the caller', threw);
+    t.equal('its text is kept aside', global.localStorage.getItem(PREFIX + 'quarantine_someNotes'), '{"broken": ');
+    t.check('and it is listed as unreadable', storage.unreadableStoreNames().indexOf('someNotes') > -1);
+
+    t.equal('a save of the empty store the page rebuilt is refused', storage.saveWithSizeCheck('someNotes', {}), false);
+    t.equal('the damaged text is still in place', global.localStorage.getItem(PREFIX + 'someNotes'), '{"broken": ');
+
+    t.check('a copy from the cloud repairs it', storage.applyRemoteStore('someNotes', { fixed: true }));
+    t.equal('after which it is no longer unreadable', storage.unreadableStoreNames().length, 0);
+});

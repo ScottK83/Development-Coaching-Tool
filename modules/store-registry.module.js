@@ -144,7 +144,9 @@
      * supervisorSeeded_v5_migration). They cannot be enumerated, so they are
      * matched by prefix and always treated as device-local.
      */
-    const DEVICE_KEY_PREFIXES = ['smartDefault_', 'supervisorSeeded_', 'supervisorRenamed_'];
+    // quarantine_<store> holds the unreadable text of a damaged store: this
+    // machine's evidence, never something to sync.
+    const DEVICE_KEY_PREFIXES = ['smartDefault_', 'supervisorSeeded_', 'supervisorRenamed_', 'quarantine_'];
 
     function tierOf(name) {
         const entry = get(name);
