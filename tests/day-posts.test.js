@@ -129,13 +129,19 @@ suite('day posts: it knows when the period was never uploaded', (t) => {
     t.check('midweek does not care that the weekly file is old', staleWeekButDailies.ok === true);
 });
 
-suite('day posts: the period question is asked once for every day', (t) => {
+/**
+ * periodStatusByDay is gone with the behaviour it served. It answered "does the
+ * tool hold what this WEEKDAY claims to describe", which was the right question
+ * only while the weekday chose the period. The window chooses it now, so the
+ * question is asked once about the window instead of five times about days that
+ * no longer claim one.
+ */
+suite('day posts: an end date is read from the period, then from the key', (t) => {
     const modules = load(t);
     const posts = modules.dayPosts;
 
-    // With no morning-pulse loaded there is nothing to ask, and that must be an
-    // empty answer rather than a crash on the render path.
-    t.check('no data modules yields no statuses', Object.keys(posts.periodStatusByDay('2026-08-05')).length === 0);
+    t.check('the per-day period question is gone with the behaviour it served',
+        typeof posts.periodStatusByDay === 'undefined');
 
     t.equal('an end date is read from metadata first', posts.latestWeekEnd('a|b', { metadata: { endDate: '2026-08-02' } }), '2026-08-02');
     t.equal('and falls back to the key', posts.latestWeekEnd('2026-07-27|2026-08-02', null), '2026-08-02');

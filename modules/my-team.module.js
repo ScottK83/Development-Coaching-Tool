@@ -58,35 +58,32 @@
         try { localStorage.setItem(DAY_KEY, dayId); } catch (e) { /* not persisted */ }
     }
 
-    // --- The stretch of time the celebrations are measured over ---
+    // --- The stretch of time this whole page is measured over ---
 
-    // Where the page starts before anybody picks. The header announces what
-    // the day covers, so opening on a different stretch of time makes the two
-    // halves of one screen disagree. Friday saying "the week you just worked"
-    // over a month-to-date field is the version of that which got noticed. An
-    // unavailable default falls back to the latest upload the same as a stale
-    // saved pick does, so this only ever moves the starting point.
-    // In order of preference, so a day whose own week has nothing usable
-    // behind it lands on a real finished week rather than on whichever upload
-    // happens to be newest. "Latest" is an honest choice when you make it and a
-    // poor one to be dropped into: it carries no label, so a month-to-date file
-    // sits unannounced under a header promising a week.
-    const DEFAULT_WINDOW_BY_COVERAGE = {
-        thisWeek: ['thisWeek', 'lastWeek'],
-        lastWeek: ['lastWeek'],
-        lastWeekPlusMonday: ['lastWeek']
-    };
+    /**
+     * The window is now the only thing on this page that owns time.
+     *
+     * It used to be derived from the weekday: Monday meant last week, Wednesday
+     * meant the week so far, and the chips merely re-ranked the celebrations on
+     * top of whatever the weekday had already decided. That is what let one
+     * screen describe three different stretches at once. The weekday now picks
+     * how the message sounds and nothing else, so the starting window is a
+     * property of the page rather than of whichever tab is lit.
+     *
+     * In order of preference. The last finished week is the honest default: it
+     * is the period most likely to be complete, and it is what a manager opening
+     * this page on a Monday morning came to read. "Latest" is a fine choice when
+     * you make it and a poor one to be dropped into, because it carries no label
+     * and a month-to-date file would sit unannounced under a header that has to
+     * name something.
+     */
+    const DEFAULT_WINDOW_ORDER = ['lastWeek', 'thisWeek', 'mtd', 'day', 'ytd'];
 
     function defaultWindowId() {
         try {
-            const plan = mods().dailyOutreach?.planById?.(activeDayId());
-            const wanted = DEFAULT_WINDOW_BY_COVERAGE[plan?.covers];
-            if (!wanted) return 'latest';
-
             const windows = mods().celebrations?.listShoutOutWindows?.() || [];
-            if (!windows.length) return wanted[0];
-
-            const usable = wanted.filter(id => windows.some(w => w.id === id && w.available));
+            if (!windows.length) return 'latest';
+            const usable = DEFAULT_WINDOW_ORDER.filter(id => windows.some(w => w.id === id && w.available));
             return usable[0] || 'latest';
         } catch (e) {
             return 'latest';
@@ -123,33 +120,58 @@
         }
     }
 
+    /**
+     * The two periods the page is comparing, and what to call them.
+     *
+     * Every surface on this page reads this one call: the header line, the
+     * evidence panel, the private round, the high five round. They used to reach
+     * for resolveCheckinPeriods, which always returned the newest two weekly
+     * uploads and had no idea the chips existed.
+     */
+    function currentComparison() {
+        const compare = mods().periodComparison;
+        if (!compare?.resolve) return null;
+        try {
+            return compare.resolve(currentWindow());
+        } catch (e) {
+            return null;
+        }
+    }
+
     // --- Day tab strip ---
 
+    /**
+     * The five tabs are a tone, not a period.
+     *
+     * They used to carry a warning triangle whenever the weekday's own stretch
+     * of time had nothing uploaded behind it, which was the right marking while
+     * the weekday chose the period. It no longer does. Leaving the triangles on
+     * would mark Wednesday unusable because this week has not been uploaded,
+     * while the window above it says "Month to date" and the month is sitting
+     * right there. Whether the data backs a message is a question about the
+     * window now, and it gets asked once, above these, rather than five times
+     * here with the wrong subject.
+     */
     function renderDayTabs(dayId, person) {
         const outreach = mods().dailyOutreach;
-        const dayPosts = mods().dayPosts;
         if (!outreach) return '';
 
-        const status = dayPosts?.periodStatusByDay?.(outreach.isoDate(new Date())) || {};
         const sentLog = outreach.loadSentLog();
         const stamp = outreach.stampFor(outreach.PLANS.monday, { todayIso: outreach.isoDate(new Date()) });
 
         const tabs = outreach.weekdayPlans().map(plan => {
             const active = plan.id === dayId;
-            const blocked = status[plan.id] && !status[plan.id].ok;
             // Only meaningful for one person, a team sweep tracks sends per rep.
             const sent = person && Boolean(outreach.getSentEntry(sentLog, plan.id, stamp, person));
 
-            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (blocked ? '#f5f5f5' : (sent ? '#e8f5e9' : '#eef1f6'));
-            const color = active ? '#fff' : (blocked ? 'var(--text-tertiary)' : (sent ? '#2e7d32' : 'var(--text-secondary)'));
-            const mark = blocked ? '⚠️ ' : (sent ? '✓ ' : '');
-            const tip = blocked
-                ? `${plan.label}, ${status[plan.id].reason} ${status[plan.id].detail}`
-                : `${plan.label}, covers ${plan.coverageLabel}`;
+            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (sent ? '#e8f5e9' : '#eef1f6');
+            const color = active ? '#fff' : (sent ? '#2e7d32' : 'var(--text-secondary)');
+            const mark = sent ? '✓ ' : '';
+            const tip = `${plan.label}. ${plan.styleLabel || ''}`.trim();
             const dayName = plan.id.charAt(0).toUpperCase() + plan.id.slice(1);
 
             return `<button type="button" class="mt-day-tab" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
-                `style="padding:10px 18px; border:${blocked ? '1px dashed var(--border-strong)' : 'none'}; border-radius:8px; font-weight:700; font-size:0.95em; cursor:pointer; background:${bg}; color:${color};">` +
+                `style="padding:10px 18px; border:none; border-radius:8px; font-weight:700; font-size:0.95em; cursor:pointer; background:${bg}; color:${color};">` +
                 `${mark}${dayName}</button>`;
         }).join('');
 
@@ -346,6 +368,11 @@
             return;
         }
 
+        // A month rebuilt from its weeks is cached for the life of a render, so
+        // eighteen messages do not rebuild August eighteen times. An upload
+        // between renders must not leave a stale month behind the numbers.
+        mods().periodComparison?.resetCache?.();
+
         const person = scope?.getActiveMember?.() || null;
         const dayId = activeDayId();
         const plan = outreach.planById(dayId);
@@ -353,9 +380,10 @@
         container.innerHTML = renderDayTabs(dayId, person) +
             `<div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:12px;">` +
                 `<h3 style="margin:0; color:#4527a0;">${escapeHtml(plan.label)}</h3>` +
-                `<div style="font-size:0.86em; color:var(--text-secondary);">Covers ${escapeHtml(plan.coverageLabel)} · ${person ? escapeHtml(person) : 'whole team'}</div>` +
+                `<div style="font-size:0.86em; color:var(--text-secondary);">${person ? escapeHtml(person) : 'whole team'}</div>` +
             `</div>` +
             renderWindowPicker(currentWindow().id) +
+            renderComparisonLine() +
             (person ? renderToneRow() : '') +
             `<div id="myTeamDayMessage"></div>` +
             `<details style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);" open>` +
@@ -398,7 +426,7 @@
                 await renderHighFive(messageEl, person);
             } else {
                 if (mods().dayPosts?.saveDayChoice) mods().dayPosts.saveDayChoice(dayId);
-                await mods().dayPosts?.renderDayPosts?.(messageEl, person);
+                await mods().dayPosts?.renderDayPosts?.(messageEl, person, currentComparison());
             }
         } else {
             renderTeamDay(messageEl, plan);
@@ -433,7 +461,10 @@
     async function renderHighFive(container, person) {
         if (!container) return;
         const pulse = mods().morningPulse;
-        const periods = pulse?.resolveCheckinPeriods?.();
+        // The window, not the newest two weekly files. A high five written off
+        // last week while the page announces the month is praise for a stretch
+        // of time the person was not reading about.
+        const periods = currentComparison();
 
         let message = '';
         try {
@@ -441,8 +472,9 @@
         } catch (e) { message = ''; }
 
         if (!message) {
+            const over = periods?.latestLabel ? ` over ${periods.latestLabel}` : '';
             container.innerHTML = `<div style="padding:24px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;">` +
-                `Not enough in the latest week to build a high five for ${escapeHtml(person)} yet.` +
+                `Not enough${escapeHtml(over)} to build a high five for ${escapeHtml(person)} yet.` +
             `</div>`;
             return;
         }
@@ -486,7 +518,16 @@
 
         container.querySelector('#myTeamRunSweep')?.addEventListener('click', async () => {
             const pulse = mods().morningPulse;
-            if (pulse?.showRunMyDayModal) await pulse.showRunMyDayModal(document.getElementById('morningPulseContainer'));
+            // The window and the lit tab, both handed over. The sweep used to
+            // read its own remembered week and the real calendar weekday, which
+            // is how one button on this page could disagree with the two
+            // controls sitting directly above it.
+            if (pulse?.showRunMyDayModal) {
+                await pulse.showRunMyDayModal(document.getElementById('morningPulseContainer'), {
+                    comparison: currentComparison(),
+                    plan: plan
+                });
+            }
         });
 
         container.querySelector('#myTeamShoutOut')?.addEventListener('click', () => renderShoutOut());
@@ -518,7 +559,7 @@
         // eighteen meant coming back and guessing.
         const sent = highFiveSentState();
 
-        const periods = pulse.resolveCheckinPeriods?.();
+        const periods = currentComparison();
         const ready = [];
         const skipped = [];
 
@@ -590,7 +631,8 @@
             return;
         }
         if (!round.ready.length) {
-            slot.innerHTML = highFiveNotice(`Nothing in the latest week backs a high five for anyone on the roster yet. All ${round.skipped.length} came back empty.`);
+            const over = currentComparison()?.latestLabel || 'this period';
+            slot.innerHTML = highFiveNotice(`Nothing in ${over} backs a high five for anyone on the roster yet. All ${round.skipped.length} came back empty.`);
             return;
         }
 
@@ -610,7 +652,7 @@
 
         const skippedHtml = round.skipped.length
             ? `<div style="margin-top:4px; padding:10px 14px; border:1px dashed var(--border-strong); border-radius:8px; color:var(--text-secondary); font-size:0.88em;">` +
-                `<strong>${round.skipped.length} skipped</strong>. Not enough in the latest week to praise honestly: ` +
+                `<strong>${round.skipped.length} skipped</strong>. Not enough in ${escapeHtml(currentComparison()?.latestLabel || 'this period')} to praise honestly: ` +
                 escapeHtml(round.skipped.map(s => s.name).join(', ')) +
             `</div>`
             : '';
@@ -722,6 +764,33 @@
     }
 
     /**
+     * What is being compared to what, in one line under the chips.
+     *
+     * This is the sentence the page could not say before, because nothing on it
+     * knew. The header said what the weekday covered, the chips said what the
+     * celebrations were ranked over, and the two were free to be different
+     * stretches of time with nothing pointing it out.
+     *
+     * A window with no other side still gets a line. "September so far, and
+     * August was never uploaded" is a different problem from "no data" and it
+     * has a different fix, so the reason is printed rather than the comparison
+     * silently falling back to two weeks.
+     */
+    function renderComparisonLine() {
+        const cmp = currentComparison();
+        if (!cmp) return '<div id="myTeamComparison"></div>';
+
+        const body = !cmp.latestKey
+            ? `<span style="color:#ef6c00;">${escapeHtml(cmp.reason || 'Nothing uploaded covers this window yet.')}</span>`
+            : cmp.baselineKey
+                ? `Comparing <strong>${escapeHtml(cmp.latestLabel)}</strong> against <strong>${escapeHtml(cmp.baselineLabel)}</strong>.`
+                : `<strong>${escapeHtml(cmp.latestLabel)}</strong>, with nothing to compare it against. ` +
+                  `<span style="color:var(--text-tertiary);">${escapeHtml(cmp.reason || '')}</span>`;
+
+        return `<div id="myTeamComparison" style="font-size:0.86em; color:var(--text-secondary); margin:-4px 0 14px;">${body}</div>`;
+    }
+
+    /**
      * Changing the window rewrites the post and the evidence panel together.
      * Repainting only the post would leave the panel underneath quoting ranks
      * from a different stretch of time, and the panel is there to back the post
@@ -741,8 +810,13 @@
      * a window the thing that opens the card, which is backwards: you change
      * the window to see what the numbers say, and then decide whether to post.
      */
-    function refreshForWindow() {
+    async function refreshForWindow() {
+        // The window decides which periods get read, so a month held over from
+        // the previous window is a month nobody asked for.
+        mods().periodComparison?.resetCache?.();
+
         const chosen = currentWindow();
+        const person = mods().teamScope?.getActiveMember?.() || null;
 
         const pickerEl = document.getElementById('myTeamWindowPicker');
         if (pickerEl) {
@@ -750,9 +824,23 @@
             bindWindowPicker(pickerEl);
         }
 
+        const comparisonEl = document.getElementById('myTeamComparison');
+        if (comparisonEl) comparisonEl.outerHTML = renderComparisonLine();
+
+        // The private message is written from the window now, so it has to be
+        // rewritten with it. Leaving it alone was harmless while the weekday
+        // owned the period and is the whole bug once the chips do: you would
+        // switch to Month to date and read a message about two weeks.
+        const messageEl = document.getElementById('myTeamDayMessage');
+        if (messageEl && person && activeTone !== 'highfive') {
+            await mods().dayPosts?.renderDayPosts?.(messageEl, person, currentComparison());
+        } else if (messageEl && person && activeTone === 'highfive') {
+            await renderHighFive(messageEl, person);
+        }
+
         const contextEl = document.getElementById('myTeamDayContext');
         if (contextEl) {
-            contextEl.innerHTML = buildContextHtml(mods().teamScope?.getActiveMember?.() || null);
+            contextEl.innerHTML = buildContextHtml(person);
         }
 
         const slot = document.getElementById('myTeamShoutOutSlot');

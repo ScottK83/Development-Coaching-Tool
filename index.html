@@ -1765,6 +1765,11 @@ Box 2 - Future Improvement Areas:
                 'modules/metrics-registry.module.js',
                 'modules/period-index.module.js',
                 'modules/period-picker.module.js',
+                // What the picked window is measured against. Reads
+                // period-index and period-compare at call time, so it can
+                // sit beside the picker and be there for every surface
+                // that shows a comparison.
+                'modules/period-comparison.module.js',
                 // Must precede storage: it is the backing store storage
                 // hydrates from, before script.js parses.
                 'modules/idb-backend.module.js',

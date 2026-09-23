@@ -28,10 +28,21 @@
      *
      * base tells the caller which existing message generator to start from;
      * dailyMode tells it which daily rows to append.
+     *
+     * styleLabel is what the day sounds like rather than what it covers, and it
+     * is the only one of these My Team reads now. That page gave the weekday
+     * ownership of the period and then put a window picker above it that owned
+     * the period too, so one screen could announce "covers last week" over a
+     * month-to-date field. The window owns time there; the weekday owns tone.
+     *
+     * covers and coverageLabel stay, because Run My Day still sweeps on the real
+     * calendar weekday and genuinely does mean "today is Wednesday, so this is a
+     * midweek note about this week".
      */
     const PLANS = {
         monday: {
             id: 'monday',
+            styleLabel: 'Opens the period. Recaps how it went and sets one focus.',
             label: 'Monday Kickoff',
             covers: 'lastWeek',
             coverageLabel: 'last week',
@@ -40,6 +51,7 @@
         },
         tuesday: {
             id: 'tuesday',
+            styleLabel: 'A follow-up on the same recap, with how the first day back went added.',
             label: 'Tuesday Follow-up',
             covers: 'lastWeekPlusMonday',
             coverageLabel: 'last week plus Monday',
@@ -48,6 +60,7 @@
         },
         wednesday: {
             id: 'wednesday',
+            styleLabel: 'A check-in partway through. Leads with what has moved.',
             label: 'Wednesday Check-in',
             covers: 'thisWeek',
             coverageLabel: 'this week so far vs last week',
@@ -56,6 +69,7 @@
         },
         thursday: {
             id: 'thursday',
+            styleLabel: 'A check-in partway through. Leads with what has moved.',
             label: 'Thursday Check-in',
             covers: 'thisWeek',
             coverageLabel: 'this week so far vs last week',
@@ -64,6 +78,7 @@
         },
         friday: {
             id: 'friday',
+            styleLabel: 'Closes the period out.',
             label: 'Friday Finish',
             covers: 'thisWeek',
             coverageLabel: 'the week you just worked',
@@ -72,6 +87,7 @@
         },
         weekend: {
             id: 'weekend',
+            styleLabel: 'Opens the period. Recaps how it went and sets one focus.',
             label: 'Weekend Recap',
             covers: 'lastWeek',
             coverageLabel: 'last week',

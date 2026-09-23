@@ -817,9 +817,53 @@
         return index.weekLikeKeys(index.currentIndex());
     }
 
-    function getPeriodData(weekKey) {
+    /**
+     * The period behind a key, whatever shape the key is.
+     *
+     * This read the weekly store and nothing else, which was fine while the only
+     * thing that ever named a period here was resolveCheckinPeriods handing back
+     * two week keys. Now that the "Covering" chips choose the comparison, a
+     * caller can legitimately name a day file, a year-to-date report or a month
+     * rebuilt from its weeks, and every one of those came back null: the
+     * generator found no employee row, returned nothing, and the page showed an
+     * empty message with no reason on it.
+     *
+     * One chokepoint rather than a branch at each of the eighteen call sites
+     * below, and periodComparison owns the resolution because it is the module
+     * that hands the keys out.
+     */
+    function getPeriodData(periodKey) {
         const weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        return weekly[weekKey] || null;
+        if (weekly[periodKey]) return weekly[periodKey];
+        return window.DevCoachModules?.periodComparison?.periodFor?.(periodKey) || null;
+    }
+
+    /**
+     * What the rest of the call center did over the same stretch.
+     *
+     * Stored averages only exist for uploads that came through the wizard, so a
+     * month rebuilt from its weeks has none, and so does a day file on the
+     * morning it lands. The nine call sites that wanted this all wrote the same
+     * three lines and all fell back to an empty object, which quietly dropped
+     * every "ahead of the center" sentence out of the message rather than saying
+     * anything was missing.
+     *
+     * Computing it from the period's own rows is the same arithmetic the wizard
+     * runs, over the same people. Nothing is written back: a derived average is
+     * right for this render and has no business becoming a stored one.
+     */
+    function centerAveragesFor(periodKey) {
+        if (typeof getCallCenterAverageForPeriod === 'function') {
+            const stored = getCallCenterAverageForPeriod(periodKey);
+            if (stored) return stored;
+        }
+        if (typeof calculateCenterAveragesFromEmployees === 'function') {
+            const period = getPeriodData(periodKey);
+            if (period?.employees?.length) {
+                return calculateCenterAveragesFromEmployees(period.employees) || {};
+            }
+        }
+        return {};
     }
 
     function getPeriodKeys(periodType) {
@@ -1140,9 +1184,7 @@
             || window.analyzeTrendMetrics;
         if (!analyzeFn) return null;
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         const analysis = analyzeFn(emp, centerAvgs, null, null, {
             employeeName: employeeName,
@@ -1508,7 +1550,10 @@
 
     // --- Check-in message generation ---
 
-    async function generateCheckinMessage(employeeName, latestKey, baselineKey) {
+    // options.now pins the day the copy is written for, the same way the high
+    // five takes it. It reaches describeWeekRecency, which is what decides
+    // whether the numbers get called this week, this month or that day.
+    async function generateCheckinMessage(employeeName, latestKey, baselineKey, options) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
         if (!emp) return null;
@@ -1519,9 +1564,7 @@
 
         const endDate = getEndDateLabel(latestKey, period);
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
@@ -1548,7 +1591,7 @@
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'));
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, describeWeekRecency(latestKey, period, options?.now)));
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
                 praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
             }
@@ -1648,9 +1691,7 @@
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
@@ -1676,7 +1717,9 @@
         const namedWins = new Set();
 
         if (biggestJump && biggestJump.delta > 0) {
-            const range = fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week', recency);
+            // recency wins over the period word, and always did: the 'week'
+            // sitting here was dead the moment a label set was passed.
+            const range = fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency);
             message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), range, recency.when)} \uD83D\uDD25`;
             namedWins.add(biggestJump.metricKey);
         } else if (wins.length >= 2) {
@@ -1791,9 +1834,7 @@
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
@@ -1872,7 +1913,7 @@
                 praiseText = pick(PERFECT_SURVEYS_SOLO)(surveysText);
             }
         } else if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, 'week'));
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, describeWeekRecency(latestKey, period, options?.now)));
             namedWins.add(biggestJump.metricKey);
             const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
             if (otherWins.length > 0) {
@@ -2849,9 +2890,7 @@
                 baseText: fmtVal(d.metricKey, d.baseValue)
             }));
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         const allMetrics = (analysis?.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
         const focal = pickFocalPointSmart(allMetrics, getYtdMetricsMapForEmployee(employeeName));
@@ -2890,9 +2929,7 @@
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
         if (!analysis) return null;
@@ -3011,9 +3048,7 @@
                 closers: MO_CLOSERS
             };
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(periodKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(periodKey);
 
         const analysis = analyzeCurrentSnapshot(emp, centerAvgs, periodKey);
         if (!analysis) return null;
@@ -3286,9 +3321,7 @@
         const analyzeFn = window.DevCoachModules?.metricTrends?.analyzeTrendMetrics
             || window.analyzeTrendMetrics;
         if (!analyzeFn) return null;
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
         const analysis = analyzeFn(latestEmp, centerAvgs, null, null, {
             employeeName: latestEmp.name,
             weekKey: latestKey,
@@ -3856,7 +3889,20 @@
         return line ? message + '\n\n' + line : message;
     }
 
-    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry) {
+    /**
+     * comparison is the window My Team is showing, when it is showing one. Two
+     * things depend on it, and both of them used to be assumed:
+     *
+     *   The week-progress generator only makes sense over a week. Run it over a
+     *   month and it writes "how this week is going" about September, so a
+     *   non-week window falls through to the kickoff recap, which is shape
+     *   agnostic and gets its own nouns from describeWeekRecency.
+     *
+     *   The daily recap appends "Week to date: ...". Under a month or a
+     *   year-to-date window that is a different stretch of time bolted onto the
+     *   bottom of the message, so it is left off.
+     */
+    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry, comparison) {
         // Every exit from here goes through finish(), which is what makes the
         // standings block a property of the one-to-one message rather than of
         // whichever generator happened to write the body. A fifth exit added
@@ -3870,8 +3916,12 @@
 
         const latestIsThisWeek = latestKeyCoversThisWeek(outreach, latestKey);
 
+        // A window with no unit on it is the old behaviour: two weekly uploads.
+        const unit = comparison?.unit || 'week';
+        const weekShaped = unit === 'week';
+
         let base;
-        if (plan.base === 'weekProgress' || plan.base === 'weekClosing') {
+        if (weekShaped && (plan.base === 'weekProgress' || plan.base === 'weekClosing')) {
             base = await generateWeekProgressMessage(employeeName, latestKey, baselineKey, {
                 tone: plan.base === 'weekClosing' ? 'closing' : 'midweek',
                 // Only the this-week file can say how far into the week the
@@ -3906,6 +3956,9 @@
         // same numbers a second time.
         if (plan.dailyMode === 'none' || !dailyEntry) return finish(base || '');
         if (plan.dailyMode === 'wtd' && latestIsThisWeek) return finish(base || '');
+        // And under a month or a year, the week to date is not a smaller view of
+        // the numbers above it, it is a different period entirely.
+        if (!weekShaped) return finish(base || '');
 
         const rows = plan.dailyMode === 'monday'
             ? (dailyEntry.mondayRow ? [dailyEntry.mondayRow] : [])
@@ -3921,24 +3974,43 @@
         return finish(outreach.insertRecap(base || '', recap));
     }
 
-    async function showRunMyDayModal(container) {
+    /**
+     * options.comparison is the window My Team is showing, and options.plan the
+     * weekday tab it has lit.
+     *
+     * This was the third control on that page claiming to own time. It read its
+     * own remembered period selection and the REAL calendar weekday, so pressing
+     * "Private round" under a Month to date header swept last week's file with
+     * today's weekday tone, disagreeing with both the chips above it and the tab
+     * beside it. Left out, it still does exactly that, which is right for the
+     * Pulse tab's own button where no window has been picked.
+     */
+    async function showRunMyDayModal(container, options) {
         const outreach = window.DevCoachModules?.dailyOutreach;
         if (!outreach) {
             if (typeof showToast === 'function') showToast('Daily outreach module failed to load.', 3000);
             return;
         }
 
-        const selection = loadPulseSelection();
-        const periodType = 'week';
-        const window_ = getPeriodWindow(periodType, selection.periodKey);
-        if (!window_) {
-            if (typeof showToast === 'function') showToast('No weekly data available yet.', 3000);
-            return;
+        const comparison = options?.comparison?.latestKey ? options.comparison : null;
+        let latestKey, baselineKey;
+        if (comparison) {
+            latestKey = comparison.latestKey;
+            baselineKey = comparison.baselineKey;
+        } else {
+            const selection = loadPulseSelection();
+            const window_ = getPeriodWindow('week', selection.periodKey);
+            if (!window_) {
+                if (typeof showToast === 'function') showToast('No weekly data available yet.', 3000);
+                return;
+            }
+            latestKey = window_.latestKey;
+            baselineKey = window_.baselineKey;
         }
-        const { latestKey, baselineKey } = window_;
+
         const period = getPeriodData(latestKey);
         if (!period) {
-            if (typeof showToast === 'function') showToast('Could not load the selected week.', 3000);
+            if (typeof showToast === 'function') showToast('Could not load the selected period.', 3000);
             return;
         }
 
@@ -3950,7 +4022,10 @@
 
         const now = new Date();
         const todayIso = outreach.isoDate(now);
-        const plan = outreach.planForDate(now);
+        // The tab the manager is looking at, when there is one. Sweeping with
+        // today's real weekday while a different tab is lit writes a tone
+        // nobody asked for.
+        const plan = (options?.plan && outreach.planById(options.plan.id)) || outreach.planForDate(now);
         const stamp = outreach.stampFor(plan, { weeklyKey: latestKey, todayIso });
 
         // Trim the log on the way in so it never grows without bound.
@@ -3963,15 +4038,18 @@
         // this day's message claims to describe?
         const latestWeekEndIso = period?.metadata?.endDate || (latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey);
         const weeklyCoversThisWeek = Boolean(latestWeekEndIso) && latestWeekEndIso >= outreach.mondayOf(now);
-        const periodCheck = outreach.checkPeriodData(plan, {
-            todayIso,
-            latestWeekEndIso,
-            dailyDayCount: dailyThisWeek.dayCount
-        });
+        // A window the manager picked has already been checked by the page that
+        // picked it, and it is not necessarily week shaped, so the weekday's own
+        // period question does not apply to it.
+        const periodCheck = comparison
+            ? { ok: true, reason: '', detail: `Using ${comparison.latestLabel || 'the selected period'}.` }
+            : outreach.checkPeriodData(plan, {
+                todayIso,
+                latestWeekEndIso,
+                dailyDayCount: dailyThisWeek.dayCount
+            });
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         // Build card data + priority scoring so we can sort worst-first, and
         // set aside anyone the day's data can't actually back a message for.
@@ -3979,12 +4057,14 @@
         const blocked = [];
         employees.forEach(emp => {
             const dailyEntry = dailyThisWeek.byName.get(emp.name) || null;
-            const coverage = outreach.checkCoverage(plan, {
-                inWeekly: true,
-                dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
-                hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow),
-                weeklyCoversThisWeek
-            });
+            const coverage = (comparison && comparison.unit !== 'week')
+                ? { ok: true, reason: '', warning: '' }
+                : outreach.checkCoverage(plan, {
+                    inWeekly: true,
+                    dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
+                    hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow),
+                    weeklyCoversThisWeek
+                });
 
             const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
             if (!analysis || !analysis.allMetrics?.length) {
@@ -4109,7 +4189,7 @@
         for (const entry of pending) {
             let message = '';
             try {
-                message = await buildOutreachMessage(outreach, plan, entry.emp.name, latestKey, baselineKey, entry.dailyEntry) || '';
+                message = await buildOutreachMessage(outreach, plan, entry.emp.name, latestKey, baselineKey, entry.dailyEntry, comparison) || '';
             } catch (e) { message = ''; }
             rendered.push({ ...entry, message });
         }
@@ -4204,7 +4284,7 @@
                 const originalText = btn.textContent;
                 btn.textContent = '⏳';
                 try {
-                    const msg = await buildOutreachMessage(outreach, plan, repName, latestKey, baselineKey, entry?.dailyEntry);
+                    const msg = await buildOutreachMessage(outreach, plan, repName, latestKey, baselineKey, entry?.dailyEntry, comparison);
                     if (msg) textarea.value = msg;
                 } finally {
                     btn.disabled = false;
@@ -4292,9 +4372,7 @@
             return;
         }
 
-        const centerAvgs = typeof getCallCenterAverageForPeriod === 'function'
-            ? getCallCenterAverageForPeriod(latestKey) || {}
-            : {};
+        const centerAvgs = centerAveragesFor(latestKey);
 
         // Build card data for each employee
         const cardData = [];
@@ -4590,6 +4668,12 @@
         initializeMorningPulse,
         renderMorningPulse,
         resolveCheckinPeriods,
+        // Any period key, resolved the one way. day-posts needs to look
+        // inside whichever period the window picked, and reaching into
+        // weeklyData directly is exactly how it came to be blind to
+        // months, day files and year-to-date reports.
+        getPeriodDataForKey: getPeriodData,
+        centerAveragesFor,
         generateCheckinMessage,
         generateHighFiveMessage,
         weekendIsInReach,

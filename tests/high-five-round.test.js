@@ -19,11 +19,23 @@ function loadMyTeam(t, opts) {
 
     if (opts.roster) M.teamScope = { getMyTeamRoster: () => opts.roster };
     if (opts.generate) {
-        M.morningPulse = {
-            resolveCheckinPeriods: () => ({ latestKey: 'wk', baselineKey: 'prev' }),
-            generateHighFiveMessage: opts.generate
-        };
+        M.morningPulse = { generateHighFiveMessage: opts.generate };
     }
+
+    // The round is written from the window the page is showing, not from the
+    // newest two weekly uploads. That is the whole point of the picker sitting
+    // above it: praise for a stretch of time the person was not reading about
+    // is praise landing in the wrong week.
+    M.periodComparison = {
+        resolve: () => ({
+            windowId: 'lastWeek',
+            unit: 'week',
+            latestKey: 'wk',
+            baselineKey: 'prev',
+            latestLabel: 'last week',
+            baselineLabel: 'the week before'
+        })
+    };
     return mods.myTeam;
 }
 
@@ -50,7 +62,7 @@ suite('high five round: everybody at once, copied one at a time', async (t) => {
     t.equal('by name', round.skipped[0].name, 'Betty Yanez');
 
     t.equal('the whole roster was asked', asked.length, 3);
-    t.equal('with the periods the pulse resolved', asked[0], 'Alyssa Dimes|wk|prev');
+    t.equal('with the periods the window resolved', asked[0], 'Alyssa Dimes|wk|prev');
 
     // Eighteen of these is long enough that a still panel reads as a broken one.
     t.equal('progress is reported per person', progress.length, 3);

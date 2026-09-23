@@ -50,10 +50,39 @@
     }
 
     /**
+     * The two periods a post is written from.
+     *
+     * My Team owns this now, because the window chips are the only control on
+     * that page that claims to own time. A caller with no window to offer falls
+     * back to the newest two weekly uploads, which is what this always did and
+     * is still right for Run My Day, where the real calendar weekday decides.
+     */
+    function periodsFor(comparison) {
+        // A window that was handed over is the answer, INCLUDING when it
+        // resolved to nothing. Falling back to two weeks there is the bug this
+        // whole change exists to remove: the page would announce "Month to
+        // date", find no month-to-date upload, and quietly write a message
+        // about the last two weekly files under that heading.
+        if (comparison) return comparison;
+
+        const pulse = window.DevCoachModules?.morningPulse;
+        const fallback = pulse?.resolveCheckinPeriods?.() || null;
+        if (!fallback) return null;
+        return Object.assign({ unit: 'week', latestLabel: 'the latest week', baselineLabel: 'the week before' }, fallback);
+    }
+
+    /**
      * Everything the view needs for one person on one day: whether the data
      * backs the message, and whether it already went out this week.
+     *
+     * The period question moved. It used to be "does the tool hold what this
+     * WEEKDAY claims to describe", which was the right question while the
+     * weekday chose the period. The window chooses it now, so the question is
+     * whether the window resolved to something with this person in it. Asking
+     * the old one would block a Wednesday post because this week has not been
+     * uploaded, while the month the page is actually showing sits right there.
      */
-    function resolveContext(employeeName, planId) {
+    function resolveContext(employeeName, planId, comparison) {
         const outreach = window.DevCoachModules?.dailyOutreach;
         const pulse = window.DevCoachModules?.morningPulse;
         if (!outreach || !pulse?.buildOutreachMessage) return null;
@@ -63,11 +92,11 @@
         const plan = outreach.planById(planId) || outreach.planForDate(now);
         const stamp = outreach.stampFor(plan, { todayIso });
 
-        const periods = pulse.resolveCheckinPeriods?.() || null;
+        const periods = periodsFor(comparison);
         const daily = pulse.collectDailyRowsThisWeek?.() || { byName: new Map(), dayCount: 0 };
         const dailyEntry = daily.byName.get(employeeName) || null;
 
-        const period = periods?.latestKey && typeof weeklyData !== 'undefined' ? weeklyData[periods.latestKey] : null;
+        const period = periods?.latestKey ? pulse.getPeriodDataForKey?.(periods.latestKey) : null;
         const inWeekly = Boolean((period?.employees || []).find(emp => String(emp?.name || '').trim() === employeeName));
 
         // Two different questions, asked in order. Does the tool hold the period
@@ -75,22 +104,49 @@
         // separately is what lets the missing-upload case name itself instead of
         // reading as "this associate has no data".
         const weekEnd = latestWeekEnd(periods?.latestKey, period);
-        const periodCheck = outreach.checkPeriodData(plan, {
-            todayIso,
-            latestWeekEndIso: weekEnd,
-            dailyDayCount: daily.dayCount
-        });
+        const periodCheck = checkWindow(periods, period);
 
-        const coverage = outreach.checkCoverage(plan, {
-            inWeekly,
-            dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
-            hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow),
-            weeklyCoversThisWeek: Boolean(weekEnd) && weekEnd >= outreach.mondayOf(new Date(todayIso + 'T12:00:00'))
-        });
+        const coverage = inWeekly
+            ? { ok: true, reason: '', warning: baselineWarning(periods) }
+            : { ok: false, reason: `Not in the ${periods?.latestLabel || 'selected'} upload.` };
 
         const sentEntry = outreach.getSentEntry(outreach.loadSentLog(), plan.id, stamp, employeeName);
 
-        return { outreach, pulse, plan, stamp, periods, dailyEntry, periodCheck, coverage, sentEntry, todayIso };
+        return { outreach, pulse, plan, stamp, periods, dailyEntry, periodCheck, coverage, sentEntry, todayIso, weekEnd };
+    }
+
+    /**
+     * Whether the window the page is showing can back a message at all.
+     *
+     * Per period rather than per person, the same way checkPeriodData was, so
+     * the answer is worked out once before any message is written.
+     */
+    function checkWindow(periods, period) {
+        if (!periods || !periods.latestKey) {
+            return {
+                ok: false,
+                reason: 'Missing data from this period.',
+                detail: periods?.reason || 'Nothing uploaded covers the window you picked.'
+            };
+        }
+        if (!period?.employees?.length) {
+            return {
+                ok: false,
+                reason: 'Missing data from this period.',
+                detail: `The upload behind ${periods.latestLabel || 'this window'} has no associate rows in it.`
+            };
+        }
+        return { ok: true, reason: '', detail: `Using ${periods.latestLabel || 'the selected period'}.` };
+    }
+
+    // A message with no other side still goes out. It just cannot say anything
+    // moved, so the warning says which half is missing rather than letting the
+    // copy quietly read as though nothing changed.
+    function baselineWarning(periods) {
+        if (!periods || periods.baselineKey) return '';
+        return periods.reason
+            ? `No comparison in this message. ${periods.reason}`
+            : 'No comparison in this message, because there is nothing earlier to measure against.';
     }
 
     function latestWeekEnd(latestKey, period) {
@@ -99,30 +155,11 @@
         return latestKey || '';
     }
 
-    // The period question is the same for every associate, so it can be asked
-    // once and used to mark the whole row of day buttons up front.
-    function periodStatusByDay(todayIso) {
-        const outreach = window.DevCoachModules?.dailyOutreach;
-        const pulse = window.DevCoachModules?.morningPulse;
-        const status = {};
-        if (!outreach || !pulse) return status;
-
-        const periods = pulse.resolveCheckinPeriods?.() || null;
-        const daily = pulse.collectDailyRowsThisWeek?.() || { dayCount: 0 };
-        const period = periods?.latestKey && typeof weeklyData !== 'undefined' ? weeklyData[periods.latestKey] : null;
-        const facts = {
-            todayIso,
-            latestWeekEndIso: latestWeekEnd(periods?.latestKey, period),
-            dailyDayCount: daily.dayCount
-        };
-
-        outreach.weekdayPlans().forEach(plan => {
-            status[plan.id] = outreach.checkPeriodData(plan, facts);
-        });
-        return status;
-    }
-
-    async function renderDayPosts(container, employeeName) {
+    /**
+     * comparison is the window My Team is showing. Left out, the posts fall back
+     * to the newest two weekly uploads, which is what they always did.
+     */
+    async function renderDayPosts(container, employeeName, comparison) {
         if (!container) return;
 
         const outreach = window.DevCoachModules?.dailyOutreach;
@@ -136,7 +173,7 @@
         const todayPlan = outreach.planForDate(new Date());
         const defaultDay = outreach.WEEKDAY_IDS.indexOf(todayPlan.id) > -1 ? todayPlan.id : 'monday';
         const dayId = loadDayChoice(defaultDay);
-        const ctx = resolveContext(employeeName, dayId);
+        const ctx = resolveContext(employeeName, dayId, comparison);
 
         if (!ctx) {
             container.innerHTML = `<div style="padding:20px; color:var(--text-secondary);">Message modules failed to load.</div>`;
@@ -147,24 +184,20 @@
         const sentLog = outreach.loadSentLog();
 
         // Every day carries its own sent flag, so the row of buttons doubles as
-        // a "what have I already sent her this week" summary.
-        const dayStatus = periodStatusByDay(ctx.todayIso);
+        // a "what have I already sent her this week" summary. No day is blocked
+        // any more: whether the data backs a message is a question about the
+        // window, asked once above, and it has the same answer for all five.
         const buttons = outreach.weekdayPlans().map(plan => {
             const active = plan.id === ctx.plan.id;
             const sent = Boolean(outreach.getSentEntry(sentLog, plan.id, ctx.stamp, employeeName));
-            const blocked = dayStatus[plan.id] && !dayStatus[plan.id].ok;
 
-            // A day whose period was never uploaded is marked before you click
-            // it, so you don't pick it and then find out.
-            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (blocked ? '#f5f5f5' : (sent ? '#e8f5e9' : '#e2e8f0'));
-            const color = active ? '#fff' : (blocked ? 'var(--text-tertiary)' : (sent ? '#2e7d32' : 'var(--text-secondary)'));
-            const mark = blocked ? '⚠️ ' : (sent ? '✓ ' : '');
-            const tip = blocked
-                ? `${plan.label}, ${dayStatus[plan.id].reason} ${dayStatus[plan.id].detail}`
-                : `${plan.label}, covers ${plan.coverageLabel}`;
+            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (sent ? '#e8f5e9' : '#e2e8f0');
+            const color = active ? '#fff' : (sent ? '#2e7d32' : 'var(--text-secondary)');
+            const mark = sent ? '✓ ' : '';
+            const tip = `${plan.label}. ${plan.styleLabel || ''}`.trim();
 
             return `<button type="button" class="day-post-btn" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
-                `style="padding:9px 16px; border:${blocked ? '1px dashed var(--border-strong)' : 'none'}; border-radius:8px; font-weight:700; font-size:0.9em; cursor:pointer; background:${bg}; color:${color};">` +
+                `style="padding:9px 16px; border:none; border-radius:8px; font-weight:700; font-size:0.9em; cursor:pointer; background:${bg}; color:${color};">` +
                 `${mark}${shortDay(plan.id)}</button>`;
         }).join('');
 
@@ -188,7 +221,7 @@
                 `<div style="font-size:2.2em; margin-bottom:8px;">📭</div>` +
                 `<div style="font-weight:700; color:#ef6c00; font-size:1.05em;">${escapeHtml(ctx.periodCheck.reason)}</div>` +
                 `<div style="font-size:0.92em; margin-top:8px;">${escapeHtml(ctx.periodCheck.detail)}</div>` +
-                `<div style="font-size:0.88em; margin-top:10px; color:var(--text-tertiary);">A ${escapeHtml(ctx.plan.label)} covers ${escapeHtml(ctx.plan.coverageLabel)}, so it can't be written from what's on file.</div>` +
+                `<div style="font-size:0.88em; margin-top:10px; color:var(--text-tertiary);">Pick a different window in <strong>Covering</strong> above, or upload the period this one is missing.</div>` +
             `</div>`;
         } else if (!ctx.coverage.ok) {
             bodyHtml = `<div style="padding:28px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;">` +
@@ -201,7 +234,8 @@
             try {
                 message = await ctx.pulse.buildOutreachMessage(
                     ctx.outreach, ctx.plan, employeeName,
-                    ctx.periods?.latestKey, ctx.periods?.baselineKey, ctx.dailyEntry
+                    ctx.periods?.latestKey, ctx.periods?.baselineKey, ctx.dailyEntry,
+                    ctx.periods
                 ) || '';
             } catch (e) { message = ''; }
 
@@ -216,7 +250,7 @@
         container.innerHTML = `<div style="margin-bottom:14px;">` +
                 `<h3 style="color:#4527a0; margin:0 0 6px 0;">📮 Posts for ${escapeHtml(employeeName)}</h3>` +
                 `<p style="color:var(--text-secondary); margin:0; font-size:0.9em;">` +
-                    `<strong>${escapeHtml(ctx.plan.label)}</strong>. Covers ${escapeHtml(ctx.plan.coverageLabel)}. ` +
+                    `<strong>${escapeHtml(ctx.plan.label)}</strong>, over ${escapeHtml(ctx.periods?.latestLabel || 'the selected period')}. ` +
                     `Pick any day; you don't have to wait for it.` +
                 `</p>` +
             `</div>` +
@@ -226,11 +260,11 @@
         container.querySelectorAll('.day-post-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 saveDayChoice(btn.dataset.day);
-                await renderDayPosts(container, employeeName);
+                await renderDayPosts(container, employeeName, comparison);
             });
         });
 
-        const rerender = async () => renderDayPosts(container, employeeName);
+        const rerender = async () => renderDayPosts(container, employeeName, comparison);
 
         container.querySelector('#dayPostUnsend')?.addEventListener('click', async () => {
             outreach.clearSent(ctx.plan.id, ctx.stamp, employeeName);
@@ -252,7 +286,8 @@
             try {
                 const msg = await ctx.pulse.buildOutreachMessage(
                     ctx.outreach, ctx.plan, employeeName,
-                    ctx.periods?.latestKey, ctx.periods?.baselineKey, ctx.dailyEntry
+                    ctx.periods?.latestKey, ctx.periods?.baselineKey, ctx.dailyEntry,
+                    ctx.periods
                 );
                 const textarea = container.querySelector('#dayPostText');
                 if (msg && textarea) textarea.value = msg;
@@ -276,7 +311,6 @@
     window.DevCoachModules.dayPosts = {
         renderDayPosts,
         resolveContext,
-        periodStatusByDay,
         latestWeekEnd,
         loadDayChoice,
         saveDayChoice,
