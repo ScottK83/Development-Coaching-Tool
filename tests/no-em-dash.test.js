@@ -29,6 +29,8 @@ const { suite, ROOT } = require('./harness');
  * cell standing in for a value that is not there, which is not a sentence.
  */
 
+const BACKSLASH = String.fromCharCode(92);
+
 const BANNED = [
     { name: 'em dash', find: '—' },
     { name: 'en dash', find: '–' },
@@ -36,7 +38,16 @@ const BANNED = [
     { name: '&mdash;', find: '&mdash;' },
     { name: '&ndash;', find: '&ndash;' },
     { name: 'numeric em dash entity', find: '&#8212;' },
-    { name: 'numeric horizontal bar entity', find: '&#8213;' }
+    { name: 'numeric horizontal bar entity', find: '&#8213;' },
+    // The same three characters written as a JavaScript escape. They render
+    // exactly the same and this suite could not see them, so seventeen of them
+    // sat in shout-outs, Copilot prompts and the Weekly Pulse header for
+    // months while the suite reported the rule as enforced. Spelled with a
+    // constructed backslash so the escape in this list is not itself an
+    // escape, which would make the entry match nothing.
+    { name: 'escaped em dash', find: BACKSLASH + 'u2014' },
+    { name: 'escaped en dash', find: BACKSLASH + 'u2013' },
+    { name: 'escaped horizontal bar', find: BACKSLASH + 'u2015' }
 ];
 
 /**

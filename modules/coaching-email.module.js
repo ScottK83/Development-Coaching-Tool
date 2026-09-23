@@ -300,7 +300,7 @@
         return `ROLE
 
 You are a real contact center supervisor writing a weekly coaching check-in email for ${employeeName}.
-This should sound like it is coming directly from their supervisor \u2014 warm, human, supportive, and invested in their success.
+This should sound like it is coming directly from their supervisor: warm, human, supportive, and invested in their success.
 This is a recurring weekly email.
 Assume you have written to this associate before.
 Vary wording and structure naturally like a human would.`;
@@ -329,12 +329,12 @@ Vary wording and structure naturally like a human would.`;
 - Do NOT repeat phrasing across bullets
 - Do NOT use HR clich\u00e9s or jargon
 - Do NOT use the phrase "This is an opportunity to"
-- Do NOT use em dashes (\u2014)
+- Do NOT use dashes of any kind. Use commas or full stops
 - Write in natural paragraphs with clean, simple bullet points where appropriate`;
     }
 
     function buildCoachingPromptFlowSection(preferredName) {
-        return `EMAIL FLOW (INTERNAL \u2013 DO NOT SHOW)
+        return `EMAIL FLOW (INTERNAL, DO NOT SHOW)
 
 Opening:
 - Start by greeting ${preferredName} by name
@@ -372,7 +372,7 @@ Close:
 - Use clean bullets for metrics (wins and opportunities)
 - Show current performance vs target in each bullet
 - Pull exactly ONE tip per opportunity metric
-- Rewrite tips in natural language\u2014never copy verbatim
+- Rewrite tips in natural language, never copy verbatim
 - Sound like a real supervisor: natural, human, and supportive
 - No numbered sections or labels`;
     }

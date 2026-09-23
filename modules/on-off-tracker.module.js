@@ -500,7 +500,7 @@
         return `
         <div style="font-weight: bold; color: #4a148c; margin-bottom: 8px;">\uD83C\uDFAF On/Off Tracker 3-Tier Scoring Legend (${reviewYear || 'N/A'})</div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 8px;">${cardsHtml}</div>
-        <div style="font-size: 0.8em; color: #5e35b1;">Status bands: Off Track \u2264 1.79 \u00B7 On Track/Successful 1.80\u20132.79 \u00B7 On Track/Exceptional \u2265 2.80</div>
+        <div style="font-size: 0.8em; color: #5e35b1;">Status bands: Off Track \u2264 1.79 \u00B7 On Track/Successful 1.80 to 2.79 \u00B7 On Track/Exceptional \u2265 2.80</div>
         <div style="font-size: 0.78em; color: #777; margin-top: 3px;">Source: ${sourceLabel}${usingFallback ? ' (used when selected year has no rating profile)' : ''}</div>
     `;
     }

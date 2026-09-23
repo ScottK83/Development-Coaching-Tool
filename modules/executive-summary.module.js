@@ -509,7 +509,7 @@
 
         var html = '<div style="margin-bottom: 30px;">';
         var scopeLabel = selectedAssociate
-            ? 'Performance Overview \u2014 ' + escapeHtml(selectedAssociate) + ' (' + metrics.activeYear + ' YTD)'
+            ? 'Performance Overview: ' + escapeHtml(selectedAssociate) + ' (' + metrics.activeYear + ' YTD)'
             : 'Performance Overview (' + metrics.activeYear + ' YTD)';
         html += '<h3>' + scopeLabel + '</h3>';
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
@@ -664,7 +664,7 @@
         var copilotUrl = _copilotUrl();
 
         // Always copy prompt to clipboard first, then open Copilot
-        copyToClipboard(prompt, { message: '\ud83d\udccb Prompt copied \u2014 paste it in CoPilot with Ctrl+V' });
+        copyToClipboard(prompt, { message: '\ud83d\udccb Prompt copied. Paste it in CoPilot with Ctrl+V' });
 
         var windowRef = window.open(copilotUrl, '_blank');
 

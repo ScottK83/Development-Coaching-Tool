@@ -1406,7 +1406,7 @@
             winsHtml = wins.map(m => {
                 if (m.displayOverride) {
                     return `<div style="font-size:0.85em; color:var(--green-text); padding:2px 0;">` +
-                        `<span style="color:var(--text-tertiary);">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
+                        `<span style="color:var(--text-tertiary);">\u2022</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
                 }
                 // Find this metric's week delta if available. Show "+X" for
                 // genuine improvements, "maintained" when the delta rounds to
@@ -1435,7 +1435,7 @@
             oppsHtml = opportunities.map(m => {
                 if (m.displayOverride) {
                     return `<div style="font-size:0.85em; color:var(--red-text); padding:2px 0;">` +
-                        `<span style="color:var(--text-tertiary);">\u2015</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
+                        `<span style="color:var(--text-tertiary);">\u2022</span> ${escapeHtml(m.label)}: <strong>${escapeHtml(m.displayOverride)}</strong></div>`;
                 }
                 const wd = weekDeltas.find(d => d.metricKey === m.metricKey);
                 const deltaTag = wd && wd.delta !== 0
@@ -1469,7 +1469,7 @@
                 ? (focalMove.numberRose ? ' and still climbing' : ' and still slipping')
                 : '';
             focalHtml = `<div style="padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800; font-size:0.85em;">` +
-                `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)} \u2014 last week ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
+                `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)}, last week ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
         } else {
             focalHtml = `<div style="padding:8px; background:var(--green-soft); border-radius:4px; border-left:3px solid #4caf50; font-size:0.85em;">` +
                 `<strong>\u2705 On track!</strong> Keep up the consistency.</div>`;
@@ -4322,7 +4322,7 @@
 
         // Header
         const baseDate = baselineKey ? getPeriodDisplayLabel(periodType, baselineKey) : null;
-        const rangeText = baseDate && baseDate !== endDate ? `${baseDate} \u2013 ${endDate}` : endDate;
+        const rangeText = baseDate && baseDate !== endDate ? `${baseDate} to ${endDate}` : endDate;
         const pulseDescription = periodType === 'week'
             ? 'Your team\'s weekly trajectory at a glance. Use "Check-in" for coaching or "High-Five" for a straight shoutout.'
             : periodType === 'month'
@@ -4337,7 +4337,7 @@
             : '';
         html += controlsHtml + `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px;">` +
             `<div>` +
-                `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Weekly Pulse \u2014 ${rangeText}</h3>` +
+                `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Weekly Pulse: ${rangeText}</h3>` +
                 `<p style="color:var(--text-secondary); margin:0; font-size:0.9em;">${pulseDescription}</p>` +
             `</div>` +
             `<div style="display:flex; gap:10px; flex-shrink:0;">` +

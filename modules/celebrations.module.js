@@ -1544,7 +1544,7 @@
         '\u2B50 Performances like this are what make this team special!',
         '\uD83C\uDFC6 You brought your A-game and it shows!',
         '\uD83D\uDE4C Take a moment and be proud of what you accomplished!',
-        '\uD83C\uDF1F Consistent excellence \u2014 that\'s what we\'re seeing from you!'
+        '\uD83C\uDF1F Consistent excellence. That\'s what we\'re seeing from you!'
     ];
 
     var BATCH_INTRO = [
@@ -1553,7 +1553,7 @@
         '\u2B50 CELEBRATION TIME \u2B50\n\nLook at what this team is doing! So proud of these performers:\n\n',
         '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n',
         '\uD83D\uDE80 WINS WORTH SHARING \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks showed up BIG:\n\n',
-        '\uD83D\uDCA5\uD83D\uDCA5 DROP EVERYTHING \u2014 WE\'RE CELEBRATING! \uD83D\uDCA5\uD83D\uDCA5\n\nThese performances deserve the spotlight:\n\n',
+        '\uD83D\uDCA5\uD83D\uDCA5 DROP EVERYTHING, WE\'RE CELEBRATING! \uD83D\uDCA5\uD83D\uDCA5\n\nThese performances deserve the spotlight:\n\n',
         '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\nSome of our people went absolutely OFF. Check this out:\n\n',
         '\uD83D\uDCAA TEAM FLEXES \uD83D\uDCAA\n\nI love getting to share wins like these. Look what our team is doing:\n\n',
         '\uD83C\uDF89 WHO\'S POPPING OFF?! \uD83C\uDF89\n\nSpoiler: these amazing people right here:\n\n',
@@ -1978,7 +1978,7 @@
         function(name) { return name + '! You\'re going to like this one \uD83D\uDE04'; },
         function(name) { return 'Hey ' + name + '! Something caught my eye and I had to tell you about it \uD83D\uDC40'; },
         function(name) { return name + ', just dropping in with some well-deserved recognition! \uD83C\uDF89'; },
-        function(name) { return 'Hey ' + name + '! Glad I caught you \u2014 I\'ve got something great to share \uD83C\uDF1F'; },
+        function(name) { return 'Hey ' + name + '! Glad I caught you, I\'ve got something great to share \uD83C\uDF1F'; },
         function(name) { return name + '! Real talk, I had to reach out about this \uD83D\uDCAA'; }
     ];
 
@@ -1991,7 +1991,7 @@
         'I don\'t take performances like this for granted. Thank you for what you do every day. \uD83D\uDE4F',
         'Just genuinely proud of you. Keep doing exactly what you\'re doing. \uD83D\uDE0A',
         'You earned every bit of this recognition. Enjoy the moment! \uD83C\uDF89',
-        'This is the stuff that makes my job easy \u2014 watching people like you succeed. \uD83D\uDCAA',
+        'This is the stuff that makes my job easy, watching people like you succeed. \uD83D\uDCAA',
         'Keep bringing this energy. It makes a bigger difference than you probably realize. \uD83C\uDF1F',
         'I love getting to send messages like this. You made it easy! \u2B50',
         'Your hard work is paying off in a real way. Don\'t stop now! \uD83D\uDE80',
@@ -2005,7 +2005,7 @@
         'I don\'t always send these messages, but when I see performance like this I have to say something:',
         'Your numbers caught my attention and I wanted to make sure you knew about it:',
         'I was going through the numbers and couldn\'t let this slide without reaching out to you:',
-        'Real quick \u2014 I saw your results and just had to give you your flowers:',
+        'Real quick, I saw your results and just had to give you your flowers:',
         'I noticed something really impressive when I was looking at the data:',
         'I keep an eye on the numbers and yours are standing out in a big way:',
         'Had to send this because what you\'re doing right now deserves to be recognized:',
