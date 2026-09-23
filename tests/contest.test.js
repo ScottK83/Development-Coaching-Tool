@@ -1060,12 +1060,32 @@ suite('contest: a survey counts whichever question it answered', (t) => {
         survey({ surveyTotal: 3, repSurveyTotal: 3, fcrSurveyTotal: 2,
                  cxRepOverall: 100, fcr: 100, overallExperience: 100 }).tickets, 3);
 
-    // A rate below 100 means some response was not perfect, and the upload
-    // cannot say which. No ticket, and it is handed back for a person to judge.
+    // One survey that said no on FCR is provably not perfect. Nothing to type.
     const mixed = survey({ surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1,
                            cxRepOverall: 100, fcr: 0, overallExperience: 100 });
     t.equal('a zero on one question earns nothing', mixed.tickets, 0);
-    t.check('and is flagged rather than dropped', mixed.flagged);
+    t.equal('and there is nothing left to judge', mixed.flagged, false);
+
+    // The report writes an unanswered question as 0% against 0 responses.
+    // That is not a zero, and it used to cost a perfect survey its ticket.
+    const skipped = survey({ surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 0,
+                             cxRepOverall: 100, fcr: 0, overallExperience: 100 });
+    t.equal('a skipped FCR question does not spoil a perfect survey', skipped.tickets, 1);
+    t.equal('and the day is not flagged', skipped.flagged, false);
+
+    // Two surveys, rep sat at 50%: one miss, so one of the two was perfect.
+    // Proven by the counts, not assumed.
+    t.equal('one perfect and one not is worked out',
+        survey({ surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2,
+                 cxRepOverall: 50, fcr: 100, overallExperience: 100 }).tickets, 1);
+
+    // Three surveys with a miss on two different questions: one, or two, were
+    // perfect depending on whether the misses fell on the same survey. The
+    // upload cannot say, so it goes to a person.
+    const open = survey({ surveyTotal: 3, repSurveyTotal: 3, fcrSurveyTotal: 3,
+                          cxRepOverall: 66.67, fcr: 66.67, overallExperience: 100 });
+    t.equal('an open question earns nothing on a guess', open.tickets, 0);
+    t.check('and is flagged', open.flagged);
 
     // Responses with nothing scoring them is odd data, not a ruling either way.
     t.check('responses with no rates are flagged',

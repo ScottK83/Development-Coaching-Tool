@@ -1411,9 +1411,9 @@
      * says so, and the day waits for a person.
      */
     function importPerfectSurveys(row) {
-        var scored = [];
-        var perfectCounts = [];
+        var questions = [];
         var responses = 0;
+        var unreadable = false;
 
         IMPORT_SURVEY_KEYS.forEach(function (key) {
             var rate = importNumber(row[key]);
@@ -1423,31 +1423,54 @@
             // the OE total, which is what this did, threw away a survey that
             // arrived as rep sat with no OE response, and threw it away
             // silently, as though no survey had come in at all.
-            var count = importNumber(row[IMPORT_SURVEY_TOTALS[key]]);
-            if (count === null) count = importNumber(row.surveyTotal);
+            var own = importNumber(row[IMPORT_SURVEY_TOTALS[key]]);
+            var count = own !== null ? own : importNumber(row.surveyTotal);
             if (count !== null && count > 0) responses = Math.max(responses, count);
 
+            // A question nobody answered is not a zero. The report writes it
+            // as 0% against 0 responses, and scoring that 0 spoiled the day:
+            // a flawless rep sat and OE survey with FCR skipped came back as
+            // "not all perfect", no ticket, and one more day to type by hand.
+            if (count === 0) return;
             if (rate === null) return;
-            scored.push(rate);
-            if (rate >= 100 && count !== null && count > 0) perfectCounts.push(count);
+            if (count === null) { unreadable = true; return; }
+            questions.push({ rate: rate, count: count, own: own !== null });
         });
 
         if (!responses) return { count: 0, certain: true };
 
         // Responses came in and nothing scored them. Rare, and not something to
         // rule on quietly in either direction.
-        if (!scored.length) return { count: 0, certain: false, total: Math.round(responses) };
+        if (!questions.length || unreadable) return { count: 0, certain: false, total: Math.round(responses) };
 
-        // Every rate that came back is 100, so every response counted was
-        // flawless. The number of surveys is then the largest response count
-        // among the questions that were scored: the question everybody answered
-        // is the one that saw them all.
-        var allPerfect = scored.every(function (v) { return v >= 100; });
-        if (allPerfect && perfectCounts.length) {
-            return { count: Math.round(Math.max.apply(null, perfectCounts)), certain: true };
+        // Each rate times its own count is how many responses were perfect on
+        // that question, and the rest are misses. From those alone:
+        //   at least  every survey less every miss (each miss spoils at most one)
+        //   at most   the perfect ones on any question, plus the surveys that
+        //             skipped it (a skipped question spoils nothing)
+        // When the two meet, the count is proven rather than guessed. Every
+        // rate at 100 is the simplest case: no misses, so every survey counts.
+        // Two surveys with rep sat at 50% and the rest at 100 is another: one
+        // miss, one perfect, and nothing about it is assumed.
+        var least = responses;
+        var most = responses;
+        for (var i = 0; i < questions.length; i++) {
+            var q = questions[i];
+            var good = q.rate * q.count / 100;
+            // A rate that does not land on a whole number of responses means the
+            // count is not the one the rate was worked from, so it proves nothing.
+            if (Math.abs(good - Math.round(good)) > 0.05) return { count: 0, certain: false, total: Math.round(responses) };
+            good = Math.round(good);
+            // Below 100 the misses are only countable against the question's own
+            // total. Borrowing the OE total there would be a guess.
+            if (good < q.count && !q.own) return { count: 0, certain: false, total: Math.round(responses) };
+            least -= q.count - good;
+            most = Math.min(most, good + (responses - q.count));
         }
+        least = Math.max(0, least);
 
-        return { count: 0, certain: false, total: Math.round(responses) };
+        if (least === most) return { count: Math.round(least), certain: true };
+        return { count: 0, certain: false, total: Math.round(responses), least: least, most: most };
     }
 
     /**
@@ -1570,8 +1593,12 @@
         if (needsSurveyCheck.length) {
             notes.push(needsSurveyCheck.length + ' person day'
                 + (needsSurveyCheck.length === 1 ? '' : 's')
-                + ' had surveys that were not all perfect. The upload holds rates rather than single surveys, so how '
-                + 'many were perfect is not in it. Type those in. Everything at 100% came in on its own.');
+                + ' had surveys that were not all perfect, and the rates cannot say how many were. Type those in: '
+                + needsSurveyCheck.map(function (item) {
+                    var parts = item.date.split('-');
+                    return item.name + ' ' + Number(parts[1]) + '/' + Number(parts[2])
+                        + (item.responses ? ' (' + item.responses + ' ' + (item.responses === 1 ? 'survey' : 'surveys') + ')' : '');
+                }).join(', ') + '.');
         }
         if (!dayList.length) {
             notes.push('Nothing to import for this month. This reads any upload that covers a single day, '
