@@ -223,3 +223,28 @@ suite('sync: a failed push retries by itself, and boot migrations read the real 
             !/localStorage\.(getItem|setItem)\(STORAGE_PREFIX \+ (storeKey|mapKey)/.test(body));
     });
 });
+
+suite('sync health: each store is compared with the cloud the way a push would hash it', async (t) => {
+    const bucket = createFakeR2();
+    const work = machine(t, bucket, 'dev-work');
+    const home = machine(t, bucket, 'dev-home');
+
+    work.storage.edit('weeklyData', { w1: {} });
+    work.storage.edit('coachingHistory', { a: [] });
+    await work.sync.pushDirty('seed');
+    await home.sync.pull();
+
+    let report = await home.sync.compareWithCloud();
+    const row = (r, name) => r.rows.find((x) => x.name === name);
+    t.check('a pulled store matches the cloud', row(report, 'weeklyData').local === row(report, 'weeklyData').cloud);
+
+    work.storage.edit('weeklyData', { w1: {}, w2: {} });
+    await work.sync.pushDirty('auto');
+    report = await home.sync.compareWithCloud();
+    t.check('a store the other machine changed shows as different', row(report, 'weeklyData').local !== row(report, 'weeklyData').cloud);
+    t.check('and nothing was written by looking', !home.storage.isStoreDirty('weeklyData'));
+
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    t.check('the button is wired', src.indexOf("getElementById('cloudSyncHealthBtn')?.addEventListener('click', handleCloudSyncHealthClick)") > -1);
+    t.check('and on the page', fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').indexOf('id="cloudSyncHealthBtn"') > -1);
+});

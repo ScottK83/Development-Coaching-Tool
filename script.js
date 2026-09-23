@@ -2123,6 +2123,7 @@ function bindCoachingFormHandlers() {
     document.getElementById('cloudSyncPushBtn')?.addEventListener('click', handleCloudSyncPushClick);
     document.getElementById('cloudSyncSetupBtn')?.addEventListener('click', handleCloudSyncSetupClick);
     document.getElementById('cloudSyncTestBtn')?.addEventListener('click', handleCloudSyncTestClick);
+    document.getElementById('cloudSyncHealthBtn')?.addEventListener('click', handleCloudSyncHealthClick);
     refreshUploadUndoBanner();
     refreshStorageQuotaWidget();
     document.getElementById('importDataBtn')?.addEventListener('click', () => {
@@ -2861,6 +2862,74 @@ async function handleCloudSyncPushClick() {
         renderCloudSyncStatus();
     } catch (error) {
         setCloudSyncResult('Could not push: ' + (error?.message || error), true);
+    }
+}
+
+/**
+ * What state this machine's data is in, store by store, on screen.
+ *
+ * Read-only. Answers the questions that used to need the console: which
+ * storage is in use, whether anything is unsent, damaged or refused, and for
+ * each store whether this computer matches the cloud and what to press if not.
+ */
+async function handleCloudSyncHealthClick() {
+    const out = document.getElementById('cloudSyncDiagnostics');
+    if (!out) return;
+    const lines = [];
+    const say = (text) => { lines.push(text); out.textContent = lines.join('\n'); };
+    out.style.display = 'block';
+    say(`--- sync health at ${new Date().toLocaleTimeString()} ---`);
+
+    const storage = window.DevCoachModules?.storage;
+    const sync = window.DevCoachModules?.manifestSync;
+    const registry = window.DevCoachModules?.storeRegistry;
+
+    say(`Storage in use: ${storage?.getBackendMode?.() === 'idb' ? 'the browser database (IndexedDB)' : 'browser local storage'}`);
+    if (storage?.isBackendUnavailable?.()) say('PROBLEM: the browser database would not open. Changes and sync are paused. Reload.');
+    try {
+        const persisted = await navigator.storage?.persisted?.();
+        say(`Kept by the browser under disk pressure: ${persisted === true ? 'yes' : persisted === false ? 'no (it may be cleared if space runs low)' : 'unknown'}`);
+    } catch (_e) { /* unsupported */ }
+
+    const listOf = (names) => (names && names.length ? names.join(', ') : 'none');
+    const dirty = registry?.syncedNames?.().filter((n) => storage?.isStoreDirty?.(n)) || [];
+    say(`Changed here, not sent yet: ${listOf(dirty)}`);
+    say(`Changed elsewhere, reload to use: ${listOf(storage?.staleStoreNames?.())}`);
+    say(`Damaged copies kept aside: ${listOf(storage?.unreadableStoreNames?.())}`);
+    say(`Saves the browser refused: ${listOf(storage?.failedDurableWriteNames?.())}`);
+
+    if (!sync?.compareWithCloud) { say('Cloud comparison is unavailable in this build.'); return; }
+    say('');
+    say('Comparing with the cloud...');
+    let report;
+    try {
+        report = await sync.compareWithCloud();
+    } catch (error) {
+        say(`Could not reach the cloud: ${error?.message || error}`);
+        return;
+    }
+    if (!report.ok) { say(`Could not read the cloud copy: ${report.error}`); return; }
+    if (!report.exists) { say('There is no cloud copy yet. Push my changes creates it.'); return; }
+    say(`Cloud copy version ${report.version}${report.conflictCopies ? `, with ${report.conflictCopies} kept conflict cop${report.conflictCopies === 1 ? 'y' : 'ies'}` : ''}.`);
+
+    const groups = { same: [], unsent: [], pushNeeded: [], pullNeeded: [], onlyHere: [], onlyCloud: [] };
+    report.rows.forEach((row) => {
+        if (row.local && row.local === row.cloud) groups.same.push(row.name);
+        else if (!row.cloud && row.local) groups.onlyHere.push(row.name);
+        else if (row.cloud && !row.local) groups.onlyCloud.push(row.name);
+        else if (!row.cloud && !row.local) groups.same.push(row.name);
+        else if (dirty.indexOf(row.name) > -1) groups.unsent.push(row.name);
+        else if (row.applied === row.cloud) groups.pushNeeded.push(row.name);
+        else groups.pullNeeded.push(row.name);
+    });
+    say(`Same as the cloud: ${groups.same.length} store(s)`);
+    if (groups.unsent.length) say(`Changed here and waiting to send (sends by itself): ${groups.unsent.join(', ')}`);
+    if (groups.pushNeeded.length) say(`Different here but not marked as changed. Press Push my changes: ${groups.pushNeeded.join(', ')}`);
+    if (groups.pullNeeded.length) say(`The cloud has newer copies. Press Pull changes: ${groups.pullNeeded.join(', ')}`);
+    if (groups.onlyHere.length) say(`Only on this computer. Press Push my changes: ${groups.onlyHere.join(', ')}`);
+    if (groups.onlyCloud.length) say(`Only in the cloud. Press Re-download everything: ${groups.onlyCloud.join(', ')}`);
+    if (!groups.unsent.length && !groups.pushNeeded.length && !groups.pullNeeded.length && !groups.onlyHere.length && !groups.onlyCloud.length) {
+        say('Everything on this computer matches the cloud.');
     }
 }
 

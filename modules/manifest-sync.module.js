@@ -574,6 +574,34 @@
         };
     }
 
+    /**
+     * Store by store, how this machine's copy compares with the cloud's. The
+     * hash is taken exactly as a push would take it, so "same" means a push
+     * would send nothing. Read-only: nothing is written anywhere.
+     */
+    async function compareWithCloud() {
+        const read = await callWorker({ mode: 'v2.manifest' });
+        if (read.status !== 200) return { ok: false, error: read.data?.error || `HTTP ${read.status}` };
+        if (!read.data.exists) return { ok: true, exists: false, rows: [] };
+        const shards = read.data.manifest.shards || {};
+        const applied = loadSyncState().applied || {};
+        const registry = window.DevCoachModules?.storeRegistry;
+        const names = registry?.syncedNames?.() || Object.keys(shards).filter((n) => !n.startsWith('conflicts/'));
+        const rows = [];
+        for (const name of names) {
+            const value = readStoreValue(name);
+            const local = value === undefined ? null : await sha256Hex(JSON.stringify(value));
+            rows.push({ name, local, cloud: shards[name] || null, applied: applied[name] || null });
+        }
+        return {
+            ok: true,
+            exists: true,
+            version: read.data.manifest.version,
+            rows,
+            conflictCopies: Object.keys(shards).filter((n) => n.startsWith('conflicts/')).length
+        };
+    }
+
     function getLocalSyncVersion() {
         return loadSyncState().version || 0;
     }
@@ -584,6 +612,7 @@
         pushDirty,
         pull,
         forgetApplied,
+        compareWithCloud,
         createFirstManifest,
         getDeviceId,
         getLocalSyncVersion,
