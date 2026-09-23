@@ -296,7 +296,11 @@
             // A survey quarter too thin to quote is shown, greyed, so the
             // supervisor can see it exists and see why the prose skipped it.
             var quoted = !m.usablePoints || !m.usablePoints.length || thin[q.quarter];
-            var meets = m.target ? (m.target.type === 'min' ? p.value >= m.target.value : p.value <= m.target.value) : null;
+            var profiles = (window.DevCoachModules || {}).metricProfiles || {};
+            var meets = !m.target ? null
+                : typeof profiles.valueMeetsTarget === 'function'
+                    ? profiles.valueMeetsTarget(m.metricKey, p.value, m.target)
+                    : (m.target.type === 'min' ? p.value >= m.target.value : p.value <= m.target.value);
             var colour = !quoted ? 'var(--text-tertiary)' : meets === true ? '#16a34a' : meets === false ? '#c2410c' : 'var(--text-primary)';
             return '<td style="padding:8px;text-align:center;font-weight:600;color:' + colour + ';"'
                 + (quoted ? '' : ' title="Too few survey responses to read as a trend"')

@@ -72,6 +72,8 @@
     function meetsTarget(metricKey, value, year) {
         const target = getYearTarget(metricKey, year);
         if (!target) return null;
+        const profile = window.DevCoachModules?.metricProfiles;
+        if (typeof profile?.valueMeetsTarget === 'function') return profile.valueMeetsTarget(metricKey, value, target);
         const num = parseFloat(value);
         if (!Number.isFinite(num)) return null;
         if (target.type === 'min') return num >= target.value;

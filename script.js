@@ -5891,11 +5891,14 @@ function buildTrendSeriesData(metricKey, employeeName, keys, periodType) {
 function metricMeetsTarget(metricKey, value) {
     const def = METRICS_REGISTRY[metricKey];
     if (!def || value === undefined || value === null || value === '') return false;
-    const target = def.target?.value ?? getMetricTarget(metricKey);
+    const target = getMetricTarget(metricKey, new Date().getFullYear());
+    // Judged as printed, the same way every other target check is.
+    const rounder = window.DevCoachModules?.metricProfiles?.roundToDisplayPrecision;
+    const shown = typeof rounder === 'function' ? rounder(metricKey, value) : value;
     if (isReverseMetric(metricKey)) {
-        return value <= target;
+        return shown <= target;
     }
-    return value >= target;
+    return shown >= target;
 }
 
 function metricGapToTarget(metricKey, value) {

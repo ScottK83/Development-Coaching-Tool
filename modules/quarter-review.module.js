@@ -103,15 +103,21 @@
     }
 
     function _targetFor(metricKey, year) {
-        var byYear = _profiles().TARGETS_BY_YEAR || {};
-        var forYear = byYear[parseInt(year, 10)] || {};
-        if (forYear[metricKey]) return forYear[metricKey];
+        var profiles = _profiles();
+        var forYear = typeof profiles.getTargetsForYear === 'function'
+            ? profiles.getTargetsForYear(year)
+            : ((profiles.TARGETS_BY_YEAR || {})[parseInt(year, 10)] || {});
+        if (forYear[metricKey]) return Object.assign({ metricKey: metricKey }, forYear[metricKey]);
         var def = _registry()[metricKey];
         return (def && def.target) || null;
     }
 
     function _meetsTarget(target, value) {
         if (!target || !Number.isFinite(value)) return null;
+        var profiles = _profiles();
+        if (target.metricKey && typeof profiles.valueMeetsTarget === 'function') {
+            return profiles.valueMeetsTarget(target.metricKey, value, target);
+        }
         return target.type === 'min' ? value >= target.value : value <= target.value;
     }
 

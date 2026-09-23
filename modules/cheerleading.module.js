@@ -96,6 +96,7 @@
     }
     function _targets() {
         var mp = window.DevCoachModules && window.DevCoachModules.metricProfiles;
+        if (mp && typeof mp.getTargetsForYear === 'function') return mp.getTargetsForYear(_year());
         return (mp && mp.TARGETS_BY_YEAR && mp.TARGETS_BY_YEAR[_year()]) || {};
     }
     function _isReverse(metricKey) {

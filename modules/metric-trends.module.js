@@ -1030,7 +1030,7 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, pr
         const metric = METRICS_REGISTRY[registryKey];
         if (!metric) return;
 
-        const target = getMetricTrendTarget(registryKey);
+        const target = getMetricTrendTarget(registryKey, reviewYear);
         const targetType = getMetricTrendTargetType(registryKey);
         const isReverse = isReverseMetric(registryKey);
         const meetsTarget = targetType === 'min'
@@ -3252,7 +3252,7 @@ function drawTrendSummaryBoxesOnCanvas(ctx, x, y, totalWidth, positiveHighlights
 }
 
 function getMetricTarget(metric, reviewYear = null) {
-    const profileModule = getMetricProfilesModule();
+    const profileModule = window.DevCoachModules?.metricProfiles || null;
 
     const parsedYear = parseInt(reviewYear, 10);
     if (Number.isInteger(parsedYear)) {
@@ -3273,12 +3273,12 @@ function getMetricTarget(metric, reviewYear = null) {
     return 90; // Safe fallback
 }
 
-function getMetricTrendTarget(metricKey) {
-    const metricDef = METRICS_REGISTRY[metricKey];
-    if (metricDef?.target && metricDef.target.value !== undefined && metricDef.target.value !== null) {
-        return metricDef.target.value;
-    }
-    return getMetricTarget(metricKey, null);
+// The year's own target (carried forward into a year with none yet), then the
+// registry's year-less one. Viewing 2025 data used to grade Rep Sat against 82
+// instead of 80, and AHT against 426 instead of 440.
+function getMetricTrendTarget(metricKey, year = null) {
+    const yearNum = parseInt(year, 10);
+    return getMetricTarget(metricKey, Number.isInteger(yearNum) ? yearNum : new Date().getFullYear());
 }
 
 function getMetricTrendTargetType(metricKey) {
@@ -3625,6 +3625,13 @@ function getYtdPeriodForWeekKey(weekKey) {
 
 
 function isMetricMeetingTarget(metric, value, target) {
+    // Judged as printed, like metricProfiles.meetsYearTarget, so 92.96 shown as
+    // "93.0%" is not "below" a 93 target here while meeting it elsewhere.
+    const rounder = window.DevCoachModules?.metricProfiles?.roundToDisplayPrecision;
+    if (typeof rounder === 'function') {
+        const rounded = rounder(metric, value);
+        if (Number.isFinite(rounded)) value = rounded;
+    }
     // PHASE 3 - Use METRICS_REGISTRY target type
     const metricDef = METRICS_REGISTRY[metric];
     if (metricDef && metricDef.target) {
@@ -3773,7 +3780,7 @@ function collectTeamTrendMetrics(period) {
             teamValue = wSum / wCount;
         }
 
-        const target = getMetricTrendTarget(key);
+        const target = getMetricTrendTarget(key, String(period?.metadata?.endDate || '').slice(0, 4));
         const targetType = getMetricTrendTargetType(key);
         const meetsTarget = targetType === 'min' ? teamValue >= target : teamValue <= target;
 

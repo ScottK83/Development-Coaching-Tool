@@ -203,6 +203,10 @@
         var limit = parseFloat(target.value);
         var actual = parseFloat(value);
         if (!Number.isFinite(limit) || !Number.isFinite(actual)) return true;
+        // Judged as printed: 92.96 reads "93.0%" and must count as meeting 93.
+        if (typeof profiles?.roundToDisplayPrecision === 'function') {
+            actual = profiles.roundToDisplayPrecision(meta.registry, actual);
+        }
 
         return target.type === 'max' ? actual <= limit : actual >= limit;
     }

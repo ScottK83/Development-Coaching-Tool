@@ -99,10 +99,27 @@
         }
     };
 
-    function getYearTarget(metricKey, year) {
+    /* The table for a year, or the newest year before it.
+
+       A year with no entry used to have no targets and no bands at all, so on
+       January 1 every Met/Not-met pill, on-target flag and rating went blank
+       until someone added the new year. Until the new figures are entered the
+       last year's stand, which is what the floor is still working to. A year
+       before the earliest on file has nothing to borrow and stays empty. */
+    function tableForYear(table, year) {
         const yearNum = parseInt(year, 10);
         if (!Number.isInteger(yearNum)) return null;
-        return TARGETS_BY_YEAR[yearNum]?.[metricKey] || null;
+        if (table[yearNum]) return table[yearNum];
+        const earlier = Object.keys(table).map(Number).filter((y) => y < yearNum).sort((a, b) => a - b);
+        return earlier.length ? table[earlier[earlier.length - 1]] : null;
+    }
+
+    function getTargetsForYear(year) {
+        return tableForYear(TARGETS_BY_YEAR, year) || {};
+    }
+
+    function getYearTarget(metricKey, year) {
+        return tableForYear(TARGETS_BY_YEAR, year)?.[metricKey] || null;
     }
 
     /* Round a value the way it will be printed, before judging it.
@@ -133,6 +150,16 @@
 
     // Whether a value clears the year's target, judged at display precision.
     // One place, so no two surfaces can disagree about the same number.
+    // For a caller already holding a target object: the same display-precision
+    // comparison meetsYearTarget makes, so a cell printed "93.0%" is never
+    // "below" a 93 target on one surface and "met" on another.
+    function valueMeetsTarget(metricKey, value, target) {
+        const numeric = roundToDisplayPrecision(metricKey, value);
+        const limit = parseFloat(target?.value);
+        if (!target || !Number.isFinite(numeric) || !Number.isFinite(limit)) return null;
+        return target.type === 'max' ? numeric <= limit : numeric >= limit;
+    }
+
     function meetsYearTarget(metricKey, value, year) {
         const target = getYearTarget(metricKey, year);
         const numeric = roundToDisplayPrecision(metricKey, value);
@@ -145,7 +172,7 @@
         const numeric = roundToDisplayPrecision(metricKey, value);
         if (!Number.isInteger(yearNum) || Number.isNaN(numeric)) return null;
 
-        const config = RATING_BANDS_BY_YEAR[yearNum]?.[metricKey];
+        const config = tableForYear(RATING_BANDS_BY_YEAR, yearNum)?.[metricKey];
         if (!config) return null;
 
         if (config.type === 'min') {
@@ -174,7 +201,7 @@
     function hasRatingBand(metricKey, year) {
         const yearNum = parseInt(year, 10);
         if (!Number.isInteger(yearNum)) return false;
-        return Boolean(RATING_BANDS_BY_YEAR[yearNum]?.[metricKey]);
+        return Boolean(tableForYear(RATING_BANDS_BY_YEAR, yearNum)?.[metricKey]);
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
@@ -182,7 +209,9 @@
         TARGETS_BY_YEAR,
         RATING_BANDS_BY_YEAR,
         getYearTarget,
+        getTargetsForYear,
         roundToDisplayPrecision,
+        valueMeetsTarget,
         meetsYearTarget,
         getRatingScore,
         getRatingBandColor,
