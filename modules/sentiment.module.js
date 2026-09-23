@@ -1281,24 +1281,10 @@
         const start = new Date(py, pm - 1, pd - 14);
         const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
 
-        // Initialize snapshot storage
-        if (!associateSentimentSnapshots[associate]) {
-            associateSentimentSnapshots[associate] = {};
-        }
-
+        // Provisional: replaced by the report's own dates once the files are read.
         const timeframeKey = `${startDate}_${endDate}`;
-        if (!associateSentimentSnapshots[associate][timeframeKey]) {
-            associateSentimentSnapshots[associate][timeframeKey] = {
-                startDate,
-                endDate,
-                pullDate,
-                positive: null,
-                negative: null,
-                emotions: null
-            };
-        }
 
-        statusDiv.textContent = '⏳ Processing files...';
+        statusDiv.textContent= '⏳ Processing files...';
         statusDiv.style.color = '#ff9800';
         statusDiv.style.display = 'block';
 
@@ -1325,11 +1311,40 @@
 
         Promise.all(filePromises)
             .then(results => {
+                // Checked before anything is written. Each of these used to be
+                // saved as if it were fine: a file for someone else under the
+                // selected name, one file dropped into two slots, and a file the
+                // parser could not read, stored empty behind a success message.
+                const problems = checkSentimentUploads(results, associate);
+                if (problems.length) {
+                    statusDiv.textContent = `❌ Not saved. ${problems.join(' ')}`;
+                    statusDiv.style.color = '#f44336';
+                    return;
+                }
+
+                // The report's own dates when it states them, rather than an
+                // assumed fourteen days before the pull date.
+                const range = sentimentRangeFromReports(results) || { startDate, endDate };
+                const savedKey = `${range.startDate}_${range.endDate}`;
+                if (!associateSentimentSnapshots[associate]) {
+                    associateSentimentSnapshots[associate] = {};
+                }
+                if (!associateSentimentSnapshots[associate][savedKey]) {
+                    associateSentimentSnapshots[associate][savedKey] = {
+                        startDate: range.startDate,
+                        endDate: range.endDate,
+                        pullDate,
+                        positive: null,
+                        negative: null,
+                        emotions: null
+                    };
+                }
+
                 // Save all processed data
                 results.forEach(({ type, report }) => {
                     const typeKey = type.toLowerCase();
                     // Only save phrases - percentages come from weekly metrics, not sentiment files
-                    associateSentimentSnapshots[associate][timeframeKey][typeKey] = {
+                    associateSentimentSnapshots[associate][savedKey][typeKey] = {
                         phrases: report.phrases
                     };
                 });
@@ -1364,6 +1379,71 @@
                 statusDiv.style.color = '#f44336';
                 console.error('Upload sentiment error:', error);
             });
+    }
+
+    // Same person when the surnames share a word and the first names share
+    // their first three letters, so "Christi Martinez-Sharp" matches
+    // "Martinez Sharp, Christi" and "Chris" matches "Christopher".
+    function sameSentimentAssociate(a, b) {
+        const tokens = (name) => {
+            let text = String(name || '').trim();
+            if (text.indexOf(',') > -1) {
+                const parts = text.split(',');
+                text = parts.slice(1).join(' ') + ' ' + parts[0];
+            }
+            return text.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+        };
+        const x = tokens(a);
+        const y = tokens(b);
+        if (x.length < 2 || y.length < 2) return true;
+        const surnameShared = x.slice(1).some((t) => y.slice(1).indexOf(t) > -1);
+        return surnameShared && x[0].slice(0, 3) === y[0].slice(0, 3);
+    }
+
+    function sentimentDateToIso(text) {
+        const m = String(text || '').trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+        if (!m) return '';
+        let year = parseInt(m[3], 10);
+        if (year < 100) year += 2000;
+        return `${year}-${String(m[1]).padStart(2, '0')}-${String(m[2]).padStart(2, '0')}`;
+    }
+
+    function sentimentRangeFromReports(results) {
+        const ranges = results
+            .map(({ report }) => ({ startDate: sentimentDateToIso(report.startDate), endDate: sentimentDateToIso(report.endDate) }))
+            .filter((r) => r.startDate && r.endDate);
+        return ranges.length ? ranges[0] : null;
+    }
+
+    function checkSentimentUploads(results, associate) {
+        const problems = [];
+        results.forEach(({ type, report }) => {
+            if (!(report.totalCalls > 0) || !(report.phrases || []).length) {
+                problems.push(`The ${type} file has no interactions or phrases in it, so it could not be read.`);
+            }
+            if (report.associateName && !sameSentimentAssociate(report.associateName, associate)) {
+                problems.push(`The ${type} file is for ${report.associateName}, not ${associate}.`);
+            }
+        });
+        const fingerprints = {};
+        results.forEach(({ type, report }) => {
+            const print = JSON.stringify([report.totalCalls, report.callsDetected, report.phrases]);
+            if (fingerprints[print]) {
+                problems.push(`The ${fingerprints[print]} and ${type} files are the same file.`);
+            } else {
+                fingerprints[print] = type;
+            }
+        });
+        const range = sentimentRangeFromReports(results);
+        const disagree = range && results.some(({ report }) => {
+            const start = sentimentDateToIso(report.startDate);
+            const end = sentimentDateToIso(report.endDate);
+            return start && end && (start !== range.startDate || end !== range.endDate);
+        });
+        if (disagree) {
+            problems.push('The files cover different dates. Pull all three for the same range.');
+        }
+        return problems;
     }
 
     function processUploadedSentimentFile(file, type, associate, timeframeKey) {
@@ -1785,6 +1865,8 @@
         parseSentimentAssociateName,
         createEmptySentimentReport,
         parseSentimentFile,
+        checkSentimentUploads,
+        sameSentimentAssociate,
         extractSentimentSpeakerAndPhrase,
         openUploadSentimentModal,
         closeUploadSentimentModal,

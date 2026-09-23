@@ -698,25 +698,76 @@
         });
     }
 
+    // Where each payroll column is, read from the header row rather than
+    // assumed. The columns used to be fixed positions with no check at all, so
+    // a different export dropped in this slot, or PW_TL_RPT_EX with one column
+    // inserted, read the wrong columns as TRC, Quantity and Task Code without a
+    // word. Positions are only the fallback for In, Out, Date and Task Code
+    // when their headers are not recognised; the four that decide hours must be
+    // found by name or the file is refused.
+    var PAYROLL_DEFAULT_COLUMNS = { emplid: 0, name: 1, date: 6, clockIn: 8, clockOut: 13, trc: 14, quantity: 15, taskCode: 22 };
+    var PAYROLL_HEADER_NAMES = {
+        emplid: ['emplid', 'employeeid', 'empid'],
+        name: ['name', 'employeename'],
+        date: ['date', 'workdate', 'reportdate'],
+        clockIn: ['in', 'clockin', 'timein', 'punchin'],
+        clockOut: ['out', 'clockout', 'timeout', 'punchout'],
+        trc: ['trc'],
+        quantity: ['quantity', 'qty', 'hours'],
+        taskCode: ['taskcode', 'task']
+    };
+
+    function findPayrollColumns(rows) {
+        var limit = Math.min(rows.length, 15);
+        for (var r = 0; r < limit; r++) {
+            var cells = (rows[r] || []).map(function(c) { return String(c || '').toLowerCase().replace(/[^a-z0-9]/g, ''); });
+            if (cells.indexOf('emplid') === -1 && cells.indexOf('employeeid') === -1) continue;
+            if (cells.indexOf('trc') === -1) continue;
+            var cols = {};
+            Object.keys(PAYROLL_HEADER_NAMES).forEach(function(field) {
+                // The known layout wins when its header agrees, so a second
+                // column that also says "Date" cannot pull the read sideways.
+                var usual = PAYROLL_DEFAULT_COLUMNS[field];
+                if (PAYROLL_HEADER_NAMES[field].indexOf(cells[usual]) > -1) {
+                    cols[field] = usual;
+                    return;
+                }
+                var idx = -1;
+                PAYROLL_HEADER_NAMES[field].some(function(label) {
+                    idx = cells.indexOf(label);
+                    return idx > -1;
+                });
+                cols[field] = idx > -1 ? idx : PAYROLL_DEFAULT_COLUMNS[field];
+            });
+            var missing = ['emplid', 'name', 'trc', 'quantity'].filter(function(field) {
+                return !PAYROLL_HEADER_NAMES[field].some(function(label) { return cells.indexOf(label) > -1; });
+            });
+            if (missing.length) {
+                throw new Error('This payroll file has no ' + missing.join(', ') + ' column. Upload the PW_TL_RPT_EX time report.');
+            }
+            return { headerRow: r, cols: cols };
+        }
+        throw new Error('This does not look like the payroll time report: no header row with Emplid and TRC was found. Upload the PW_TL_RPT_EX export.');
+    }
+
     function extractPayrollData(rows) {
-        // Row 4 (index 3) = headers: Emplid, Name, ..., Date, ..., TRC, Quantity, ..., Task Code
-        // Row 5+ = data
-        // Columns: A=Emplid(0), B=Name(1), G=Date(6), I=In(8), N=Out(13), O=TRC(14), P=Quantity(15), W=TaskCode(22)
+        var found = findPayrollColumns(rows);
+        var c = found.cols;
         var employees = {};
-        for (var i = 4; i < rows.length; i++) {
+        for (var i = found.headerRow + 1; i < rows.length; i++) {
             var row = rows[i];
-            var rawName = stripUnicode(String(row[1] || ''));
+            var rawName = stripUnicode(String(row[c.name] || ''));
             if (!rawName) continue;
 
             var name = normalizeEmployeeName(rawName);
             if (!isLikelyEmployeeName(name)) continue;
-            var emplid = stripUnicode(String(row[0] || ''));
-            var dateValue = row[6];
-            var clockIn = String(row[8] || '').trim();
-            var clockOut = String(row[13] || '').trim();
-            var trc = stripUnicode(String(row[14] || '')).toUpperCase();
-            var quantity = parseFloat(row[15]) || 0;
-            var taskCode = stripUnicode(String(row[22] || '')).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+            var emplid = stripUnicode(String(row[c.emplid] || ''));
+            var dateValue = row[c.date];
+            var clockIn = String(row[c.clockIn] || '').trim();
+            var clockOut = String(row[c.clockOut] || '').trim();
+            var trc = stripUnicode(String(row[c.trc] || '')).toUpperCase();
+            var quantity = parseFloat(row[c.quantity]) || 0;
+            var taskCode = stripUnicode(String(row[c.taskCode] || '')).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 
             var dateObj = parseSpreadsheetDate(dateValue);
 
@@ -2548,20 +2599,59 @@
         return verint;
     }
 
+    function payrollEntryTime(entry) {
+        if (!entry || !entry.date) return NaN;
+        var d = entry.date instanceof Date ? entry.date : new Date(entry.date);
+        return d.getTime();
+    }
+
+    /* A new payroll file is the authority for the days it covers, and only
+       those. Each upload used to replace the person's whole payroll record, so
+       a second pay period wiped the first, and the PTOST 40-hour running total
+       and the discipline tiers were worked out on part of the year. Entries
+       outside the new file's dates are kept; entries inside them are replaced,
+       so a re-pulled period with corrected codes still wins. */
+    function mergePayrollEntries(existing, incoming, fromMs, toMs) {
+        var kept = (existing || []).filter(function(entry) {
+            var t = payrollEntryTime(entry);
+            return !Number.isFinite(t) || t < fromMs || t > toMs;
+        });
+        return kept.concat(incoming || []).sort(function(a, b) {
+            return (payrollEntryTime(a) || 0) - (payrollEntryTime(b) || 0);
+        });
+    }
+
     async function handlePayrollUpload(file) {
         var payrollByEmployee = await parsePayrollExcel(file);
         var store = loadStore();
+
+        var fromMs = Infinity;
+        var toMs = -Infinity;
+        Object.keys(payrollByEmployee).forEach(function(rawName) {
+            (payrollByEmployee[rawName].entries || []).forEach(function(entry) {
+                var t = payrollEntryTime(entry);
+                if (!Number.isFinite(t)) return;
+                if (t < fromMs) fromMs = t;
+                if (t > toMs) toMs = t;
+            });
+        });
 
         Object.keys(payrollByEmployee).forEach(function(rawName) {
             var normalizedName = normalizeEmployeeName(rawName);
             var existingName = findExistingEmployeeName(store, normalizedName) || normalizedName;
             if (!store.employees[existingName]) store.employees[existingName] = {};
-            store.employees[existingName].payroll = payrollByEmployee[rawName];
+            var incoming = payrollByEmployee[rawName];
+            var previous = store.employees[existingName].payroll;
+            var merged = {
+                emplid: incoming.emplid || previous?.emplid || '',
+                entries: mergePayrollEntries(previous?.entries, incoming.entries, fromMs, toMs)
+            };
+            store.employees[existingName].payroll = merged;
             store.employees[existingName].hasPayroll = true;
 
             // Reconcile with existing Verint data if present
             var verint = store.employees[existingName].verint || null;
-            store.employees[existingName].reconciled = reconcileEmployee(verint, payrollByEmployee[rawName].entries);
+            store.employees[existingName].reconciled = reconcileEmployee(verint, merged.entries);
         });
 
         consolidateDuplicateEmployees(store);
@@ -2593,6 +2683,8 @@
         handlePayrollUpload: handlePayrollUpload,
         parseVerintExcel: parseVerintExcel,
         parsePayrollExcel: parsePayrollExcel,
+        extractPayrollData: extractPayrollData,
+        mergePayrollEntries: mergePayrollEntries,
         reconcileEmployee: reconcileEmployee
     };
 })();
