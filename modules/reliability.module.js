@@ -790,6 +790,16 @@
         throw new Error('This does not look like the payroll time report: no header row with Emplid and TRC was found. Upload the PW_TL_RPT_EX export.');
     }
 
+    // A time cell comes through as a fraction of a day (0.354166... for 8:30)
+    // and showed as that number. Written back as h:mm; text passes as it was.
+    function payrollClockText(value) {
+        if (typeof value === 'number' && value >= 0 && value < 1) {
+            var minutes = Math.round(value * 24 * 60);
+            return Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0');
+        }
+        return String(value || '').trim();
+    }
+
     function extractPayrollData(rows) {
         var found = findPayrollColumns(rows);
         var c = found.cols;
@@ -803,8 +813,8 @@
             if (!isLikelyEmployeeName(name)) continue;
             var emplid = stripUnicode(String(row[c.emplid] || ''));
             var dateValue = row[c.date];
-            var clockIn = String(row[c.clockIn] || '').trim();
-            var clockOut = String(row[c.clockOut] || '').trim();
+            var clockIn = payrollClockText(row[c.clockIn]);
+            var clockOut = payrollClockText(row[c.clockOut]);
             var trc = stripUnicode(String(row[c.trc] || '')).toUpperCase();
             var quantity = parseFloat(row[c.quantity]) || 0;
             var taskCode = stripUnicode(String(row[c.taskCode] || '')).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
