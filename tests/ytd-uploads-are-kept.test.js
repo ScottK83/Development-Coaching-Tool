@@ -126,9 +126,17 @@ suite('startup: nothing assumes there is only one year-to-date file', (t) => {
     const reads = [
         ['modules/center-ranking.module.js', '_latestYtdKeyForYear'],
         ['modules/morning-pulse.module.js', 'latestYtdPeriod'],
-        ['modules/q1-review.module.js', 'getLatestYtdPeriod'],
         ['modules/period-compare.module.js', '_latestYtdReliability']
     ];
+
+    // q1-review used to be on this list and was deleted when the Quarterly tab
+    // was rewritten. Its replacement reads no year-to-date row of its own: the
+    // quarter aggregate refuses that period type outright, and the one figure
+    // that does come from a year-to-date file, missed hours, is fetched through
+    // period-compare's picker, which is already checked above.
+    const quarterTrend = fs.readFileSync(path.join(ROOT, 'modules/quarter-trend.module.js'), 'utf8');
+    t.check('the quarter aggregate refuses year-to-date rows',
+        /periodType === 'ytd'/.test(quarterTrend));
 
     reads.forEach(([file, fn]) => {
         const src = fs.readFileSync(path.join(ROOT, file), 'utf8');

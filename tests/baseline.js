@@ -629,8 +629,12 @@ function recordKpiScoring() {
         return M().centerRanking.buildYearImageModel(2026);
     });
 
-    record('q1-review / buildQ1ReviewData', () => {
-        return M().q1Review.buildQ1ReviewData();
+    record('quarter-trend / buildYearQuarters', () => {
+        return M().quarterTrend.buildYearQuarters(2026);
+    });
+
+    record('quarter-trend / quarterCoverageReport', () => {
+        return M().quarterTrend.quarterCoverageReport(2026);
     });
 
     record('futures / buildFuturesData', () => {
@@ -1035,14 +1039,16 @@ function recordReviewPrompts() {
             : '(not exported)';
     });
 
-    record('q1-review / generateQ1CopilotPrompt', () => {
-        const q = M().q1Review;
-        const data = q.buildQ1ReviewData();
-        const emp = data && Array.isArray(data.employees)
-            ? data.employees.find((e) => e.name === subject.name) || data.employees[0]
-            : null;
-        if (!emp) return '(no employee rows in Q1 data)';
-        return q.generateQ1CopilotPrompt(emp, data);
+    record('quarter-review / buildNotes', () => {
+        const qr = M().quarterReview;
+        const ctx = qr.buildContext(subject.name, 2026);
+        return ctx ? qr.buildNotes(ctx) : '(no quarter data for subject)';
+    });
+
+    record('quarter-review / buildPrompt', () => {
+        const qr = M().quarterReview;
+        const ctx = qr.buildContext(subject.name, 2026);
+        return ctx ? qr.buildPrompt(ctx) : '(no quarter data for subject)';
     });
 
     record('trend-coaching-email / individual', () => {

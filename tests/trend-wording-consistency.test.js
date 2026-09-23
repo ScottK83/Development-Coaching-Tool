@@ -11,7 +11,8 @@ const { suite, ROOT } = require('./harness');
 
 const RENDERERS = [
     'modules/metric-trends.module.js',
-    'modules/q1-review.module.js',
+    // Took over the Quarterly tab from q1-review, which was deleted with it.
+    'modules/quarter-review.module.js',
     'modules/morning-pulse.module.js'
 ];
 

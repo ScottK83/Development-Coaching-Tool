@@ -150,6 +150,49 @@ suite('quarter trend: months beat weeks when both cover the quarter', (t) => {
     t.equal('and it covers the whole quarter', q2.coveredDays, 91);
 });
 
+/* Missed hours are ADDED across the weeks of a quarter, never maxed.
+ *
+ * Inherited from tests/q1-reliability-sums.test.js, which covered the Quarterly
+ * tab's previous aggregator and went with it when that module was deleted.
+ * Its history is worth keeping: the old code took the highest value it saw, on
+ * the belief that the reliability column is a running total. It is not, for
+ * anything but a year-to-date upload. A weekly or monthly upload carries the
+ * hours missed IN THAT PERIOD, and a typical sequence is 0, 0, 0, 8.5, 0.
+ *
+ * Maxing keeps an associate's single worst week and silently discards every
+ * other absence. A quarter of 8 + 8 + 3 came out as 8, inside the 18 hour
+ * budget, listed as a strength, and driving the review copy off a figure less
+ * than half the real one. metric-trends and futures had each fixed the same
+ * mistake in their own aggregation; the Quarterly tab was the copy left behind.
+ */
+suite('quarter trend: a quarter adds its weeks up rather than taking the worst', (t) => {
+    t.pinClock('2026-09-22');
+    const qt = load(t, Object.assign({},
+        period('week', '2026-01-05', '2026-01-11', [person('Sam Quarter', { reliability: 8 })]),
+        period('week', '2026-02-02', '2026-02-08', [person('Sam Quarter', { reliability: 8 })]),
+        period('week', '2026-03-02', '2026-03-08', [person('Sam Quarter', { reliability: 3 })])
+    ));
+
+    const q1 = qt.buildQuarterAggregate(2026, 1);
+    t.equal('8 + 8 + 3 is nineteen, not the worst single week',
+        q1.employees['Sam Quarter'].reliabilityAccrued, 19);
+    t.check('which is over the eighteen hour budget',
+        q1.employees['Sam Quarter'].reliabilityAccrued > 18);
+});
+
+suite('quarter trend: one bad week among zeroes is not the whole quarter', (t) => {
+    t.pinClock('2026-09-22');
+    // The shape that made maxing look right: max and sum agree here, which is
+    // exactly why the bug survived as long as it did.
+    const qt = load(t, Object.assign({},
+        period('week', '2026-01-05', '2026-01-11', [person('Solo Absence', { reliability: 0 })]),
+        period('week', '2026-02-02', '2026-02-08', [person('Solo Absence', { reliability: 8.5 })]),
+        period('week', '2026-03-02', '2026-03-08', [person('Solo Absence', { reliability: 0 })])
+    ));
+    t.equal('one absence among zeroes totals that absence',
+        qt.buildQuarterAggregate(2026, 1).employees['Solo Absence'].reliabilityAccrued, 8.5);
+});
+
 suite('quarter trend: weeks are used when they are all there is', (t) => {
     t.pinClock('2026-09-22');
     const qt = load(t, APRIL_WEEKS);
