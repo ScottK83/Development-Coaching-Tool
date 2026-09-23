@@ -94,7 +94,17 @@
         if (typeof listener === 'function') storeChangeListeners.push(listener);
     }
 
+    // Bumped on every write, so a push can tell whether a store changed again
+    // while it was on the wire. Clearing dirt by name alone marked an edit made
+    // mid-push as sent when it never was.
+    const writeCounts = new Map();
+
+    function storeWriteCount(key) {
+        return writeCounts.get(key) || 0;
+    }
+
     function markStoreDirty(key) {
+        writeCounts.set(key, storeWriteCount(key) + 1);
         dirtyStores.add(key);
         storeChangeListeners.forEach((listener) => {
             try {
@@ -109,8 +119,22 @@
         return dirtyStores.has(key);
     }
 
-    function clearDirtyStores() {
-        dirtyStores.clear();
+    /**
+     * With no arguments, clears everything (boot, before any user edit).
+     * With names, clears only those; with countsAtRead as well, only the ones
+     * not written again since those counts were taken.
+     */
+    function clearDirtyStores(names, countsAtRead) {
+        if (arguments.length === 0) {
+            dirtyStores.clear();
+            return;
+        }
+        // A skipped push has no list; that clears nothing rather than everything.
+        if (!Array.isArray(names)) return;
+        names.forEach((key) => {
+            if (countsAtRead && key in countsAtRead && countsAtRead[key] !== storeWriteCount(key)) return;
+            dirtyStores.delete(key);
+        });
     }
 
     // ============================================
@@ -1243,6 +1267,7 @@
         isStoreDirty,
         markStoreDirty,
         clearDirtyStores,
+        storeWriteCount,
         onStoreChanged,
         // Storage helpers
         // Lets a caller ask whether a store is subject to the localStorage size

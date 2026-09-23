@@ -156,6 +156,12 @@
             console.log(`[v2] No cloud copy yet; sending all ${names.length} stores as the baseline.`);
         }
 
+        // Taken before any value is read: a write after this point is not in
+        // what gets sent, so it must stay dirty after the push succeeds.
+        const storage = window.DevCoachModules?.storage;
+        const writeCounts = {};
+        names.forEach((n) => { writeCounts[n] = storage?.storeWriteCount?.(n) ?? 0; });
+
         // Blobs first, and awaited. A manifest naming bytes that are not in the
         // bucket is unresolvable on every machine forever, so the reference must
         // never land before the thing it references.
@@ -173,7 +179,29 @@
         }
         if (!Object.keys(changed).length) return { ok: true, skipped: true, reason: 'nothing readable to push' };
 
-        return commitWithRebase(changed, reason);
+        const result = await commitWithRebase(changed, reason);
+        return { ...result, pushed: Object.keys(changed), writeCounts };
+    }
+
+    /**
+     * Pushes every synced store with unsent edits, and marks as sent only the
+     * ones that did not change again while the push was in flight.
+     */
+    async function pushDirty(reason = 'auto') {
+        const storage = window.DevCoachModules?.storage;
+        const registry = window.DevCoachModules?.storeRegistry;
+        if (!storage?.isStoreDirty || !registry) return { ok: true, skipped: true, reason: 'nothing to push' };
+        const dirty = registry.syncedNames().filter((n) => storage.isStoreDirty(n));
+        if (!dirty.length) return { ok: true, skipped: true, reason: 'nothing to push' };
+        const result = await push(dirty, reason);
+        if (result?.ok && !result.skipped) {
+            storage.clearDirtyStores?.(result.pushed || dirty, result.writeCounts);
+        }
+        return result;
+    }
+
+    function isLocallyDirty(name) {
+        return window.DevCoachModules?.storage?.isStoreDirty?.(name) === true;
     }
 
     // ============================================
@@ -426,6 +454,18 @@
      */
     async function pull(options) {
         const full = options?.full === true;
+
+        // Unsent edits go up first. The push rebases onto whatever the other
+        // machine committed and merges or keeps both copies, which a pull
+        // cannot do: a pull only replaces. Pulling first wrote the other
+        // machine's copy over edits this one had not sent yet.
+        let prePush = null;
+        try {
+            prePush = await pushDirty('before pull');
+        } catch (error) {
+            prePush = { ok: false, error: error?.message || String(error) };
+        }
+
         const read = await callWorker({ mode: 'v2.manifest' });
         if (read.status !== 200) return { ok: false, error: read.data?.error || 'Could not read the manifest.' };
         if (!read.data.exists) {
@@ -446,12 +486,29 @@
         const applied = state.applied || {};
         const shards = manifest.shards || {};
 
+        // Conflict copies are kept in the cloud so nothing is destroyed. They
+        // are never brought down: each is a whole store, and written here they
+        // filled the browser's storage. Any already here from before are dropped.
+        Object.keys(applied).filter((name) => name.startsWith('conflicts/')).forEach((name) => {
+            delete applied[name];
+            try { localStorage.removeItem(STORAGE_PREFIX + name); } catch (_) { /* nothing to drop */ }
+        });
+
+        // A store still holding unsent edits (the push above failed, or it was
+        // edited since) is never overwritten. It waits for its own push.
+        const deferred = [];
+
         // full: every shard, whatever this machine thinks it already holds. The
         // recovery for a machine whose local copy was overwritten after a pull
         // recorded it as applied, which an ordinary pull can never notice.
         const toFetch = Object.keys(shards).filter((name) => {
-            if (full) return !name.startsWith('conflicts/');
-            return applied[name] !== shards[name];
+            if (name.startsWith('conflicts/')) return false;
+            if (!full && applied[name] === shards[name]) return false;
+            if (isLocallyDirty(name)) {
+                if (applied[name] !== shards[name]) deferred.push(name);
+                return false;
+            }
+            return true;
         });
         // A shard that vanished from the manifest was deleted elsewhere. Handled
         // separately from a changed one so a wipe is never mistaken for a stall.
@@ -476,10 +533,19 @@
 
         removed.forEach((name) => { delete applied[name]; });
 
-        saveSyncState({ version: manifest.version, etag: read.data.etag, applied });
+        // With a store deferred, the old etag is kept. The next push then
+        // commits against it, is told the manifest moved, and reconciles that
+        // store against the other machine's copy instead of overwriting it.
+        if (deferred.length) {
+            saveSyncState({ version: state.version, etag: state.etag, applied });
+        } else {
+            saveSyncState({ version: manifest.version, etag: read.data.etag, applied });
+        }
 
         return {
-            ok: failed.length === 0,
+            ok: failed.length === 0 && deferred.length === 0,
+            deferred,
+            prePush,
             version: manifest.version,
             updated,
             removed,
@@ -495,6 +561,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.manifestSync = {
         push,
+        pushDirty,
         pull,
         createFirstManifest,
         getDeviceId,

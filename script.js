@@ -2389,7 +2389,7 @@ async function ensureCloudCopyIsCurrent() {
     if (pending.length) {
         const pushed = await sync.push(pending, 'before a destructive step');
         if (!pushed.ok) return { ok: false, reason: pushed.error || pushed.code || 'the push failed' };
-        storage?.clearDirtyStores?.();
+        storage?.clearDirtyStores?.(pushed.pushed, pushed.writeCounts);
     }
 
     // Checked against what actually landed, not against a request returning
@@ -2528,7 +2528,7 @@ function startCloudSyncBackground() {
             if (!dirty.length) return;
             sync.push(dirty, 'auto').then((result) => {
                 if (result?.ok && !result.skipped) {
-                    storage?.clearDirtyStores?.();
+                    storage?.clearDirtyStores?.(result.pushed, result.writeCounts);
                     _lastCloudPushAt = new Date().toLocaleTimeString();
                     renderCloudSyncStatus();
                     console.log(`[cloud] Pushed ${result.changed.join(', ')} as version ${result.version}.`);
@@ -2666,7 +2666,7 @@ async function handleCloudSyncFullPullClick() {
                 setCloudSyncResult('Stopped: could not send this computer\'s unsent changes first (' + (pushed.error || pushed.code) + '). Nothing was replaced.', true);
                 return;
             }
-            storage?.clearDirtyStores?.();
+            storage?.clearDirtyStores?.(pushed.pushed, pushed.writeCounts);
         }
         setCloudSyncResult('Downloading everything...');
         const result = await sync.pull({ full: true });
@@ -2789,7 +2789,7 @@ async function handleCloudSyncPushClick() {
             return;
         }
         if (result.skipped) { setCloudSyncResult('Nothing to push.'); return; }
-        storage?.clearDirtyStores?.();
+        storage?.clearDirtyStores?.(result.pushed, result.writeCounts);
         _lastCloudPushAt = new Date().toLocaleTimeString();
         setCloudSyncResult(`Pushed ${result.changed.length} store(s) as version ${result.version}.`);
         renderCloudSyncStatus();
@@ -2863,7 +2863,7 @@ async function handleCloudSyncTestClick() {
     try {
         const result = await sync.push(dirty, 'test button');
         if (result.ok) {
-            storage.clearDirtyStores();
+            storage.clearDirtyStores(result.pushed, result.writeCounts);
             say(`PUSH OK${result.created ? ' (created the cloud copy)' : ''}, version ${result.version}`);
             say('');
             say('Now open the other computer and press Pull changes.');
