@@ -106,6 +106,7 @@
     function markStoreDirty(key) {
         writeCounts.set(key, storeWriteCount(key) + 1);
         dirtyStores.add(key);
+        announceWriteToOtherTabs(key);
         storeChangeListeners.forEach((listener) => {
             try {
                 listener(key);
@@ -181,6 +182,45 @@
 
     function isStoreStale(key) {
         return staleStores.has(key);
+    }
+
+    // ============================================
+    // OTHER TABS OF THIS APP
+    // ============================================
+    //
+    // Each tab holds the stores in memory from its own load. A second tab that
+    // saved its whole weeklyData wrote over an upload the first tab had just
+    // made. A write in one tab now marks that store stale in every other tab,
+    // the same way a pull from another machine does: saves from the old copy
+    // are refused until that tab reloads.
+    const otherTabWriteListeners = [];
+    let tabChannel = null;
+    try {
+        const Channel = typeof window !== 'undefined' ? window.BroadcastChannel : undefined;
+        if (typeof Channel === 'function') {
+            tabChannel = new Channel(STORAGE_PREFIX + 'storeWrites');
+            tabChannel.onmessage = (event) => {
+                const key = event?.data?.key;
+                if (!key || typeof key !== 'string') return;
+                staleStores.add(key);
+                otherTabWriteListeners.forEach((listener) => {
+                    try { listener(key); } catch (error) { console.error('[storage] An other-tab listener threw:', error); }
+                });
+            };
+        }
+    } catch (error) {
+        tabChannel = null;
+    }
+
+    function announceWriteToOtherTabs(key) {
+        // try covers a write during module load, before the channel exists.
+        try {
+            if (tabChannel) tabChannel.postMessage({ key });
+        } catch (_) { /* a missing or closed channel only loses the warning */ }
+    }
+
+    function onOtherTabWrite(listener) {
+        if (typeof listener === 'function') otherTabWriteListeners.push(listener);
     }
 
     function staleStoreNames() {
@@ -1279,6 +1319,7 @@
         isStoreStale,
         staleStoreNames,
         onStaleWriteRefused,
+        onOtherTabWrite,
         // Weekly data
         loadWeeklyData,
         saveWeeklyData,

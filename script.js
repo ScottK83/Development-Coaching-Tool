@@ -2517,6 +2517,10 @@ function startCloudSyncBackground() {
     });
     setInterval(() => pullFromOtherMachine('timer'), 5 * 60 * 1000);
 
+    storage?.onOtherTabWrite?.((key) => {
+        showSyncReloadBanner(`This data (${key}) was changed in another tab of this app. Reload before making changes here, or they will not save.`);
+    });
+
     storage?.onStaleWriteRefused?.((key) => {
         showSyncReloadBanner(`Not saved. Your other computer changed this data (${key}) since this page loaded. Reload to pick it up, then try again.`);
     });
