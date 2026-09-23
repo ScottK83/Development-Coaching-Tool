@@ -136,7 +136,26 @@
      * Uploads the given stores and commits them as a delta.
      * Returns a report; never throws for an ordinary conflict.
      */
+    function localStoreUnavailable() {
+        return window.DevCoachModules?.storage?.isBackendUnavailable?.() === true;
+    }
+
+    const UNAVAILABLE = {
+        ok: false,
+        code: 'LOCAL_STORE_UNAVAILABLE',
+        error: 'The local database could not be opened, so this computer\'s copy is out of date. Reload before syncing.'
+    };
+
+    /** A store whose local write failed is fetched again on the next pull. */
+    function forgetApplied(name) {
+        const state = loadSyncState();
+        if (!state.applied || !(name in state.applied)) return;
+        delete state.applied[name];
+        saveSyncState(state);
+    }
+
     async function push(storeNames, reason = 'updated') {
+        if (localStoreUnavailable()) return { ...UNAVAILABLE };
         const registry = window.DevCoachModules?.storeRegistry;
         let names = (storeNames || []).filter((n) => (registry ? registry.isSynced(n) : true));
         if (!names.length) return { ok: true, skipped: true, reason: 'nothing to push' };
@@ -454,6 +473,7 @@
      */
     async function pull(options) {
         const full = options?.full === true;
+        if (localStoreUnavailable()) return { ...UNAVAILABLE, updated: [], removed: [], failed: [], deferred: [] };
 
         // Unsent edits go up first. The push rebases onto whatever the other
         // machine committed and merges or keeps both copies, which a pull
@@ -563,6 +583,7 @@
         push,
         pushDirty,
         pull,
+        forgetApplied,
         createFirstManifest,
         getDeviceId,
         getLocalSyncVersion,

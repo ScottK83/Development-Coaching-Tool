@@ -161,6 +161,7 @@
     const staleWriteListeners = [];
 
     function applyRemoteStore(key, value) {
+        if (refuseBulkWriteWhileUnavailable(key)) return false;
         let ok;
         if (isBackedByIdb(key)) {
             ok = writeThroughToBackend(key, value ?? {});
@@ -231,12 +232,61 @@
         if (typeof listener === 'function') staleWriteListeners.push(listener);
     }
 
+    // ============================================
+    // WHEN THE BACKEND CANNOT BE TRUSTED
+    // ============================================
+    //
+    // After the move to IndexedDB, the localStorage copies of the bulk stores
+    // are frozen at the day of the move (or reclaimed). Falling back to them
+    // when IndexedDB fails to open meant an upload landed on months-old
+    // weeklyData, and the next push sent that over the cloud. So once migrated,
+    // a backend that cannot be opened stops bulk saves and sync instead.
+    //
+    // A durable write that fails later (the connection was closed by another
+    // tab, say) leaves the value in memory only. The cloud push still sends
+    // it and records it as applied, so after a reload this machine would hold
+    // the older copy and never fetch the newer one. The store is forgotten from
+    // the sync record, so the next pull brings it back.
+    let backendUnavailable = false;
+    const failedDurableWrites = new Set();
+    const backendProblemListeners = [];
+
+    function onBackendProblem(listener) {
+        if (typeof listener === 'function') backendProblemListeners.push(listener);
+    }
+
+    function reportBackendProblem(kind, key) {
+        backendProblemListeners.forEach((listener) => {
+            try { listener(kind, key); } catch (error) { console.error('[storage] A backend-problem listener threw:', error); }
+        });
+    }
+
+    function isBackendUnavailable() {
+        return backendUnavailable;
+    }
+
+    function failedDurableWriteNames() {
+        return Array.from(failedDurableWrites);
+    }
+
+    function refuseBulkWriteWhileUnavailable(key) {
+        if (!backendUnavailable || !BULK_KEYS.has(key)) return false;
+        console.error(`[storage] Refused to save ${key}: the local database could not be opened, and the fallback copy is out of date.`);
+        reportBackendProblem('unavailable', key);
+        return true;
+    }
+
     function writeThroughToBackend(key, value) {
         const backend = window.DevCoachModules?.idbBackend;
         if (!backend) return false;
         bulkCache[key] = value;
-        backend.put(key, value).catch((error) => {
+        backend.put(key, value).then(() => {
+            failedDurableWrites.delete(key);
+        }).catch((error) => {
             console.error(`[storage] Durable write failed for ${key}; the value is in memory only:`, error);
+            failedDurableWrites.add(key);
+            window.DevCoachModules?.manifestSync?.forgetApplied?.(key);
+            reportBackendProblem('writeFailed', key);
         });
         // Repo sync's only auto trigger is a patch on Storage.prototype.setItem,
         // which this write deliberately never touches. Without this call the
@@ -283,11 +333,19 @@
             }, HYDRATE_TIMEOUT_MS);
         });
 
+        let mode;
         try {
-            return await Promise.race([hydrateUsingBackend(), deadline]);
+            mode = await Promise.race([hydrateUsingBackend(), deadline]);
         } finally {
             clearTimeout(timer);
         }
+        let migrated = false;
+        try { migrated = localStorage.getItem(STORAGE_PREFIX + IDB_MIGRATED_MARKER) === '1'; } catch (_) { /* unreadable: treat as not migrated */ }
+        if (mode !== 'idb' && migrated) {
+            backendUnavailable = true;
+            console.error('[storage] The local database could not be opened after the move to it. Bulk saves and sync are paused until a reload succeeds.');
+        }
+        return mode;
     }
 
     async function hydrateUsingBackend() {
@@ -506,6 +564,7 @@
     // ============================================
 
     function saveWithSizeCheck(key, data) {
+        if (refuseBulkWriteWhileUnavailable(key)) return false;
         if (staleStores.has(key)) {
             console.error(`[storage] Refused to save ${key}: another machine changed it and this page still holds the older copy. Reload first.`);
             staleWriteListeners.forEach((listener) => {
@@ -1320,6 +1379,9 @@
         staleStoreNames,
         onStaleWriteRefused,
         onOtherTabWrite,
+        onBackendProblem,
+        isBackendUnavailable,
+        failedDurableWriteNames,
         // Weekly data
         loadWeeklyData,
         saveWeeklyData,
