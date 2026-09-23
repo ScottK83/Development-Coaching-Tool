@@ -461,10 +461,23 @@
             return true;
         };
 
-        if (Array.isArray(keywords)) {
-            return headers.findIndex(h => keywords.some(k => matchesKeyword(h, k)));
+        // Best match first, not first match. Taking the first header that
+        // loosely matched any keyword let "schedule" claim "Scheduled Hours"
+        // when it sat left of "Adherence%", and adherence read hours (40
+        // became 40%). An exact name wins outright; after that the keywords
+        // are tried in the order they are listed, most specific first.
+        const list = Array.isArray(keywords) ? keywords : [keywords];
+        const bare = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const bareHeaders = headers.map(bare);
+        for (const k of list) {
+            const exact = bareHeaders.indexOf(bare(k));
+            if (exact > -1 && bare(k)) return exact;
         }
-        return headers.findIndex(h => matchesKeyword(h, keywords));
+        for (const k of list) {
+            const hit = headers.findIndex(h => matchesKeyword(h, k));
+            if (hit > -1) return hit;
+        }
+        return -1;
     }
 
     function getCell(cells, colIndex) {

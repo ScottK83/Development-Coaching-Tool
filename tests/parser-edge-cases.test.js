@@ -236,3 +236,13 @@ suite('parser: names left off by the roster are reported, not just logged', (t) 
     t.check('the save confirmation names them', /Not on the roster, so not saved: \$\{skippedNames\.join/.test(src));
     delete global.window.isRosteredAssociate;
 });
+
+suite('parser: a loosely matching header does not beat the real one', (t) => {
+    const dp = load(t);
+    const paste = [
+        ['Name (Last, First)', 'TotalCalls', 'Scheduled Hours', 'AHT', 'Adherence%'].join('\t'),
+        ['Reed, Dana', '200', '40', '400', '95.2%'].join('\t')
+    ].join('\n');
+    const dana = dp.parsePastedData(paste, '2026-08-17', '2026-08-23')[0];
+    t.equal('adherence comes from Adherence%, not Scheduled Hours', dana.scheduleAdherence, 95.2);
+});
