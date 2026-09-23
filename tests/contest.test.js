@@ -1047,13 +1047,25 @@ suite('contest: a survey counts whichever question it answered', (t) => {
         return { tickets: row.perfectSurveys || 0, flagged: preview.needsSurveyCheck.length > 0 };
     }
 
-    // Each question keeps its own response count and they differ: somebody can
-    // answer the rep question and skip FCR. Reading only the OE total threw
-    // away a survey that arrived as rep sat, and threw it away silently.
-    t.equal('a rep sat survey with no OE response still counts',
-        survey({ surveyTotal: 0, repSurveyTotal: 1, cxRepOverall: 100 }).tickets, 1);
-    t.equal('and an FCR only survey does too',
-        survey({ surveyTotal: 0, fcrSurveyTotal: 1, fcr: 100 }).tickets, 1);
+    // A survey is a response with an OE answer, as it is everywhere else in
+    // the app. Johnathan had one survey in September, on 9/8, and a rep-only
+    // response on 9/9 was being counted as a second perfect survey.
+    t.equal('a rep sat answer with no OE response is not a survey',
+        survey({ surveyTotal: 0, repSurveyTotal: 1, cxRepOverall: 100 }).tickets, 0);
+    t.equal('and is not flagged either',
+        survey({ surveyTotal: 0, repSurveyTotal: 1, cxRepOverall: 100 }).flagged, false);
+    t.equal('nor is an FCR only answer',
+        survey({ surveyTotal: 0, fcrSurveyTotal: 1, fcr: 100 }).tickets, 0);
+
+    // One full survey plus a rep-only response: one survey.
+    t.equal('a partial response alongside a survey does not add one',
+        survey({ surveyTotal: 1, repSurveyTotal: 2, fcrSurveyTotal: 1,
+                 cxRepOverall: 100, fcr: 100, overallExperience: 100 }).tickets, 1);
+    // And when the extra rep answer was a miss, it might have been the
+    // survey's own, so the day is left to a person.
+    t.check('a partial miss that could be the survey\'s own is flagged',
+        survey({ surveyTotal: 1, repSurveyTotal: 2, fcrSurveyTotal: 1,
+                 cxRepOverall: 50, fcr: 100, overallExperience: 100 }).flagged);
     t.equal('an OE survey still counts as it always did',
         survey({ surveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 }).tickets, 1);
 

@@ -1437,6 +1437,27 @@
             questions.push({ rate: rate, count: count, own: own !== null });
         });
 
+        // A survey is a response with an overall experience answer, the same
+        // count the rest of the app uses (celebrations, perfect survey
+        // callouts). A customer who answers only the rep question has not sent
+        // a survey. Counting those as surveys gave Johnathan two perfect
+        // surveys in a month that held one: a full survey on 9/8 and a rep-only
+        // response on 9/9.
+        //
+        // Only when the upload says so consistently. An OE rate with no OE
+        // count means the count column is missing, and falls back to the
+        // question that saw the most responses.
+        var oeCount = importNumber(row.surveyTotal);
+        var oeRate = importNumber(row.overallExperience);
+        var anchored = oeCount !== null && (oeCount > 0 || !oeRate);
+        if (anchored) {
+            responses = oeCount;
+            // A question answered more often than OE was answered by partial
+            // responses too. Its misses still count against the surveys, since
+            // any one of them might belong to one, but it cannot cap them.
+            questions.forEach(function (q) { q.partial = q.count > responses; });
+        }
+
         if (!responses) return { count: 0, certain: true };
 
         // Responses came in and nothing scored them. Rare, and not something to
@@ -1465,7 +1486,7 @@
             // total. Borrowing the OE total there would be a guess.
             if (good < q.count && !q.own) return { count: 0, certain: false, total: Math.round(responses) };
             least -= q.count - good;
-            most = Math.min(most, good + (responses - q.count));
+            if (!q.partial) most = Math.min(most, good + (responses - q.count));
         }
         least = Math.max(0, least);
 

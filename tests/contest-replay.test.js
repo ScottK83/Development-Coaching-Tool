@@ -183,7 +183,7 @@ suite('contest replay: re-upload every daily, pull once, and September comes out
                 return p;
             })();
             if (res.needsSurveyCheck.length) open.push(day);
-            else certain += truth[n][day].filter((s) => s.scores.every((v) => v === 1 || v === null)).length;
+            else certain += truth[n][day].filter((s) => s.scores[2] === 1 && s.scores.every((v) => v === 1 || v === null)).length;
         });
         const got = board.find((r) => r.associate === n);
         check(n + ' perfect surveys', (got ? got.perfectSurvey : 0) === certain);
