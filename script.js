@@ -30,7 +30,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.09.23.14'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.09.23.15'; // Version: YYYY.MM.DD.NN
 // A top-level const is not a window property, and every reader of the version
 // asks window for it: the diagnostics summary, the crash reports, the sync
 // metadata. All three had been recording 'unknown' since the version moved to a
@@ -7515,7 +7515,18 @@ function mergeCallListeningDraftText(textareaId, draftText) {
     if (!field || !draftText) return;
 
     const existing = field.value.trim();
-    field.value = existing ? `${existing}\n${draftText}` : draftText;
+    if (!existing) {
+        field.value = draftText;
+        return;
+    }
+
+    // Only the lines that are not there already. Pressing Analyze a second
+    // time, or after loading a saved call, used to stack a second copy of
+    // every bullet under the first.
+    const have = new Set(existing.split('\n').map(line => line.trim()).filter(Boolean));
+    const fresh = draftText.split('\n').filter(line => line.trim() && !have.has(line.trim()));
+    if (!fresh.length) return;
+    field.value = `${existing}\n${fresh.join('\n')}`;
 }
 
 // A Verint export already carries the call date and who took it, so the
@@ -8471,15 +8482,38 @@ function clearCallListeningTranscript() {
     if (!confirm('Clear the pasted transcript? Your feedback notes stay as they are.')) return;
 
     transcriptField.value = '';
-    const summary = document.getElementById('callTranscriptAnalysisSummary');
-    if (summary) summary.style.display = 'none';
-    // A red box left up over an empty transcript reads as a verdict on
-    // whatever gets pasted next.
-    const alert = document.getElementById('callVerificationAlert');
-    if (alert) {
-        alert.style.display = 'none';
-        alert.innerHTML = '';
-    }
+    resetCallListeningReadPanels();
+}
+
+/**
+ * Takes down everything read off the call on screen.
+ *
+ * A red box left up over an empty transcript reads as a verdict on whatever
+ * gets pasted next, and the same is true of the recap, the QA answers and the
+ * language read: Clear used to take the red box down and leave those three
+ * describing a call that was no longer there.
+ */
+function resetCallListeningReadPanels() {
+    ['callTranscriptAnalysisSummary', 'callVerificationAlert', 'callSummaryPanel',
+        'callPasteDiagnosis', 'callQaPanel', 'callWordChoicePanel', 'callMetricCoachPanel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    ['callVerificationAlert', 'callSummaryPanel', 'callQaResults', 'callWordChoiceResults',
+        'callMetricChips', 'callMetricBrief'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+    ['callQaCount', 'callWordChoiceCount', 'callMetricCount'].forEach(id => setCallFoldCount(id, ''));
+
+    // The metric buttons act on these, so they go too.
+    callMetricBriefs = [];
+    callMetricSelectedKey = '';
+    callMetricCallMoments = [];
+    callMetricLedgerCallName = '';
+    callMetricSummary = null;
+    lastTranscriptPasteHtml = '';
+    sawTranscriptPaste = false;
 }
 
 function buildCallListeningPrompt(entry) {
