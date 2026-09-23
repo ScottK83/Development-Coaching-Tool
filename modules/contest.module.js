@@ -1491,6 +1491,18 @@
         least = Math.max(0, least);
 
         if (least === most) return { count: Math.round(least), certain: true, total: Math.round(responses) };
+
+        // Every survey answered every question, and every question came back
+        // with the same number of good answers. The good answers are the same
+        // surveys: two surveys at 50% on rep, FCR and OE are one perfect survey
+        // and one bad one, not two surveys each spoiled on a different question.
+        // That is the supervisor's ruling (Kamella, 9/15), and it is how
+        // customers answer: a happy customer is happy on every question.
+        var goods = questions.map(function (q) { return Math.round(q.rate * q.count / 100); });
+        var lined = questions.length === IMPORT_SURVEY_KEYS.length
+            && questions.every(function (q) { return !q.partial && q.count === responses; })
+            && goods.every(function (g) { return g === goods[0]; });
+        if (lined) return { count: goods[0], certain: true, total: Math.round(responses) };
         return { count: 0, certain: false, total: Math.round(responses), least: least, most: most };
     }
 

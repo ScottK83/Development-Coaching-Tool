@@ -1263,3 +1263,23 @@ suite('contest: a survey count typed in Enter a day outranks the uploads', (t) =
     t.check('and stays marked as typed', merged.month.days['2026-09-09']['Johnathan Test'].surveysTyped === true);
     t.equal('while the untyped day still comes from the upload', merged.month.days['2026-09-08']['Johnathan Test'].perfectSurveys, 1);
 });
+
+suite('contest: surveys whose good answers line up are counted', (t) => {
+    const contest = load(t);
+    const count = (extra) => {
+        const stores = { dailyData: { '2026-09-15|2026-09-15': { metadata: { startDate: '2026-09-15', endDate: '2026-09-15' },
+            employees: [Object.assign({ name: 'Kamella Test', scheduleAdherence: 90 }, extra)] } } };
+        const p = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+        return { tickets: ((p.days['2026-09-15'] || {})['Kamella Test'] || {}).perfectSurveys || 0, flagged: p.needsSurveyCheck.length > 0 };
+    };
+    // Kamella, 9/15: two surveys at 50% on every question. One perfect, one bad.
+    const kamella = count({ surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2, cxRepOverall: 50, fcr: 50, overallExperience: 50 });
+    t.equal('two surveys at 50% on everything are one perfect survey', kamella.tickets, 1);
+    t.equal('and nothing is left to type', kamella.flagged, false);
+    t.equal('three at a third on everything are one',
+        count({ surveyTotal: 3, repSurveyTotal: 3, fcrSurveyTotal: 3, cxRepOverall: 33.33, fcr: 33.33, overallExperience: 33.33 }).tickets, 1);
+    // Good answers that differ between questions cannot be lined up, so a
+    // person still decides.
+    t.check('uneven good answers are still left to a person',
+        count({ surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2, cxRepOverall: 100, fcr: 50, overallExperience: 50 }).flagged);
+});

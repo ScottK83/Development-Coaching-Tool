@@ -230,8 +230,8 @@ suite('contest replay: re-upload every daily, pull once, and September comes out
     const clean = api.buildLeaderboard(cloud, { asOf: '2026-09-23' });
     check('a clean pull gives Ang her 3', clean.find((r) => r.associate === 'Angelina Fierro').perfectSurvey === 3);
     check('and Christi her 1', clean.find((r) => r.associate === 'Christi Martinez-Sharp').perfectSurvey === 1);
-    check('and Kamella her certain 1 until 9/15 is typed again',
-        clean.find((r) => r.associate === 'Kamella Dash').perfectSurvey === 1);
+    check('and Kamella her 2: 9/15 lined up to one perfect survey, plus 9/17',
+        clean.find((r) => r.associate === 'Kamella Dash').perfectSurvey === 2);
 
     // Leave nothing behind for the suites that follow.
     ['fetch', 'CSS', 'SUPERVISOR_ROSTER', 'dailyData', 'weeklyData', 'ytdData', 'getDailyArchive'].forEach((k) => { delete global[k]; });
