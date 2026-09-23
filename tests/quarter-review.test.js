@@ -304,6 +304,62 @@ suite('quarter review: no attendance column is not perfect attendance', (t) => {
     t.equal('which is inside the allowance', perfect.ctx.reliability.meetsTarget, true);
 });
 
+suite('quarter review: a name spelled differently is still one person', (t) => {
+    t.pinClock('2026-09-22');
+    // Rows are keyed by the exact string the export carried, so a change of
+    // case or a trailing space between two uploads split one associate into
+    // two. On a quarter over quarter document that does not read as an error,
+    // it reads as a quarter with no data and the trend loses a point.
+    const spelled = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Jordan Reyes', { aht: 451 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('jordan reyes ', { aht: 438 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Jordan  Reyes', { aht: 421 })])
+    );
+    const { ctx } = ctxFor(t, spelled, 'Jordan Reyes');
+    const aht = ctx.metrics.find((m) => m.metricKey === 'aht');
+
+    t.equal('all three quarters are found', aht.series.measuredCount, 3);
+    t.equal('in order', aht.series.points.map((p) => p.value).join(','), '451,438,421');
+    t.equal('and the trend is read across them', aht.direction, 'improving');
+});
+
+suite('quarter review: two different people are not merged', (t) => {
+    t.pinClock('2026-09-22');
+    const both = period('quarter', '2026-07-01', '2026-09-30', [
+        person('Chris Taylor', { aht: 400 }),
+        person('Chris Taylom', { aht: 500 })
+    ]);
+    const { ctx } = ctxFor(t, both, 'Chris Taylor');
+    const aht = ctx.metrics.find((m) => m.metricKey === 'aht');
+    // Exact spelling wins, so a genuine near-miss between two names is never
+    // collapsed by the fallback.
+    t.equal('the exact name is the one read', aht.latestValue, 400);
+});
+
+suite('quarter review: a clean quarter still says something specific', (t) => {
+    t.pinClock('2026-09-22');
+    const clean = (name, over) => Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person(name, over)]),
+        period('quarter', '2026-04-01', '2026-06-30', [person(name, over)]),
+        period('quarter', '2026-07-01', '2026-09-30', [person(name, over)])
+    );
+    const a = ctxFor(t, clean('Strong Adherence', { scheduleAdherence: 99, cxRepOverall: 83 }), 'Strong Adherence');
+    const b = ctxFor(t, clean('Strong Sentiment', { scheduleAdherence: 93.5, overallSentiment: 99 }), 'Strong Sentiment');
+
+    const boxA = a.qr.buildNotes(a.ctx).box2;
+    const boxB = b.qr.buildNotes(b.ctx).box2;
+
+    t.check('both are clean quarters', /at goal for Q3 2026/.test(boxA) && /at goal for Q3 2026/.test(boxB));
+    // Every clean quarter used to produce a byte identical box, and a file
+    // note that could have been written about anybody reads like one that was.
+    t.check('but the two boxes differ', boxA !== boxB);
+    t.check('one names adherence', /schedule adherence the furthest clear/.test(boxA));
+    t.check('the other names sentiment', /overall sentiment the furthest clear/.test(boxB));
+    // Transfers has the most generous goal of the set and won on raw margin
+    // for almost everybody, which is not the line to open a good quarter with.
+    t.check('neither opens on transfers', !/transfers the furthest clear/.test(boxA + boxB));
+});
+
 suite('quarter review: a mid-year starter is not praised off an annual allowance', (t) => {
     t.pinClock('2026-09-22');
     // The allowance is 18 hours for a WHOLE year. A July starter who burned 15

@@ -309,9 +309,13 @@
         var carried = columnsCarried(pick.chosen.periods);
         rows.forEach(function (row) { finishQuarterRow(row, carried[row.name]); });
         var byName = {};
-        rows.forEach(function (r) { byName[r.name] = r; });
+        var byKey = {};
+        rows.forEach(function (r) {
+            byName[r.name] = r;
+            byKey[employeeKey(r.name)] = r;
+        });
 
-        return {
+        var aggregate = {
             year: pick.bounds.year,
             quarter: pick.bounds.quarter,
             name: pick.bounds.name,
@@ -335,12 +339,44 @@
             employees: byName,
             employeeList: rows
         };
+
+        // A lookup index, not part of the aggregate. Defined non-enumerable so
+        // it stays out of JSON.stringify: as a plain property it duplicated
+        // every associate row into the behaviour baseline, adding four hundred
+        // lines of noise to a file whose whole value is that a diff means
+        // something.
+        Object.defineProperty(aggregate, 'employeesByKey', {
+            value: byKey, enumerable: false, writable: false
+        });
+        return aggregate;
     }
 
     // Argument-less on purpose. The test harness pins exactly this form, so a
     // suite can ask what this module does in March without waiting for March.
     function _todayMs() {
         return new Date().getTime();
+    }
+
+    /* One associate, however their name was spelled in a given upload.
+     *
+     * Rows are keyed by the exact string the export carried, so "Jordan Reyes"
+     * in one quarter and "jordan reyes " in the next are two different people
+     * as far as the aggregate is concerned. On a quarter over quarter document
+     * that does not read as an error, it reads as a quarter with no data, and
+     * the trend quietly loses a point.
+     */
+    function employeeKey(name) {
+        return String(name == null ? '' : name).trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    // Exact spelling first, so an upload that genuinely distinguishes two
+    // similar names is never merged by the fallback.
+    function findEmployee(quarterAggregate, name) {
+        if (!quarterAggregate) return null;
+        var exact = quarterAggregate.employees && quarterAggregate.employees[name];
+        if (exact) return exact;
+        var byKey = quarterAggregate.employeesByKey;
+        return (byKey && byKey[employeeKey(name)]) || null;
     }
 
     /* Two corrections the generic aggregator cannot make on its own.
@@ -495,7 +531,7 @@
      */
     function buildMetricSeries(employeeName, metricKey, quarterAggregates) {
         var points = (quarterAggregates || []).map(function (qa) {
-            var emp = qa.employees ? qa.employees[employeeName] : null;
+            var emp = findEmployee(qa, employeeName);
             var raw = emp ? emp[metricKey] : undefined;
             var val = parseFloat(raw);
             var has = Number.isFinite(val);
@@ -660,6 +696,8 @@
         quarterOfDate: quarterOfDate,
         describePeriods: describePeriods,
         dropContained: dropContained,
+        employeeKey: employeeKey,
+        findEmployee: findEmployee,
         columnsCarried: columnsCarried,
         coveredDays: coveredDays,
         chooseQuarterSource: chooseQuarterSource,

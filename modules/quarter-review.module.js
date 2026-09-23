@@ -48,6 +48,12 @@
     // the quarter by quarter prose the other metrics get.
     var RELIABILITY = 'reliability';
 
+    // The four a review is actually about, matching the set the year end
+    // scoring uses minus attendance. Used where one metric has to stand for a
+    // whole quarter, so it is one of these rather than whichever happens to
+    // sit furthest from a generous goal.
+    var CORE_METRICS = ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall'];
+
     // Fewer responses than this behind a survey quarter and the quarter is not
     // quoted as a movement. Three is the floor the year end scoring already
     // uses, and a quarter swinging on two surveys is noise in a record.
@@ -56,6 +62,14 @@
     /* ── Access to the rest of the app ── */
 
     function _qt() { return (window.DevCoachModules || {}).quarterTrend || null; }
+
+    // Through quarter-trend so a name spelled differently between two
+    // uploads is still one person, rather than a quarter with no data.
+    function _findEmployee(quarterAggregate, name) {
+        var qt = _qt();
+        if (qt && typeof qt.findEmployee === 'function') return qt.findEmployee(quarterAggregate, name);
+        return (quarterAggregate && quarterAggregate.employees && quarterAggregate.employees[name]) || null;
+    }
     function _registry() { return window.METRICS_REGISTRY || {}; }
     function _profiles() { return (window.DevCoachModules || {}).metricProfiles || {}; }
 
@@ -271,7 +285,7 @@
         var running = 0;
         var any = false;
         var checkpoints = quarters.map(function (qa) {
-            var emp = qa.employees ? qa.employees[employeeName] : null;
+            var emp = _findEmployee(qa, employeeName);
             var accrued = emp ? parseFloat(emp.reliabilityAccrued) : NaN;
             if (Number.isFinite(accrued)) {
                 running += accrued;
@@ -364,13 +378,13 @@
      */
     function _coverageFacts(quarters, employeeName) {
         var mine = quarters.filter(function (q) {
-            return q.employees && q.employees[employeeName];
+            return !!_findEmployee(q, employeeName);
         });
         return {
             quartersWithData: mine.length,
             quartersRequested: quarters.length,
             missing: quarters.filter(function (q) {
-                return !(q.employees && q.employees[employeeName]);
+                return !_findEmployee(q, employeeName);
             }).map(function (q) { return q.name; }),
             spanStart: mine.length ? mine[0].spanStart || mine[0].startDate : null,
             spanEnd: mine.length ? mine[mine.length - 1].spanEnd || mine[mine.length - 1].endDate : null
@@ -761,6 +775,35 @@
      * fraction of the goal puts them on one scale well enough to decide which
      * of two misses a supervisor should be shown first.
      */
+    /* The metric sitting furthest clear of its goal.
+     *
+     * By margin as a fraction of the goal, so seconds and percentage points
+     * are comparable, which is the same scale _missSeverity uses at the other
+     * end.
+     */
+    function _strongest(strengths) {
+        // Drawn from the KPIs a review is actually about. Transfers has the
+        // most generous goal of the set, so by raw margin it won for almost
+        // everybody, and "transfers the furthest clear of it" is not the line
+        // a supervisor would open with about a good quarter.
+        var pick = function (pool) {
+            var best = null;
+            var bestMargin = -1;
+            pool.forEach(function (m) {
+                if (m.metricKey === RELIABILITY) return;
+                if (!m.target || !Number.isFinite(m.latestValue)) return;
+                var goal = Math.abs(m.target.value);
+                if (!goal) return;
+                var margin = Math.abs(m.latestValue - m.target.value) / goal;
+                if (margin > bestMargin) { bestMargin = margin; best = m; }
+            });
+            return best;
+        };
+        var all = strengths || [];
+        var core = all.filter(function (m) { return CORE_METRICS.indexOf(m.metricKey) >= 0; });
+        return pick(core) || pick(all);
+    }
+
     function _missSeverity(m) {
         if (!m || !m.gap || !m.target) return 0;
         var goal = Math.abs(m.target.value);
@@ -893,7 +936,16 @@
                 + _overRemainingPhrase(ctx) + '.');
         } else {
             var left = _quartersLeftPhrase(ctx);
-            box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel + '. '
+            // Named rather than left generic. Every associate with a clean
+            // quarter was getting a byte identical focus box, and a file note
+            // that could have been written about anybody reads as one that was.
+            var best = _strongest(split.strengths);
+            var opening = 'Every tracked metric is at goal for ' + ctx.quarterLabel;
+            if (best) {
+                opening += ', ' + best.label.toLowerCase() + ' the furthest clear of it at '
+                    + _display(best.metricKey, best.latestValue);
+            }
+            box2Parts.push(opening + '. '
                 + (left
                     ? 'The focus for the rest of the year is holding that through ' + left + '.'
                     : 'The focus is holding that through next year.'));
