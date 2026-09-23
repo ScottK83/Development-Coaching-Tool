@@ -217,6 +217,7 @@
             metrics: metrics,
             reliability: _reliabilityFacts(employeeName, year, scoped),
             coverage: _coverageFacts(scoped, employeeName),
+            support: _supportFacts(employeeName, scoped),
             preparedOn: opts.preparedOn || _today()
         };
     }
@@ -389,6 +390,87 @@
             spanStart: mine.length ? mine[0].spanStart || mine[0].startDate : null,
             spanEnd: mine.length ? mine[mine.length - 1].spanEnd || mine[mine.length - 1].endDate : null
         };
+    }
+
+    /* ── What the supervisor actually did ──
+     *
+     * Metrics alone make a scorecard, not a check-in. A record that says
+     * handle time came down and never says it was coached twice reads as
+     * something that happened to the associate rather than something they and
+     * their supervisor worked on, and the second reading is the one a review
+     * is for.
+     *
+     * Both stores are keyed by name and carry a date, so this is a count over
+     * the quarter's span. Nothing is invented when a store is absent: the
+     * counts come back zero and the sentence is not built.
+     */
+    function _supportFacts(employeeName, quarters) {
+        var withData = quarters.filter(function (q) { return !q.empty; });
+        var from = withData.length ? (withData[0].startDate || '') : '';
+        var to = withData.length ? (withData[withData.length - 1].endDate || '') : '';
+        var inSpan = function (dateText) {
+            var d = String(dateText || '').slice(0, 10);
+            return !!d && (!from || d >= from) && (!to || d <= to);
+        };
+
+        var history = (typeof coachingHistory !== 'undefined' ? coachingHistory : null)
+            || (typeof window !== 'undefined' ? window.coachingHistory : null) || {};
+        var sessions = (history[employeeName] || []).filter(function (entry) {
+            return entry && inSpan(entry.generatedAt);
+        });
+
+        var metricsCoached = {};
+        sessions.forEach(function (entry) {
+            (entry.metricsCoached || []).forEach(function (key) { metricsCoached[key] = true; });
+        });
+
+        var logs = (typeof callListeningLogs !== 'undefined' ? callListeningLogs : null)
+            || (typeof window !== 'undefined' ? window.callListeningLogs : null) || {};
+        var calls = (Array.isArray(logs[employeeName]) ? logs[employeeName] : []).filter(function (entry) {
+            return entry && inSpan(entry.listenedOn || entry.createdAt);
+        });
+
+        return {
+            coachingSessions: sessions.length,
+            metricsCoached: Object.keys(metricsCoached),
+            callsReviewed: calls.length,
+            spanStart: from,
+            spanEnd: to
+        };
+    }
+
+    /* One sentence, only when there is something to say. */
+    function supportSentence(ctx) {
+        var sup = ctx.support;
+        if (!sup) return '';
+        var parts = [];
+        if (sup.coachingSessions > 0) {
+            parts.push(sup.coachingSessions === 1
+                ? 'one coaching conversation'
+                : sup.coachingSessions + ' coaching conversations');
+        }
+        if (sup.callsReviewed > 0) {
+            parts.push(sup.callsReviewed === 1
+                ? 'one call reviewed together'
+                : sup.callsReviewed + ' calls reviewed together');
+        }
+        if (!parts.length) return '';
+
+        var joined = parts.length === 1 ? parts[0] : parts.join(' and ');
+        var line = ctx.firstName + ' and I have had ' + joined + ' over this stretch';
+
+        // Naming what was worked on is the part that makes the count mean
+        // something, but only the ones this document already discusses, so it
+        // cannot introduce a metric out of nowhere.
+        var discussed = ctx.metrics.map(function (m) { return m.metricKey; });
+        var named = sup.metricsCoached
+            .filter(function (k) { return discussed.indexOf(k) >= 0; })
+            .map(function (k) { return _label(k).toLowerCase(); });
+        if (named.length === 1) line += ', on ' + named[0];
+        else if (named.length === 2) line += ', on ' + named[0] + ' and ' + named[1];
+        else if (named.length > 2) line += ', on ' + named.slice(0, -1).join(', ') + ' and ' + named[named.length - 1];
+
+        return line + '.';
     }
 
     /* ── Sorting the facts into the two boxes ── */
@@ -952,6 +1034,10 @@
         }
         var box2 = box2Parts.filter(Boolean).join(' ');
 
+        // The work behind the numbers, ahead of the supervisor's own note.
+        var support = supportSentence(ctx);
+        if (support) box1 = box1 + ' ' + support;
+
         if (opts.notes) {
             box1 = box1 + ' ' + String(opts.notes).trim();
         }
@@ -1082,6 +1168,13 @@
         out.push('Here is how each measure has moved across the quarters this year:');
         factLines(ctx).forEach(function (line) { out.push(line); });
 
+        var support = supportSentence(ctx);
+        if (support) {
+            out.push('');
+            out.push('What we have worked on together over this stretch:');
+            out.push('- ' + support);
+        }
+
         out.push('');
         out.push('What I want recognised:');
         if (split.strengths.length) {
@@ -1141,6 +1234,7 @@
         progressionPhrase: progressionPhrase,
         metricSentence: metricSentence,
         reliabilitySentence: reliabilitySentence,
+        supportSentence: supportSentence,
         buildHeader: buildHeader,
         buildNotes: buildNotes,
         buildPrompt: buildPrompt,

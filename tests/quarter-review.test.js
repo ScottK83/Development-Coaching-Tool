@@ -304,6 +304,87 @@ suite('quarter review: no attendance column is not perfect attendance', (t) => {
     t.equal('which is inside the allowance', perfect.ctx.reliability.meetsTarget, true);
 });
 
+/* ── The work behind the numbers ──
+ *
+ * Metrics alone make a scorecard, not a check-in. A record that says handle
+ * time came down and never says it was coached twice reads as something that
+ * happened to the associate rather than something they and their supervisor
+ * worked on, and the second reading is what a review is for.
+ */
+
+function withSupport(t, store, name, coaching, calls) {
+    const qr = load(t, store);
+    global.coachingHistory = coaching || {};
+    global.window.coachingHistory = global.coachingHistory;
+    global.callListeningLogs = calls || {};
+    global.window.callListeningLogs = global.callListeningLogs;
+    return { qr, ctx: qr.buildContext(name, 2026) };
+}
+
+suite('quarter review: coaching held and calls reviewed reach the record', (t) => {
+    t.pinClock('2026-09-22');
+    const { qr, ctx } = withSupport(t, IMPROVING, 'Jordan Reyes',
+        {
+            'Jordan Reyes': [
+                { generatedAt: '2026-02-14T10:00:00Z', metricsCoached: ['aht'] },
+                { generatedAt: '2026-05-06T10:00:00Z', metricsCoached: ['aht', 'cxRepOverall'] },
+                { generatedAt: '2026-08-19T10:00:00Z', metricsCoached: ['cxRepOverall'] }
+            ]
+        },
+        { 'Jordan Reyes': [{ listenedOn: '2026-03-02' }, { listenedOn: '2026-07-15' }] });
+
+    t.equal('the sessions in the span are counted', ctx.support.coachingSessions, 3);
+    t.equal('and the calls', ctx.support.callsReviewed, 2);
+
+    const sentence = qr.supportSentence(ctx);
+    t.check('both counts are stated', /3 coaching conversations and 2 calls reviewed together/.test(sentence));
+    t.check('and what was worked on', /average handle time and rep satisfaction/.test(sentence));
+
+    t.check('it lands in the strengths box', /coaching conversations/.test(qr.buildNotes(ctx).box1));
+    t.check('and is handed to Copilot too', /worked on together/.test(qr.buildPrompt(ctx)));
+});
+
+suite('quarter review: nothing is invented when there is no history', (t) => {
+    t.pinClock('2026-09-22');
+    const { qr, ctx } = withSupport(t, IMPROVING, 'Jordan Reyes', {}, {});
+
+    t.equal('no sessions', ctx.support.coachingSessions, 0);
+    t.equal('no calls', ctx.support.callsReviewed, 0);
+    t.equal('and no sentence is built', qr.supportSentence(ctx), '');
+    t.check('so the box says nothing about coaching',
+        !/coaching conversation/.test(qr.buildNotes(ctx).box1));
+});
+
+suite('quarter review: only what happened inside the span is counted', (t) => {
+    t.pinClock('2026-09-22');
+    // Last year's sessions and a session dated after the quarter closed.
+    const { ctx } = withSupport(t, IMPROVING, 'Jordan Reyes',
+        {
+            'Jordan Reyes': [
+                { generatedAt: '2025-11-02T10:00:00Z', metricsCoached: ['aht'] },
+                { generatedAt: '2026-05-06T10:00:00Z', metricsCoached: ['aht'] },
+                { generatedAt: '2026-12-30T10:00:00Z', metricsCoached: ['aht'] }
+            ]
+        },
+        { 'Jordan Reyes': [{ listenedOn: '2025-08-01' }, { listenedOn: '2026-07-15' }] });
+
+    t.equal('only the one inside the year counts', ctx.support.coachingSessions, 1);
+    t.equal('and the one call inside it', ctx.support.callsReviewed, 1);
+});
+
+suite('quarter review: a coached metric the document does not discuss is not introduced', (t) => {
+    t.pinClock('2026-09-22');
+    // acw is coachable but is not one of the metrics this document reports, so
+    // naming it would raise something the reader has no numbers for.
+    const { qr, ctx } = withSupport(t, IMPROVING, 'Jordan Reyes',
+        { 'Jordan Reyes': [{ generatedAt: '2026-05-06T10:00:00Z', metricsCoached: ['acw', 'aht'] }] },
+        {});
+
+    const sentence = qr.supportSentence(ctx);
+    t.check('the discussed metric is named', /average handle time/.test(sentence));
+    t.check('the undiscussed one is not', !/after call work/i.test(sentence));
+});
+
 suite('quarter review: a name spelled differently is still one person', (t) => {
     t.pinClock('2026-09-22');
     // Rows are keyed by the exact string the export carried, so a change of
