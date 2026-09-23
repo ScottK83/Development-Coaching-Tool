@@ -1563,7 +1563,7 @@
                     var list = spanRows[name] || (spanRows[name] = []);
                     // The same span filed in two stores is one span.
                     list = spanRows[name] = list.filter(function (s) { return s.key !== key; });
-                    list.push({ key: key, start: start, end: end, order: here, kind: String(meta.periodType || 'span'), row: row, surveys: importPerfectSurveys(row) });
+                    list.push({ key: key, start: start, end: end, order: here, uploadedAt: String(meta.uploadedAt || ''), kind: String(meta.periodType || 'span'), row: row, surveys: importPerfectSurveys(row) });
                 });
                 return;
             }
@@ -1584,8 +1584,11 @@
 
         // Which spans each person's surveys come from.
         //
-        // Longest first, so a month to date beats the weeks inside it, then the
-        // newest end, then the store read last. Only a span whose count is
+        // Newest upload first. A survey lands days after its call, so the
+        // upload pulled last has seen the most of them: a month to date pulled
+        // on the 18th had missed surveys that the week pulled on the 21st
+        // holds, and ranking by length let the stale one win. Then the longest,
+        // then the newest end, then the store read last. Only a span whose count is
         // proven is used: an open one would trade a daily's certain count for a
         // guess. Spans that overlap one already chosen are skipped, so no
         // survey is counted twice. Days no chosen span covers fall back to
@@ -1596,6 +1599,7 @@
             spanRows[name]
                 .filter(function (s) { return s.surveys.certain; })
                 .sort(function (a, b) {
+                    if (a.uploadedAt !== b.uploadedAt) return a.uploadedAt < b.uploadedAt ? 1 : -1;
                     var lengthA = Date.parse(a.end) - Date.parse(a.start);
                     var lengthB = Date.parse(b.end) - Date.parse(b.start);
                     if (lengthA !== lengthB) return lengthB - lengthA;
@@ -1629,7 +1633,7 @@
                 var chosen = (coverOf[name] || []).indexOf(s) > -1;
                 if (!s.surveys.total) return;
                 trace(name, {
-                    kind: s.kind, start: s.start, end: s.end, questions: traceRow(s.row),
+                    kind: s.kind, start: s.start, end: s.end, uploadedAt: s.uploadedAt, questions: traceRow(s.row),
                     count: s.surveys.count, certain: s.surveys.certain, used: chosen,
                     why: chosen ? 'used' : (!s.surveys.certain ? 'mixed, cannot be worked out' : 'overlaps a longer upload that was used')
                 });

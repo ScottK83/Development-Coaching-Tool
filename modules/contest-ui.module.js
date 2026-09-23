@@ -410,7 +410,8 @@
                 .forEach(function (it) {
                     var when = it.start === it.end ? md(it.start) : md(it.start) + ' to ' + md(it.end);
                     var q = it.questions || {};
-                    out.push('  ' + it.kind + ' ' + when
+                    var uploaded = it.uploadedAt ? ' (uploaded ' + md(it.uploadedAt.slice(0, 10)) + ')' : '';
+                    out.push('  ' + it.kind + ' ' + when + uploaded
                         + ': rep ' + pct(q.cxRepOverall) + ', FCR ' + pct(q.fcr) + ', OE ' + pct(q.overallExperience)
                         + ' -> ' + (it.certain ? it.count + ' perfect' : 'open')
                         + ', ' + it.why);

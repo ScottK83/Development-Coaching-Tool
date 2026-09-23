@@ -1174,3 +1174,27 @@ suite('contest: the survey trace says where every count came from', (t) => {
     const daily = trace.find((it) => it.kind === 'daily');
     t.check('the daily inside it is marked as counted there', !daily.used && /counted there/.test(daily.why));
 });
+
+suite('contest: the newest upload wins, not the longest', (t) => {
+    const contest = load(t);
+    const one = { surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 };
+    // The month to date was pulled on the 18th and had seen one survey. The
+    // weeks pulled after it had seen one each.
+    const stores = { weeklyData: {
+        '2026-09-01|2026-09-17': { metadata: { startDate: '2026-09-01', endDate: '2026-09-17', periodType: 'month-to-date', uploadedAt: '2026-09-18T14:00:00Z' },
+            employees: [Object.assign({ name: 'Angelina Test' }, one)] },
+        '2026-09-07|2026-09-13': { metadata: { startDate: '2026-09-07', endDate: '2026-09-13', periodType: 'week', uploadedAt: '2026-09-14T14:00:00Z' },
+            employees: [Object.assign({ name: 'Angelina Test' }, one)] },
+        '2026-09-14|2026-09-20': { metadata: { startDate: '2026-09-14', endDate: '2026-09-20', periodType: 'week', uploadedAt: '2026-09-21T14:00:00Z' },
+            employees: [Object.assign({ name: 'Angelina Test' }, one)] }
+    } };
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    const row = contest.buildLeaderboard(contest.mergeImportIntoMonth({ days: {} }, preview).month)[0];
+    t.equal('both weeks count, the stale month to date does not', row.perfectSurvey, 2);
+
+    // A fresh month to date pulled after everything else covers the lot.
+    stores.weeklyData['2026-09-01|2026-09-22'] = { metadata: { startDate: '2026-09-01', endDate: '2026-09-22', periodType: 'month-to-date', uploadedAt: '2026-09-23T14:00:00Z' },
+        employees: [Object.assign({}, one, { name: 'Angelina Test', surveyTotal: 3, repSurveyTotal: 3, fcrSurveyTotal: 3 })] };
+    const fresh = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    t.equal('a fresh month to date wins', contest.buildLeaderboard(contest.mergeImportIntoMonth({ days: {} }, fresh).month)[0].perfectSurvey, 3);
+});
