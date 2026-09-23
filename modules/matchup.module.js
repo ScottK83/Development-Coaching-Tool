@@ -443,38 +443,53 @@
             teamStats[name] = stats;
         });
 
-        // Head-to-head: compare My Team vs each rival on each metric
-        var myStats = teamStats[MY_TEAM];
-        if (myStats) {
-            teamNames.forEach(function (name) {
-                if (name === MY_TEAM || name === 'Unassigned') return;
-                var rival = teamStats[name];
+        /* ── The W-L record: a round robin, not a spoke ──
+         *
+         * This used to compare My Team against each rival and nothing else,
+         * so My Team's record ran over every rival while each rival's record
+         * ran over My Team alone. Seven rivals and five metrics gave My Team
+         * up to thirty five comparisons and every other team at most five,
+         * and the two numbers were printed in the same column of the same
+         * table as though they meant the same thing. It reads like evidence
+         * and it was not.
+         *
+         * Every team now plays every other team, so one denominator covers
+         * the column. Teams too thin to place sit it out, the same ones the
+         * placing already withholds, rather than being beaten by everybody
+         * on the strength of two measured KPIs.
+         */
+        var contenders = teamNames.filter(function (name) {
+            return name !== 'Unassigned' && teamStats[name] && teamStats[name].rankable;
+        });
+
+        contenders.forEach(function (aName, i) {
+            contenders.slice(i + 1).forEach(function (bName) {
+                var a = teamStats[aName];
+                var b = teamStats[bName];
                 MATCHUP_METRICS.forEach(function (m) {
-                    var myVal = myStats.averages[m.key];
-                    var rivalVal = rival.averages[m.key];
-                    if (myVal === null || rivalVal === null) return;
+                    var aVal = a.averages[m.key];
+                    var bVal = b.averages[m.key];
+                    if (aVal === null || bVal === null) return;
 
-                    var myWins;
-                    if (m.lowerIsBetter) {
-                        myWins = myVal < rivalVal;
-                    } else {
-                        myWins = myVal > rivalVal;
+                    if (Math.abs(aVal - bVal) < 0.01) {
+                        a.ties++;
+                        b.ties++;
+                        return;
                     }
-                    var tie = Math.abs(myVal - rivalVal) < 0.01;
-
-                    if (tie) {
-                        myStats.ties++;
-                        rival.ties++;
-                    } else if (myWins) {
-                        myStats.wins++;
-                        rival.losses++;
-                    } else {
-                        myStats.losses++;
-                        rival.wins++;
-                    }
+                    var aWins = m.lowerIsBetter ? (aVal < bVal) : (aVal > bVal);
+                    if (aWins) { a.wins++; b.losses++; } else { a.losses++; b.wins++; }
                 });
             });
-        }
+        });
+
+        // How many opponents stood behind every record in the column, so a
+        // caller can say so rather than leaving a bare number to be read
+        // against whatever denominator the reader assumes.
+        teamNames.forEach(function (name) {
+            var st = teamStats[name];
+            if (!st) return;
+            st.opponents = st.rankable ? Math.max(0, contenders.length - 1) : 0;
+        });
 
         return {
             teams: teams,
@@ -983,7 +998,15 @@
             html += '<th style="padding: 8px; text-align: center;">' + m.label + '</th>';
         });
 
-        html += '<th style="padding: 8px; text-align: center;">Record</th>';
+        // The denominator, in the header, because a bare W-L invites the
+        // reader to supply one of their own.
+        var opponentCount = rankedTeams.length > 1 ? rankedTeams.length - 1 : 0;
+        html += '<th style="padding: 8px; text-align: center;">Record'
+            + (opponentCount
+                ? '<div style="font-size: 0.76em; font-weight: normal; color: var(--text-tertiary);">vs the other '
+                    + opponentCount + ' team' + (opponentCount === 1 ? '' : 's') + ', per metric</div>'
+                : '')
+            + '</th>';
         html += '</tr></thead><tbody>';
 
         sortedTeams.forEach(function (team, idx) {
@@ -1020,8 +1043,15 @@
             });
 
             html += '<td style="padding: 8px; text-align: center;">';
-            var wColor = team.wins > team.losses ? '#2e7d32' : (team.wins < team.losses ? '#c62828' : '#666');
-            html += '<span style="color: ' + wColor + '; font-weight: bold;">' + team.wins + 'W-' + team.losses + 'L</span>';
+            if (!team.rankable) {
+                // The same teams the placing is withheld from. A team too thin
+                // to place is too thin to carry a record, and 0W-0L would read
+                // as a team that played and drew everything.
+                html += '<span style="color: var(--text-tertiary);">--</span>';
+            } else {
+                var wColor = team.wins > team.losses ? '#2e7d32' : (team.wins < team.losses ? '#c62828' : '#666');
+                html += '<span style="color: ' + wColor + '; font-weight: bold;">' + team.wins + 'W-' + team.losses + 'L</span>';
+            }
             html += '</td>';
             html += '</tr>';
         });
