@@ -111,6 +111,14 @@
                     ${teamOptions}<option value="__all__">Everyone</option>
                 </select>
                 <button type="button" id="contestImportBtn" class="btn-secondary" style="background: #1565c0; color: white;">⬇️ Pull from uploads</button>
+                <button type="button" id="contestTraceBtn" class="btn-secondary" style="background: #546e7a; color: white;">🔍 Where surveys came from</button>
+            </div>
+            <div id="contestTrace" style="display: none; margin-bottom: 20px; padding: 14px 20px; background: var(--bg-surface-raised); border-radius: 8px; border: 1px solid var(--border);">
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <strong style="color: var(--text-primary);">Where surveys came from</strong>
+                    <button type="button" id="contestTraceCopyBtn" class="btn-secondary">Copy</button>
+                </div>
+                <div id="contestTraceBody" style="white-space: pre-wrap; font-family: monospace; font-size: 0.85em; color: var(--text-primary); max-height: 480px; overflow-y: auto;"></div>
             </div>
 
             <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
@@ -289,13 +297,7 @@
         // paste lands in and a single day pasted while the type still says
         // Week goes to weeklyData. buildImportPreview keeps only the periods
         // that pin to one day, so handing it all three cannot widen anything.
-        var stores = {
-            dailyData: typeof dailyData !== 'undefined' ? dailyData : {},
-            weeklyData: typeof weeklyData !== 'undefined' ? weeklyData : {},
-            ytdData: typeof ytdData !== 'undefined' ? ytdData : {},
-            // Where a weekly upload moves the dailies it covers.
-            dailyArchive: typeof getDailyArchive === 'function' ? getDailyArchive() : {}
-        };
+        var stores = importStores();
 
         var preview = api.buildImportPreview(stores, {
             monthKey: monthKey,
@@ -355,6 +357,82 @@
                 : ''));
         renderDayGrid();
         renderStandings();
+    }
+
+    function importStores() {
+        return {
+            dailyData: typeof dailyData !== 'undefined' ? dailyData : {},
+            weeklyData: typeof weeklyData !== 'undefined' ? weeklyData : {},
+            ytdData: typeof ytdData !== 'undefined' ? ytdData : {},
+            dailyArchive: typeof getDailyArchive === 'function' ? getDailyArchive() : {}
+        };
+    }
+
+    /**
+     * Every upload that had surveys for each person on the team, what the pull
+     * made of it, and what is stored. Read only: nothing is saved.
+     *
+     * When a survey count looks wrong this is how to see why, without a
+     * console: the rates and response counts each upload carried, whether it
+     * was used, and the per day numbers the standings are built from.
+     */
+    function traceText() {
+        var api = contest();
+        if (!api?.buildImportPreview) return 'The import is not available.';
+        var date = document.getElementById('contestDate')?.value;
+        var monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
+        var names = namesForTeam(selectedTeam());
+        var preview = api.buildImportPreview(importStores(), { monthKey: monthKey, names: names });
+        var trace = preview.surveyTrace || {};
+        var stored = currentMonthData().days || {};
+        var board = api.buildLeaderboard(currentMonthData()) || [];
+
+        var md = function (iso) { var p = String(iso).split('-'); return Number(p[1]) + '/' + Number(p[2]); };
+        var pct = function (q) {
+            if (!q || q.rate === null) return '-';
+            return q.rate + '% of ' + (q.responses === null ? '?' : q.responses);
+        };
+
+        var out = ['Month ' + monthKey + ', team ' + selectedTeam() + '.', ''];
+        names.forEach(function (name) {
+            var storedDays = Object.keys(stored).sort().filter(function (d) {
+                return stored[d] && stored[d][name] && Number(stored[d][name].perfectSurveys) > 0;
+            });
+            var items = trace[name] || [];
+            if (!items.length && !storedDays.length) return;
+
+            var row = board.find(function (r) { return r.associate === name; });
+            out.push(name + ': standings show ' + (row ? row.perfectSurvey : 0) + ' perfect surveys');
+            out.push('  Stored: ' + (storedDays.length
+                ? storedDays.map(function (d) { return md(d) + ' = ' + stored[d][name].perfectSurveys; }).join(', ')
+                : 'none'));
+            items.slice().sort(function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; })
+                .forEach(function (it) {
+                    var when = it.start === it.end ? md(it.start) : md(it.start) + ' to ' + md(it.end);
+                    var q = it.questions || {};
+                    out.push('  ' + it.kind + ' ' + when
+                        + ': rep ' + pct(q.cxRepOverall) + ', FCR ' + pct(q.fcr) + ', OE ' + pct(q.overallExperience)
+                        + ' -> ' + (it.certain ? it.count + ' perfect' : 'open')
+                        + ', ' + it.why);
+                });
+            out.push('');
+        });
+        if (out.length === 2) out.push('No surveys found in any upload or stored day for this team this month.');
+        return out.join('\n');
+    }
+
+    function showTrace() {
+        var panel = document.getElementById('contestTrace');
+        var body = document.getElementById('contestTraceBody');
+        if (!panel || !body) return;
+        body.textContent = traceText();
+        panel.style.display = 'block';
+    }
+
+    function copyTrace() {
+        var text = document.getElementById('contestTraceBody')?.textContent || '';
+        var copy = window.DevCoachModules?.uiUtils?.copyToClipboard;
+        if (text && typeof copy === 'function') copy(text, { message: 'Copied.' });
     }
 
     /**
@@ -541,6 +619,8 @@
             document.getElementById('contestTeam')?.addEventListener('change', () => { renderDayGrid(); renderStandings(); });
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
             document.getElementById('contestImportBtn')?.addEventListener('click', importFromUploads);
+            document.getElementById('contestTraceBtn')?.addEventListener('click', showTrace);
+            document.getElementById('contestTraceCopyBtn')?.addEventListener('click', copyTrace);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
             document.getElementById('contestDrawBtn')?.addEventListener('click', draw);

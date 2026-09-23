@@ -876,9 +876,11 @@ suite('contest: the panel offers one way to do each thing', (t) => {
 
     // Five buttons for three actions was two too many. The words, the picture,
     // and the draw.
+    // Plus the survey trace and its copy button, which exist so a count that
+    // looks wrong can be traced to its upload without a console.
     const buttons = (ui.match(/<button type="button" id="contest\w+Btn"/g) || []);
-    t.equal('three buttons in the standings row and two in the day entry',
-        buttons.length, 5);
+    t.equal('three buttons in the standings row, two in the day entry, two for the trace',
+        buttons.length, 7);
     t.check('the post button says where it goes', ui.indexOf('📣 Post to Teams') > -1);
     t.check('there is no second post button', ui.indexOf('Copy a check in') === -1);
 
@@ -1146,4 +1148,29 @@ suite('contest: a survey that arrives after the daily is still counted', (t) => 
         { cxRepOverall: 66.67, fcr: 66.67 });
     const open = contest.buildImportPreview(openStores, { monthKey: '2026-09' });
     t.equal('an open span leaves the daily count alone', open.days['2026-09-12']['Ang Test'].perfectSurveys, 1);
+});
+
+suite('contest: the survey trace says where every count came from', (t) => {
+    const contest = load(t);
+    const perfect = { surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 };
+    const stores = {
+        dailyData: {
+            '2026-09-10|2026-09-10': { metadata: { startDate: '2026-09-10', endDate: '2026-09-10' },
+                employees: [Object.assign({ name: 'Christi Test' }, perfect)] }
+        },
+        weeklyData: {
+            '2026-09-07|2026-09-13': { metadata: { startDate: '2026-09-07', endDate: '2026-09-13', periodType: 'week' },
+                employees: [{ name: 'Christi Test', surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2,
+                              cxRepOverall: 50, fcr: 100, overallExperience: 100 }] }
+        }
+    };
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    const trace = preview.surveyTrace['Christi Test'];
+
+    t.equal('the week and the daily are both listed', trace.length, 2);
+    const week = trace.find((it) => it.kind === 'week');
+    t.check('the week was used, with its one perfect survey', week.used && week.count === 1);
+    t.equal('its rates are carried', week.questions.cxRepOverall.rate, 50);
+    const daily = trace.find((it) => it.kind === 'daily');
+    t.check('the daily inside it is marked as counted there', !daily.used && /counted there/.test(daily.why));
 });

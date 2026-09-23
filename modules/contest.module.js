@@ -1469,7 +1469,7 @@
         }
         least = Math.max(0, least);
 
-        if (least === most) return { count: Math.round(least), certain: true };
+        if (least === most) return { count: Math.round(least), certain: true, total: Math.round(responses) };
         return { count: 0, certain: false, total: Math.round(responses), least: least, most: most };
     }
 
@@ -1563,7 +1563,7 @@
                     var list = spanRows[name] || (spanRows[name] = []);
                     // The same span filed in two stores is one span.
                     list = spanRows[name] = list.filter(function (s) { return s.key !== key; });
-                    list.push({ key: key, start: start, end: end, order: here, surveys: importPerfectSurveys(row) });
+                    list.push({ key: key, start: start, end: end, order: here, kind: String(meta.periodType || 'span'), row: row, surveys: importPerfectSurveys(row) });
                 });
                 return;
             }
@@ -1609,6 +1609,33 @@
             if (chosen.length) coverOf[name] = chosen;
         });
 
+        // Every upload that had surveys for a person, and what became of it.
+        // Shown by the panel's "where surveys came from" check, so a count that
+        // looks wrong can be traced to the upload that made it.
+        var surveyTrace = {};
+        var traceRow = function (row) {
+            var read = {};
+            IMPORT_SURVEY_KEYS.forEach(function (key) {
+                var own = importNumber(row[IMPORT_SURVEY_TOTALS[key]]);
+                read[key] = { rate: importNumber(row[key]), responses: own !== null ? own : importNumber(row.surveyTotal) };
+            });
+            return read;
+        };
+        var trace = function (name, item) {
+            (surveyTrace[name] || (surveyTrace[name] = [])).push(item);
+        };
+        Object.keys(spanRows).forEach(function (name) {
+            spanRows[name].forEach(function (s) {
+                var chosen = (coverOf[name] || []).indexOf(s) > -1;
+                if (!s.surveys.total) return;
+                trace(name, {
+                    kind: s.kind, start: s.start, end: s.end, questions: traceRow(s.row),
+                    count: s.surveys.count, certain: s.surveys.certain, used: chosen,
+                    why: chosen ? 'used' : (!s.surveys.certain ? 'mixed, cannot be worked out' : 'overlaps a longer upload that was used')
+                });
+            });
+        });
+
         var coveringSpan = function (name, date) {
             return (coverOf[name] || []).find(function (s) { return date >= s.start && date <= s.end; }) || null;
         };
@@ -1635,8 +1662,18 @@
 
             var adherence = importNumber(row.scheduleAdherence);
             // Surveys on a day a chosen span covers are already in the span.
-            var covered = !!coveringSpan(name, date);
-            var surveys = covered ? { count: 0, certain: true } : importPerfectSurveys(row);
+            var span = coveringSpan(name, date);
+            var covered = !!span;
+            var own = importPerfectSurveys(row);
+            var surveys = covered ? { count: 0, certain: true } : own;
+            if (own.count || own.total) {
+                trace(name, {
+                    kind: 'daily', start: date, end: date, questions: traceRow(row),
+                    count: own.count, certain: own.certain, used: !covered && own.certain,
+                    why: covered ? 'inside ' + span.start + ' to ' + span.end + ', counted there'
+                        : (own.certain ? 'used' : 'mixed, cannot be worked out')
+                });
+            }
 
             if (!surveys.certain) {
                 needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
@@ -1696,6 +1733,7 @@
             notes: notes,
             needsSurveyCheck: needsSurveyCheck,
             surveySpans: surveySpans,
+            surveyTrace: surveyTrace,
             dateRange: { first: dayList[0] || '', last: dayList[dayList.length - 1] || '' },
             counts: {
                 days: dayList.length,
