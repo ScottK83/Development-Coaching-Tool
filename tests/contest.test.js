@@ -877,10 +877,11 @@ suite('contest: the panel offers one way to do each thing', (t) => {
     // Five buttons for three actions was two too many. The words, the picture,
     // and the draw.
     // Plus the survey trace and its copy button, which exist so a count that
-    // looks wrong can be traced to its upload without a console.
+    // looks wrong can be traced to its upload without a console, and the
+    // start over button for a month that needs pulling clean.
     const buttons = (ui.match(/<button type="button" id="contest\w+Btn"/g) || []);
-    t.equal('three buttons in the standings row, two in the day entry, two for the trace',
-        buttons.length, 7);
+    t.equal('three in the standings row, two in the day entry, two for the trace, one to start over',
+        buttons.length, 8);
     t.check('the post button says where it goes', ui.indexOf('📣 Post to Teams') > -1);
     t.check('there is no second post button', ui.indexOf('Copy a check in') === -1);
 

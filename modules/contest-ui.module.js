@@ -112,6 +112,7 @@
                 </select>
                 <button type="button" id="contestImportBtn" class="btn-secondary" style="background: #1565c0; color: white;">⬇️ Pull from uploads</button>
                 <button type="button" id="contestTraceBtn" class="btn-secondary" style="background: #546e7a; color: white;">🔍 Where surveys came from</button>
+                <button type="button" id="contestClearBtn" class="btn-secondary" style="background: #c62828; color: white;">🗑️ Start the month over</button>
             </div>
             <div id="contestTrace" style="display: none; margin-bottom: 20px; padding: 14px 20px; background: var(--bg-surface-raised); border-radius: 8px; border: 1px solid var(--border);">
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
@@ -422,6 +423,48 @@
         return out.join('\n');
     }
 
+    /**
+     * Wipes the month on screen, for everyone, so a pull can fill it clean.
+     *
+     * Every day and every typed number in the month goes, not just one team,
+     * because a pull fills the whole month and half a wipe would leave old
+     * counts sitting beside new ones. Asked first, with the month named, since
+     * it cannot be undone.
+     */
+    async function clearMonth() {
+        var status = document.getElementById('contestDayStatus');
+        var say = function (message) { if (status) status.textContent = message; };
+        if (busy) return;
+
+        var date = document.getElementById('contestDate')?.value;
+        var monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
+        var days = Object.keys(currentMonthData().days || {}).length;
+
+        if (!window.confirm('Delete every contest number for ' + monthKey + '?\n\n'
+            + days + ' ' + (days === 1 ? 'day' : 'days') + ' will be cleared for everyone, including anything typed in by hand. '
+            + 'Your uploads are not touched, so Pull from uploads fills it back in.\n\nThis cannot be undone.')) {
+            say('Nothing was deleted.');
+            return;
+        }
+
+        busy = true;
+        say('Clearing...');
+        var empty = { days: {} };
+        try {
+            await pushMonth(monthKey, empty);
+        } catch (error) {
+            say('Not cleared: ' + (error?.message || error));
+            busy = false;
+            return;
+        }
+        loadedMonth = monthKey;
+        loadedData = empty;
+        busy = false;
+        say('Cleared ' + monthKey + '. Click Pull from uploads to fill it back in.');
+        renderDayGrid();
+        renderStandings();
+    }
+
     function showTrace() {
         var panel = document.getElementById('contestTrace');
         var body = document.getElementById('contestTraceBody');
@@ -621,6 +664,7 @@
             document.getElementById('contestSaveDayBtn')?.addEventListener('click', saveDay);
             document.getElementById('contestImportBtn')?.addEventListener('click', importFromUploads);
             document.getElementById('contestTraceBtn')?.addEventListener('click', showTrace);
+            document.getElementById('contestClearBtn')?.addEventListener('click', clearMonth);
             document.getElementById('contestTraceCopyBtn')?.addEventListener('click', copyTrace);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
@@ -656,5 +700,5 @@
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
-    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
+    window.DevCoachModules.contestUi = { show, renderDayGrid, renderStandings, renderGraphic, saveDay, importFromUploads, clearMonth, draw, copyStandings, copyGraphic, downloadGraphic, loadMonthAndRender };
 })();
