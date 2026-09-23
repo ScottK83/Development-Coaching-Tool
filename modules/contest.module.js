@@ -1473,6 +1473,12 @@
         return { count: 0, certain: false, total: Math.round(responses), least: least, most: most };
     }
 
+    function hasSurveyColumns(row) {
+        return ['surveyTotal', 'repSurveyTotal', 'fcrSurveyTotal'].some(function (key) {
+            return importNumber((row || {})[key]) !== null;
+        });
+    }
+
     /**
      * What an import would do, without doing it.
      *
@@ -1572,7 +1578,7 @@
             ((period || {}).employees || []).forEach(function (row) {
                 var name = rowName(row);
                 if (!name) return;
-                singles[date + '|' + name] = { date: date, name: name, row: row };
+                singles[date + '|' + name] = { date: date, name: name, row: row, uploadedAt: String(meta.uploadedAt || '') };
             });
         };
 
@@ -1582,7 +1588,22 @@
             });
         });
 
-        // Which spans each person's surveys come from.
+        // A daily competes with the spans on the same terms. Re-pulling a day
+        // after its surveys have landed is the cleanest fix there is for a late
+        // survey, and while dailies only filled the gaps between spans, a fresh
+        // daily lost to a week uploaded before it. Only a certain one competes:
+        // an open daily has no count to offer.
+        Object.keys(singles).forEach(function (id) {
+            var single = singles[id];
+            var surveys = importPerfectSurveys(single.row);
+            if (!surveys.certain) return;
+            (spanRows[single.name] || (spanRows[single.name] = [])).push({
+                key: 'day:' + single.date, start: single.date, end: single.date, order: 0, daily: true,
+                uploadedAt: single.uploadedAt, kind: 'daily', row: single.row, surveys: surveys
+            });
+        });
+
+        // Which uploads each person's surveys come from.
         //
         // Newest upload first. A survey lands days after its call, so the
         // upload pulled last has seen the most of them: a month to date pulled
@@ -1597,7 +1618,9 @@
         Object.keys(spanRows).forEach(function (name) {
             var chosen = [];
             spanRows[name]
-                .filter(function (s) { return s.surveys.certain; })
+                // An upload with no survey columns at all has nothing to say
+                // about surveys, which is not the same as saying there were none.
+                .filter(function (s) { return s.surveys.certain && hasSurveyColumns(s.row); })
                 .sort(function (a, b) {
                     if (a.uploadedAt !== b.uploadedAt) return a.uploadedAt < b.uploadedAt ? 1 : -1;
                     var lengthA = Date.parse(a.end) - Date.parse(a.start);
@@ -1631,11 +1654,11 @@
         Object.keys(spanRows).forEach(function (name) {
             spanRows[name].forEach(function (s) {
                 var chosen = (coverOf[name] || []).indexOf(s) > -1;
-                if (!s.surveys.total) return;
+                if (s.daily || !s.surveys.total) return;
                 trace(name, {
                     kind: s.kind, start: s.start, end: s.end, uploadedAt: s.uploadedAt, questions: traceRow(s.row),
                     count: s.surveys.count, certain: s.surveys.certain, used: chosen,
-                    why: chosen ? 'used' : (!s.surveys.certain ? 'mixed, cannot be worked out' : 'overlaps a longer upload that was used')
+                    why: chosen ? 'used' : (!s.surveys.certain ? 'mixed, cannot be worked out' : 'overlaps a newer upload that was used')
                 });
             });
         });
@@ -1647,7 +1670,7 @@
         var surveySpans = [];
         Object.keys(coverOf).forEach(function (name) {
             coverOf[name].forEach(function (s) {
-                usedSpan[s.key] = true;
+                if (!s.daily) usedSpan[s.key] = true;
                 surveySpans.push({ name: name, start: s.start, end: s.end });
                 if (!s.surveys.count) return;
                 // Filed on the day the span ends, the last day it can speak for.
@@ -1665,17 +1688,19 @@
             var row = single.row;
 
             var adherence = importNumber(row.scheduleAdherence);
-            // Surveys on a day a chosen span covers are already in the span.
+            // Surveys on a day a chosen upload covers are already counted,
+            // this daily's own included when it was the one chosen.
             var span = coveringSpan(name, date);
             var covered = !!span;
             var own = importPerfectSurveys(row);
             var surveys = covered ? { count: 0, certain: true } : own;
             if (own.count || own.total) {
                 trace(name, {
-                    kind: 'daily', start: date, end: date, questions: traceRow(row),
-                    count: own.count, certain: own.certain, used: !covered && own.certain,
-                    why: covered ? 'inside ' + span.start + ' to ' + span.end + ', counted there'
-                        : (own.certain ? 'used' : 'mixed, cannot be worked out')
+                    kind: 'daily', start: date, end: date, uploadedAt: single.uploadedAt, questions: traceRow(row),
+                    count: own.count, certain: own.certain, used: !!(span && span.daily),
+                    why: span && span.daily ? 'used'
+                        : covered ? 'inside ' + span.start + ' to ' + span.end + ', counted there'
+                        : 'mixed, cannot be worked out'
                 });
             }
 

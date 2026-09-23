@@ -1198,3 +1198,32 @@ suite('contest: the newest upload wins, not the longest', (t) => {
     const fresh = contest.buildImportPreview(stores, { monthKey: '2026-09' });
     t.equal('a fresh month to date wins', contest.buildLeaderboard(contest.mergeImportIntoMonth({ days: {} }, fresh).month)[0].perfectSurvey, 3);
 });
+
+suite('contest: a daily re-pulled after its surveys landed beats an older week', (t) => {
+    const contest = load(t);
+    const perfect = (n) => ({ surveyTotal: n, repSurveyTotal: n, fcrSurveyTotal: n, cxRepOverall: 100, fcr: 100, overallExperience: 100 });
+    const stores = {
+        weeklyData: {
+            // Pulled on the 14th, before the 9/9 survey had landed.
+            '2026-09-07|2026-09-13': { metadata: { startDate: '2026-09-07', endDate: '2026-09-13', periodType: 'week', uploadedAt: '2026-09-14T14:00:00Z' },
+                employees: [Object.assign({ name: 'Ang Test' }, perfect(0))] }
+        },
+        dailyData: {
+            // Every day of the week re-pulled today.
+            '2026-09-09|2026-09-09': { metadata: { startDate: '2026-09-09', endDate: '2026-09-09', uploadedAt: '2026-09-23T14:00:00Z' },
+                employees: [Object.assign({ name: 'Ang Test', scheduleAdherence: 95 }, perfect(1))] },
+            '2026-09-10|2026-09-10': { metadata: { startDate: '2026-09-10', endDate: '2026-09-10', uploadedAt: '2026-09-23T14:01:00Z' },
+                employees: [Object.assign({ name: 'Ang Test', scheduleAdherence: 95 }, perfect(1))] }
+        }
+    };
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+
+    // An old month that counted a bad day. The fresh daily replaces it.
+    const before = { days: { '2026-09-09': { 'Ang Test': { perfectSurveys: 3 } } } };
+    const merged = contest.mergeImportIntoMonth(before, preview);
+    const row = contest.buildLeaderboard(merged.month)[0];
+    t.equal('both fresh dailies count, the stale week does not block them', row.perfectSurvey, 2);
+    t.equal('and the old stored count was replaced, not kept', merged.kept, 0);
+    const trace = preview.surveyTrace['Ang Test'];
+    t.check('the trace marks the dailies used', trace.filter((it) => it.kind === 'daily').every((it) => it.used));
+});
