@@ -113,6 +113,60 @@
         dirtyStores.clear();
     }
 
+    // ============================================
+    // STORES ANOTHER MACHINE HAS CHANGED UNDER US
+    // ============================================
+    //
+    // script.js and the feature modules hold the bulk stores in memory from
+    // boot. When a sync pull writes a newer copy underneath them, that memory
+    // is out of date, and the next save of it would put the old copy back.
+    //
+    // That is not hypothetical. A pull wrote the other machine's uploads here
+    // and marked them dirty like any local edit; the reload the toast asked for
+    // then ran the save-before-leaving pass, which saw "dirty" and wrote the
+    // in-memory copy, from before the pull, straight over them. This machine
+    // then believed it held the cloud's version, so it never fetched it again,
+    // and any later save would have sent the old copy up over the other
+    // machine's work.
+    //
+    // So a pulled store is written without being marked dirty, and is marked
+    // stale instead: a save of it is refused until the page reloads and every
+    // holder reads it fresh.
+    const staleStores = new Set();
+    const staleWriteListeners = [];
+
+    function applyRemoteStore(key, value) {
+        let ok;
+        if (isBackedByIdb(key)) {
+            ok = writeThroughToBackend(key, value ?? {});
+        } else {
+            try {
+                localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value ?? {}));
+                ok = true;
+            } catch (error) {
+                console.error(`[storage] Could not apply the synced copy of ${key}:`, error?.name || error);
+                ok = false;
+            }
+        }
+        if (ok) {
+            dirtyStores.delete(key);
+            staleStores.add(key);
+        }
+        return ok;
+    }
+
+    function isStoreStale(key) {
+        return staleStores.has(key);
+    }
+
+    function staleStoreNames() {
+        return Array.from(staleStores);
+    }
+
+    function onStaleWriteRefused(listener) {
+        if (typeof listener === 'function') staleWriteListeners.push(listener);
+    }
+
     function writeThroughToBackend(key, value) {
         const backend = window.DevCoachModules?.idbBackend;
         if (!backend) return false;
@@ -388,6 +442,13 @@
     // ============================================
 
     function saveWithSizeCheck(key, data) {
+        if (staleStores.has(key)) {
+            console.error(`[storage] Refused to save ${key}: another machine changed it and this page still holds the older copy. Reload first.`);
+            staleWriteListeners.forEach((listener) => {
+                try { listener(key); } catch (error) { console.error('[storage] A stale-write listener threw:', error); }
+            });
+            return false;
+        }
         markStoreDirty(key);
 
         // A bulk store on the backend is not subject to the localStorage size
@@ -1188,6 +1249,11 @@
         // ceiling, so it can make room rather than simply failing.
         isBackedByIdb,
         saveWithSizeCheck,
+        // Sync pulls write through this, never saveWithSizeCheck.
+        applyRemoteStore,
+        isStoreStale,
+        staleStoreNames,
+        onStaleWriteRefused,
         // Weekly data
         loadWeeklyData,
         saveWeeklyData,

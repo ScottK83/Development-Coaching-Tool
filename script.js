@@ -2110,6 +2110,7 @@ function bindCoachingFormHandlers() {
     document.getElementById('loadSnapshotListBtn')?.addEventListener('click', handleLoadSnapshotListClick);
     document.getElementById('restoreSnapshotBtn')?.addEventListener('click', handleRestoreSnapshotClick);
     document.getElementById('cloudSyncPullBtn')?.addEventListener('click', handleCloudSyncPullClick);
+    document.getElementById('cloudSyncFullPullBtn')?.addEventListener('click', handleCloudSyncFullPullClick);
     document.getElementById('cloudSyncPushBtn')?.addEventListener('click', handleCloudSyncPushClick);
     document.getElementById('cloudSyncSetupBtn')?.addEventListener('click', handleCloudSyncSetupClick);
     document.getElementById('cloudSyncTestBtn')?.addEventListener('click', handleCloudSyncTestClick);
@@ -2506,11 +2507,19 @@ function startCloudSyncBackground() {
 
     sync.pull().then((result) => {
         renderCloudSyncStatus();
-        if (result?.updated?.length) {
-            console.log(`[cloud] Pulled ${result.updated.length} change(s) from another machine:`, result.updated.join(', '));
-            showToast(`☁️ Picked up ${result.updated.length} change(s) from your other machine. Reload to see them.`, 6000);
-        }
+        afterCloudPull(result, 'boot');
     }).catch(() => { /* offline is not an error */ });
+
+    // The other machine keeps working after this one has booted. Checking only
+    // at startup meant a tab left open all day never saw a thing it uploaded.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') pullFromOtherMachine('focus');
+    });
+    setInterval(() => pullFromOtherMachine('timer'), 5 * 60 * 1000);
+
+    storage?.onStaleWriteRefused?.((key) => {
+        showSyncReloadBanner(`Not saved. Your other computer changed this data (${key}) since this page loaded. Reload to pick it up, then try again.`);
+    });
 
     const scheduleCloudPush = () => {
         clearTimeout(_cloudPushTimer);
@@ -2548,6 +2557,126 @@ function startCloudSyncBackground() {
         });
     } else {
         console.warn('[cloud] storage.onStoreChanged is unavailable; changes will not auto-push.');
+    }
+}
+
+/** The stores a pull actually replaced, leaving out the kept-aside conflict copies. */
+function pulledDataStores(result) {
+    return (result?.updated || []).filter((name) => !String(name).startsWith('conflicts/'));
+}
+
+async function pullFromOtherMachine(when) {
+    const sync = window.DevCoachModules?.manifestSync;
+    if (!sync) return;
+    try {
+        const result = await sync.pull();
+        renderCloudSyncStatus();
+        afterCloudPull(result, when);
+    } catch (_error) { /* offline is not an error */ }
+}
+
+/**
+ * What to do once a pull has written another machine's changes here.
+ *
+ * Everything holding those stores in memory is now out of date, and the
+ * storage module refuses to save them until a reload. So reload, when that
+ * costs nothing: nothing unsent here, and nobody part way through typing.
+ * Otherwise say so plainly and leave the page alone.
+ */
+function afterCloudPull(result, when) {
+    const pulled = pulledDataStores(result);
+    if (!pulled.length) return;
+    console.log(`[cloud] Pulled ${pulled.length} change(s) from another machine (${when}):`, pulled.join(', '));
+
+    const storage = window.DevCoachModules?.storage;
+    const registry = window.DevCoachModules?.storeRegistry;
+    const unsent = registry && storage?.isStoreDirty
+        ? registry.syncedNames().filter((n) => storage.isStoreDirty(n))
+        : [];
+    const active = document.activeElement;
+    const typing = !document.hidden && !!active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName || '');
+
+    // A reload that pulls again and finds more is fine; one that loops is not.
+    let recentlyReloaded = false;
+    try {
+        const last = Number(sessionStorage.getItem('devCoachingTool_syncReloadAt') || 0);
+        recentlyReloaded = Date.now() - last < 20000;
+    } catch (_e) { /* no session storage */ }
+
+    if (!unsent.length && !typing && !recentlyReloaded) {
+        try { sessionStorage.setItem('devCoachingTool_syncReloadAt', String(Date.now())); } catch (_e) { /* fine */ }
+        showToast('☁️ Picked up changes from your other computer. Reloading...', 3000);
+        setTimeout(() => location.reload(), 900);
+        return;
+    }
+    showSyncReloadBanner(`Your other computer changed ${pulled.length} thing(s). Reload to see them. Until then, changes to them here cannot be saved.`);
+}
+
+function showSyncReloadBanner(message) {
+    let banner = document.getElementById('syncReloadBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'syncReloadBanner';
+        banner.style.cssText = 'position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 10000; '
+            + 'padding: 10px 16px; background: #ef6c00; color: white; font-weight: 600; display: flex; gap: 12px; '
+            + 'align-items: center; justify-content: center; flex-wrap: wrap;';
+        const text = document.createElement('span');
+        text.id = 'syncReloadBannerText';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = 'Reload now';
+        button.style.cssText = 'padding: 6px 14px; border: none; border-radius: 4px; background: white; color: #ef6c00; font-weight: 700; cursor: pointer;';
+        button.addEventListener('click', () => location.reload());
+        banner.appendChild(text);
+        banner.appendChild(button);
+        document.body.appendChild(banner);
+    }
+    const textEl = document.getElementById('syncReloadBannerText');
+    if (textEl) textEl.textContent = message;
+    banner.style.display = 'flex';
+}
+
+/**
+ * Replaces this computer's copy with the cloud's, every store.
+ *
+ * For a machine whose data fell behind without knowing it: an ordinary pull
+ * only fetches what it thinks it is missing, and a copy overwritten after it
+ * was recorded as current looks current. Anything changed here and not yet
+ * sent goes up first, so nothing of this machine's is lost on the way.
+ */
+async function handleCloudSyncFullPullClick() {
+    const sync = window.DevCoachModules?.manifestSync;
+    const storage = window.DevCoachModules?.storage;
+    const registry = window.DevCoachModules?.storeRegistry;
+    if (!sync || !registry) { setCloudSyncResult('Cloud sync is unavailable in this build.', true); return; }
+
+    if (!confirm('Re-download everything from the cloud?\n\n'
+        + 'This computer\'s copy of every store is replaced with the cloud copy, which is what your other computer last sent. '
+        + 'Anything changed here and not sent yet goes up first.\n\nThe page reloads when it is done.')) {
+        setCloudSyncResult('Nothing was changed.');
+        return;
+    }
+
+    try {
+        const unsent = registry.syncedNames().filter((n) => storage?.isStoreDirty?.(n));
+        if (unsent.length) {
+            setCloudSyncResult(`Sending ${unsent.length} unsent change(s) first...`);
+            const pushed = await sync.push(unsent, 'before a full re-download');
+            if (!pushed.ok) {
+                setCloudSyncResult('Stopped: could not send this computer\'s unsent changes first (' + (pushed.error || pushed.code) + '). Nothing was replaced.', true);
+                return;
+            }
+            storage?.clearDirtyStores?.();
+        }
+        setCloudSyncResult('Downloading everything...');
+        const result = await sync.pull({ full: true });
+        if (result.skipped) { setCloudSyncResult('There is no cloud copy yet.'); return; }
+        if (!result.ok) { setCloudSyncResult('Some stores could not be applied: ' + result.failed.join('; '), true); return; }
+        setCloudSyncResult(`Downloaded ${result.updated.length} store(s) at version ${result.version}. Reloading...`);
+        try { sessionStorage.setItem('devCoachingTool_syncReloadAt', String(Date.now())); } catch (_e) { /* fine */ }
+        setTimeout(() => location.reload(), 900);
+    } catch (error) {
+        setCloudSyncResult('Could not re-download: ' + (error?.message || error), true);
     }
 }
 

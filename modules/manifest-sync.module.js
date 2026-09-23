@@ -108,8 +108,15 @@
         }
     }
 
+    // Everything written here came from the cloud, so it goes through
+    // applyRemoteStore: not dirty (it is not a local edit, and a dirty store
+    // gets saved from memory on the way out, over the copy just pulled), and
+    // stale (whatever holds the old copy in memory must reload before saving).
     function writeStoreValue(name, value) {
         const storage = window.DevCoachModules?.storage;
+        if (typeof storage?.applyRemoteStore === 'function') {
+            return storage.applyRemoteStore(name, value);
+        }
         if (typeof storage?.saveWithSizeCheck === 'function') {
             return storage.saveWithSizeCheck(name, value);
         }
@@ -417,7 +424,8 @@
      * Applies anything another machine has committed. Fetches only the shards
      * whose hashes differ from what this machine already has.
      */
-    async function pull() {
+    async function pull(options) {
+        const full = options?.full === true;
         const read = await callWorker({ mode: 'v2.manifest' });
         if (read.status !== 200) return { ok: false, error: read.data?.error || 'Could not read the manifest.' };
         if (!read.data.exists) {
@@ -438,7 +446,13 @@
         const applied = state.applied || {};
         const shards = manifest.shards || {};
 
-        const toFetch = Object.keys(shards).filter((name) => applied[name] !== shards[name]);
+        // full: every shard, whatever this machine thinks it already holds. The
+        // recovery for a machine whose local copy was overwritten after a pull
+        // recorded it as applied, which an ordinary pull can never notice.
+        const toFetch = Object.keys(shards).filter((name) => {
+            if (full) return !name.startsWith('conflicts/');
+            return applied[name] !== shards[name];
+        });
         // A shard that vanished from the manifest was deleted elsewhere. Handled
         // separately from a changed one so a wipe is never mistaken for a stall.
         const removed = Object.keys(applied).filter((name) => !(name in shards));
