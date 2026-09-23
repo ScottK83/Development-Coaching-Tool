@@ -549,7 +549,7 @@
     function postOptions() {
         var team = selectedTeam();
         var monthKey = monthKeyFor(document.getElementById('contestDate')?.value)
-            || new Date().toISOString().slice(0, 10).slice(0, 7);
+            || (window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toLocaleDateString('en-CA')).slice(0, 7);
         return {
             monthLabel: monthLabelFor(monthKey),
             target: contest()?.adherenceTarget(),
@@ -669,7 +669,9 @@
         if (!rendered) {
             section.innerHTML = panelHtml();
             const dateInput = document.getElementById('contestDate');
-            if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+            // Today where Scott is, not in UTC: after 5 pm Phoenix the UTC date is
+            // already tomorrow, and an entry landed on the wrong day or month.
+            if (dateInput && !dateInput.value) dateInput.value = (window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toLocaleDateString('en-CA'));
 
             document.getElementById('contestDate')?.addEventListener('change', loadMonthAndRender);
             document.getElementById('contestTeam')?.addEventListener('change', () => { renderDayGrid(); renderStandings(); });

@@ -285,6 +285,11 @@
             }
         }
 
+        // A bare ISO date is UTC midnight to the Date constructor, which is the
+        // previous day in Phoenix. Built from its parts it stays on its own day.
+        var isoMatch = String(raw).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) return new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+
         var parsed = new Date(raw);
         if (isNaN(parsed.getTime())) return null;
         if (parsed.getFullYear() >= 20000 && parsed.getFullYear() <= 80000) {

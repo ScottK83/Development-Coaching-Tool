@@ -3608,7 +3608,10 @@
         if (!reps.length) return '';
 
         // Build the section header.
-        const yesterdayLabel = new Date(yesterdayIso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+        // Built from its parts: new Date('YYYY-MM-DD') is UTC midnight, which is
+        // the previous evening in Phoenix, so Monday's data was headed "Sun".
+        const [yY, yM, yD] = String(yesterdayIso).split('-').map(Number);
+        const yesterdayLabel = new Date(yY, yM - 1, yD).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
         const uploadedCount = dailyKeysThisWeek.length;
         const header = `<div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;">` +
             `<div>` +

@@ -3477,7 +3477,7 @@ function handleLoadPastedDataClick() {
         startDate = endDate; // Daily: start = end (same day)
     } else if (isYtdSelected) {
         // YTD always starts Jan 1 of the end date's year
-        const ytdYear = new Date(weekEndingDate).getFullYear();
+        const ytdYear = parseInt(String(weekEndingDate).slice(0, 4), 10); // from the text: new Date('2027-01-01') is 2026 in Phoenix
         startDate = `${ytdYear}-01-01`;
     } else {
         const endDateObj = new Date(weekEndingDate);
@@ -3490,7 +3490,7 @@ function handleLoadPastedDataClick() {
 
     // Ensure YTD always starts Jan 1
     if (periodType === 'ytd') {
-        const ytdYear = new Date(weekEndingDate).getFullYear();
+        const ytdYear = parseInt(String(weekEndingDate).slice(0, 4), 10); // from the text: new Date('2027-01-01') is 2026 in Phoenix
         startDate = `${ytdYear}-01-01`;
     }
 
@@ -3693,7 +3693,7 @@ function handleTestPastedDataClick() {
         }
     } else {
         const today = new Date();
-        endDate = today.toISOString().split('T')[0];
+        endDate = (window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toLocaleDateString('en-CA'));
         if (testExplicitStart) {
             startDate = testExplicitStart;
         } else if (isTestDaily) {
@@ -3701,7 +3701,7 @@ function handleTestPastedDataClick() {
         } else {
             const startDateObj = new Date(today);
             startDateObj.setDate(startDateObj.getDate() - 6);
-            startDate = startDateObj.toISOString().split('T')[0];
+            startDate = window.DevCoachModules?.sharedUtils?.formatLocalDate?.(startDateObj) || startDateObj.toLocaleDateString('en-CA');
         }
     }
 
@@ -9316,7 +9316,7 @@ function initializeCallListeningSection() {
     }
 
     if (!dateInput.value) {
-        dateInput.value = new Date().toISOString().split('T')[0];
+        dateInput.value = (window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toLocaleDateString('en-CA'));
     }
 
     const currentSelection = employeeSelect.value;
