@@ -28,9 +28,13 @@ const { suite, ROOT } = require('./harness');
 // out and running it is the only way to assert what it does rather than how it
 // is written, so the brace match is done properly rather than by regex.
 function loadCleanup() {
+    return loadScriptFunction('cleanupStaleDuplicatePeriods');
+}
+
+function loadScriptFunction(name) {
     const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
-    const start = src.indexOf('function cleanupStaleDuplicatePeriods()');
-    if (start === -1) throw new Error('cleanupStaleDuplicatePeriods not found in script.js');
+    const start = src.indexOf('function ' + name + '(');
+    if (start === -1) throw new Error(name + ' not found in script.js');
 
     let depth = 0;
     let end = -1;
@@ -41,13 +45,13 @@ function loadCleanup() {
             if (depth === 0) { end = i + 1; break; }
         }
     }
-    if (end === -1) throw new Error('could not find the end of cleanupStaleDuplicatePeriods');
+    if (end === -1) throw new Error('could not find the end of ' + name);
 
     global.saveWeeklyData = () => {};
     global.saveTeamMembers = () => {};
     global.saveYtdData = () => {};
     (0, eval)(src.slice(start, end));
-    return global.cleanupStaleDuplicatePeriods;
+    return global[name];
 }
 
 function ytdFile(end, uploadedAt) {
@@ -148,4 +152,56 @@ suite('startup: nothing assumes there is only one year-to-date file', (t) => {
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
     t.check('startup no longer keeps one real YTD per year',
         script.indexOf('bestYtdByYear') === -1);
+});
+
+/**
+ * The startup prune was not the only copy. Saving an upload ran its own purge
+ * that deleted every other real YTD for the year, whatever its date, so each
+ * new YTD still destroyed the last one. That purge now only touches a part
+ * period re-uploaded over itself.
+ */
+suite('upload: saving a year-to-date keeps the earlier ones', (t) => {
+    const purge = loadScriptFunction('purgeSupersededPeriods');
+
+    global.ytdData = {
+        'ytd|2026-06-28': ytdFile('2026-06-28', '2026-06-29T10:00:00Z'),
+        'ytd|2026-09-13': ytdFile('2026-09-13', '2026-09-14T10:00:00Z'),
+        'ytd|2026-09-20': ytdFile('2026-09-20', '2026-09-21T10:00:00Z')
+    };
+    global.weeklyData = {};
+    global.myTeamMembers = { 'ytd|2026-09-13': ['Person A'] };
+
+    const removed = purge('ytd', 'ytd|2026-09-20', '2026-01-01');
+
+    t.equal('nothing is removed', removed.length, 0);
+    t.equal('all three YTDs are still there', Object.keys(global.ytdData).length, 3);
+    t.check('the team list for an earlier YTD is kept', !!global.myTeamMembers['ytd|2026-09-13']);
+
+    // An older file saved after a newer one must not delete the newer one either.
+    purge('ytd', 'ytd|2026-06-28', '2026-01-01');
+    t.check('an older upload leaves the newest alone', !!global.ytdData['ytd|2026-09-20']);
+});
+
+suite('upload: a re-uploaded unfinished week replaces its copy and can be undone', (t) => {
+    const purge = loadScriptFunction('purgeSupersededPeriods');
+    const wip = (start, end) => ({
+        metadata: { periodType: 'week-in-progress', startDate: start, endDate: end },
+        employees: [{ name: 'Person A' }]
+    });
+
+    global.ytdData = {};
+    global.myTeamMembers = { '2026-09-07|2026-09-09': ['Person A'] };
+    global.weeklyData = {
+        '2026-09-07|2026-09-09': wip('2026-09-07', '2026-09-09'),
+        '2026-09-07|2026-09-11': wip('2026-09-07', '2026-09-11'),
+        '2026-08-31|2026-09-02': wip('2026-08-31', '2026-09-02')
+    };
+
+    const removed = purge('week-in-progress', '2026-09-07|2026-09-11', '2026-09-07');
+
+    t.equal('only the older copy of that Monday goes', removed.length, 1);
+    t.check('it is gone from the store', !global.weeklyData['2026-09-07|2026-09-09']);
+    t.check('a different Monday is untouched', !!global.weeklyData['2026-08-31|2026-09-02']);
+    t.check('what was removed is handed back for undo, value and team list',
+        removed[0].key === '2026-09-07|2026-09-09' && !!removed[0].value && !!removed[0].teamMembers);
 });
