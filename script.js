@@ -30,7 +30,7 @@
 // ============================================
 // GLOBAL STATE
 // ============================================
-const APP_VERSION = '2026.09.23.16'; // Version: YYYY.MM.DD.NN
+const APP_VERSION = '2026.09.23.17'; // Version: YYYY.MM.DD.NN
 // A top-level const is not a window property, and every reader of the version
 // asks window for it: the diagnostics summary, the crash reports, the sync
 // metadata. All three had been recording 'unknown' since the version moved to a
@@ -2516,6 +2516,15 @@ function startCloudSyncBackground() {
         if (document.visibilityState === 'visible') pullFromOtherMachine('focus');
     });
     setInterval(() => pullFromOtherMachine('timer'), 5 * 60 * 1000);
+
+    if (storage?.isBackendUnavailable?.()) {
+        showSyncReloadBanner('Your saved data could not be opened in this browser. Changes and sync are paused so nothing older is saved over it. Reload to try again.');
+    }
+    storage?.onBackendProblem?.((kind, key) => {
+        showSyncReloadBanner(kind === 'writeFailed'
+            ? `A change to ${key} could not be saved in this browser. Reload now; the cloud copy will be brought back down.`
+            : 'Your saved data could not be opened in this browser. Changes and sync are paused so nothing older is saved over it. Reload to try again.');
+    });
 
     storage?.onOtherTabWrite?.((key) => {
         showSyncReloadBanner(`This data (${key}) was changed in another tab of this app. Reload before making changes here, or they will not save.`);
