@@ -1825,6 +1825,8 @@
                 if (date < range.start || date > range.end) return;
                 if (open[date + '|' + range.name]) return;
                 var person = merged[date][range.name];
+                // Typed in Enter a day. A person's ruling outranks the upload.
+                if (person && person.surveysTyped) return;
                 if (person) delete person.perfectSurveys;
             });
         });
@@ -1837,6 +1839,7 @@
 
                 ['adherence', 'perfectSurveys'].forEach(function (field) {
                     if (from[field] === undefined) return;
+                    if (field === 'perfectSurveys' && to.surveysTyped) return;
                     if (to[field] === undefined || overwrite) {
                         to[field] = from[field];
                     } else if (to[field] !== from[field]) {

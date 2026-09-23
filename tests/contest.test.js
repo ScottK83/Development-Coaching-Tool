@@ -1228,3 +1228,26 @@ suite('contest: a daily re-pulled after its surveys landed beats an older week',
     const trace = preview.surveyTrace['Ang Test'];
     t.check('the trace marks the dailies used', trace.filter((it) => it.kind === 'daily').every((it) => it.used));
 });
+
+suite('contest: a survey count typed in Enter a day outranks the uploads', (t) => {
+    const contest = load(t);
+    const perfect = { surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 };
+    // Johnathan's one survey is counted on 9/8 and again on 9/9, because the
+    // 9/9 report covered both days. The supervisor types 0 on 9/9.
+    const stores = { dailyData: {
+        '2026-09-08|2026-09-08': { metadata: { startDate: '2026-09-08', endDate: '2026-09-08', uploadedAt: '2026-09-23T15:00:00Z' },
+            employees: [Object.assign({ name: 'Johnathan Test', scheduleAdherence: 90 }, perfect)] },
+        '2026-09-09|2026-09-09': { metadata: { startDate: '2026-09-09', endDate: '2026-09-09', uploadedAt: '2026-09-23T15:01:00Z' },
+            employees: [Object.assign({ name: 'Johnathan Test', scheduleAdherence: 90 }, perfect)] }
+    } };
+    const typed = { days: {
+        '2026-09-08': { 'Johnathan Test': { adherence: 90, perfectSurveys: 1 } },
+        '2026-09-09': { 'Johnathan Test': { adherence: 90, surveysTyped: true } }
+    } };
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    const merged = contest.mergeImportIntoMonth(typed, preview, { overwrite: true });
+    const row = contest.buildLeaderboard(merged.month, { asOf: '2026-09-23' })[0];
+    t.equal('the typed 0 on 9/9 stands, even with overwrite', row.perfectSurvey, 1);
+    t.check('and stays marked as typed', merged.month.days['2026-09-09']['Johnathan Test'].surveysTyped === true);
+    t.equal('while the untyped day still comes from the upload', merged.month.days['2026-09-08']['Johnathan Test'].perfectSurveys, 1);
+});

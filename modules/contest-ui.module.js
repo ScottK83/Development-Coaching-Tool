@@ -247,11 +247,19 @@
             const perfectInput = document.querySelector(`[data-contest-perfect="${CSS.escape(name)}"]`);
             const perfect = perfectInput && perfectInput.value !== '' ? Number(perfectInput.value) : 0;
 
-            if (adherence === null && !perfect) {
+            // A survey count typed here is a ruling, and the next pull must not
+            // undo it. It is marked as typed when it differs from what was
+            // there, or when it was typed before, so correcting one person does
+            // not freeze everyone else saved on the same click.
+            const before = day[name] || {};
+            const typed = before.surveysTyped === true || perfect !== (Number(before.perfectSurveys) || 0);
+
+            if (adherence === null && !perfect && !typed) {
                 delete day[name];
                 return;
             }
             day[name] = {};
+            if (typed) day[name].surveysTyped = true;
             if (Number.isFinite(adherence)) day[name].adherence = adherence;
             if (perfect) day[name].perfectSurveys = perfect;
         });
@@ -397,7 +405,8 @@
         var out = ['Month ' + monthKey + ', team ' + selectedTeam() + '.', ''];
         names.forEach(function (name) {
             var storedDays = Object.keys(stored).sort().filter(function (d) {
-                return stored[d] && stored[d][name] && Number(stored[d][name].perfectSurveys) > 0;
+                var p = stored[d] && stored[d][name];
+                return p && (Number(p.perfectSurveys) > 0 || p.surveysTyped);
             });
             var items = trace[name] || [];
             if (!items.length && !storedDays.length) return;
@@ -405,7 +414,10 @@
             var row = board.find(function (r) { return r.associate === name; });
             out.push(name + ': standings show ' + (row ? row.perfectSurvey : 0) + ' perfect surveys');
             out.push('  Stored: ' + (storedDays.length
-                ? storedDays.map(function (d) { return md(d) + ' = ' + stored[d][name].perfectSurveys; }).join(', ')
+                ? storedDays.map(function (d) {
+                    var p = stored[d][name];
+                    return md(d) + ' = ' + (Number(p.perfectSurveys) || 0) + (p.surveysTyped ? ' (typed, kept over uploads)' : '');
+                }).join(', ')
                 : 'none'));
             items.slice().sort(function (a, b) { return a.start < b.start ? -1 : a.start > b.start ? 1 : 0; })
                 .forEach(function (it) {
