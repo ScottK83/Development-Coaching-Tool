@@ -663,7 +663,7 @@ async function renderTipsManagement() {
     html += '<select id="categoriesSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
     html += '<option value="">-- Choose a category --</option>';
     sortedCategories.forEach(metricKey => {
-        html += `<option value="${metricKey}">${metricNames[metricKey]}</option>`;
+        html += `<option value="${escapeHtml(metricKey)}">${escapeHtml(metricNames[metricKey])}</option>`;
     });
     html += '</select>';
     html += '</div>';
@@ -766,7 +766,7 @@ async function renderTipsManagement() {
         const displayMetricName = metricNames[metricKey];
 
         let tipsHtml = `<div style="padding: 20px; background: var(--bg-surface-raised); border-radius: 8px;">`;
-        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">📂 ${displayMetricName}</h3>`;
+        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">📂 ${escapeHtml(displayMetricName)}</h3>`;
         tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Tips</h4>';
 
         if (serverTipsWithIndex.length > 0) {

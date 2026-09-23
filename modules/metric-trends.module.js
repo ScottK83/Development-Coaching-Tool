@@ -1384,7 +1384,7 @@ function generateCoachingFollowup() {
     } = buildTrendEmailAnalysisBundle(employee, weekKey, period);
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
 
-    const emailSubject = `Coaching Follow-up - ${displayName}`;
+    const emailSubject = `Coaching Follow-up: ${displayName}`;
     const emailBody = buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta);
     openCoachingFollowupEmail(emailSubject, employeeName, emailBody);
 
@@ -1456,7 +1456,7 @@ function getTrendPeriodDisplay(periodType = 'week') {
 function buildTrendEmailSubject(periodMeta, displayName) {
     const { periodTypeTitle } = getTrendPeriodDisplay(periodMeta?.periodType);
     const endDate = periodMeta?.endDate || '';
-    return `${periodTypeTitle} Trend Email - ${displayName} (Week Ending ${endDate})`;
+    return `${periodTypeTitle} Trend Email: ${displayName} (Week Ending ${endDate})`;
 }
 
 function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tipsForTrending, allMetrics) {
@@ -1521,13 +1521,13 @@ function renderTrendFocusAreasHtml(focusAreas) {
     return focusAreas.map((focusArea, areaIndex) => {
         const tipsHtml = focusArea.tips.map((tip, tipIndex) => `
             <div style="background: var(--bg-surface-sunken); padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
-                <strong>💡 Tip ${tipIndex + 1}:</strong> ${tip}
+                <strong>💡 Tip ${tipIndex + 1}:</strong> ${escapeHtml(tip)}
             </div>
         `).join('');
 
         const heading = focusAreas.length === 1
-            ? `📉 Focus Area: ${focusArea.metric.label}`
-            : `📉 Focus Area ${areaIndex + 1}: ${focusArea.metric.label}`;
+            ? `📉 Focus Area: ${escapeHtml(focusArea.metric.label)}`
+            : `📉 Focus Area ${areaIndex + 1}: ${escapeHtml(focusArea.metric.label)}`;
 
         return `
             <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
@@ -1764,7 +1764,7 @@ function attachTrendTipsModalHandlers(options) {
 
 function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, intelligenceSnapshotHtml, copilotPrompt) {
     return `
-        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${displayName}</h3>
+        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${escapeHtml(displayName)}</h3>
         <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
 
         ${summaryBoxesHtml}
@@ -1785,7 +1785,7 @@ function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, foc
             <p style="color: var(--text-secondary); font-size: 0.9em; margin: 0 0 10px 0;">
                 Copy this prompt and paste it into <strong><a href="${copilotUrl()}" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
             </p>
-            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${copilotPrompt}</textarea>
+            <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${escapeHtml(copilotPrompt)}</textarea>
             <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
                 📋 Copy Prompt
             </button>
@@ -3915,7 +3915,7 @@ function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, te
 
         <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
             <h4 style="color: var(--text-primary); margin-top: 0;">🤖 Team CoPilot Prompt</h4>
-            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${teamPrompt}</textarea>
+            <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${escapeHtml(teamPrompt)}</textarea>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">

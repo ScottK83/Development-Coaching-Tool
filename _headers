@@ -43,3 +43,11 @@
 
 /lib-pdf.js
   Cache-Control: no-cache
+
+# Every file. Nothing here restricts what the page may run, so nothing can break:
+# nosniff stops a file being run as a type it is not, and the referrer policy
+# keeps the app's URL off requests to other sites. A full Content-Security-Policy
+# needs the inline handlers moved out first.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin

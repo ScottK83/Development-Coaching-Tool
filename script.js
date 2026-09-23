@@ -319,8 +319,12 @@ function restoreLastViewedSection() {
     window.DevCoachModules?.navigation?.restoreLastViewedSection?.();
 }
 
+// The fallback escapes too. It used to hand the text back raw, so if
+// shared-utils ever failed to load every escape in the app did nothing.
 function escapeHtml(text) {
-    return window.DevCoachModules?.sharedUtils?.escapeHtml?.(text) ?? String(text ?? '');
+    const shared = window.DevCoachModules?.sharedUtils?.escapeHtml;
+    if (typeof shared === 'function') return shared(text);
+    return String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 // Uses inline style.cssText for the toast. styles-v2.css has utility

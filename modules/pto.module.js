@@ -49,7 +49,7 @@ function showToast(msg, ms) {
 function escapeHtml(str) {
     var utils = window.DevCoachModules?.sharedUtils;
     if (utils?.escapeHtml) return utils.escapeHtml(str);
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 // ============================================

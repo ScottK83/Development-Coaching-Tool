@@ -542,7 +542,7 @@ function renderFollowUpHistory() {
 function escapeHtml(text) {
     var mod = window.DevCoachModules?.sharedUtils;
     if (mod?.escapeHtml) return mod.escapeHtml(text);
-    return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 // ============================================
