@@ -219,3 +219,20 @@ suite('parser: percent columns are read by the column, not the cell', (t) => {
     t.equal('in a whole-percent column a small rate is not multiplied by 100',
         c.find((e) => e.name.indexOf('Dana') > -1).transfers, 0.5);
 });
+
+suite('parser: names left off by the roster are reported, not just logged', (t) => {
+    const dp = load(t);
+    global.window.isRosteredAssociate = (name) => name.indexOf('Dana') > -1;
+    const paste = [
+        ['Name (Last, First)', 'TotalCalls', 'AHT', 'Adherence%'].join('\t'),
+        ['Reed, Dana', '200', '400', '95.2%'].join('\t'),
+        ['Newhire, Pat', '180', '410', '91.0%'].join('\t')
+    ].join('\n');
+    const employees = dp.parsePastedData(paste, '2026-08-17', '2026-08-23');
+    t.equal('the rostered associate is kept', employees.length, 1);
+    t.equal('the skipped name is available to the upload screen', dp.getLastSkippedNames().join(','), 'Pat Newhire');
+
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'script.js'), 'utf8');
+    t.check('the save confirmation names them', /Not on the roster, so not saved: \$\{skippedNames\.join/.test(src));
+    delete global.window.isRosteredAssociate;
+});

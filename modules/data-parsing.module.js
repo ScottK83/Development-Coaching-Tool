@@ -733,7 +733,14 @@
         }
     }
 
+    let lastSkippedNames = [];
+
+    function getLastSkippedNames() {
+        return lastSkippedNames.slice();
+    }
+
     function parsePastedData(pastedText, startDate, endDate) {
+        lastSkippedNames = [];
         const lines = pastedText
             .split('\n')
             .map(line => String(line || '').replace(/\r/g, ''))
@@ -825,6 +832,9 @@
             employees.push(employeeData);
         }
         if (skipped.length) console.info(`[data-parsing] Skipped ${skipped.length} non-rostered name(s):`, skipped);
+        // Kept for the upload screen: a console line is invisible to the person
+        // uploading, so a new hire or a misspelling vanished without a word.
+        lastSkippedNames = skipped.slice();
 
         return employees;
     }
@@ -843,6 +853,7 @@
         normalizeTransfersPercentage,
         validatePastedData,
         parsePastedData,
+        getLastSkippedNames,
         // Pure, and the one place a mis-mapped hold column is repaired.
         // Exported so the repair can be asserted without a full paste.
         autoCorrectHoldTimeColumn,

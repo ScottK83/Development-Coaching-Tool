@@ -3643,7 +3643,12 @@ function handleLoadPastedDataClick() {
         if (periodType !== 'ytd') {
         }
 
-        showToast(`✅ Loaded ${employees.length} employees for ${label}`, 4000);
+        const skippedNames = window.DevCoachModules?.dataParsing?.getLastSkippedNames?.() || [];
+        if (skippedNames.length) {
+            showToast(`✅ Loaded ${employees.length} employees for ${label}. Not on the roster, so not saved: ${skippedNames.join(', ')}`, 9000);
+        } else {
+            showToast(`✅ Loaded ${employees.length} employees for ${label}`, 4000);
+        }
     } catch (error) {
         console.error('Error parsing pasted data:', error);
         alert(`⚠️ Error parsing data: ${error.message}\n\nPlease ensure you copied the full table with headers from PowerBI.`);
@@ -3718,7 +3723,11 @@ function handleTestPastedDataClick() {
             })
             .join('<br>');
 
-        const sampleNames = employees.slice(0, 5).map(emp => emp.name).join(', ');
+        const sampleNames = escapeHtml(employees.slice(0, 5).map(emp => emp.name).join(', '));
+        const skippedTestNames = window.DevCoachModules?.dataParsing?.getLastSkippedNames?.() || [];
+        const skippedLine = skippedTestNames.length
+            ? `🚫 Not on the roster (will not be saved): ${escapeHtml(skippedTestNames.join(', '))}<br>`
+            : '';
         const dateLabel = weekEndingDate ? `${startDate} to ${endDate}` : `${startDate} to ${endDate} (auto test range)`;
         const qualityWarnings = buildMetricsUploadQualityWarnings(employees);
         const qualityHtml = qualityWarnings.length
@@ -3744,6 +3753,7 @@ function handleTestPastedDataClick() {
                 📅 Parse window: ${dateLabel}<br>
                 👥 Employees parsed: ${employees.length}<br>
                 👤 Sample: ${sampleNames}${employees.length > 5 ? '...' : ''}<br>
+                ${skippedLine}
                 <div style="margin-top: 8px;"><strong>Metric coverage:</strong><br>${metricCoverage}</div>
                 <div style="margin-top: 8px; padding: 8px; background: var(--bg-surface-raised); border-radius: 4px; color: var(--text-primary);"><strong>Spot check (parsed values):</strong><br>${spotCheckHtml}</div>
                 ${qualityHtml}
