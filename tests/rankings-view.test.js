@@ -481,8 +481,13 @@ function monthsEndingNow(count) {
 function weeksIn(monthKeys, perMonth) {
     let weeks = {};
     monthKeys.forEach((mo, i) => {
-        for (let w = 0; w < (perMonth || 2); w++) {
-            const end = mo + '-' + String(7 * (w + 1)).padStart(2, '0');
+        const count = perMonth || 2;
+        for (let w = 0; w < count; w++) {
+            // The last week ends in the month's final seven days, as real
+            // uploads do, so a finished month reads as finished. The 28th is in
+            // that window for every month.
+            const day = w === count - 1 ? 28 : 7 * (w + 1);
+            const end = mo + '-' + String(day).padStart(2, '0');
             weeks = Object.assign(weeks, period(mo + '-01', end, 'week', roster(40, i * 3 + w), 'Week ending ' + end));
         }
     });

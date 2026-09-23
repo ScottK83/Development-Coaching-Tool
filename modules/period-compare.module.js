@@ -142,6 +142,24 @@
         return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
     }
 
+    /* A month is still in progress while the clock is in it, and also while
+       its data stops short of its end. The clock alone called a month finished
+       the moment the calendar turned: on Sep 2, with uploads only through
+       Aug 29, a part-August was ranked against a full July as two finished
+       months. A rebuilt month is whole once a week ending in its last seven days
+       is in; its remaining days belong to a week that ends next month. An
+       uploaded month has to reach its last day. */
+    function _isMonthInProgress(monthKey, spanEnd, fromUpload) {
+        if (monthKey >= _nowMonth()) return true;
+        var parts = String(monthKey).split('-');
+        var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+        if (!y || !m) return false;
+        var lastDay = new Date(y, m, 0);
+        var needed = new Date(y, m - 1, lastDay.getDate() - (fromUpload ? 0 : 6));
+        var neededIso = needed.getFullYear() + '-' + String(needed.getMonth() + 1).padStart(2, '0') + '-' + String(needed.getDate()).padStart(2, '0');
+        return !spanEnd || String(spanEnd) < neededIso;
+    }
+
     function _monthLabel(monthKey) {
         var parts = String(monthKey).split('-');
         var mi = parseInt(parts[1], 10) - 1;
@@ -804,7 +822,7 @@
 
         return {
             scope: sc,
-            current: { key: cur.key, label: cur.label, weekCount: cur.weekCount, fromUpload: cur.fromUpload, inProgress: sc === 'month' && cur.key === nowMonth },
+            current: { key: cur.key, label: cur.label, weekCount: cur.weekCount, fromUpload: cur.fromUpload, inProgress: sc === 'month' && !!cur.inProgress },
             previous: { key: prev.key, label: prev.label, weekCount: prev.weekCount, fromUpload: prev.fromUpload },
             // Periods newer than the pair that were passed over as partial.
             // Surfaced so a stale-looking comparison explains itself instead of
@@ -876,7 +894,7 @@
                 count: count,
                 spanEnd: spanEnd || '',
                 fromUpload: !!buckets.fromUpload[mo],
-                inProgress: mo === nowMonth,
+                inProgress: _isMonthInProgress(mo, spanEnd, !!buckets.fromUpload[mo]),
                 status: 'none',
                 reason: 'nothing uploaded for this month'
             };
@@ -1213,7 +1231,7 @@
                     // `partial`, which is about head count: a two-week August has
                     // very nearly the full roster, so the population guard waves it
                     // straight through even though it is half a month of work.
-                    inProgress: mo === _nowMonth()
+                    inProgress: _isMonthInProgress(mo, agg.spanEnd, !!agg.fromUpload)
                 });
             });
             return out;
@@ -1345,6 +1363,7 @@
         // cumulative-not-slice rule to stored periods that buildMonthAggregate
         // applies to rebuilt months, and both must read it from one place.
         latestYtdReliability: _latestYtdReliability,
+        isMonthInProgress: _isMonthInProgress,
         compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,
         buildMonthOverMonthTeams: buildMonthOverMonthTeams,

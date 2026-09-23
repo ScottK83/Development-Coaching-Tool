@@ -991,3 +991,19 @@ suite('period compare: one day into the month still beats a rebuild made of last
     t.check('the short month-to-date row still wins', buckets.fromUpload['2026-08'] === true);
     t.equal('and it is what gets aggregated', pc.buildMonthAggregate('2026-08', 2026).employees[0].aht, 350);
 });
+
+/**
+ * A month is unfinished while its data stops short, not only while the clock
+ * is in it. On Sep 2 with uploads only through mid-August, a part-August was
+ * ranked against a full July as two finished months.
+ */
+suite('period compare: a month whose uploads stop short is still in progress', (t) => {
+    t.pinClock('2026-09-02');
+    const pc = loadPure(t, {}, {});
+    t.equal('the current month is in progress', pc.isMonthInProgress('2026-09', '2026-09-01', false), true);
+    t.equal('a past month rebuilt only to the 16th is still in progress', pc.isMonthInProgress('2026-08', '2026-08-16', false), true);
+    t.equal('one with a week ending in its last seven days is finished', pc.isMonthInProgress('2026-08', '2026-08-30', false), false);
+    t.equal('an uploaded month has to reach its last day', pc.isMonthInProgress('2026-08', '2026-08-30', true), true);
+    t.equal('and is finished when it does', pc.isMonthInProgress('2026-08', '2026-08-31', true), false);
+    t.equal('a month with no data at all is not called finished', pc.isMonthInProgress('2026-07', '', false), true);
+});
