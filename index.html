@@ -1238,6 +1238,11 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
                     <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">
+                        <h3 style="margin-top: 0;">💤 Inactive associates</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 12px;">Anyone on the roster with no numbers for 30 days is set aside: listed last in pickers and left out of the contest grid. Their history is kept. They come back on their own when an upload has them, or press Reinstate for someone on FMLA or leave.</p>
+                        <div id="inactiveAssociatesPanel"><p style="color: var(--text-tertiary); margin: 0;">Open this tab after your data loads to see who is set aside.</p></div>
+                    </div>
+                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">
                         <h3 style="margin-top: 0;">📧 Copy on coaching emails</h3>
                         <p style="color: var(--text-secondary); margin-bottom: 12px;">Every coaching, call listening and follow-up draft opens with this address on CC. Leave it blank for no CC.</p>
                         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -1794,6 +1799,8 @@ Box 2 - Future Improvement Areas:
                 // Turns a roster into option elements. Every picker in the app
                 // goes through it; the roster itself still comes from the feature.
                 'modules/associate-picker.module.js',
+                // Who is away: no numbers in 30 days. Pickers list them last.
+                'modules/associate-activity.module.js',
                 'modules/data-integrity.module.js',
                 'modules/upload-drift.module.js',
                 'modules/pattern-memory.module.js',

@@ -132,12 +132,28 @@
             select.appendChild(option);
         });
 
+        // Inactive associates (no numbers in 30 days) go last, under their own
+        // heading, rather than vanishing: their history is still something to
+        // look at, and someone on leave is still somebody's to review.
+        var activity = window.DevCoachModules && window.DevCoachModules.associateActivity;
+        var isInactive = activity && typeof activity.isInactive === 'function' && opts.inactiveLast !== false
+            ? activity.isInactive : function () { return false; };
+        var inactiveGroup = null;
         normalized.forEach(function (name) {
             var option = document.createElement('option');
             option.value = name;
             option.textContent = labelFor(name, opts);
+            if (isInactive(name)) {
+                if (!inactiveGroup) {
+                    inactiveGroup = document.createElement('optgroup');
+                    inactiveGroup.label = 'Inactive (no numbers in 30 days)';
+                }
+                inactiveGroup.appendChild(option);
+                return;
+            }
             select.appendChild(option);
         });
+        if (inactiveGroup) select.appendChild(inactiveGroup);
 
         var wanted = opts.selected != null ? String(opts.selected) : previous;
         if (wanted && normalized.indexOf(wanted) !== -1) select.value = wanted;

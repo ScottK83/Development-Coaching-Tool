@@ -66,6 +66,8 @@
         { name: 'employeePreferredNames', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'employeeNicknames', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'employeeSupervisors', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        // Who was reinstated from inactive, and when (associate-activity).
+        { name: 'associateReinstated', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'executiveSummaryNotes', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'userCustomTips', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
         { name: 'coachingTips', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },

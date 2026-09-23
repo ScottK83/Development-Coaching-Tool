@@ -1253,7 +1253,7 @@ function rosterSurnamesOverlap(aTokens, bTokens) {
 const ROSTER_NAME_INDEX = SUPERVISOR_ROSTER.reduce(function(acc, team) {
     team.agents.forEach(function(agent) {
         const norm = normalizeRosterName(agent);
-        acc.push({ norm: norm, tokens: norm.split(' ').filter(Boolean) });
+        acc.push({ norm: norm, tokens: norm.split(' ').filter(Boolean), display: agent });
     });
     return acc;
 }, []);
@@ -1271,22 +1271,31 @@ const EXCLUDED_NAME_INDEX = EXCLUDED_ASSOCIATES.map(normalizeRosterName);
 //
 // Matching mirrors the tiers in seedSupervisorTeams so upload spelling drift still
 // lands: exact, then first-name + overlapping surname, then nickname prefix + surname.
-function isRosteredAssociate(name) {
+// The roster entry a name belongs to, spelled as the roster spells it, or null.
+// Same tiers as isRosteredAssociate, and an exact match wins over a loose one.
+function rosterEntryFor(name) {
     const norm = normalizeRosterName(name);
-    if (!norm) return false;
-    if (EXCLUDED_NAME_INDEX.indexOf(norm) > -1) return false;
+    if (!norm) return null;
+    if (EXCLUDED_NAME_INDEX.indexOf(norm) > -1) return null;
 
     const tokens = norm.split(' ').filter(Boolean);
     const first = tokens[0] || '';
 
-    return ROSTER_NAME_INDEX.some(function(r) {
-        if (r.norm === norm) return true;
+    const exact = ROSTER_NAME_INDEX.find(function(r) { return r.norm === norm; });
+    if (exact) return exact.display;
+    const loose = ROSTER_NAME_INDEX.find(function(r) {
         if (!rosterSurnamesOverlap(r.tokens, tokens)) return false;
         const rf = r.tokens[0] || '';
         if (rf === first) return true;
         return first.length >= 3 && rf.length >= 3 &&
             (first.indexOf(rf.slice(0, 3)) === 0 || rf.indexOf(first.slice(0, 3)) === 0);
     });
+    return loose ? loose.display : null;
+}
+window.rosterEntryFor = rosterEntryFor;
+
+function isRosteredAssociate(name) {
+    return rosterEntryFor(name) !== null;
 }
 window.isRosteredAssociate = isRosteredAssociate;
 // Exposed for the contest panel, which needs the names to build its day grid.
@@ -7134,6 +7143,7 @@ async function initApp() {
     loadTeamMembers();
     bindTeamFilterChangeHandlers();
     notifyTeamFilterChanged();
+    window.DevCoachModules?.associateActivity?.renderPanel?.();
 
     // When local state is empty, wait for auto-restore before first UI render.
     // This avoids intermittent "empty dashboard/rankings until refresh" behavior.

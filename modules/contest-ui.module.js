@@ -78,12 +78,21 @@
         return Array.isArray(roster) ? roster : [];
     }
 
+    // Inactive associates (no numbers in 30 days, not reinstated) are left
+    // off the grid: someone on leave cannot earn entries, and a row nobody
+    // fills in is only something to scroll past.
+    function activeOnly(names) {
+        const activity = window.DevCoachModules?.associateActivity;
+        if (!activity || typeof activity.isInactive !== 'function') return names;
+        return names.filter((name) => !activity.isInactive(name));
+    }
+
     function namesForTeam(supervisor) {
         if (supervisor === '__all__') {
-            return teams().reduce((all, team) => all.concat(team.agents || []), []).sort();
+            return activeOnly(teams().reduce((all, team) => all.concat(team.agents || []), [])).sort();
         }
         const team = teams().find((t) => t.supervisor === supervisor);
-        return (team?.agents || []).slice().sort();
+        return activeOnly((team?.agents || []).slice()).sort();
     }
 
     function selectedTeam() {

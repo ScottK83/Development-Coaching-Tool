@@ -55,7 +55,7 @@
         'reliabilityTracker', 'ptoTracker', 'tipUsageHistory', 'followUpHistory',
         'hotTipHistory', 'attendanceTracker', 'myTeamMembers', 'callCenterAverages',
         'yearEndAnnualGoals', 'yearEndDraftEntries', 'employeePreferredNames', 'employeeNicknames',
-        'employeeSupervisors', 'executiveSummaryNotes', 'userCustomTips', 'coachingTips',
+        'employeeSupervisors', 'associateReinstated', 'executiveSummaryNotes', 'userCustomTips', 'coachingTips',
         'customMetrics', 'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips',
         'yoyBaseline2025', 'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory',
         'oneOnOneMeetings', 'midYearMeta', 'quarterReviewNotes',
