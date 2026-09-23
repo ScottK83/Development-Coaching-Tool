@@ -291,15 +291,63 @@ suite('quarter review: no attendance column is not perfect attendance', (t) => {
     const notes = qr.buildNotes(ctx);
     t.check('it is not praised as attendance', !/missed 0/.test(notes.box1 + notes.box2));
 
-    // A genuine zero still reads as a genuine zero.
+    // A genuine zero still reads as a genuine zero. Every elapsed quarter is
+    // present, so this is a full year and the annual allowance applies.
     const real = Object.assign({},
         period('quarter', '2026-01-01', '2026-03-31', [person('Perfect Record', { reliability: 0 })]),
-        period('quarter', '2026-04-01', '2026-06-30', [person('Perfect Record', { reliability: 0 })])
+        period('quarter', '2026-04-01', '2026-06-30', [person('Perfect Record', { reliability: 0 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Perfect Record', { reliability: 0 })])
     );
     const perfect = ctxFor(t, real, 'Perfect Record');
     t.equal('somebody who missed nothing has a figure', perfect.ctx.reliability.hasValue, true);
     t.equal('and it is nothing', perfect.ctx.reliability.yearToDate, 0);
     t.equal('which is inside the allowance', perfect.ctx.reliability.meetsTarget, true);
+});
+
+suite('quarter review: a mid-year starter is not praised off an annual allowance', (t) => {
+    t.pinClock('2026-09-22');
+    // The allowance is 18 hours for a WHOLE year. A July starter who burned 15
+    // of them in one quarter is on a pace of sixty, and read against the
+    // annual figure they came out under it, so the document filed attendance
+    // under strengths and praised them for it.
+    const store = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Been Here', { reliability: 5 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Been Here', { reliability: 5 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [
+            person('Been Here', { reliability: 5 }),
+            person('July Start', { reliability: 15 })
+        ])
+    );
+    const { qr, ctx } = ctxFor(t, store, 'July Start');
+    const rel = ctx.reliability;
+
+    t.equal('the partial year is recognised', rel.partialYear, true);
+    t.equal('off one quarter of data', rel.quartersCovered, 1);
+    t.equal('against three elapsed', rel.quartersElapsed, 3);
+    // Nothing is prorated: whether a partial year earns a prorated allowance
+    // is a policy question. The verdict is simply withheld.
+    t.equal('and no verdict is claimed', rel.meetsTarget, null);
+
+    const split = qr.splitForBoxes(ctx);
+    t.check('attendance is not praised',
+        !split.strengths.some((m) => m.metricKey === 'reliability'));
+    t.check('but the hours are still raised',
+        split.focus.some((m) => m.metricKey === 'reliability'));
+
+    const sentence = qr.reliabilitySentence(rel, ctx);
+    t.check('the sentence says which quarter the hours are from', /15 hrs in Q3/.test(sentence));
+    t.check('and that the allowance is for a full year', /for a full year/.test(sentence));
+    t.check('it does not call it the year to date', !/for the year to date/.test(sentence));
+
+    const notes = qr.buildNotes(ctx);
+    t.check('the hours reach the document', /15 hrs in Q3/.test(notes.box2));
+    t.check('with no progress expectation against an allowance never applied',
+        !/steady progress toward goal/.test(notes.box2));
+
+    // Somebody here all year is measured against the allowance as before.
+    const vet = ctxFor(t, store, 'Been Here');
+    t.equal('a full year still gets a verdict', vet.ctx.reliability.partialYear, false);
+    t.equal('and 15 hours is inside 18', vet.ctx.reliability.meetsTarget, true);
 });
 
 suite('quarter review: the year-to-date upload outranks a sum of quarters', (t) => {

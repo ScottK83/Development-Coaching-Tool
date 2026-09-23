@@ -349,6 +349,13 @@
         if (!rel.target) {
             // No allowance configured is not the same as being inside one.
             summary = '<span style="color:var(--text-tertiary);">no allowance set</span>';
+        } else if (rel.partialYear) {
+            // The allowance covers a year this associate has not worked, so
+            // the hours are shown and the reading against it is not.
+            summary = '<span style="color:#d97706;font-weight:600;">'
+                + _escape(_display('reliability', rel.yearToDate)) + ' in '
+                + (rel.quartersCovered === 1 ? '1 quarter' : rel.quartersCovered + ' quarters')
+                + '</span>';
         } else if (rel.meetsTarget === false) {
             summary = '<span style="color:#c2410c;font-weight:600;">'
                 + _escape(_display('reliability', rel.overBy)) + ' over</span>';
@@ -363,7 +370,9 @@
             + '<div style="font-size:0.78em;color:var(--text-tertiary);font-weight:400;">'
             + (rel.fromYtdUpload
                 ? 'year to date, ' + _escape(_display('reliability', rel.yearToDate)) + ' from the year-to-date upload'
-                : 'year running total')
+                : rel.partialYear
+                    ? 'running total, from ' + _escape(rel.firstQuarterWithData ? rel.firstQuarterWithData.name : 'their first quarter')
+                    : 'year running total')
             + '</div></td>'
             + cells
             + '<td style="padding:8px;text-align:center;color:var(--text-secondary);">'

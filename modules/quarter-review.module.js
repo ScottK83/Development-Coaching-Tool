@@ -310,15 +310,39 @@
         var reconciles = !Number.isFinite(fromYtd)
             || (Number.isFinite(summed) && Math.abs(summed - total) <= 0.5);
 
+        // The allowance is for a whole year, so it only means what it says
+        // about somebody who was here for one.
+        //
+        // A July starter who burned 15 hours in a single quarter is on a pace
+        // of sixty, and measured against the annual 18 they came out UNDER it,
+        // so the document filed them under strengths and praised their
+        // attendance. Whether a partial year earns a prorated allowance is a
+        // policy question this code cannot answer, so nothing is prorated. The
+        // verdict is withheld instead, and the sentence says which quarter the
+        // hours start from so a reader can see it for themselves.
+        // Only when the figure is the sum of the quarters on hand. A quarter
+        // missing because nobody uploaded it and a quarter missing because the
+        // associate was not here yet look identical from here, and the year to
+        // date file tells them apart: if it supplied the number, it covers the
+        // year by definition and the allowance applies normally.
+        var withData = checkpoints.filter(function (c) { return c.hasValue; });
+        var partialYear = !Number.isFinite(fromYtd)
+            && withData.length > 0
+            && withData.length < checkpoints.length;
+
         return {
             target: target,
             checkpoints: checkpoints,
             checkpointsReconcile: reconciles,
+            partialYear: partialYear,
+            quartersCovered: withData.length,
+            quartersElapsed: checkpoints.length,
+            firstQuarterWithData: withData.length ? withData[0] : null,
             yearToDate: total,
             summedFromQuarters: summed,
             fromYtdUpload: Number.isFinite(fromYtd),
             hasValue: has,
-            meetsTarget: has ? _meetsTarget(target, total) : null,
+            meetsTarget: (has && !partialYear) ? _meetsTarget(target, total) : null,
             overBy: (has && target && total > target.value) ? _round1(total - target.value) : 0
         };
     }
@@ -399,15 +423,26 @@
 
         // Missed hours sit in whichever box the year's total puts them.
         var rel = ctx.reliability;
+        // meetsTarget is null on a partial year, where the annual allowance
+        // says nothing useful. Neither box claims a verdict then; the sentence
+        // is still available to a caller that wants to state the hours.
         if (rel.hasValue && rel.target) {
-            if (rel.meetsTarget) {
+            if (rel.meetsTarget === true) {
                 strengths.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'met', reliability: rel });
-            } else {
+            } else if (rel.meetsTarget === false) {
                 focus.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'missed', reliability: rel });
+            } else if (rel.partialYear && rel.yearToDate > 0) {
+                // No verdict, but hours worth raising. Withholding the verdict
+                // must not mean withholding the hours: fifteen of them in one
+                // quarter is the single most useful thing on the page about a
+                // new starter, and leaving it out entirely was worse than the
+                // wrong verdict it replaced. Ranked last, so a real miss is
+                // still raised ahead of it.
+                focus.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'partial-year', reliability: rel });
             }
         }
 
-        var focusRank = { 'missed-and-falling': 0, 'missed': 1, 'missed-but-rising': 2 };
+        var focusRank = { 'missed-and-falling': 0, 'missed': 1, 'missed-but-rising': 2, 'partial-year': 3 };
         focus.sort(function (a, b) {
             var ra = focusRank[a.why] === undefined ? 1 : focusRank[a.why];
             var rb = focusRank[b.why] === undefined ? 1 : focusRank[b.why];
@@ -746,9 +781,22 @@
         var goalText = target ? _display(RELIABILITY, target.value) : '';
         var lines = [];
 
-        lines.push(name + ' has missed ' + _display(RELIABILITY, rel.yearToDate)
-            + ' for the year to date'
-            + (target ? ', against an allowance of ' + goalText + ' for the year' : '') + '.');
+        // A partial year says which quarter it starts from. Fifteen hours
+        // reads as comfortable against an annual eighteen and reads as a
+        // problem when it happened in one quarter, and the only difference on
+        // the page is this clause.
+        if (rel.partialYear && rel.firstQuarterWithData) {
+            var span = rel.quartersCovered === 1
+                ? 'in ' + rel.firstQuarterWithData.name
+                : 'since ' + rel.firstQuarterWithData.name;
+            lines.push(name + ' has missed ' + _display(RELIABILITY, rel.yearToDate)
+                + ' ' + span
+                + (target ? ', against an allowance of ' + goalText + ' for a full year' : '') + '.');
+        } else {
+            lines.push(name + ' has missed ' + _display(RELIABILITY, rel.yearToDate)
+                + ' for the year to date'
+                + (target ? ', against an allowance of ' + goalText + ' for the year' : '') + '.');
+        }
 
         var withValues = rel.checkpoints.filter(function (c) { return c.runningTotal !== null; });
         if (rel.checkpointsReconcile && withValues.length >= 2) {
@@ -879,6 +927,14 @@
             return 'This is the one to move first. ' + name
                 + ' and I will work it in our one to ones, and the expectation is visible movement '
                 + over + '.';
+        }
+        if (lead.why === 'partial-year') {
+            var rel = lead.reliability;
+            var since = rel && rel.firstQuarterWithData ? rel.firstQuarterWithData.name : 'they started';
+            return 'The allowance is set for a full year and ' + name
+                + ' has been on the team since ' + since
+                + ', so the figure above is the hours themselves rather than a reading against it. '
+                + 'We will talk through the time missed and what sits behind it.';
         }
         if (lead.why === 'missed-but-rising') {
             return name + ' is already moving this the right way, and the expectation is that it reaches goal '
