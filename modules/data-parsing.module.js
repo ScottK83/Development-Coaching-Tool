@@ -216,10 +216,44 @@
         return [name, ...metrics];
     }
 
-    function parsePercentage(value) {
+    /**
+     * How a percent column is written, decided once for the whole column.
+     *
+     * Deciding per cell broke both ways. "0.8%" lost its sign on the way in and
+     * was then rescaled as a fraction, so a 0.8% transfer rate became 80%. And
+     * "1.000" became the number 1 before the decimal-point check could see it,
+     * so a perfect score in a fraction-formatted column read as 1%.
+     *
+     * A % sign anywhere, or any value over 1, means whole percents. Every value
+     * between 0 and 1 with at least one decimal point means fractions. Anything
+     * else is left to the old per-value rule.
+     */
+    function detectPercentScale(texts) {
+        let sawValue = false;
+        let sawDecimal = false;
+        for (const raw of texts) {
+            const text = String(raw ?? '').replace(/\u00A0/g, ' ').replace(/,/g, '').trim();
+            if (!text) continue;
+            if (text.endsWith('%')) return 'percent';
+            const n = Number(text);
+            if (!Number.isFinite(n)) continue;
+            sawValue = true;
+            if (n > 1 || n < 0) return 'percent';
+            if (text.indexOf('.') > -1) sawDecimal = true;
+        }
+        return sawValue && sawDecimal ? 'fraction' : undefined;
+    }
+
+    function scaleForCell(value, scale) {
+        if (typeof value === 'string' && value.trim().endsWith('%')) return 'percent';
+        return scale;
+    }
+
+    function parsePercentage(value, scale) {
         if (!value && value !== 0) return 0;
         if (value === 'N/A' || value === 'n/a' || value === '') return 0;
-        
+        scale = scaleForCell(value, scale);
+
         if (typeof value === 'string') {
             value = value.replace('%', '').trim();
         }
@@ -227,6 +261,8 @@
 
         const parsed = parseFloat(value);
         if (isNaN(parsed)) return 0;
+        if (scale === 'percent') return parseFloat(parsed.toFixed(2));
+        if (scale === 'fraction') return parseFloat((parsed * 100).toFixed(2));
         
         if (parsed > 0 && parsed < 1) {
             return parseFloat((parsed * 100).toFixed(2));
@@ -279,10 +315,11 @@
         return parseFloat(parsedTransfers.toFixed(2));
     }
 
-    function parseSurveyPercentage(value) {
+    function parseSurveyPercentage(value, scale) {
         if (!value && value !== 0) return '';
         if (value === 'N/A' || value === 'n/a' || value === '') return '';
-        
+        scale = scaleForCell(value, scale);
+
         if (typeof value === 'string') {
             value = value.replace('%', '').trim();
         }
@@ -290,6 +327,8 @@
 
         const parsed = parseFloat(value);
         if (isNaN(parsed)) return '';
+        if (scale === 'percent') return parseFloat(parsed.toFixed(2));
+        if (scale === 'fraction') return parseFloat((parsed * 100).toFixed(2));
         
         if (parsed > 0 && parsed < 1) {
             return parseFloat((parsed * 100).toFixed(2));
@@ -434,14 +473,21 @@
         return (value === null || value === undefined) ? '' : value;
     }
 
+    const PERCENT_COLUMNS = [
+        'adherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience', 'overallExperienceTop3',
+        'sentiment', 'positiveWord', 'negativeWord', 'emotions'
+    ];
+
     function normalizeRawCell(value) {
         const text = String(value ?? '').replace(/\u00A0/g, ' ').trim();
         if (!text || text === '(Blank)' || text === 'N/A') return null;
 
         const cleaned = text.replace(/,/g, '');
         if (cleaned.endsWith('%')) {
+            // Kept as text so the parser still sees the sign: as a bare number
+            // 0.8 was indistinguishable from the fraction 0.8 and became 80%.
             const pct = parseFloat(cleaned);
-            return Number.isNaN(pct) ? text : pct;
+            return Number.isNaN(pct) ? text : cleaned;
         }
 
         const numeric = Number(cleaned);
@@ -590,7 +636,8 @@
     }
 
     // Build the canonical employee row from parsed cells + the detected col map.
-    function parseEmployeeRow(cells, colMap) {
+    function parseEmployeeRow(cells, colMap, scales) {
+        const scaleOf = (key) => (scales ? scales[key] : undefined);
         const nameField = getCell(cells, colMap.name);
         if (!String(nameField || '').trim()) return null;
 
@@ -624,7 +671,7 @@
             ? parsedTotalCalls
             : (surveyTotal > 0 ? surveyTotal : 0);
 
-        const parsedTransfers = parsePercentage(getCell(cells, colMap.transfers)) || 0;
+        const parsedTransfers = parsePercentage(getCell(cells, colMap.transfers), scaleOf('transfers')) || 0;
         const parsedTransfersCount = parseInt(getCell(cells, colMap.transfersCount), 10) || 0;
         // Transfers is only known if the upload actually carried one of the two
         // transfer columns for this row. Otherwise leave it blank rather than
@@ -636,12 +683,12 @@
             name: displayName,
             firstName: firstName,
             scheduleAdherence: hasMetricCell(cells, colMap.adherence)
-                ? (parsePercentage(getCell(cells, colMap.adherence)) || 0)
+                ? (parsePercentage(getCell(cells, colMap.adherence), scaleOf('adherence')) || 0)
                 : '',
-            cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall)),
-            fcr: parseSurveyPercentage(getCell(cells, colMap.fcr)),
-            overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience)),
-            overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3)),
+            cxRepOverall: parseSurveyPercentage(getCell(cells, colMap.cxRepOverall), scaleOf('cxRepOverall')),
+            fcr: parseSurveyPercentage(getCell(cells, colMap.fcr), scaleOf('fcr')),
+            overallExperience: parseSurveyPercentage(getCell(cells, colMap.overallExperience), scaleOf('overallExperience')),
+            overallExperienceTop3: parseSurveyPercentage(getCell(cells, colMap.overallExperienceTop3), scaleOf('overallExperienceTop3')),
             transfers: hasTransfersData
                 ? normalizeTransfersPercentage(parsedTransfers, parsedTransfersCount, totalCalls)
                 : '',
@@ -666,10 +713,10 @@
             reliability: colMap.reliability >= 0
                 ? (parseHours(getCell(cells, colMap.reliability)) || 0)
                 : '',
-            overallSentiment: parsePercentage(getCell(cells, colMap.sentiment)) || '',
-            positiveWord: parsePercentage(getCell(cells, colMap.positiveWord)) || '',
-            negativeWord: parsePercentage(getCell(cells, colMap.negativeWord)) || '',
-            managingEmotions: parsePercentage(getCell(cells, colMap.emotions)) || '',
+            overallSentiment: parsePercentage(getCell(cells, colMap.sentiment), scaleOf('sentiment')) || '',
+            positiveWord: parsePercentage(getCell(cells, colMap.positiveWord), scaleOf('positiveWord')) || '',
+            negativeWord: parsePercentage(getCell(cells, colMap.negativeWord), scaleOf('negativeWord')) || '',
+            managingEmotions: parsePercentage(getCell(cells, colMap.emotions), scaleOf('emotions')) || '',
             surveyTotal: surveyTotal,
             // Null when the export did not carry the column; callers weight by
             // surveyTotal in that case, which is what they did for every metric
@@ -750,6 +797,15 @@
         // Heuristic column fix-up after we've seen some data.
         autoCorrectHoldTimeColumn(colMap, headers, parsedRows);
 
+        // Read from the raw text, before any cell became a number.
+        const rawCells = lines.slice(1).filter((line) => line.includes('\t')).map((line) => line.split('\t'));
+        const scales = {};
+        PERCENT_COLUMNS.forEach((key) => {
+            const idx = colMap[key];
+            if (!(idx >= 0)) return;
+            scales[key] = detectPercentScale(rawCells.map((cells) => cells[idx]));
+        });
+
         // Second pass: build canonical employee rows.
         // The roster acts as an allowlist (isRosteredAssociate, script.js). Report
         // exports carry departed reps, team leads, and other orgs alongside the real
@@ -759,7 +815,7 @@
         const employees = [];
         const skipped = [];
         for (let i = 0; i < parsedRows.length; i++) {
-            const employeeData = parseEmployeeRow(parsedRows[i], colMap);
+            const employeeData = parseEmployeeRow(parsedRows[i], colMap, scales);
             if (!employeeData) continue;
             validateEmployeeData(employeeData);
             if (onRoster && employeeData.name && !onRoster(employeeData.name)) {

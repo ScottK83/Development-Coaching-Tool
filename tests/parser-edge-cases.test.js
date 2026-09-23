@@ -179,3 +179,43 @@ suite('parser: a space-separated paste is refused, not imported as zeros', (t) =
     t.equal('with its real adherence', ok[0].scheduleAdherence, 95.2);
     t.equal('and its real call count', ok[0].totalCalls, 200);
 });
+
+/**
+ * A percent column's format is decided once, for the whole column.
+ *
+ * Per cell, "0.8%" lost its sign when the cell was normalized and was then
+ * rescaled as the fraction 0.8, so a 0.8% transfer rate became 80%. The only
+ * rescue needed the Number of Transfers column to be present. And "1.000"
+ * became the number 1 before the decimal-point check could see it, so a
+ * perfect score in a fraction-formatted paste read as 1%.
+ */
+suite('parser: percent columns are read by the column, not the cell', (t) => {
+    const dp = load(t);
+    const header = ['Name (Last, First)', 'TotalCalls', 'Transfers%', 'AHT', 'Adherence%'].join('\t');
+
+    const signed = [header,
+        ['Reed, Dana', '200', '0.8%', '400', '95.2%'].join('\t'),
+        ['Vale, Chris', '180', '6.1%', '410', '91.0%'].join('\t')
+    ].join('\n');
+    const a = dp.parsePastedData(signed, '2026-08-17', '2026-08-23');
+    const dana = a.find((e) => e.name.indexOf('Dana') > -1);
+    t.equal('0.8% stays 0.8 without a transfer count to rescue it', dana.transfers, 0.8);
+    t.equal('and a normal rate is untouched', a.find((e) => e.name.indexOf('Chris') > -1).transfers, 6.1);
+
+    const fractions = [header,
+        ['Reed, Dana', '200', '0.061', '400', '1.000'].join('\t'),
+        ['Vale, Chris', '180', '0.008', '410', '0.912'].join('\t')
+    ].join('\n');
+    const b = dp.parsePastedData(fractions, '2026-08-17', '2026-08-23');
+    t.equal('a fraction-formatted perfect adherence is 100', b.find((e) => e.name.indexOf('Dana') > -1).scheduleAdherence, 100);
+    t.equal('and the rest of the column converts with it', b.find((e) => e.name.indexOf('Chris') > -1).scheduleAdherence, 91.2);
+    t.equal('a fraction transfer rate converts too', b.find((e) => e.name.indexOf('Chris') > -1).transfers, 0.8);
+
+    const wholes = [header,
+        ['Reed, Dana', '200', '0.5', '400', '95'].join('\t'),
+        ['Vale, Chris', '180', '6', '410', '91'].join('\t')
+    ].join('\n');
+    const c = dp.parsePastedData(wholes, '2026-08-17', '2026-08-23');
+    t.equal('in a whole-percent column a small rate is not multiplied by 100',
+        c.find((e) => e.name.indexOf('Dana') > -1).transfers, 0.5);
+});
