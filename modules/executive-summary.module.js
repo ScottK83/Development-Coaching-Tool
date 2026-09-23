@@ -203,53 +203,56 @@
         return null;
     }
 
+    /**
+     * The stored period that came just before this one, or null.
+     *
+     * This used to build the previous end date by arithmetic and look for a key
+     * containing it. new Date(y, m - 2, d) overflows: Apr 30 became "Mar 30"
+     * and Mar 31 became Mar 3, so a month only ever found its predecessor in
+     * Jan and Aug, and the trend emails silently lost their "vs prior" column.
+     * A week in progress looked for another week in progress, but the week
+     * before it is stored as a finished week.
+     *
+     * Now: the newest period of a compatible type that ends before this one
+     * starts, and not so long before that it skips a period.
+     */
+    var PREVIOUS_PERIOD_RULES = {
+        'week': { types: ['week'], maxGapDays: 8 },
+        'week-in-progress': { types: ['week', 'week-in-progress'], maxGapDays: 8 },
+        'month': { types: ['month'], maxGapDays: 32 },
+        'month-to-date': { types: ['month'], maxGapDays: 32 },
+        'quarter': { types: ['quarter'], maxGapDays: 93 }
+    };
+
+    function _isoDaysBefore(iso, days) {
+        var p = String(iso).split('-').map(Number);
+        var d = new Date(p[0], p[1] - 1, p[2]);
+        d.setDate(d.getDate() - days);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
     function getPreviousPeriodData(currentWeekKey, periodType) {
-        /**
-         * Find the previous period's data based on period type
-         * Returns: weekKey of previous period or null
-         */
-        var weeklyData = getWeeklyData();
-        var parts = currentWeekKey.split('|');
-        var endStr = parts[1] || '';
-        var endParts = endStr.split('-').map(Number);
-        var endYear = endParts[0];
-        var endMonth = endParts[1];
-        var endDay = endParts[2];
-        var endDate = new Date(endYear, endMonth - 1, endDay);
+        var rule = PREVIOUS_PERIOD_RULES[periodType || 'week'];
+        if (!rule) return null;
+        var weeklyData = getWeeklyData() || {};
+        var current = weeklyData[currentWeekKey];
+        var parts = String(currentWeekKey || '').split('|');
+        var startStr = (current && current.metadata && current.metadata.startDate) || parts[0] || '';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(startStr)) return null;
+        var earliestEnd = _isoDaysBefore(startStr, rule.maxGapDays);
 
-        var previousPeriodEnd = null;
-
-        if (periodType === 'week' || periodType === 'week-in-progress') {
-            previousPeriodEnd = new Date(endDate);
-            previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 7);
-        } else if (periodType === 'month') {
-            previousPeriodEnd = new Date(endYear, endMonth - 2, endDay);
-        } else if (periodType === 'quarter') {
-            previousPeriodEnd = new Date(endDate);
-            previousPeriodEnd.setMonth(previousPeriodEnd.getMonth() - 3);
-        } else if (periodType === 'ytd') {
-            return null;
-        }
-
-        if (!previousPeriodEnd) return null;
-
-        var prevEndStr = previousPeriodEnd.getFullYear() + '-' +
-            String(previousPeriodEnd.getMonth() + 1).padStart(2, '0') + '-' +
-            String(previousPeriodEnd.getDate()).padStart(2, '0');
-
-        var ytdDataLocal = getYtdData();
-        var sortedKeys = Object.keys(weeklyData).concat(Object.keys(ytdDataLocal)).sort().reverse();
-        for (var i = 0; i < sortedKeys.length; i++) {
-            var key = sortedKeys[i];
-            if (!key.includes(prevEndStr)) continue;
-            var allData = Object.assign({}, weeklyData, ytdDataLocal);
-            var metadata = allData[key]?.metadata || {};
-            var keyPeriodType = metadata.periodType || 'week';
-            if (keyPeriodType !== periodType) continue;
-            return key;
-        }
-
-        return null;
+        var best = null;
+        var bestEnd = '';
+        Object.keys(weeklyData).forEach(function (key) {
+            if (key === currentWeekKey) return;
+            var meta = (weeklyData[key] && weeklyData[key].metadata) || {};
+            var type = meta.periodType || 'week';
+            if (rule.types.indexOf(type) === -1) return;
+            var end = meta.endDate || (key.indexOf('|') > -1 ? key.split('|')[1] : '');
+            if (!end || end >= startStr || end < earliestEnd) return;
+            if (!best || end > bestEnd) { best = key; bestEnd = end; }
+        });
+        return best;
     }
 
     // ============================================
