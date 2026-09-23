@@ -1765,7 +1765,7 @@ function attachTrendTipsModalHandlers(options) {
 function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, intelligenceSnapshotHtml, copilotPrompt) {
     return `
         <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${escapeHtml(displayName)}</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95em;">${periodLabel}</p>
+        <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
 
         ${summaryBoxesHtml}
 
@@ -1884,8 +1884,8 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         periodLabel,
         summaryBoxesHtml,
         focusAreasHtml,
-        intelligenceSnapshotHtml,
         sentimentHtml,
+        intelligenceSnapshotHtml,
         copilotPrompt
     );
 

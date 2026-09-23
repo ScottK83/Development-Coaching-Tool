@@ -45,8 +45,8 @@
 
     var selected = '';
     var subscribers = [];
-    var observed = {};       // id -> MutationObserver
-    var bound = {};          // id -> true once the change handler is attached
+    var observed = {};       // id -> { element, observer } for the element now under that id
+    var bound = {};          // id -> the element the change handler is attached to
     // Guards the write-back loop: setting .value on a picker to mirror the
     // global must not be read as the user choosing someone.
     var syncing = false;
@@ -127,22 +127,27 @@
         var select = document.getElementById(id);
         if (!select) return;
 
-        if (!bound[id]) {
+        // Keyed by the element, not its id. A tab that re-renders replaces its
+        // <select> with a new one under the same id, and an id-keyed flag left
+        // the new one with no listener while the observer watched the old,
+        // detached node, so the choice stopped carrying between tabs.
+        if (bound[id] !== select) {
             select.addEventListener('change', function () {
                 if (syncing) return;
                 // A picker cleared to "all"/"none" shouldn't wipe the person
                 // you're working; only a real name updates the global.
                 if (select.value) set(select.value);
             });
-            bound[id] = true;
+            bound[id] = select;
         }
 
-        if (!observed[id]) {
+        if (!observed[id] || observed[id].element !== select) {
+            if (observed[id]) observed[id].observer.disconnect();
             var observer = new MutationObserver(function () {
                 applyTo(select);
             });
             observer.observe(select, { childList: true });
-            observed[id] = observer;
+            observed[id] = { element: select, observer: observer };
         }
 
         applyTo(select);

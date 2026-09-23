@@ -3762,6 +3762,11 @@
                     document.getElementById('pulseCheckinText').value = newMessage;
                     await copyToClipboard(newMessage, { message: 'New check-in copied!' });
                 }
+            } catch (error) {
+                // Said on screen: there is no console to read, and a button that
+                // silently does nothing reads as broken.
+                console.error('[pulse] A button action failed:', error);
+                if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
             } finally {
                 regenBtn.textContent = '\uD83D\uDD04 Regenerate';
                 regenBtn.disabled = false;
@@ -4285,6 +4290,11 @@
                 try {
                     const msg = await buildOutreachMessage(outreach, plan, repName, latestKey, baselineKey, entry?.dailyEntry, comparison);
                     if (msg) textarea.value = msg;
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     btn.disabled = false;
                     btn.textContent = originalText;
@@ -4456,6 +4466,11 @@
                 runMyDayBtn.textContent = '\u23F3 Building\u2026';
                 try {
                     await showRunMyDayModal(container);
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     runMyDayBtn.textContent = originalText;
                     runMyDayBtn.disabled = false;
@@ -4489,6 +4504,11 @@
                     showCheckinModal(empName, message, latestKey, baselineKey, 'checkin');
 
                     await copyToClipboard(message, { message: 'Check-in copied to clipboard!' });
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -4513,6 +4533,11 @@
                     showCheckinModal(empName, message, latestKey, baselineKey, 'kickoff');
 
                     await copyToClipboard(message, { message: 'Monday Kickoff copied to clipboard!' });
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -4537,6 +4562,11 @@
                     showCheckinModal(empName, message, latestKey, baselineKey, 'midweek');
 
                     await copyToClipboard(message, { message: 'Midweek check-in copied to clipboard!' });
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -4561,6 +4591,11 @@
                     showCheckinModal(empName, message, latestKey, baselineKey, 'highfive');
 
                     await copyToClipboard(message, { message: 'High-five copied to clipboard!' });
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -4581,6 +4616,11 @@
                 this.disabled = true;
                 try {
                     await showGrowthModal(empName, defaultComparison);
+                } catch (error) {
+                    // Said on screen: there is no console to read, and a button that
+                    // silently does nothing reads as broken.
+                    console.error('[pulse] A button action failed:', error);
+                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                 } finally {
                     this.textContent = originalText;
                     this.disabled = false;
@@ -4610,6 +4650,11 @@
                         showCheckinModal(empName, message, latestKey, baselineKey, messageType);
 
                         await copyToClipboard(message, { message: (periodType === 'quarter' ? 'Quarterly' : 'Monthly') + ' review copied to clipboard!' });
+                    } catch (error) {
+                        // Said on screen: there is no console to read, and a button that
+                        // silently does nothing reads as broken.
+                        console.error('[pulse] A button action failed:', error);
+                        if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
                     } finally {
                         this.textContent = originalText;
                         this.disabled = false;

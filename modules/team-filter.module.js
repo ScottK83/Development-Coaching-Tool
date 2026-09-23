@@ -10,7 +10,6 @@
     // MODULE STATE
     // ============================================
 
-    let teamFilterChangeHandlersBound = false;
 
     // ============================================
     // HELPERS - access globals and storage module
@@ -262,29 +261,10 @@
         window.dispatchEvent(new CustomEvent('devcoach:teamFilterChanged', { detail: context }));
     }
 
-    function bindTeamFilterChangeHandlers() {
-        if (teamFilterChangeHandlersBound) return;
-
-        window.addEventListener('devcoach:teamFilterChanged', function() {
-            if (typeof window.initializeTrendIntelligence === 'function') window.initializeTrendIntelligence();
-            if (typeof window.renderTrendIntelligence === 'function') window.renderTrendIntelligence();
-            if (typeof window.renderTrendVisualizations === 'function') window.renderTrendVisualizations();
-            if (typeof window.populateTrendPeriodDropdown === 'function') window.populateTrendPeriodDropdown();
-
-            var selectedTrendPeriod = String(document.getElementById('trendPeriodSelect')?.value || '').trim();
-            if (selectedTrendPeriod && typeof window.populateEmployeeDropdownForPeriod === 'function') {
-                window.populateEmployeeDropdownForPeriod(selectedTrendPeriod);
-            }
-
-            if (typeof window.populateExecutiveSummaryAssociate === 'function') window.populateExecutiveSummaryAssociate();
-            if (typeof window.initializeCoachingEmail === 'function') window.initializeCoachingEmail();
-            if (typeof window.initializeYearEndComments === 'function') window.initializeYearEndComments();
-            if (typeof window.initializeCallListeningSection === 'function') window.initializeCallListeningSection();
-            if (typeof window.initializePtoTracker === 'function') window.initializePtoTracker();
-        });
-
-        teamFilterChangeHandlersBound = true;
-    }
+    // The listener that re-renders on a team filter change is bound once, by
+    // bindTeamFilterChangeHandlers in script.js. A second copy lived here with
+    // its own "already bound" flag, unused; wiring it up would have rendered
+    // every panel twice per change, so it is gone.
 
     // ============================================
     // MODULE EXPORT
@@ -304,8 +284,7 @@
         isAssociateIncludedByTeamFilter: isAssociateIncludedByTeamFilter,
         filterAssociateNamesByTeamSelection: filterAssociateNamesByTeamSelection,
         updateTeamFilterStatusChip: updateTeamFilterStatusChip,
-        notifyTeamFilterChanged: notifyTeamFilterChanged,
-        bindTeamFilterChangeHandlers: bindTeamFilterChangeHandlers
+        notifyTeamFilterChanged: notifyTeamFilterChanged
     };
 
     // Maintain backward compatibility with existing global references

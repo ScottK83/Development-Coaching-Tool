@@ -291,6 +291,11 @@
                 );
                 const textarea = container.querySelector('#dayPostText');
                 if (msg && textarea) textarea.value = msg;
+            } catch (error) {
+                // Said on screen: there is no console to read, and a button that
+                // silently does nothing reads as broken.
+                console.error('[day-posts] A button action failed:', error);
+                if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
             } finally {
                 btn.disabled = false;
                 btn.textContent = original;
