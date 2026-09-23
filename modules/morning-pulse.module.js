@@ -1087,10 +1087,18 @@
     }
 
     // Find the single biggest positive jump for an employee
+    // How far a move is in that metric's own noise units. Raw deltas are in
+    // different units, so fifteen seconds off AHT "beat" ten points of rep
+    // satisfaction and handle time was named the biggest jump almost every time.
+    function jumpSize(d) {
+        const noise = getGrowthNoiseThreshold(d.metricKey);
+        return d.delta / (Number.isFinite(noise) && noise > 0 ? noise : 1);
+    }
+
     function getBiggestJump(deltas) {
         const improvements = deltas.filter(d => d.delta > 0);
         if (!improvements.length) return null;
-        return improvements.reduce((best, d) => d.delta > best.delta ? d : best);
+        return improvements.reduce((best, d) => jumpSize(d) > jumpSize(best) ? d : best);
     }
 
     // --- Analysis (reuses existing analyzeTrendMetrics for current snapshot) ---
@@ -3341,8 +3349,8 @@
 
         const labelInfo = GROWTH_LABELS[comparisonType];
         const deltas = computeGrowthDeltas(latestEmp, baselineEmp);
-        const improvements = deltas.filter(d => d.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
-        const declines = deltas.filter(d => d.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 2);
+        const improvements = deltas.filter(d => d.delta > 0).sort((a, b) => jumpSize(b) - jumpSize(a)).slice(0, 3);
+        const declines = deltas.filter(d => d.delta < 0).sort((a, b) => jumpSize(a) - jumpSize(b)).slice(0, 2);
 
         let message = `${pick(GROWTH_GREETINGS)(firstName, labelInfo.long)}\n\n`;
         message += `${pick(GROWTH_RANGE_LINE)(ctx.currentLabel, ctx.priorLabel)}`;

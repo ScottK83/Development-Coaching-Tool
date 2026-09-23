@@ -291,15 +291,33 @@
      * Average a rep's metric over weekly periods whose endDate falls within
      * [startMs, endMs]. Returns null if no samples in window.
      */
+    // Weighted, never a flat mean of weekly figures (the aggregation rule). A
+    // one-survey week at 0% counted as much as a thirty-survey week at 95%, so a
+    // tip's "improved" verdict could flip on a single response. Survey metrics
+    // weigh by that question's responses, rates by calls; hours by the week.
+    function weekWeight(period, name, metricKey) {
+        const emp = employeeIndexFor(period.employees || []).get(name);
+        if (!emp) return 0;
+        const survey = typeof window.getSurveyWeight === 'function' ? window.getSurveyWeight(metricKey, emp) : null;
+        if (survey !== null && survey !== undefined) return survey > 0 ? survey : 0;
+        if (window.METRICS_REGISTRY?.[metricKey]?.unit === 'hrs') return 1;
+        const calls = parseInt(emp.totalCalls, 10);
+        return Number.isFinite(calls) && calls > 0 ? calls : 1;
+    }
+
     function avgInWindow(weeklyPeriods, name, metricKey, startMs, endMs) {
-        const vals = [];
+        let sum = 0;
+        let weight = 0;
         weeklyPeriods.forEach(function (w) {
             if (w.endDate < startMs || w.endDate > endMs) return;
             const v = getNumericMetric(w.period, name, metricKey);
-            if (v !== null) vals.push(v);
+            if (v === null) return;
+            const wt = weekWeight(w.period, name, metricKey);
+            if (wt <= 0) return;
+            sum += v * wt;
+            weight += wt;
         });
-        if (!vals.length) return null;
-        return vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+        return weight > 0 ? sum / weight : null;
     }
 
     /**

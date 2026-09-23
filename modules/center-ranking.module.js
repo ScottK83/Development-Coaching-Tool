@@ -814,8 +814,13 @@
 
         rankings.forEach(function (r) {
             var normalized = [];
+            // A metric with no value scores the bottom of its range rather than
+            // leaving the average. Dropped from the divisor, a missing slot
+            // lifted the tiebreaker, the same shape as the matchup bug that
+            // ranked the thinnest team first, and unlike kpiRankTotal above,
+            // which already counts a missing rank as the worst.
             var _norm = function (val, key, invert) {
-                if (val === null || val === undefined || isNaN(val)) return;
+                if (val === null || val === undefined || isNaN(val)) { normalized.push(0); return; }
                 var mm = metricMinMax[key];
                 var range = mm.max - mm.min;
                 if (range === 0) { normalized.push(0.5); return; }
