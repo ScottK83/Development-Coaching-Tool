@@ -910,7 +910,7 @@
         'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection',
         'callListeningSyncConfig', 'v2SyncState', 'v2DeviceId', 'idbMigrated_v1',
         'theme', 'selectedYearEndYear', 'lastTrendPeriod', 'celebrationsThreshold',
-        'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'lastUploadUndo',
+        'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'reliabilityBlankIsZero_v2', 'lastUploadUndo',
         'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage'
     ]);
 

@@ -130,6 +130,7 @@
         { name: 'lastUploadHeaderFingerprint', tier: 'derived', backend: 'local', merge: 'recompute' },
         { name: 'lastUploadMetricCoverage', tier: 'derived', backend: 'local', merge: 'recompute' },
         { name: 'reliabilityBlankIsZero_v1', tier: 'derived', backend: 'local', merge: 'recompute' },
+        { name: 'reliabilityBlankIsZero_v2', tier: 'derived', backend: 'local', merge: 'recompute' },
         { name: 'dataHealthReviewed', tier: 'derived', backend: 'local', merge: 'recompute' }
     ];
 

@@ -683,7 +683,7 @@ const NON_RESTORABLE_STORE_SUFFIXES = new Set(
         'trendQueueLegendExpanded', 'celebrationsInnerTab', 'celebrationsSelection',
         'callListeningSyncConfig', 'v2SyncState', 'v2DeviceId', 'idbMigrated_v1',
         'theme', 'selectedYearEndYear', 'lastTrendPeriod', 'celebrationsThreshold',
-        'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'lastUploadUndo',
+        'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'reliabilityBlankIsZero_v2', 'lastUploadUndo',
         'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage'
     ]
 );
@@ -1296,9 +1296,12 @@ window.SUPERVISOR_ROSTER = SUPERVISOR_ROSTER;
 function purgeNonRosteredEmployees() {
     const removed = {};
 
+    // Through the storage module: once these stores moved to IndexedDB, reading
+    // and writing localStorage here only rewrote the frozen copy left behind.
+    const storage = window.DevCoachModules?.storage;
     ['weeklyData', 'ytdData'].forEach(function(storeKey) {
         let store;
-        try { store = JSON.parse(localStorage.getItem(STORAGE_PREFIX + storeKey) || '{}'); }
+        try { store = storage?.readStore?.(storeKey) || {}; }
         catch (_e) { console.warn('[purgeNonRostered] Could not read ' + storeKey + ':', _e.message); return; }
 
         let touched = false;
@@ -1318,9 +1321,8 @@ function purgeNonRosteredEmployees() {
             }
         });
 
-        if (touched) {
-            try { localStorage.setItem(STORAGE_PREFIX + storeKey, JSON.stringify(store)); }
-            catch (_e) { console.warn('[purgeNonRostered] Could not save ' + storeKey + ':', _e.message); }
+        if (touched && !storage?.saveWithSizeCheck?.(storeKey, store)) {
+            console.warn('[purgeNonRostered] Could not save ' + storeKey);
         }
     });
 
@@ -1328,12 +1330,12 @@ function purgeNonRosteredEmployees() {
     // supervisor colour and stay checked in the team filter.
     ['employeeSupervisors', 'employeePreferredNames'].forEach(function(mapKey) {
         try {
-            const map = JSON.parse(localStorage.getItem(STORAGE_PREFIX + mapKey) || '{}');
+            const map = storage?.readStore?.(mapKey) || {};
             let touched = false;
             Object.keys(map).forEach(function(empName) {
                 if (!isRosteredAssociate(empName)) { delete map[empName]; touched = true; }
             });
-            if (touched) localStorage.setItem(STORAGE_PREFIX + mapKey, JSON.stringify(map));
+            if (touched) storage?.saveWithSizeCheck?.(mapKey, map);
         } catch (_e) { console.warn('[purgeNonRostered] Could not clean ' + mapKey + ':', _e.message); }
     });
 
@@ -1371,9 +1373,10 @@ window.purgeNonRosteredEmployees = purgeNonRosteredEmployees;
 function backfillBlankReliability() {
     let filled = 0;
 
+    const storage = window.DevCoachModules?.storage;
     ['weeklyData', 'ytdData'].forEach(function(storeKey) {
         let store;
-        try { store = JSON.parse(localStorage.getItem(STORAGE_PREFIX + storeKey) || '{}'); }
+        try { store = storage?.readStore?.(storeKey) || {}; }
         catch (_e) { console.warn('[backfillReliability] Could not read ' + storeKey + ':', _e.message); return; }
 
         let touched = false;
@@ -1395,9 +1398,8 @@ function backfillBlankReliability() {
             });
         });
 
-        if (touched) {
-            try { localStorage.setItem(STORAGE_PREFIX + storeKey, JSON.stringify(store)); }
-            catch (_e) { console.warn('[backfillReliability] Could not save ' + storeKey + ':', _e.message); }
+        if (touched && !storage?.saveWithSizeCheck?.(storeKey, store)) {
+            console.warn('[backfillReliability] Could not save ' + storeKey);
         }
     });
 
@@ -1406,10 +1408,13 @@ function backfillBlankReliability() {
 window.backfillBlankReliability = backfillBlankReliability;
 
 (function migrateBlankReliability() {
-    if (localStorage.getItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v1')) return;
+    // v2: v1 ran against the localStorage copy after the stores had moved to
+    // IndexedDB, so the real data was never filled. Filling blanks is
+    // idempotent, so running it again where v1 did work changes nothing.
+    if (localStorage.getItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v2')) return;
     const filled = backfillBlankReliability();
     if (filled) console.info('[backfillReliability] Set ' + filled + ' blank reliability value(s) to 0.');
-    localStorage.setItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v1', '1');
+    localStorage.setItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v2', '1');
 })();
 
 (function seedSupervisorTeams() {
@@ -2536,6 +2541,15 @@ function startCloudSyncBackground() {
         showSyncReloadBanner(`Not saved. Your other computer changed this data (${key}) since this page loaded. Reload to pick it up, then try again.`);
     });
 
+    // Also retried on its own a minute later. Waiting for the next edit meant
+    // a note typed just before going offline could sit unsent for the rest of
+    // the day if nothing else was changed.
+    let retryTimer = null;
+    const scheduleCloudPushRetry = () => {
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(() => scheduleCloudPush(), 60 * 1000);
+    };
+
     const scheduleCloudPush = () => {
         clearTimeout(_cloudPushTimer);
         _cloudPushTimer = setTimeout(() => {
@@ -2554,10 +2568,12 @@ function startCloudSyncBackground() {
                     // testing because this was a console.warn and nothing else.
                     console.warn('[cloud] Push failed, will retry on the next change:', result.error || result.code);
                     notifyCloudPushFailed(result.error || result.code);
+                    scheduleCloudPushRetry();
                 }
             }).catch((error) => {
                 console.warn('[cloud] Push failed, will retry on the next change:', error?.message || error);
                 notifyCloudPushFailed(error?.message || error);
+                scheduleCloudPushRetry();
             });
         }, 5000);
     };

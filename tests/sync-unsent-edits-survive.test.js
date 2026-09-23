@@ -209,3 +209,17 @@ suite('sync: an empty browser and a delete elsewhere are handled from the per-st
     const del = worker.slice(worker.indexOf("mode === 'deleteAll'"), worker.indexOf("mode === 'uploadFile'"));
     t.check('the delete tombstone is written under compare-and-swap', del.indexOf('etagMatches') > -1);
 });
+
+suite('sync: a failed push retries by itself, and boot migrations read the real stores', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const bg = src.slice(src.indexOf('function startCloudSyncBackground'), src.indexOf('\nfunction pulledDataStores'));
+    t.check('a failed push schedules its own retry', (bg.match(/scheduleCloudPushRetry\(\);/g) || []).length >= 2);
+
+    ['purgeNonRosteredEmployees', 'backfillBlankReliability'].forEach((fn) => {
+        const start = src.indexOf('function ' + fn + '(');
+        const body = src.slice(start, src.indexOf('\n}\n', start));
+        t.check(`${fn} reads through the storage module`, body.indexOf('readStore') > -1);
+        t.check(`${fn} never touches the frozen localStorage copy of the bulk stores`,
+            !/localStorage\.(getItem|setItem)\(STORAGE_PREFIX \+ (storeKey|mapKey)/.test(body));
+    });
+});

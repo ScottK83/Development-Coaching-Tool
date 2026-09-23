@@ -30,7 +30,7 @@ const RAW_WRITE_ALLOWED = [
     'theme', 'debugLog', 'errorLog', 'lastError', 'repoSyncLastSuccess',
     'repoBackupAppliedAt', 'deleteAllJustRan', 'idbMigrated_v1', 'selectedYearEndYear',
     'lastTrendPeriod', 'lastUploadUndo', 'lastUploadHeaderFingerprint',
-    'lastUploadMetricCoverage', 'reliabilityBlankIsZero_v1', 'dataHealthReviewed',
+    'lastUploadMetricCoverage', 'reliabilityBlankIsZero_v1', 'reliabilityBlankIsZero_v2', 'dataHealthReviewed',
     'v2SyncState', 'v2DeviceId', 'ccEmail'
 ];
 
