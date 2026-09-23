@@ -1667,11 +1667,25 @@
             return (coverOf[name] || []).find(function (s) { return date >= s.start && date <= s.end; }) || null;
         };
 
-        var surveySpans = [];
+        // Every day an upload inside the month speaks for, per person. The
+        // import owns the survey count on those days: whatever an earlier pull
+        // stored there is replaced by what this one works out, because an
+        // earlier pull may have filed a week's total on the Sunday, and once a
+        // fresh daily takes that week over the old total would count the same
+        // surveys twice. Days flagged to type in are left to the person.
+        var surveyRanges = [];
+        Object.keys(spanRows).forEach(function (name) {
+            spanRows[name].forEach(function (s) {
+                if (hasSurveyColumns(s.row)) surveyRanges.push({ name: name, start: s.start, end: s.end });
+            });
+        });
+        Object.keys(singles).forEach(function (id) {
+            var single = singles[id];
+            if (hasSurveyColumns(single.row)) surveyRanges.push({ name: single.name, start: single.date, end: single.date });
+        });
         Object.keys(coverOf).forEach(function (name) {
             coverOf[name].forEach(function (s) {
                 if (!s.daily) usedSpan[s.key] = true;
-                surveySpans.push({ name: name, start: s.start, end: s.end });
                 if (!s.surveys.count) return;
                 // Filed on the day the span ends, the last day it can speak for.
                 var day = days[s.end] || (days[s.end] = {});
@@ -1761,7 +1775,7 @@
             days: days,
             notes: notes,
             needsSurveyCheck: needsSurveyCheck,
-            surveySpans: surveySpans,
+            surveyRanges: surveyRanges,
             surveyTrace: surveyTrace,
             dateRange: { first: dayList[0] || '', last: dayList[dayList.length - 1] || '' },
             counts: {
@@ -1794,29 +1808,25 @@
             });
         });
 
-        var filled = 0;
         var kept = 0;
 
-        // Surveys a span now accounts for. Whatever a day inside it holds,
-        // from an earlier pull off the dailies or typed in, is part of the
-        // span's count, and leaving it would count the same survey twice. The
-        // span's own total lands on its last day below.
-        ((preview && preview.surveySpans) || []).forEach(function (span) {
+        // Survey counts on the days the uploads speak for belong to the
+        // import, and are cleared before it fills them. Leaving an earlier
+        // pull's count in place is how a week's total filed on its Sunday was
+        // added on top of the same surveys read off fresh dailies. A day
+        // flagged to type in keeps whatever was typed, which is the whole
+        // point of flagging it.
+        var open = {};
+        ((preview && preview.needsSurveyCheck) || []).forEach(function (item) {
+            open[item.date + '|' + item.name] = true;
+        });
+        ((preview && preview.surveyRanges) || []).forEach(function (range) {
             Object.keys(merged).forEach(function (date) {
-                if (date < span.start || date >= span.end) return;
-                var person = merged[date][span.name];
-                if (!person || person.perfectSurveys === undefined) return;
-                delete person.perfectSurveys;
-                filled += 1;
+                if (date < range.start || date > range.end) return;
+                if (open[date + '|' + range.name]) return;
+                var person = merged[date][range.name];
+                if (person) delete person.perfectSurveys;
             });
-            // The last day too, so the span's total goes in as a fill rather
-            // than as a disagreement with a daily's partial count.
-            var last = merged[span.end] && merged[span.end][span.name];
-            var arriving = ((incoming[span.end] || {})[span.name] || {}).perfectSurveys;
-            if (last && last.perfectSurveys !== undefined) {
-                delete last.perfectSurveys;
-                if (arriving === undefined) filled += 1;
-            }
         });
 
         Object.keys(incoming).forEach(function (date) {
@@ -1829,12 +1839,27 @@
                     if (from[field] === undefined) return;
                     if (to[field] === undefined || overwrite) {
                         to[field] = from[field];
-                        filled += 1;
                     } else if (to[field] !== from[field]) {
                         kept += 1;
                     }
                 });
             });
+        });
+
+        // What actually changed, counted at the end so a second pull over
+        // the same uploads reports nothing to do rather than every value it
+        // cleared and put straight back.
+        var filled = 0;
+        Object.keys(merged).forEach(function (date) {
+            Object.keys(merged[date]).forEach(function (name) {
+                var was = (source[date] || {})[name] || {};
+                var now = merged[date][name];
+                ['adherence', 'perfectSurveys'].forEach(function (field) {
+                    if (now[field] !== was[field]) filled += 1;
+                });
+                if (!Object.keys(now).length) delete merged[date][name];
+            });
+            if (!Object.keys(merged[date]).length) delete merged[date];
         });
 
         return {
