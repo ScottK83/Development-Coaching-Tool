@@ -41,8 +41,13 @@
 
     /**
      * Compute weighted team average for a metric across snapshot rows.
-     * Rate metrics: weighted by totalCalls or surveyTotal.
-     * Cumulative metrics (reliability): summed.
+     * Rate metrics: weighted by totalCalls, or by that survey question's own
+     * response count (getSurveyWeight), not surveyTotal: someone with Overall
+     * Experience responses and no rep-sat ones arrives at 0% rep-sat and used
+     * to drag the team's figure down with their whole survey count.
+     * Cumulative metrics (reliability): hours per person. The sum was graded
+     * against the 18-hour per-person budget and compared with a per-person
+     * center figure, so ten people at 4 hours showed a red 40.0.
      * Returns null if no data.
      *
      * `hasValue` is already the whole presence test — set at :359 from
@@ -62,12 +67,12 @@
      */
     function computeTeamMetricValue(rows, metricKey) {
         if (CUMULATIVE_SNAP[metricKey]) {
-            var sum = 0, hasData = false;
+            var sum = 0, people = 0;
             rows.forEach(function(row) {
                 var cell = row.cells.find(function(c) { return c.metricKey === metricKey; });
-                if (cell && cell.hasValue) { sum += cell.value; hasData = true; }
+                if (cell && cell.hasValue) { sum += cell.value; people += 1; }
             });
-            return hasData ? sum : null;
+            return people > 0 ? sum / people : null;
         }
 
         var wSum = 0, wCount = 0;
@@ -76,7 +81,10 @@
             if (!cell || !cell.hasValue) return;
             var w = 1;
             if (SURVEY_WEIGHTED_SNAP[metricKey]) {
-                w = row.surveyTotal > 0 ? row.surveyTotal : 0;
+                var surveyWeight = typeof window.getSurveyWeight === 'function'
+                    ? window.getSurveyWeight(metricKey, row.employee || row)
+                    : row.surveyTotal;
+                w = surveyWeight > 0 ? surveyWeight : 0;
             } else {
                 w = row.totalCalls > 0 ? row.totalCalls : 1;
             }
@@ -409,6 +417,7 @@
                 fullName: emp.name || 'Unknown',
                 totalCalls: parseInt(emp.totalCalls, 10) || 0,
                 surveyTotal: parseInt(emp.surveyTotal, 10) || 0,
+                employee: emp,
                 cells: cells
             };
         });

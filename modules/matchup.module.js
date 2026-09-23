@@ -372,13 +372,15 @@
                     return m.isTopLevel ? r[m.key] : (r.values ? r.values[m.key] : null);
                 };
 
-                // Cumulative metrics (reliability) total their values.
+                // Cumulative metrics (reliability): the average person's total.
+                // A team sum made the bigger team lose every reliability
+                // matchup on headcount alone.
                 if (m.weightBy === 'sum') {
                     var sumVals = members.map(_val).filter(function (v) {
                         return v !== null && v !== undefined && !isNaN(v);
                     });
                     stats.averages[m.key] = sumVals.length > 0
-                        ? sumVals.reduce(function (a, b) { return a + b; }, 0)
+                        ? sumVals.reduce(function (a, b) { return a + b; }, 0) / sumVals.length
                         : null;
                     return;
                 }
@@ -391,7 +393,13 @@
                     if (v === null || v === undefined || isNaN(v)) return;
                     var w;
                     if (m.weightBy === 'survey') {
-                        w = r.surveyTotal > 0 ? r.surveyTotal : 0;
+                        // The responses behind the figure shown, not every
+                        // survey: someone with no rep-sat responses arrives at
+                        // 0% and would otherwise count at full survey volume.
+                        var responses = (r.associateOverallSurveys === undefined || r.associateOverallSurveys === null)
+                            ? Number(r.surveyTotal)
+                            : Number(r.associateOverallSurveys);
+                        w = responses > 0 ? responses : 0;
                     } else {
                         w = r.totalCalls > 0 ? r.totalCalls : 1;
                     }

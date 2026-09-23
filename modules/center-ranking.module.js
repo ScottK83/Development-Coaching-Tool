@@ -2528,7 +2528,11 @@
                 // always rep sat.
                 weight = Number(h.holder.associateOverallSurveys);
             } else if (_SURVEY_WEIGHTED_AVG[row.registry]) {
-                weight = Number(h.holder.surveyTotal) > 0 ? Number(h.holder.surveyTotal) : 0;
+                // That question's own responses, as getSurveyWeight defines.
+                var responses = typeof window.getSurveyWeight === 'function'
+                    ? window.getSurveyWeight(row.registry, h.holder)
+                    : Number(h.holder.surveyTotal);
+                weight = Number(responses) > 0 ? Number(responses) : 0;
             } else {
                 weight = Number(h.holder.totalCalls) > 0 ? Number(h.holder.totalCalls) : 1;
             }

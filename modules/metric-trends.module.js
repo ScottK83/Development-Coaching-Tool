@@ -3833,21 +3833,26 @@ function buildTeamTrendAggregateEmployee(period) {
     // Compute metrics with proper weighting
     getMetricOrder().forEach(({ key }) => {
         if (key === 'reliability') {
-            // Cumulative: sum across team
-            let sum = 0, hasData = false;
+            // Hours per person, as in the team prompt above: this figure is
+            // graded against the per-person 18-hour budget.
+            let sum = 0, people = 0;
             filteredEmployees.forEach(emp => {
                 const v = parseFloat(emp?.[key]);
-                if (Number.isFinite(v)) { sum += v; hasData = true; }
+                if (Number.isFinite(v)) { sum += v; people += 1; }
             });
-            if (hasData) aggregate[key] = sum;
+            if (people > 0) aggregate[key] = sum / people;
         } else {
-            // Rate metrics: weighted average
+            // Rate metrics: weighted average. Survey metrics weigh by that
+            // question's own responses; surveyTotal let a 0% from someone with
+            // no rep-sat responses count at their full survey volume.
             let wSum = 0, wCount = 0;
             filteredEmployees.forEach(emp => {
                 const v = parseFloat(emp?.[key]);
                 if (!Number.isFinite(v)) return;
                 const tc = parseInt(emp?.totalCalls, 10);
-                const st = parseInt(emp?.surveyTotal, 10);
+                const st = typeof window.getSurveyWeight === 'function'
+                    ? window.getSurveyWeight(key, emp)
+                    : parseInt(emp?.surveyTotal, 10);
                 let w = 1;
                 if (SURVEY_WEIGHTED[key]) {
                     w = Number.isInteger(st) && st > 0 ? st : 0;

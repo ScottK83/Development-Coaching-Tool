@@ -80,8 +80,8 @@ suite('team snapshot: a zero counts toward the team figure', (t) => {
 suite('team snapshot: a team that missed no hours reports zero, not nothing', (t) => {
     const api = load(t);
 
-    // reliability is summed rather than averaged. Every member at zero is a
-    // perfect month, and it used to render as "--".
+    // reliability is hours per person (graded against the per-person budget).
+    // Every member at zero is a perfect month, and it used to render as "--".
     const perfect = [
         row('A', 100, { reliability: 0 }),
         row('B', 100, { reliability: 0 })
@@ -92,8 +92,8 @@ suite('team snapshot: a team that missed no hours reports zero, not nothing', (t
         row('A', 100, { reliability: 0 }),
         row('B', 100, { reliability: 6 })
     ];
-    t.equal('and one absence still totals only that absence',
-        api.computeTeamMetricValue(mixed, 'reliability'), 6);
+    t.equal('and one absence is spread over the people, not totalled',
+        api.computeTeamMetricValue(mixed, 'reliability'), 3);
 });
 
 suite('team snapshot: genuinely absent readings are still absent', (t) => {

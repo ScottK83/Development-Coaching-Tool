@@ -83,6 +83,29 @@
         return weeklyData[coachingLatestWeekKey]?.employees?.find(emp => emp.name === employeeName) || null;
     }
 
+    /**
+     * Reliability is the year's running total of hours missed, never one
+     * week's. The weekly row holds that week's hours, so graded against the
+     * year's budget someone at 30 hours for the year who missed nothing this
+     * week was listed as a win. The total comes from the newest year-to-date
+     * upload that had closed by the end of the coaching week's month; with none
+     * it is left out rather than guessed.
+     */
+    function resolveReliabilityYearTotal(employeeName) {
+        const pc = window.DevCoachModules?.periodCompare;
+        const period = weeklyData[coachingLatestWeekKey];
+        const endDate = period?.metadata?.endDate || String(coachingLatestWeekKey || '').split('|')[1] || '';
+        if (typeof pc?.latestYtdReliability !== 'function' || !/^\d{4}-\d{2}/.test(endDate)) return NaN;
+        const map = pc.latestYtdReliability(parseInt(endDate.slice(0, 4), 10), { asOfMonth: endDate.slice(0, 7) }) || {};
+        const value = parseFloat(map[employeeName]);
+        return Number.isFinite(value) ? value : NaN;
+    }
+
+    function coachingMetricValue(employeeRecord, key) {
+        if (key === 'reliability') return resolveReliabilityYearTotal(employeeRecord?.name);
+        return employeeRecord[key];
+    }
+
     function buildCoachingDisplayMetricData(employeeRecord) {
         const wins = [];
         const opportunities = [];
@@ -90,7 +113,7 @@
 
         metricKeys.forEach(key => {
             const metricConfig = METRICS_REGISTRY[key];
-            const value = employeeRecord[key];
+            const value = coachingMetricValue(employeeRecord, key);
             if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
 
             const numValue = parseFloat(value);
@@ -241,7 +264,7 @@
 
         getMetricOrder().map(m => m.key).forEach(key => {
             const metricConfig = METRICS_REGISTRY[key];
-            const value = employeeRecord[key];
+            const value = coachingMetricValue(employeeRecord, key);
             if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
 
             const numValue = parseFloat(value);
