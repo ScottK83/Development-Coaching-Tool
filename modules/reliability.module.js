@@ -589,18 +589,38 @@
         return '';
     }
 
+    // Exact header names first, then a containment match for the longer
+    // names only. Containment on every candidate let 'to' match "Total" and
+    // 'end' match "Attendance" or "Pending", which moved the read to the wrong
+    // column whenever such a header sat to the left of the real one.
     function findColumnIndexFromHeaderRow(row, candidates) {
         if (!Array.isArray(row)) return -1;
-        for (var i = 0; i < row.length; i++) {
-            var h = stripUnicode(String(row[i] || ''))
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '');
-            if (!h) continue;
-            for (var j = 0; j < candidates.length; j++) {
-                if (h === candidates[j] || h.indexOf(candidates[j]) >= 0) return i;
+        var headers = row.map(function(cell) {
+            return stripUnicode(String(cell || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+        });
+        for (var j = 0; j < candidates.length; j++) {
+            var exact = headers.indexOf(candidates[j]);
+            if (exact >= 0) return exact;
+        }
+        for (var i = 0; i < headers.length; i++) {
+            if (!headers[i]) continue;
+            for (var k = 0; k < candidates.length; k++) {
+                if (candidates[k].length >= 5 && headers[i].indexOf(candidates[k]) >= 0) return i;
             }
         }
         return -1;
+    }
+
+    // Hours as the report writes them: a number, or h:mm. parseFloat read
+    // "0:30" as 0 and "4:30" as 4, so a half-hour tardy counted as nothing.
+    function parseVerintHours(value) {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        var text = String(value || '').trim();
+        var clock = text.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
+        if (clock) {
+            return parseInt(clock[1], 10) + parseInt(clock[2], 10) / 60 + (clock[3] ? parseInt(clock[3], 10) / 3600 : 0);
+        }
+        return parseFloat(text) || 0;
     }
 
     function extractVerintData(rows, fileName) {
@@ -614,11 +634,15 @@
             'Same Day - Partial', 'Same day - Partial PTOST',
             'Tardy EQ GT 6 Min', 'Tardy EQ GT 6 Min PTOST', 'Tardy LT 6 Min'
         ];
+        // Matched without regard to case ("Same day - Partial PTOST" is spelled
+        // that way in the report), and stored under the canonical spelling.
+        var sameDayByLower = {};
+        SAME_DAY_KEYS.forEach(function(key) { sameDayByLower[key.toLowerCase()] = key; });
         rows.forEach(function(r) {
-            var activity = String(r[1] || '').trim();
-            if (SAME_DAY_KEYS.indexOf(activity) >= 0) {
-                var used = parseFloat(r[7]) || 0;
-                summaryCategories[activity] = used;
+            var activity = String(r[1] || '').trim().replace(/\s+/g, ' ');
+            var canonical = sameDayByLower[activity.toLowerCase()];
+            if (canonical) {
+                summaryCategories[canonical] = parseVerintHours(r[7]);
             }
         });
 
@@ -667,8 +691,7 @@
 
                 var fromRaw = row[fromCol];
                 var toRaw = row[toCol];
-                var lengthStr = String(row[hoursCol] || '').trim();
-                var hours = parseFloat(lengthStr) || 0;
+                var hours = parseVerintHours(row[hoursCol]);
                 var fromDate = parseSpreadsheetDate(fromRaw);
                 var toDate = parseSpreadsheetDate(toRaw);
 
@@ -2700,6 +2723,8 @@
         handlePayrollUpload: handlePayrollUpload,
         parseVerintExcel: parseVerintExcel,
         parsePayrollExcel: parsePayrollExcel,
+        parseVerintHours: parseVerintHours,
+        findColumnIndexFromHeaderRow: findColumnIndexFromHeaderRow,
         extractPayrollData: extractPayrollData,
         mergePayrollEntries: mergePayrollEntries,
         reconcileEmployee: reconcileEmployee

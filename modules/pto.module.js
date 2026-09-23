@@ -176,11 +176,26 @@ function cleanUnicodeControl(str) {
     return str.trim();
 }
 
+// One key for a person however the file writes them: "Berrelleza, Robert" and
+// "Robert Berrelleza" are the same associate. Lowercase comparison alone made
+// the PDF's "Last, First" miss the stored "First Last" and open a second PTO
+// record, so balances landed on a person nobody looked at.
+function ptoNameKey(name) {
+    return String(name || '')
+        .toLowerCase()
+        .replace(/,/g, ' ')
+        .replace(/[^a-z\s]/g, '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .sort()
+        .join(' ');
+}
+
 function resolveEmployeeName(rawName, nameLookup) {
-    const lower = rawName.toLowerCase();
-    if (nameLookup[lower]) return nameLookup[lower];
+    const key = ptoNameKey(rawName);
+    if (nameLookup[key]) return nameLookup[key];
     const titleCased = rawName.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-    nameLookup[lower] = titleCased;
+    nameLookup[key] = titleCased;
     return titleCased;
 }
 
@@ -190,10 +205,10 @@ function resolveEmployeeName(rawName, nameLookup) {
 
 function resolveStoreKey(store, employeeName) {
     if (store.associates?.[employeeName]) return employeeName;
-    var lower = employeeName.toLowerCase();
+    var wanted = ptoNameKey(employeeName);
     var keys = Object.keys(store.associates || {});
     for (var i = 0; i < keys.length; i++) {
-        if (keys[i].toLowerCase() === lower) return keys[i];
+        if (ptoNameKey(keys[i]) === wanted) return keys[i];
     }
     return employeeName;
 }
@@ -305,7 +320,7 @@ function processPtoBalancePdf(input) {
     
     var store = loadPtoStore();
     var nameLookup = {};
-    Object.keys(store.associates || {}).forEach(function(n) { nameLookup[n.toLowerCase()] = n; });
+    Object.keys(store.associates || {}).forEach(function(n) { nameLookup[ptoNameKey(n)] = n; });
     var weeklyData = window.DevCoachModules?.storage?.loadWeeklyData?.() || {};
     var ytdData = window.DevCoachModules?.storage?.loadYtdData?.() || {};
     [weeklyData, ytdData].forEach(function(source) {
@@ -313,7 +328,7 @@ function processPtoBalancePdf(input) {
             if (!Array.isArray(period?.employees)) return;
             period.employees.forEach(function(emp) {
                 var n = String(emp?.name || '').trim();
-                if (n && !nameLookup[n.toLowerCase()]) nameLookup[n.toLowerCase()] = n;
+                if (n && !nameLookup[ptoNameKey(n)]) nameLookup[ptoNameKey(n)] = n;
             });
         });
     });
@@ -382,7 +397,7 @@ function populateAssociateSelect() {
 
     const store = loadPtoStore();
     const storeLookup = {};
-    Object.keys(store.associates || {}).forEach(n => { storeLookup[n.toLowerCase()] = n; });
+    Object.keys(store.associates || {}).forEach(n => { storeLookup[ptoNameKey(n)] = n; });
 
     // The option text is not just the name here: it carries how many payroll
     // entries are on file, which is the whole point of the PTO picker. That is
@@ -392,7 +407,7 @@ function populateAssociateSelect() {
         label: (name) => {
             let entries = store.associates?.[name]?.payrollEntries || [];
             if (!entries.length) {
-                const storeName = storeLookup[name.toLowerCase()];
+                const storeName = storeLookup[ptoNameKey(name)];
                 if (storeName) entries = store.associates[storeName]?.payrollEntries || [];
             }
             return entries.length > 0 ? `${name} (${entries.length})` : name;

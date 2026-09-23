@@ -264,7 +264,7 @@ suite('contest: editing one team does not wipe the rest of that day', (t) => {
     const { ROOT } = require('./harness');
     const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8').replace(/\r\n/g, '\n');
     const start = ui.indexOf('async function saveDay');
-    const body = ui.slice(start, start + 2400);
+    const body = ui.slice(start, start + 3200);
 
     // A day is revisited days later to add surveys that arrived late. If that
     // revisit happens with a different team selected, rebuilding the day from
@@ -1282,4 +1282,18 @@ suite('contest: surveys whose good answers line up are counted', (t) => {
     // person still decides.
     t.check('uneven good answers are still left to a person',
         count({ surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2, cxRepOverall: 100, fcr: 50, overallExperience: 50 }).flagged);
+});
+
+suite('contest: bad entries are refused before anything is saved', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8').replace(/\r\n/g, '\n');
+    const check = ui.slice(ui.indexOf('function findBadEntries'), ui.indexOf('async function saveDay'));
+    t.check('adherence has to be 0 to 100', check.indexOf('n >= 0 && n <= 100') > -1);
+    t.check('surveys have to be a whole number', check.indexOf('Number.isInteger(n) && n >= 0') > -1);
+    t.check('a box that is not a number is caught rather than read as cleared', check.indexOf('badInput') > -1);
+    const save = ui.slice(ui.indexOf('async function saveDay'));
+    t.check('and the save stops before touching the day',
+        save.indexOf('findBadEntries()') > -1 && save.indexOf('findBadEntries()') < save.indexOf('const day = Object.assign'));
 });

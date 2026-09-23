@@ -219,6 +219,32 @@
     // ACTIONS
     // ============================================
 
+    // Checked before anything is written. The boxes' min and max are only
+    // hints: an adherence of 950 (a missed decimal point), a negative or a
+    // fractional survey count all saved as typed. And a box holding something
+    // that is not a number reads as empty, which on save means "remove this
+    // person from the day". Bad boxes are outlined and named.
+    function findBadEntries() {
+        const problems = [];
+        document.querySelectorAll('[data-contest-adherence], [data-contest-perfect]').forEach((box) => {
+            box.style.outline = '';
+            const who = box.getAttribute('data-contest-adherence') || box.getAttribute('data-contest-perfect');
+            const isAdherence = box.hasAttribute('data-contest-adherence');
+            let problem = '';
+            if (box.validity && box.validity.badInput) {
+                problem = 'not a number';
+            } else if (box.value !== '') {
+                const n = Number(box.value);
+                if (isAdherence && !(n >= 0 && n <= 100)) problem = 'adherence must be 0 to 100';
+                if (!isAdherence && !(Number.isInteger(n) && n >= 0)) problem = 'surveys must be a whole number';
+            }
+            if (!problem) return;
+            box.style.outline = '2px solid #c62828';
+            problems.push(who + ': ' + problem);
+        });
+        return problems;
+    }
+
     async function saveDay() {
         const status = document.getElementById('contestDayStatus');
         const date = document.getElementById('contestDate')?.value;
@@ -240,6 +266,12 @@
         //
         // Clearing a box still means "this did not happen" for that person,
         // because a visible name with both boxes empty is removed below.
+        const problems = findBadEntries();
+        if (problems.length) {
+            if (status) status.textContent = 'Not saved. Fix the boxes outlined in red: ' + problems.slice(0, 3).join('; ') + (problems.length > 3 ? '...' : '');
+            return;
+        }
+
         const day = Object.assign({}, month.days[date] || {});
         document.querySelectorAll('[data-contest-adherence]').forEach((input) => {
             const name = input.getAttribute('data-contest-adherence');

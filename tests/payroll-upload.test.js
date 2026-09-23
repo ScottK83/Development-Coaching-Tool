@@ -70,3 +70,26 @@ suite('payroll: a second file keeps the first file\'s days', (t) => {
     t.equal('with the corrected code', again.filter((e) => e.trc === 'PTOST').length, 1);
     t.equal('and leaves the other period alone', again.filter((e) => e.trc === 'UNSCHD').length, 1);
 });
+
+suite('verint: hours, categories and headers are read as written', (t) => {
+    const api = load(t);
+    t.equal('0:30 is half an hour', api.parseVerintHours('0:30'), 0.5);
+    t.equal('4:30 is four and a half', api.parseVerintHours('4:30'), 4.5);
+    t.equal('a plain number still reads', api.parseVerintHours('2.25'), 2.25);
+    t.equal('and a numeric cell', api.parseVerintHours(3), 3);
+
+    const header = ['', 'Total', 'Time Off Activity', 'From', 'To', 'Length Hours'];
+    t.equal('"to" is the To column, not Total', api.findColumnIndexFromHeaderRow(header, ['to', 'end', 'enddate']), 4);
+    t.equal('"from" is From', api.findColumnIndexFromHeaderRow(header, ['from', 'start', 'startdate']), 3);
+    t.equal('hours still match a longer header', api.findColumnIndexFromHeaderRow(header, ['lengthhours', 'hours', 'duration']), 5);
+});
+
+suite('pto: one person however the file writes the name', (t) => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'modules/pto.module.js'), 'utf8');
+    const start = src.indexOf('function ptoNameKey(');
+    const body = src.slice(start, src.indexOf('\n}\n', start) + 2);
+    const key = new Function(body + '\nreturn ptoNameKey;')();
+    t.equal('Last, First matches First Last', key('Berrelleza, Robert'), key('Robert Berrelleza'));
+    t.equal('case and spacing do not matter', key('  ROBERT   berrelleza '), key('Robert Berrelleza'));
+    t.check('different people stay different', key('Robert Berrelleza') !== key('Roberta Berrelleza'));
+});
