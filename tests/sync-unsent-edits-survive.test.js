@@ -189,3 +189,23 @@ suite('sync: conflict copies are never pulled into this machine', async (t) => {
     t.check('an old conflict copy on this machine is removed',
         !(PREFIX + 'conflicts/old/leftover' in home.browser.store));
 });
+
+suite('sync: an empty browser and a delete elsewhere are handled from the per-store copy', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
+    const restore = src.slice(src.indexOf('async function restoreEmptyBrowserFromCloud'), src.indexOf('async function tryAutoRestoreFromRepoBackupOnEmptyState'));
+    t.check('an empty browser is filled from the per-store copy', restore.indexOf('sync.pull({ full: true })') > -1);
+    t.check('with boot dirt cleared first, so empty stores are never pushed over it',
+        restore.indexOf('clearDirtyStores') > -1 && restore.indexOf('clearDirtyStores') < restore.indexOf('sync.pull('));
+    t.check('and only once per tab session', restore.indexOf('emptyBootCloudRestore') > -1);
+    const boot = src.slice(src.indexOf('if (!hadLocalDataAtBoot) {'));
+    t.check('the whole-state backup is only the fallback',
+        boot.indexOf('restoreEmptyBrowserFromCloud()') > -1
+        && boot.indexOf('restoreEmptyBrowserFromCloud()') < boot.indexOf('tryAutoRestoreFromRepoBackupOnEmptyState()'));
+
+    const after = src.slice(src.indexOf('function afterCloudPull'), src.indexOf('function showDeletedElsewhereBanner'));
+    t.check('a delete on the other computer is offered here', /result\?\.deletedAll[\s\S]{0,80}showDeletedElsewhereBanner\(\)/.test(after));
+
+    const worker = fs.readFileSync(path.join(ROOT, 'cloudflare-sync-worker/index.js'), 'utf8');
+    const del = worker.slice(worker.indexOf("mode === 'deleteAll'"), worker.indexOf("mode === 'uploadFile'"));
+    t.check('the delete tombstone is written under compare-and-swap', del.indexOf('etagMatches') > -1);
+});

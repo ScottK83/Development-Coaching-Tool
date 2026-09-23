@@ -411,6 +411,9 @@
             if (hydrateAbandoned) return 'localStorage';
             bulkCache = cache;
             backendMode = 'idb';
+            // Without this IndexedDB is best-effort, and the browser may evict
+            // it under disk pressure. Not awaited: boot does not wait on it.
+            try { window.navigator?.storage?.persist?.()?.catch?.(() => {}); } catch (_) { /* unsupported */ }
             return 'idb';
         } catch (error) {
             console.error('[storage] Hydrate failed; staying on localStorage:', error);

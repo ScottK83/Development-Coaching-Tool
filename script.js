@@ -2597,6 +2597,12 @@ async function pullFromOtherMachine(when) {
  * Otherwise say so plainly and leave the page alone.
  */
 function afterCloudPull(result, when) {
+    // Delete-all on the other computer empties the cloud copy but not this one.
+    // Left alone, this machine's next edit re-seeds the cloud, and the machine
+    // that deleted everything pulls it straight back. Offered, not automatic.
+    if (result?.deletedAll && (result.removed || []).length) {
+        showDeletedElsewhereBanner();
+    }
     const pulled = pulledDataStores(result);
     if (!pulled.length) return;
     console.log(`[cloud] Pulled ${pulled.length} change(s) from another machine (${when}):`, pulled.join(', '));
@@ -2623,6 +2629,31 @@ function afterCloudPull(result, when) {
         return;
     }
     showSyncReloadBanner(`Your other computer changed ${pulled.length} thing(s). Reload to see them. Until then, changes to them here cannot be saved.`);
+}
+
+function showDeletedElsewhereBanner() {
+    if (document.getElementById('deletedElsewhereBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'deletedElsewhereBanner';
+    banner.style.cssText = 'position: fixed; bottom: env(safe-area-inset-bottom, 0px); left: 0; right: 0; z-index: 10000; '
+        + 'padding: 10px 16px; background: #c62828; color: white; font-weight: 600; display: flex; gap: 12px; '
+        + 'align-items: center; justify-content: center; flex-wrap: wrap;';
+    const text = document.createElement('span');
+    text.textContent = 'Your other computer deleted all data. This computer still has its copy, and its next change will send some of it back to the cloud.';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = 'Delete here too';
+    deleteBtn.style.cssText = 'padding: 6px 14px; border: none; border-radius: 4px; background: white; color: #c62828; font-weight: 700; cursor: pointer;';
+    deleteBtn.addEventListener('click', () => { banner.remove(); handleDeleteAllDataClick(); });
+    const keepBtn = document.createElement('button');
+    keepBtn.type = 'button';
+    keepBtn.textContent = 'Keep this copy';
+    keepBtn.style.cssText = 'padding: 6px 14px; border: 1px solid white; border-radius: 4px; background: transparent; color: white; font-weight: 700; cursor: pointer;';
+    keepBtn.addEventListener('click', () => banner.remove());
+    banner.appendChild(text);
+    banner.appendChild(deleteBtn);
+    banner.appendChild(keepBtn);
+    document.body.appendChild(banner);
 }
 
 function showSyncReloadBanner(message) {
@@ -4155,6 +4186,41 @@ function hasMeaningfulLocalData() {
 
 function applyRepoBackupPayload(payload) {
     return window.DevCoachModules?.repoSync?.applyRepoBackupPayload?.(payload);
+}
+
+/**
+ * An empty browser is filled from the per-store cloud copy first.
+ *
+ * The whole-state backup (state/latest.json) is written only by the work PC,
+ * so it can be older than what the stores hold, and restoring it wholesale put
+ * that older copy on this machine. It is now only the fallback for a cloud
+ * with no per-store copy at all. Resolves true when a reload is under way.
+ */
+async function restoreEmptyBrowserFromCloud() {
+    const sync = window.DevCoachModules?.manifestSync;
+    if (!sync) return false;
+    try {
+        if (sessionStorage.getItem(STORAGE_PREFIX + 'deleteAllJustRan') === '1') return false;
+        // One attempt per tab session, so a cloud copy without weekly or YTD
+        // data cannot send the page round a reload loop.
+        if (sessionStorage.getItem(STORAGE_PREFIX + 'emptyBootCloudRestore') === '1') return false;
+        sessionStorage.setItem(STORAGE_PREFIX + 'emptyBootCloudRestore', '1');
+    } catch (_) { return false; }
+    // Anything dirty now came from boot's own cleanup passes on an empty
+    // browser. The pull pushes dirty stores first, and pushing these would send
+    // empty stores over the cloud copy this is about to restore from.
+    window.DevCoachModules?.storage?.clearDirtyStores?.();
+    try {
+        const result = await sync.pull({ full: true });
+        if (!result?.ok || !pulledDataStores(result).length) return false;
+        showToast(`Restored ${pulledDataStores(result).length} synced store(s). Reloading...`, 3000);
+        window.__skipBeforeunloadSave = true;
+        setTimeout(() => window.location.reload(), 400);
+        return true;
+    } catch (error) {
+        console.warn('[cloud] Could not restore this browser from the cloud copy:', error?.message || error);
+        return false;
+    }
 }
 
 async function tryAutoRestoreFromRepoBackupOnEmptyState() {
@@ -6971,6 +7037,7 @@ async function initApp() {
     const hadLocalDataAtBoot = Object.keys(weeklyData).length > 0 || Object.keys(ytdData).length > 0;
     if (!hadLocalDataAtBoot) {
         showToast('Checking for synced data...', 3000);
+        if (await restoreEmptyBrowserFromCloud()) return;
         try {
             restoredFromRepo = await tryAutoRestoreFromRepoBackupOnEmptyState();
         } catch (err) {

@@ -349,10 +349,14 @@ export default {
         // than seeing no manifest and deciding it should seed one from its own
         // stale local copy. Blobs are deliberately left: they are unreachable
         // once unreferenced, and they are what a snapshot restore needs.
+        //
+        // Written under the same compare-and-swap as a commit. An unconditional
+        // put could land between another machine's read and write and silently
+        // drop that commit, or be dropped by it.
         let v2Cleared = false;
-        const head = await env.COACHING_BUCKET.head(V2_MANIFEST_KEY);
-        if (head) {
+        for (let attempt = 0; attempt < 5 && !v2Cleared; attempt += 1) {
           const currentObj = await env.COACHING_BUCKET.get(V2_MANIFEST_KEY);
+          if (!currentObj) break;
           const current = await currentObj.json();
           const tombstone = buildManifest({
             version: (Number(current.version) || 0) + 1,
@@ -361,10 +365,14 @@ export default {
             prev: current
           });
           tombstone.deletedAll = true;
-          await env.COACHING_BUCKET.put(V2_MANIFEST_KEY, JSON.stringify(tombstone), {
-            httpMetadata: { contentType: 'application/json' }
+          const written = await env.COACHING_BUCKET.put(V2_MANIFEST_KEY, JSON.stringify(tombstone), {
+            httpMetadata: { contentType: 'application/json' },
+            onlyIf: { etagMatches: currentObj.etag }
           });
-          v2Cleared = true;
+          v2Cleared = !!written;
+        }
+        if (!v2Cleared && await env.COACHING_BUCKET.head(V2_MANIFEST_KEY)) {
+          return json({ ok: false, code: 'CAS_LIVELOCK', error: 'The cloud copy kept changing while deleting. Try again.' }, 409, cors);
         }
 
         return json({ ok: true, mode: 'deleteAll', deletedAt: new Date().toISOString(), v2Cleared }, 200, cors);
@@ -398,6 +406,9 @@ export default {
         ytdData: sanitizeForRepo(coerce(body?.ytdData)),
         coachingHistory: sanitizeForRepo(coerce(body?.coachingHistory)),
         callListeningLogs: sanitizeForRepo(coerce(body?.callListeningLogs)),
+        // Sent by the client and kept out of verbatimStores, so without its own
+        // field no whole-state backup or dated snapshot ever held a transcript.
+        callTranscripts: sanitizeForRepo(coerce(body?.callTranscripts)),
         sentimentPhraseDatabase: sanitizeForRepo(body?.sentimentPhraseDatabase && typeof body.sentimentPhraseDatabase === 'object' ? body.sentimentPhraseDatabase : null),
         associateSentimentSnapshots: sanitizeForRepo(coerce(body?.associateSentimentSnapshots)),
         myTeamMembers: sanitizeForRepo(coerce(body?.myTeamMembers)),

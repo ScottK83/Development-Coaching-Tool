@@ -321,7 +321,7 @@ suite('worker: the payload keeps what the client actually sends', (t) => {
 
     // The client sends these on every push. The worker rebuilt the payload
     // field by field and dropped them, so they had no remote copy at all.
-    ['verbatimStores', 'executiveSummaryNotes', 'userCustomTips', 'yoyBaseline2025'].forEach((field) => {
+    ['verbatimStores', 'executiveSummaryNotes', 'userCustomTips', 'yoyBaseline2025', 'callTranscripts'].forEach((field) => {
         t.check(`${field} survives to storage`, literal.indexOf(field) > -1);
     });
 
