@@ -16,14 +16,23 @@
     // and missed hours all accumulate, so the double count is not a rounding
     // error, it lands on every figure in the review.
     //
-    // The rule here is ONE granularity per quarter, chosen by how much of the
-    // quarter it actually covers. That differs from the year-to-date aggregator
-    // in metric-trends, which always prefers weeks, and the difference is
-    // deliberate: a year-to-date range is arbitrary and weeks tile it finely,
-    // but a quarter is an exact calendar span. Weeks straddle its edges (the
-    // week of Mar 30 to Apr 5 belongs to neither quarter cleanly), while a
-    // month row or a real quarter upload lines up with it exactly. So coverage
-    // decides, and the priority below only breaks ties.
+    // So each quarter is built from ONE granularity, chosen by how much of the
+    // quarter it actually covers. Coverage decides; the priority below only
+    // breaks ties, running quarter, then month, then week. That is the
+    // opposite of the year-to-date aggregator in metric-trends, which always
+    // prefers weeks, and the difference is deliberate: a year-to-date range is
+    // arbitrary and weeks tile it finely, but a quarter is an exact calendar
+    // span that a month row or a real quarter upload lines up with exactly.
+    //
+    // One grain per quarter is not quite enough on its own, because a period
+    // belongs to the quarter its END date falls in. The week of Mar 30 to Apr
+    // 5 therefore sits in Q2 carrying two March days, which is harmless while
+    // both quarters use the same grain and is not harmless when Q1 resolves to
+    // months and Q2 to weeks: March 30 is then inside Q1's March row AND
+    // inside Q2's straddling week. buildYearQuarters closes that by walking
+    // the quarters in order and refusing any period that reaches back into a
+    // day an earlier quarter already used. Quarter and month rows sit exactly
+    // on calendar boundaries, so it only ever fires on a week.
     // ============================================
 
     var QUARTER_MONTHS = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]];
@@ -175,21 +184,33 @@
         }).filter(Boolean);
     }
 
-    // Drop any period wholly inside another one from the same group. Keeps the
-    // larger span, which is the one that carries the complete figure.
+    /* Reduce a group to periods that do not share a day.
+     *
+     * Containment alone is not enough. Two uploads of the same quarter a day
+     * apart, 04-01 to 06-30 and 04-02 to 06-30, contain neither the other, so
+     * both survived and every figure in the quarter doubled: calls, surveys
+     * and missed hours all accumulate. Re-uploading a period after a
+     * correction is ordinary, and the two copies rarely line up to the day.
+     *
+     * So overlap is the test, not containment. Longest span first, and
+     * anything that shares a day with something already kept is dropped, which
+     * keeps the copy covering the most of the quarter and discards the rest.
+     */
     function dropContained(periods) {
         var sorted = periods.slice().sort(function (a, b) {
             var spanA = a.endMs - a.startMs;
             var spanB = b.endMs - b.startMs;
             if (spanB !== spanA) return spanB - spanA;
-            return a.startMs - b.startMs;
+            // Same span: the later upload wins, so a correction supersedes the
+            // copy it corrects rather than losing to it on a tie.
+            return b.startMs - a.startMs;
         });
         var kept = [];
         sorted.forEach(function (p) {
-            var swallowed = kept.some(function (k) {
-                return p.startMs >= k.startMs && p.endMs <= k.endMs;
+            var overlaps = kept.some(function (k) {
+                return p.startMs <= k.endMs && p.endMs >= k.startMs;
             });
-            if (!swallowed) kept.push(p);
+            if (!overlaps) kept.push(p);
         });
         return kept.sort(function (a, b) { return a.endMs - b.endMs; });
     }
@@ -206,11 +227,23 @@
         });
     }
 
-    /* Build one granularity's candidate set for a quarter, with its coverage. */
-    function buildCandidate(gran, periods, bounds, todayMs) {
+    /* Build one granularity's candidate set for a quarter, with its coverage.
+     *
+     * `claimed` holds day spans an earlier quarter of the same year already
+     * used. A period reaching back into one of those is dropped rather than
+     * counted a second time.
+     */
+    function buildCandidate(gran, periods, bounds, todayMs, claimed) {
         var mine = periodsInQuarter(periods, bounds).filter(function (p) {
             return gran.types.indexOf(p.type) >= 0;
         });
+        if (claimed && claimed.length) {
+            mine = mine.filter(function (p) {
+                return !claimed.some(function (c) {
+                    return p.startMs <= c.endMs && p.endMs >= c.startMs;
+                });
+            });
+        }
         if (!mine.length) return null;
         var kept = dropContained(mine);
         var elapsedEnd = Math.min(bounds.endMs, todayMs);
@@ -244,7 +277,7 @@
         var todayMs = opts.todayMs || _todayMs();
         var periods = opts.periods || describePeriods(opts.store);
         var candidates = GRANULARITIES.map(function (g) {
-            return buildCandidate(g, periods, bounds, todayMs);
+            return buildCandidate(g, periods, bounds, todayMs, opts.excludeOverlapping);
         }).filter(Boolean);
         if (!candidates.length) return null;
 
@@ -273,7 +306,8 @@
         if (!pc || typeof pc.aggregateEmployeesFrom !== 'function') return null;
 
         var rows = pc.aggregateEmployeesFrom(pick.chosen.periods.map(function (p) { return p.entry; }));
-        rows.forEach(finishQuarterRow);
+        var carried = columnsCarried(pick.chosen.periods);
+        rows.forEach(function (row) { finishQuarterRow(row, carried[row.name]); });
         var byName = {};
         rows.forEach(function (r) { byName[r.name] = r; });
 
@@ -290,6 +324,11 @@
             sourceLabel: pick.chosen.sourceLabel,
             periodCount: pick.chosen.periodCount,
             periodKeys: pick.chosen.periods.map(function (p) { return p.key; }),
+            // The day spans actually used, so the next quarter of the same
+            // year can refuse a period reaching back into one of them.
+            periodSpans: pick.chosen.periods.map(function (p) {
+                return { startMs: p.startMs, endMs: p.endMs };
+            }),
             coveredDays: pick.chosen.coveredDays,
             elapsedDays: pick.chosen.elapsedDays,
             coverageRatio: pick.chosen.coverageRatio,
@@ -316,15 +355,55 @@
      * what goes in front of an associate, so it is kept under its own name
      * rather than left in the field the rest of the app reads as the year.
      */
-    function finishQuarterRow(row) {
+    function finishQuarterRow(row, carried) {
+        var supplied = carried || {};
+
+        // Only recompute the rate when every period that fed this row actually
+        // carried a transfer count. The aggregator starts the count at zero and
+        // adds what it finds, so a quarter where one month is missing the
+        // column divides a partial count by a complete call volume, and the
+        // rate comes out low enough to look like an improvement.
         var count = parseFloat(row.transfersCount);
         var calls = parseFloat(row.totalCalls);
-        if (Number.isFinite(count) && Number.isFinite(calls) && calls > 0 && count > 0) {
+        if (supplied.transfersEverywhere
+            && Number.isFinite(count) && Number.isFinite(calls) && calls > 0) {
             row.transfers = (count / calls) * 100;
         }
+
+        // Zero hours missed and no attendance column at all are the same value
+        // once the aggregator has finished, because it seeds the total at zero
+        // and only adds readings it can parse. Written into a record they are
+        // opposite claims: one says perfect attendance, the other says nothing
+        // was measured. Nothing read means no figure.
         var rel = parseFloat(row.reliability);
-        row.reliabilityAccrued = Number.isFinite(rel) ? Math.round(rel * 100) / 100 : null;
+        row.reliabilityAccrued = (supplied.reliabilityAny && Number.isFinite(rel))
+            ? Math.round(rel * 100) / 100
+            : null;
         return row;
+    }
+
+    /* Which columns the source rows for each associate actually carried.
+     *
+     * The parser writes '' for a column the export did not include, and null
+     * for a survey count it did not include, so an absent column and a real
+     * zero are indistinguishable by the time the aggregate is built. This
+     * walks the source rows once to tell them apart.
+     */
+    function columnsCarried(periods) {
+        var out = {};
+        (periods || []).forEach(function (p) {
+            ((p.entry && p.entry.employees) || []).forEach(function (emp) {
+                if (!emp || !emp.name) return;
+                if (!out[emp.name]) {
+                    out[emp.name] = { reliabilityAny: false, transfersEverywhere: true, periods: 0 };
+                }
+                var seen = out[emp.name];
+                seen.periods += 1;
+                if (Number.isFinite(parseFloat(emp.reliability))) seen.reliabilityAny = true;
+                if (!Number.isFinite(parseFloat(emp.transfersCount))) seen.transfersEverywhere = false;
+            });
+        });
+        return out;
     }
 
     /* ── The series ── */
@@ -355,12 +434,36 @@
         var todayMs = opts.todayMs || _todayMs();
         var periods = opts.periods || describePeriods(opts.store);
         var quarters = (opts.quarters || elapsedQuarters(year, todayMs));
+
+        // Days already spoken for by an earlier quarter of this same year.
+        //
+        // A period belongs to the quarter its END date falls in, so the week
+        // of Mar 30 to Apr 5 sits in Q2 carrying two March days. Harmless
+        // while both quarters use the same grain, because then the day is
+        // described once. It stops being harmless when Q1 resolves to months
+        // and Q2 to weeks: March 30 is then inside Q1's March row AND inside
+        // Q2's straddling week, and an absence that day is charged to the year
+        // twice. The mirror case loses those days instead.
+        //
+        // Forcing one grain on the whole year would prevent it and cost too
+        // much: a Q1 uploaded as a quarter with Q2 and Q3 as months would lose
+        // Q1 entirely. So each quarter still picks its own grain, and a period
+        // reaching back into a day an earlier quarter already covered is
+        // dropped here. Quarter and month rows sit exactly on calendar
+        // boundaries, so this only ever fires on a week, which is the only
+        // grain with edges that do not line up.
+        var claimed = [];
+
         var out = [];
         quarters.forEach(function (q) {
             var agg = buildQuarterAggregate(year, q, {
                 periods: periods,
-                todayMs: todayMs
+                todayMs: todayMs,
+                excludeOverlapping: claimed
             });
+            if (agg) {
+                agg.periodSpans.forEach(function (span) { claimed.push(span); });
+            }
             var bounds = quarterBounds(year, q);
             out.push(agg || {
                 year: bounds.year,
@@ -491,8 +594,16 @@
         var todayMs = opts.todayMs || _todayMs();
         var periods = opts.periods || describePeriods(opts.store);
         var quarters = elapsedQuarters(year, todayMs);
+
+        // Walked in order against the same running claim the document uses,
+        // so the panel reports the periods that actually fed each quarter
+        // rather than every period that could have.
+        var claimed = [];
+
         return quarters.map(function (q) {
-            var pick = chooseQuarterSource(year, q, { periods: periods, todayMs: todayMs });
+            var pick = chooseQuarterSource(year, q, {
+                periods: periods, todayMs: todayMs, excludeOverlapping: claimed
+            });
             var bounds = quarterBounds(year, q);
             var complete = bounds.endMs <= todayMs;
             if (!pick) {
@@ -508,7 +619,10 @@
             var chosen = pick.chosen;
             var ratio = chosen.coverageRatio;
             var status = ratio >= 0.95 ? 'full' : ratio >= 0.6 ? 'partial' : 'thin';
-            var agg = buildQuarterAggregate(year, q, { periods: periods, todayMs: todayMs });
+            var agg = buildQuarterAggregate(year, q, {
+                periods: periods, todayMs: todayMs, excludeOverlapping: claimed
+            });
+            if (agg) agg.periodSpans.forEach(function (span) { claimed.push(span); });
             return {
                 quarter: q,
                 name: bounds.name,
@@ -546,6 +660,7 @@
         quarterOfDate: quarterOfDate,
         describePeriods: describePeriods,
         dropContained: dropContained,
+        columnsCarried: columnsCarried,
         coveredDays: coveredDays,
         chooseQuarterSource: chooseQuarterSource,
         buildQuarterAggregate: buildQuarterAggregate,

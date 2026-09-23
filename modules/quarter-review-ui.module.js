@@ -329,7 +329,11 @@
         rel.checkpoints.forEach(function (c) { byQuarter[c.quarter] = c; });
         var cells = ctx.quarters.map(function (q) {
             var c = byQuarter[q.quarter];
-            if (!c || c.runningTotal === null) {
+            // When the year figure comes from a year-to-date upload covering
+            // months these quarters do not, the per-quarter running totals
+            // climb to a different number. Showing both would put two
+            // different answers for the year on one row.
+            if (!rel.checkpointsReconcile || !c || c.runningTotal === null) {
                 return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);">-</td>';
             }
             var over = rel.target && c.runningTotal > rel.target.value;
@@ -338,17 +342,30 @@
                 + _escape(_display('reliability', c.runningTotal)) + '</td>';
         }).join('');
 
+        var summary;
+        if (!rel.target) {
+            // No allowance configured is not the same as being inside one.
+            summary = '<span style="color:var(--text-tertiary);">no allowance set</span>';
+        } else if (rel.meetsTarget === false) {
+            summary = '<span style="color:#c2410c;font-weight:600;">'
+                + _escape(_display('reliability', rel.overBy)) + ' over</span>';
+        } else if (rel.meetsTarget === true) {
+            summary = '<span style="color:#16a34a;font-weight:600;">inside the allowance</span>';
+        } else {
+            summary = '<span style="color:var(--text-tertiary);">-</span>';
+        }
+
         return '<tr style="border-bottom:1px solid var(--border);background:var(--bg-surface-raised);">'
             + '<td style="padding:8px;">Reliability'
-            + '<div style="font-size:0.78em;color:var(--text-tertiary);font-weight:400;">year running total</div></td>'
+            + '<div style="font-size:0.78em;color:var(--text-tertiary);font-weight:400;">'
+            + (rel.fromYtdUpload
+                ? 'year to date, ' + _escape(_display('reliability', rel.yearToDate)) + ' from the year-to-date upload'
+                : 'year running total')
+            + '</div></td>'
             + cells
             + '<td style="padding:8px;text-align:center;color:var(--text-secondary);">'
             + (rel.target ? _escape(_display('reliability', rel.target.value)) : '-') + '</td>'
-            + '<td style="padding:8px;text-align:center;">'
-            + (rel.meetsTarget === false
-                ? '<span style="color:#c2410c;font-weight:600;">' + _escape(_display('reliability', rel.overBy)) + ' over</span>'
-                : '<span style="color:#16a34a;font-weight:600;">inside the allowance</span>')
-            + '</td></tr>';
+            + '<td style="padding:8px;text-align:center;">' + summary + '</td></tr>';
     }
 
     function _notesPanel(ctx, notes, note) {

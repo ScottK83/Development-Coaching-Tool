@@ -151,7 +151,7 @@ suite('quarter review: a slipping metric is named plainly', (t) => {
     // it moved further from a goal it was already clearing. What belongs in a
     // record is the quarter it went under.
     t.check('the quarter it dropped below goal is named',
-        /Q3 is the first quarter under the 82% goal/.test(sentence));
+        /Q3 is the first quarter below the 82% goal/.test(sentence));
     t.check('and it is not described as moving away from a goal it was meeting',
         !/further from goal/.test(sentence));
 
@@ -270,6 +270,65 @@ suite('quarter review: missed hours are the year running total', (t) => {
     // standalone figure. 3.5 is Q3's share and is not a number an associate
     // is shown.
     t.check('but never a single quarter share on its own', !/3\.5 hrs through/.test(sentence));
+});
+
+suite('quarter review: no attendance column is not perfect attendance', (t) => {
+    t.pinClock('2026-09-22');
+    // The parser writes '' for a column the export did not carry, and the
+    // aggregator seeds the total at zero and adds only what it can parse. So
+    // "missed nothing" and "nothing was measured" arrive as the same 0, and
+    // one of them is a claim about somebody's attendance.
+    const noColumn = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('No Column', { reliability: '' })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('No Column', { reliability: '' })])
+    );
+    const { qr, ctx } = ctxFor(t, noColumn, 'No Column');
+
+    t.equal('no figure is claimed for the year', ctx.reliability.hasValue, false);
+    t.equal('and none for a quarter', ctx.reliability.checkpoints[0].accrued, null);
+    t.equal('and nothing is said about it', qr.reliabilitySentence(ctx.reliability, ctx), '');
+
+    const notes = qr.buildNotes(ctx);
+    t.check('it is not praised as attendance', !/missed 0/.test(notes.box1 + notes.box2));
+
+    // A genuine zero still reads as a genuine zero.
+    const real = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Perfect Record', { reliability: 0 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Perfect Record', { reliability: 0 })])
+    );
+    const perfect = ctxFor(t, real, 'Perfect Record');
+    t.equal('somebody who missed nothing has a figure', perfect.ctx.reliability.hasValue, true);
+    t.equal('and it is nothing', perfect.ctx.reliability.yearToDate, 0);
+    t.equal('which is inside the allowance', perfect.ctx.reliability.meetsTarget, true);
+});
+
+suite('quarter review: the year-to-date upload outranks a sum of quarters', (t) => {
+    t.pinClock('2026-09-22');
+    const qr = load(t, Object.assign({},
+        period('quarter', '2026-04-01', '2026-06-30', [person('Part Year', { reliability: 5 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Part Year', { reliability: 3 })])
+    ));
+    // Q1 was never loaded, so adding the quarters up gives 8 and misses
+    // whatever was missed before April. The year-to-date file knows.
+    global.window.ytdData = {
+        '2026-01-01|2026-09-19': {
+            metadata: { periodType: 'ytd', startDate: '2026-01-01', endDate: '2026-09-19' },
+            employees: [person('Part Year', { reliability: 21 })]
+        }
+    };
+    global.ytdData = global.window.ytdData;
+
+    const ctx = qr.buildContext('Part Year', 2026);
+    t.equal('the quarters on hand add to eight', ctx.reliability.summedFromQuarters, 8);
+    t.equal('but the year is what the upload says', ctx.reliability.yearToDate, 21);
+    t.equal('and it says so', ctx.reliability.fromYtdUpload, true);
+    t.equal('which puts it over the allowance', ctx.reliability.meetsTarget, false);
+
+    // The running line would climb to 8 and contradict the 21 in the sentence
+    // before it, so it is not printed.
+    const sentence = qr.reliabilitySentence(ctx.reliability, ctx);
+    t.check('the year figure is stated', /21 hrs for the year to date/.test(sentence));
+    t.check('and no sequence contradicts it', !/through Q2/.test(sentence));
 });
 
 suite('quarter review: being over the allowance is said directly', (t) => {

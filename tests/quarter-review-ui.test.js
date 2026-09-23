@@ -132,8 +132,15 @@ suite('quarterly tab: a year-to-date file never reaches the quarter columns', (t
     const html = renderInto(ui, () => { ui.state.employee = 'Jordan Reyes'; });
 
     t.check('the year-to-date handle time is nowhere in the table', !html.includes('999s'));
-    t.check('the year-to-date hours are not there either', !/99 hrs/.test(html));
     t.check('the real quarters are', html.includes('451s') && html.includes('421s'));
+
+    // Missed hours are the exception, and deliberately so: the year-to-date
+    // upload IS the running year total, and it outranks a sum of whichever
+    // quarters happen to be loaded. The row says where the figure came from,
+    // and the quarter columns go blank rather than showing a running total
+    // that climbs to a different number.
+    t.check('the year-to-date hours are used for the year', /99 hrs from the year-to-date upload/.test(html));
+    t.check('and the quarter columns do not contradict it', !/>14\.5 hrs</.test(html));
     t.check('and the table says where the numbers came from',
         /never from a year-to-date file/.test(html));
 });

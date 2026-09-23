@@ -164,7 +164,98 @@ suite('quarter trend: weeks are used when they are all there is', (t) => {
     t.check('which is well short of the quarter', q2.coverageRatio < 0.3);
 });
 
+/* ── The quarter boundary ──
+ *
+ * A period belongs to the quarter its END date falls in, so the week of Mar 30
+ * to Apr 5 sits in Q2 carrying two March days. Harmless while both quarters
+ * use the same grain. Not harmless when Q1 resolves to months and Q2 to weeks:
+ * March 30 is then inside Q1's March row AND inside Q2's straddling week, and
+ * a day missed then is charged to the year twice.
+ *
+ * It is not an exotic store. The upload wizard sells a monthly upload as a
+ * replacement for four or five weeklies, and never offers the running quarter
+ * as a month, so backfilling Q1 by month and carrying on weekly is the
+ * ordinary result of following its prompts.
+ */
+
+suite('quarter trend: a straddling week is not charged to two quarters', (t) => {
+    t.pinClock('2026-09-22');
+    const store = Object.assign({},
+        // Q1 by month. The 8 hours are missed on Mar 30.
+        period('month', '2026-01-01', '2026-01-31', [person('Sam Straddle', { reliability: 0 })]),
+        period('month', '2026-02-01', '2026-02-28', [person('Sam Straddle', { reliability: 0 })]),
+        period('month', '2026-03-01', '2026-03-31', [person('Sam Straddle', { reliability: 8 })]),
+        // Q2 by week, starting with the week that reaches back into March.
+        period('week', '2026-03-30', '2026-04-05', [person('Sam Straddle', { reliability: 8 })]),
+        period('week', '2026-04-06', '2026-04-12', [person('Sam Straddle', { reliability: 0 })]),
+        period('week', '2026-04-13', '2026-04-19', [person('Sam Straddle', { reliability: 0 })]),
+        period('week', '2026-04-20', '2026-04-26', [person('Sam Straddle', { reliability: 0 })])
+    );
+    const qt = load(t, store);
+    const quarters = qt.buildYearQuarters(2026);
+
+    const q1 = quarters.find((q) => q.quarter === 1);
+    const q2 = quarters.find((q) => q.quarter === 2);
+
+    t.equal('Q1 came from the months', q1.granularity, 'month');
+    t.equal('and carries the eight hours', q1.employees['Sam Straddle'].reliabilityAccrued, 8);
+
+    t.equal('Q2 came from the weeks', q2.granularity, 'week');
+    // The straddling week is refused: its March days are already spoken for.
+    t.equal('but not from the week reaching back into March', q2.periodCount, 3);
+    t.check('so the week of Mar 30 is not in Q2',
+        q2.periodKeys.indexOf('2026-03-30|2026-04-05') < 0);
+    t.equal('and the eight hours are not counted again',
+        q2.employees['Sam Straddle'].reliabilityAccrued, 0);
+
+    // The whole point: the year total is the truth, not twice it.
+    const total = quarters.reduce(function (sum, q) {
+        const emp = q.employees['Sam Straddle'];
+        return sum + (emp ? emp.reliabilityAccrued : 0);
+    }, 0);
+    t.equal('the year adds up to the eight hours actually missed', total, 8);
+});
+
+suite('quarter trend: calendar aligned grains lose nothing to the guard', (t) => {
+    t.pinClock('2026-09-22');
+    // Q1 as a quarter upload, Q2 and Q3 as months. Nothing straddles, so the
+    // overlap guard must not cost a single period. Forcing one grain on the
+    // whole year would have thrown Q1 away entirely here.
+    const store = Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Mixed Grain', { reliability: 6 })]),
+        period('month', '2026-04-01', '2026-04-30', [person('Mixed Grain', { reliability: 1 })]),
+        period('month', '2026-05-01', '2026-05-31', [person('Mixed Grain', { reliability: 1 })]),
+        period('month', '2026-06-01', '2026-06-30', [person('Mixed Grain', { reliability: 1 })]),
+        period('month', '2026-07-01', '2026-07-31', [person('Mixed Grain', { reliability: 2 })]),
+        period('month', '2026-08-01', '2026-08-31', [person('Mixed Grain', { reliability: 0 })])
+    );
+    const qt = load(t, store);
+    const quarters = qt.buildYearQuarters(2026);
+
+    t.equal('Q1 still comes from its quarter upload', quarters[0].granularity, 'quarter');
+    t.equal('and keeps its hours', quarters[0].employees['Mixed Grain'].reliabilityAccrued, 6);
+    t.equal('Q2 comes from its three months', quarters[1].periodCount, 3);
+    t.equal('with all three hours', quarters[1].employees['Mixed Grain'].reliabilityAccrued, 3);
+    t.equal('and Q3 from the two it has', quarters[2].periodCount, 2);
+});
+
 /* ── Containment ── */
+
+suite('quarter trend: the same quarter uploaded twice is not counted twice', (t) => {
+    t.pinClock('2026-09-22');
+    // A correction re-uploaded a day off from the original. Neither contains
+    // the other, so a containment-only guard kept both and every figure in the
+    // quarter doubled.
+    const qt = load(t, Object.assign({},
+        period('quarter', '2026-04-01', '2026-06-30', [person('Double Up', { totalCalls: 1200, reliability: 9 })]),
+        period('quarter', '2026-04-02', '2026-06-30', [person('Double Up', { totalCalls: 1200, reliability: 9 })])
+    ));
+
+    const q2 = qt.buildQuarterAggregate(2026, 2);
+    t.equal('only one copy is used', q2.periodCount, 1);
+    t.equal('the calls are not doubled', q2.employees['Double Up'].totalCalls, 1200);
+    t.equal('and neither are the hours', q2.employees['Double Up'].reliabilityAccrued, 9);
+});
 
 suite('quarter trend: a period inside another is dropped', (t) => {
     const qt = load(t, {});

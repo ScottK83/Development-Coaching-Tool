@@ -268,15 +268,49 @@
                 hasValue: Number.isFinite(accrued)
             };
         });
-        var total = any ? _round1(running) : null;
+
+        // The year's figure comes from the year-to-date upload when there is
+        // one, and only falls back to adding the quarters up when there is
+        // not.
+        //
+        // That upload IS the running total, published by the business, and it
+        // is the source of truth everywhere else in this app. Summing quarters
+        // can only match it when every quarter of the year is loaded: a
+        // supervisor who started uploading in April gets a year figure missing
+        // Q1 entirely, and it lands in the record as a bare number against an
+        // annual allowance with nothing to say it is short.
+        var summed = any ? _round1(running) : null;
+        var fromYtd = _ytdReliabilityFor(employeeName, year);
+        var total = Number.isFinite(fromYtd) ? _round1(fromYtd) : summed;
+        var has = Number.isFinite(total);
+
+        // The quarter by quarter running line is only shown when it actually
+        // adds up to the year figure. A year-to-date upload that covers months
+        // the quarters here do not would otherwise be followed by a sequence
+        // climbing to a different number, and a record that disagrees with
+        // itself in consecutive sentences is worse than one that says less.
+        var reconciles = !Number.isFinite(fromYtd)
+            || (Number.isFinite(summed) && Math.abs(summed - total) <= 0.5);
+
         return {
             target: target,
             checkpoints: checkpoints,
+            checkpointsReconcile: reconciles,
             yearToDate: total,
-            hasValue: any,
-            meetsTarget: any ? _meetsTarget(target, total) : null,
-            overBy: (any && target && total > target.value) ? _round1(total - target.value) : 0
+            summedFromQuarters: summed,
+            fromYtdUpload: Number.isFinite(fromYtd),
+            hasValue: has,
+            meetsTarget: has ? _meetsTarget(target, total) : null,
+            overBy: (has && target && total > target.value) ? _round1(total - target.value) : 0
         };
+    }
+
+    function _ytdReliabilityFor(employeeName, year) {
+        var pc = (window.DevCoachModules || {}).periodCompare;
+        if (!pc || typeof pc.latestYtdReliability !== 'function') return NaN;
+        var map = pc.latestYtdReliability(parseInt(year, 10)) || {};
+        var value = parseFloat(map[employeeName]);
+        return Number.isFinite(value) ? value : NaN;
     }
 
     function _coverageFacts(quarters) {
@@ -354,7 +388,12 @@
             // are the one of these with a hard ceiling on them.
             if (a.metricKey === RELIABILITY) return -1;
             if (b.metricKey === RELIABILITY) return 1;
-            return 0;
+            // Then by how badly it missed. Returning 0 here left the order to
+            // the metric registry, so a metric missing by a tenth of a point
+            // was raised ahead of one missing by forty, purely because handle
+            // time is declared before first call resolution. Only two make it
+            // into the box, so that decided which gaps a supervisor saw.
+            return _missSeverity(b) - _missSeverity(a);
         });
 
         var strengthRank = { 'improved-and-met': 0, 'met': 1, 'improved': 2 };
@@ -559,7 +598,10 @@
         // story when one quarter was fifty seconds off.
         if (path.kind === 'swung' && path.worstIsInterior) {
             lines.push(_cap(_swingNote(m, path, ctx)) + _goalTail(story, m, 'lead') + '.');
-        } else if (moved && moved.size > 0) {
+        // "Held steady" and "that is 3 points better than where they started"
+        // contradict each other inside one paragraph. A move small enough to
+        // call steady is a move too small to then quantify as progress.
+        } else if (path.kind !== 'steady' && moved && moved.size > 0) {
             lines.push('That is ' + _movementAmount(m.metricKey, moved.size)
                 + (moved.improved === true ? ' better than' : ' off')
                 + ' where ' + ctx.firstName + ' started the year'
@@ -614,15 +656,21 @@
                 if (style === 'support') return ', and it has been inside the ' + goal + ' goal since ' + story.at.name;
                 return ', which moved it inside the ' + goal + ' goal in ' + story.at.name;
             case 'crossed-down':
+                // "Under the goal" is failure for adherence and success for
+                // handle time. Said of a reverse metric that blew its ceiling
+                // it is not merely the wrong word, it reports the miss as good
+                // news: 470s against a 426s goal came out as "it has been under
+                // the 426s goal since Q2".
+                var past = _missSide(m);
                 if (story.onlyLast) {
-                    if (style === 'brief') return ', dropping under the ' + goal + ' goal in ' + lastName;
-                    return ', and ' + lastName + ' is the first quarter under the ' + goal + ' goal';
+                    if (style === 'brief') return ', going ' + past + ' the ' + goal + ' goal in ' + lastName;
+                    return ', and ' + lastName + ' is the first quarter ' + past + ' the ' + goal + ' goal';
                 }
-                if (style === 'brief') return ', under the ' + goal + ' goal since ' + story.at.name;
-                return ', and it has been under the ' + goal + ' goal since ' + story.at.name;
+                if (style === 'brief') return ', ' + past + ' the ' + goal + ' goal since ' + story.at.name;
+                return ', and it has been ' + past + ' the ' + goal + ' goal since ' + story.at.name;
             case 'mixed':
                 if (m.meetsTarget) return ', and it is back inside the ' + goal + ' goal';
-                return ', and it is under the ' + goal + ' goal';
+                return ', and it is ' + _missSide(m) + ' the ' + goal + ' goal';
             default:
                 return '';
         }
@@ -630,6 +678,31 @@
 
     function _cap(text) {
         return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+    }
+
+    /* Which side of its goal a missing metric sits on.
+     *
+     * A goal is a floor for most metrics and a ceiling for handle time,
+     * transfers and missed hours, so there is no single word for missing one.
+     * Adherence misses by falling below 93%; handle time misses by climbing
+     * above 426s.
+     */
+    function _missSide(m) {
+        return m && m.isReverse ? 'above' : 'below';
+    }
+
+    /* How badly a metric missed, on a scale the metrics share.
+     *
+     * Raw gaps are not comparable: 40 seconds of handle time and 4 points of
+     * adherence are different units and different severities. The gap as a
+     * fraction of the goal puts them on one scale well enough to decide which
+     * of two misses a supervisor should be shown first.
+     */
+    function _missSeverity(m) {
+        if (!m || !m.gap || !m.target) return 0;
+        var goal = Math.abs(m.target.value);
+        if (!goal) return m.gap.size;
+        return m.gap.size / goal;
     }
 
     /* Missed hours, always as the year's running total.
@@ -650,7 +723,7 @@
             + (target ? ', against an allowance of ' + goalText + ' for the year' : '') + '.');
 
         var withValues = rel.checkpoints.filter(function (c) { return c.runningTotal !== null; });
-        if (withValues.length >= 2) {
+        if (rel.checkpointsReconcile && withValues.length >= 2) {
             var parts = withValues.map(function (c) {
                 return _display(RELIABILITY, c.runningTotal) + ' through ' + c.name;
             });
@@ -662,16 +735,35 @@
         }
 
         if (rel.meetsTarget === false && rel.overBy > 0) {
-            lines.push('That puts the year ' + _display(RELIABILITY, rel.overBy)
-                + ' over the allowance with ' + _quartersLeftPhrase(ctx) + ' to go.');
+            var left = _quartersLeftPhrase(ctx);
+            lines.push(left
+                ? 'That puts the year ' + _display(RELIABILITY, rel.overBy)
+                    + ' over the allowance with ' + left + ' to go.'
+                : 'That closed the year ' + _display(RELIABILITY, rel.overBy)
+                    + ' over the allowance.');
         }
         return lines.join(' ');
     }
 
+    /* How much year is left, as a noun phrase, or null when none is.
+     *
+     * This used to return "the year closed" for a Q4 check-in, which every
+     * caller then dropped into a sentence built around a span of time: "with
+     * the year closed to go", "visible movement over the year closed". Four
+     * broken sentences, in every Q4 document, which is the one that matters
+     * most. A Q4 check-in has no quarters left, so callers say something else
+     * rather than pushing a sentence fragment through the same slot.
+     */
     function _quartersLeftPhrase(ctx) {
         var left = 4 - ctx.quarter;
-        if (left <= 0) return 'the year closed';
+        if (left <= 0) return null;
         return left === 1 ? 'one quarter' : left + ' quarters';
+    }
+
+    // "over one quarter", or "going into next year" when the year is done.
+    function _overRemainingPhrase(ctx) {
+        var left = _quartersLeftPhrase(ctx);
+        return left ? 'over ' + left : 'going into next year';
     }
 
     /* ── The finished notes ── */
@@ -721,12 +813,14 @@
             var slide = split.watch[0];
             box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel + '.');
             box2Parts.push(metricSentence(slide, ctx, 'lead'));
-            box2Parts.push('It is still at goal, so this is one to watch rather than fix, and the aim is to stop the slide over '
-                + _quartersLeftPhrase(ctx) + '.');
+            box2Parts.push('It is still at goal, so this is one to watch rather than fix, and the aim is to stop the slide '
+                + _overRemainingPhrase(ctx) + '.');
         } else {
-            box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel
-                + '. The focus for the rest of the year is holding that through '
-                + _quartersLeftPhrase(ctx) + '.');
+            var left = _quartersLeftPhrase(ctx);
+            box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel + '. '
+                + (left
+                    ? 'The focus for the rest of the year is holding that through ' + left + '.'
+                    : 'The focus is holding that through next year.'));
         }
         var box2 = box2Parts.filter(Boolean).join(' ');
 
@@ -752,17 +846,17 @@
         if (!focus.length) return '';
         var name = ctx.firstName;
         var lead = focus[0];
-        var left = _quartersLeftPhrase(ctx);
+        var over = _overRemainingPhrase(ctx);
         if (lead.why === 'missed-and-falling') {
             return 'This is the one to move first. ' + name
-                + ' and I will work it in our one to ones, and the expectation is visible movement over '
-                + left + '.';
+                + ' and I will work it in our one to ones, and the expectation is visible movement '
+                + over + '.';
         }
         if (lead.why === 'missed-but-rising') {
-            return name + ' is already moving this the right way, and the expectation is that it reaches goal over '
-                + left + '.';
+            return name + ' is already moving this the right way, and the expectation is that it reaches goal '
+                + over + '.';
         }
-        return 'The expectation is steady progress toward goal over ' + left + '.';
+        return 'The expectation is steady progress toward goal ' + over + '.';
     }
 
     /* The two lines that make it a file note rather than a paragraph: who and
