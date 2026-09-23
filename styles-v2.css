@@ -402,8 +402,10 @@
     color: var(--text-secondary) !important;
 }
 
-/* Widgets toggled via JS .style.display: browser re-serializes inline colors
-   to rgb(...) {
+/* Widgets toggled via JS .style.display: the browser re-serializes the inline
+   colors to rgb(...), so the [style*="#f..."] overrides above stop matching.
+   These widgets have to be targeted by id instead. */
+[data-theme="dark"] #storageQuotaWidget {
     background: var(--bg-surface-raised) !important;
     border-color: var(--border) !important;
 }
@@ -446,6 +448,10 @@
 }
 [data-theme="dark"] #uploadUndoBanner > div:first-child {
     color: var(--text-primary) !important;
+}
+[data-theme="dark"] #uploadUndoBanner #uploadUndoBtn {
+    background: var(--orange) !important;
+    color: var(--text-inverse) !important;
 }
 [data-theme="dark"] #uploadUndoBanner #uploadUndoDismissBtn {
     background: transparent !important;
