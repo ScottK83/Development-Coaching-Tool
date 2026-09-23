@@ -139,7 +139,7 @@ Requirements:
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
-- Do NOT use em dashes (, )${momentRule}${transcriptRules}
+- Do NOT use em dashes, or hyphens with spaces around them${momentRule}${transcriptRules}
 - The QA read is background for you, not content for the associate. Do not paste the checklist or the words "opportunity" and "cannot tell" into the email; turn what matters into normal coaching language
 - Where the language read shows a scored phrase, be concrete: name the phrase they said and give them the phrase that would have scored instead. "You said 'unfortunately' twice, and 'what I can do is' lands the same news without costing you" is coaching. "Use more positive language" is not
 - Do not mention phrase lists, scoring, or the words positive and negative as categories. The associate should read it as advice about talking to customers, not as a report on a keyword count

@@ -272,3 +272,30 @@ suite('copy: no invisible byte rides along in a file we wrote', (t) => {
     t.check('and is drawn instead',
         /border-left: \d+px solid currentColor/.test(marker.slice(0, 400)));
 });
+
+/*
+ * The scan above covers string literals in the modules. These cover the other
+ * ways a dash reached an associate: the tips file, which is copy in its own
+ * right and used " - " as a dash in 221 tips, and what an old em-dash swap left
+ * behind in the modules, a stray " , " and a literal "(, )".
+ */
+suite('copy: tips and swap leftovers carry no dash', (t) => {
+    const tips = fs.readFileSync(path.join(ROOT, 'tips.csv'), 'utf8');
+    t.equal('no tip uses an em dash', (tips.match(/—/g) || []).length, 0);
+    t.equal('no tip uses a spaced hyphen as a dash', tips.split('\n').filter(l => l.indexOf(' - ') > -1).length, 0);
+
+    const tipsModule = fs.readFileSync(path.join(ROOT, 'modules/tips.module.js'), 'utf8');
+    t.equal('nor does the copy of them in tips.module.js',
+        tipsModule.split('\n').filter(l => /^[a-zA-Z]+,/.test(l) && l.indexOf(' - ') > -1).length, 0);
+
+    const leftovers = [];
+    sourceFiles().forEach((file) => {
+        const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+        stringRanges(src).forEach(([a, b]) => {
+            const text = src.slice(a, b);
+            if (text.indexOf(' , ') > -1 || text.indexOf('(, )') > -1) leftovers.push(file + ': ' + text.slice(0, 80));
+        });
+    });
+    leftovers.slice(0, 10).forEach(l => console.log('    ' + l));
+    t.equal('no string carries what a dash swap left behind', leftovers.length, 0);
+});

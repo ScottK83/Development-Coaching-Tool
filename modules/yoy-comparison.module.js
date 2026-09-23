@@ -216,7 +216,7 @@
 
         // Header
         html += '<div style="margin-bottom: 16px; padding: 15px; background: #ede7f6; border-radius: 8px; border-left: 4px solid #5e35b1;">';
-        html += '<strong>📊 Year-over-Year</strong> , compare 2025 vs ' + new Date().getFullYear() + ' per rep.';
+        html += '<strong>📊 Year-over-Year</strong>, compare 2025 vs ' + new Date().getFullYear() + ' per rep.';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Plug in your 2025 full-year numbers below, then pick a metric to see who climbed and who slipped.</span>';
         html += '</div>';
 
@@ -402,7 +402,7 @@
 
         var html = '';
         html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.9em;">';
-        html += '<strong>' + _escapeHtml(metric.label) + '</strong> , ';
+        html += '<strong>' + _escapeHtml(metric.label) + '</strong>, ';
         html += '<span style="color:var(--green-text); font-weight:600;">▲ ' + improved + ' improved</span> · ';
         html += '<span style="color:var(--red-text); font-weight:600;">▼ ' + declined + ' declined</span> · ';
         html += '<span style="color:#777;">' + flat + ' flat</span>';
@@ -552,7 +552,7 @@
 
         var html = '';
         html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.85em; color:var(--text-secondary);">';
-        html += '<strong>2025 → ' + curYear + ' side-by-side</strong> , ' + data.matched + ' reps · click a KPI header to sort by who moved most. Click a value to see 2025 vs ' + curYear + '.';
+        html += '<strong>2025 → ' + curYear + ' side-by-side</strong>, ' + data.matched + ' reps · click a KPI header to sort by who moved most. Click a value to see 2025 vs ' + curYear + '.';
         html += '</div>';
 
         html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85em;">';

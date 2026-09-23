@@ -23,7 +23,7 @@ const { suite, ROOT } = require('./harness');
  *     does not buy rep satisfaction past that gate;
  *   - rep satisfaction keeps its slot once it qualifies, whatever a larger
  *     projected gain elsewhere would otherwise have taken it;
- *   - the frozen field is admitted once, in plain words;
+ *   - no caveat under the milestones: they are worded as a what-if instead;
  *   - reliability is attendance and never appears, whatever a caller does to
  *     the rank keys on the way in.
  *
@@ -163,9 +163,7 @@ const EXPECTED =
     + '\n'
     + '  • Average Handle Time: 422s\n'
     + '      12th in the call center, 4th on our team.\n'
-    + '      Take 15 seconds off. At 407s you would have finished about 8 places higher.\n'
-    + '\n'
-    + '  Those position gains assume everybody else stays exactly where they finished.';
+    + '      Take 15 seconds off. At 407s you would have finished about 8 places higher.';
 
 suite('pulse standings: both placings and a milestone, for a named period', (t) => {
     const pulse = load(t);
@@ -273,22 +271,16 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
         withoutSurveys.indexOf('Rep Satisfaction') === -1);
 });
 
-suite('pulse standings: the frozen field is admitted once', (t) => {
+// No disclaimer on associate-facing copy (Scott's rule). The milestones are
+// worded as a what-if about the associate's own number, so they need none.
+suite('pulse standings: the milestones carry no caveat', (t) => {
     const pulse = load(t);
     const block = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('there is no caveat line', block.indexOf('assume everybody else') === -1);
+    t.check('the milestones are still worded as a what-if', block.indexOf('you would have finished') > -1);
 
-    const caveat = 'assume everybody else stays exactly where they finished';
-    t.equal('the caveat is there exactly once', block.split(caveat).length - 1, 1);
-
-    // Under every bullet it stops being read by the second one, and a milestone
-    // block that never says it is selling a frozen field as a forecast.
-    t.check('it is one short sentence, not a paragraph',
-        block.split('\n').filter(line => line.indexOf('assume everybody else') > -1).length === 1);
-
-    // A block with nothing to promise has nothing to caveat.
     const flat = load(t, { noise: 999 }).buildStandingsBlock('Dana Reed', WEEK_KEY);
-    t.check('and it is absent when no milestone was printed', flat.indexOf('assume everybody else') === -1);
-    t.check('though the placings themselves still stand', flat.indexOf('12th in the call center') > -1);
+    t.check('and the placings still stand without a milestone', flat.indexOf('12th in the call center') > -1);
 });
 
 suite('pulse standings: a step the app calls churn is not a milestone', (t) => {
@@ -407,7 +399,7 @@ suite('pulse standings: private message only', async (t) => {
 
     t.check('the private message carries the block', dm.indexOf('📊 Where you stood for') > -1);
     t.check('with the placings in it', dm.indexOf('12th in the call center') > -1);
-    t.check('and the caveat with them', dm.indexOf('assume everybody else') > -1);
+    t.check('and no caveat with them', dm.indexOf('assume everybody else') === -1);
     t.check('the message it was appended to is still there', dm.indexOf('Dana') > -1);
 
     // The shout-out is the same numbers about the same person on the same day,
@@ -515,8 +507,7 @@ suite('pulse standings: a week still being worked is not spoken of in the past',
     t.check('the ask points forward',
         open.indexOf('Add 1 point. At 94.9% you could still move up about 4 places this week.') > -1);
     t.check('and nothing in it is already over', open.indexOf('would have finished') === -1);
-    t.check('the caveat is in the same tense',
-        open.indexOf('stays exactly where they are now') > -1);
+    t.check('with no caveat under it', open.indexOf('assume everybody else') === -1);
     t.check('and not the finished one', open.indexOf('where they finished') === -1);
 
     // The Friday file is a week that stopped, and the past tense is the honest
@@ -525,7 +516,7 @@ suite('pulse standings: a week still being worked is not spoken of in the past',
     t.check('a finished week still reports what was missed',
         closed.indexOf('Add 1 point. At 94.9% you would have finished about 4 places higher.') > -1);
     t.check('with no offer to change it', closed.indexOf('could still move up') === -1);
-    t.check('and the caveat matches', closed.indexOf('stays exactly where they finished') > -1);
+    t.check('and no caveat under it either', closed.indexOf('assume everybody else') === -1);
 
     // The half of the rule that is easy to lose: a four-day file from a week
     // gone by is every bit as finished as a full one, whatever weekday it

@@ -1,6 +1,17 @@
 (function() {
     'use strict';
 
+    // A difference in the metric's own unit. "+12.0%" on AHT read as a
+    // percentage of something when it was twelve seconds.
+    function formatDifference(context, metricKey, amount) {
+        const unit = context.metricsRegistry?.[metricKey]?.unit || '%';
+        const size = Math.abs(amount);
+        if (unit === 'sec') return `${Math.round(size)}s`;
+        if (unit === 'hrs') return `${size.toFixed(1)} hrs`;
+        if (unit === '%') return `${size.toFixed(1)} pts`;
+        return size.toFixed(1);
+    }
+
     function isIncludedByTeamFilter(context = {}, employeeName = '') {
         const includeFn = typeof context.isAssociateIncludedByTeamFilter === 'function'
             ? context.isAssociateIncludedByTeamFilter
@@ -216,9 +227,9 @@ Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`
                     if (delta > 5) {
                         const metric = context.metricsRegistry?.[metricKey] || {};
                         improvingMetrics.push({
-                            metric: metric.label,
-                            empValue: context.formatMetricValue?.(metricKey, parseFloat(current)),
-                            trend: `+${delta.toFixed(1)}%`
+                            metric: metric.label || metricKey,
+                            empValue: context.formatMetricValue?.(metricKey, parseFloat(current)) ?? String(current),
+                            trend: `up ${formatDifference(context, metricKey, delta)}`
                         });
                     }
                 });
@@ -263,13 +274,13 @@ Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`
 
         let rockstarsText = '';
         if (teamAnalysis.improving.length > 0) {
-            rockstarsText = '\n🏆 ROCKSTARS - SHOWING INCREDIBLE IMPROVEMENT:\n';
+            rockstarsText = '\n🏆 ROCKSTARS, SHOWING INCREDIBLE IMPROVEMENT:\n';
             rockstarsText += 'These team members are CRUSHING IT with strong week-over-week gains:\n';
             teamAnalysis.improving.slice(0, 5).forEach(rockstar => {
-                rockstarsText += `\n${rockstar.name} - IMPROVING BIG TIME:\n`;
+                rockstarsText += `\n${rockstar.name}, IMPROVING BIG TIME:\n`;
                 if (rockstar.metrics && rockstar.metrics.length > 0) {
                     rockstar.metrics.forEach(m => {
-                        rockstarsText += `  • ${m.metric}: ${m.empValue} (${m.trend} improvement!)\n`;
+                        rockstarsText += `  • ${m.metric}: ${m.empValue} (${m.trend}!)\n`;
                     });
                 }
             });
@@ -283,9 +294,11 @@ Keep it to 2-3 sentences + three bullet-point lists. Be direct and encouraging.`
             championText = '\n🎯 METRIC CHAMPIONS:\n';
             topMetricsToHighlight.forEach(([metricKey, champions]) => {
                 const metric = context.metricsRegistry?.[metricKey] || {};
-                championText += `\n${metric.label} Leaders:\n`;
+                championText += `\n${metric.label || metricKey} Leaders:\n`;
+                const reverse = metric.isReverse === true;
                 champions.forEach((champ, idx) => {
-                    championText += `  ${idx + 1}. ${champ.name} - ${champ.value} (${champ.delta.toFixed(1)} above center avg!)\n`;
+                    const shown = context.formatMetricValue?.(metricKey, parseFloat(champ.value)) ?? String(champ.value);
+                    championText += `  ${idx + 1}. ${champ.name}: ${shown} (${formatDifference(context, metricKey, champ.delta)} ${reverse ? 'better than' : 'above'} center avg!)\n`;
                 });
             });
         }
@@ -333,11 +346,11 @@ TONE & STYLE:
 - Make top performers feel like ROCKSTARS
 - Professional but exciting and engaging
 - Use bullet points and emojis (🔥⭐🏆💪🎯) for impact
-- Do NOT use em dashes (, ) anywhere in the email
+- Do NOT use em dashes, or hyphens with spaces around them, anywhere in the email
 - Keep it concise but impactful (under 350 words)
 
 SUBJECT LINE:
-🔥 This Week's ROCKSTARS - Week of ${endDate}
+🔥 This Week's ROCKSTARS: Week of ${endDate}
 
 Please generate the coaching email now with HIGH ENERGY celebrating our top performers!`;
 

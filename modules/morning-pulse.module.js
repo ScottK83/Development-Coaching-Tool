@@ -2644,8 +2644,8 @@
             : [];
 
         const candidates = [];
-        // Asked once for the whole block, because every milestone in it and the
-        // caveat under them all have to be in the same tense.
+        // Asked once for the whole block, because every milestone in it has to
+        // be in the same tense.
         const periodIsOpen = standingsPeriodIsOpen(periodKey);
         // The scorecard four, not everything rank-projection can project. See
         // STANDINGS_METRICS for why the two lists are deliberately different.
@@ -2806,15 +2806,11 @@
             return c.milestone ? bullet + '\n      ' + c.milestone.text : bullet;
         });
 
-        // Said once, at the bottom, in the plainest words available. Once,
-        // because a caveat repeated under every bullet stops being read by the
-        // second one; at the bottom, because it is about the milestones rather
-        // than the placings, and the placings are simply what happened.
-        const caveat = chosen.some(c => c.milestone)
-            ? (periodIsOpen
-                ? '\n\n  Those position gains assume everybody else stays exactly where they are now.'
-                : '\n\n  Those position gains assume everybody else stays exactly where they finished.')
-            : '';
+        // No caveat under the milestones. Each one is already worded as a
+        // what-if about this person's own number ("you would have finished"),
+        // and a note on associate-facing copy is exactly what Scott has ruled
+        // out: resolve it in the wording, never in a disclaimer.
+        const caveat = '';
 
         // Which metrics this block spoke for, so the near-miss tail after it can
         // avoid naming one of them a second time with a placing counted over a

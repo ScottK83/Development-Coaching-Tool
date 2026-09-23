@@ -1425,17 +1425,17 @@
         var callFloor = Number.isFinite(window.MIN_CALLS_TO_JUDGE) ? window.MIN_CALLS_TO_JUDGE : 20;
         var calls = parseFloat(row.totalCalls);
         if (Number.isFinite(calls) && calls < callFloor) {
-            return 'not paced , ' + calls + ' call' + (calls === 1 ? '' : 's') + ' in this period, under the ' +
+            return 'not paced, ' + calls + ' call' + (calls === 1 ? '' : 's') + ' in this period, under the ' +
                 callFloor + ' the centre needs before it judges a number.';
         }
         var surveyFloor = Number.isFinite(rp.MIN_SURVEYS_TO_PROJECT) ? rp.MIN_SURVEYS_TO_PROJECT : 3;
         var surveys = parseFloat(row.surveyTotal);
         var isSurveyKey = !!(rp.SURVEY_WEIGHTED_RANK_KEYS && rp.SURVEY_WEIGHTED_RANK_KEYS.has(rankKey));
         if (isSurveyKey && Number.isFinite(surveys) && surveys < surveyFloor) {
-            return 'not paced , ' + surveys + ' survey' + (surveys === 1 ? '' : 's') + ' returned, under the ' +
+            return 'not paced, ' + surveys + ' survey' + (surveys === 1 ? '' : 's') + ' returned, under the ' +
                 surveyFloor + ' a survey metric needs before it ranks.';
         }
-        return 'not paced , the volume behind it is too thin to build a pace on.';
+        return 'not paced, the volume behind it is too thin to build a pace on.';
     }
 
     /**
@@ -1641,7 +1641,7 @@
             'against the month before, over the people scored in both. Which is why it is not always the ' +
             'difference of the two ranks either side of it. Best rank sits at the top. ' +
             'A month rebuilt from weekly uploads covers whole weeks, so its dates can start in the ' +
-            'month before , the span under each heading is what it really covers. ' +
+            'month before, the span under each heading is what it really covers. ' +
             'The purple line is where they stand year to date as of each month, which is what says ' +
             'whether the year is moving; a single month cannot. It reads the uploaded year-to-date file ' +
             'wherever one had closed by that month, so it agrees with the card; before that it is rebuilt ' +
@@ -1796,7 +1796,7 @@
 
         html += '<tr><td colspan="' + (columns.length + 1) + '" style="' + stick + ' padding: 10px 6px 4px 6px; ' +
             'font-size: 0.78em; color: var(--text-secondary); border-bottom: 2px solid var(--border);">' +
-            'The five KPIs behind it , value, its 3/2/1 score, and where that ranked in the month.</td></tr>';
+            'The five KPIs behind it, value, its 3/2/1 score, and where that ranked in the month.</td></tr>';
 
         TRAJECTORY_METRIC_ROWS.forEach(function (row) {
             html += bodyRow(row.label, function (pt) {
@@ -1922,24 +1922,22 @@
             if (!has(before) || !has(after)) return;
 
             // Reliability is the year's running total, which only ever goes up,
-            // so "better by" has no meaning. What is worth saying is the total
-            // and how much of it this month added.
+            // so "better by" has no meaning. The line states the total, never a
+            // month's own hours (Scott's rule), and a total the YTD file brought
+            // down after re-coding is stated as it stands, with no note about
+            // the correction (he rejected that footnote on 2026-09-18).
             if (row.registry === 'reliability') {
                 var added = Number(after) - Number(before);
                 var total = _formatMetricDisplay(row.registry, Number(after));
                 var onTarget = _meetsTarget(row.registry, Number(after), year) === true;
                 var month = String(cur.label || '').split(' ')[0];
-                // A total that went DOWN was corrected: hours re-coded after
-                // the monthly file were taken off in the YTD file.
-                if (added < -0.05) {
-                    lines.push('🎉 Reliability ' + total + ' missed this year, after hours were corrected' +
-                        (onTarget ? ', and inside the budget' : ''));
+                if (added > 0.05) {
+                    lines.push('📉 Reliability ' + total + ' missed this year' +
+                        (onTarget ? ', still inside the budget' : ''));
                     return;
                 }
-                lines.push(added > 0.05
-                    ? '📉 Reliability ' + total + ' missed this year, ' +
-                      _formatMetricDisplay(row.registry, added) + ' of it in ' + month +
-                      (onTarget ? ', still inside the budget' : '')
+                lines.push(added < -0.05
+                    ? '🎉 Reliability ' + total + ' missed this year' + (onTarget ? ', inside the budget' : '')
                     : '🎉 Reliability ' + total + ' missed this year, nothing added in ' + month +
                       (onTarget ? ', and inside the budget' : ''));
                 return;
@@ -3357,7 +3355,7 @@
                 '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
                 'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
                 '<span style="color: var(--text-tertiary); font-size: 0.78em;">Goes to ' +
-                _escapeHtml(_apsEmailFor(name)) + '. The picture is copied , paste it into the draft.</span>' +
+                _escapeHtml(_apsEmailFor(name)) + '. The picture is copied, paste it into the draft.</span>' +
             '</div>';
 
         overlay.appendChild(content);
@@ -3500,7 +3498,7 @@
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: ' + (_isDark() ? '#12243a' : '#e3f2fd') +
             '; border-radius: 8px; border-left: 4px solid #1565c0;">';
-        html += '<strong>Center Rankings</strong> , ' + data.totalEmployees + ' employees scored';
+        html += '<strong>Center Rankings</strong>, ' + data.totalEmployees + ' employees scored';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
 
         // Say exactly what the movement column compares, including the shared
@@ -3527,7 +3525,7 @@
                 ', a different window from the movement column, not just a different count.';
             if (_mom.fellBack) {
                 html += ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[_mom.requestedScope] || _mom.requestedScope) +
-                    ' is available, so there is nothing to compare it against , showing months instead.</span>';
+                    ' is available, so there is nothing to compare it against, showing months instead.</span>';
             }
             // A comparison that stops short of today explains itself, rather than
             // looking like uploads went missing.
@@ -3535,10 +3533,10 @@
                 html += ' <span style="color: #e65100;">' + _escapeHtml(_mom.skippedInProgress.label) +
                     ' is still in progress' +
                     (_mom.skippedInProgress.weekCount ? ' (' + _mom.skippedInProgress.weekCount + ' weeks so far)' : '') +
-                    ', so it is set aside , half a month against a full one moves people on sample size, not performance.</span>';
+                    ', so it is set aside, half a month against a full one moves people on sample size, not performance.</span>';
             } else if (_mom.comparingInProgress) {
                 html += ' <span style="color: #e65100;">' + _escapeHtml(_mom.current.label) +
-                    ' is not finished yet, so it is being compared against a full month , expect movement that is partly sample size.</span>';
+                    ' is not finished yet, so it is being compared against a full month, expect movement that is partly sample size.</span>';
             }
             html += '</span>';
 
@@ -3580,7 +3578,7 @@
                     'separate <strong>' + _escapeHtml(_teamMovementLabels.previous) + '</strong> &rarr; <strong>' +
                     _escapeHtml(_teamMovementLabels.current) + '</strong> comparison, with both of those periods ' +
                     're-ranked from scratch over the ' + _teamMovementLabels.total + ' people scored in both. ' +
-                    'Different window, different field , the two sets of ranks are not on the same scale ' +
+                    'Different window, different field, the two sets of ranks are not on the same scale ' +
                     'and are not meant to line up.</p>';
             }
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">';
@@ -3654,7 +3652,7 @@
                 html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' +
                     r.kpisMet + '/' + r.measuredCount + ' KPIs met</span>' +
                     (r.measuredCount < FULL_KPI_COUNT
-                        ? '<span style="color: var(--text-tertiary); font-weight: 400;"> , ' +
+                        ? '<span style="color: var(--text-tertiary); font-weight: 400;">, ' +
                           (FULL_KPI_COUNT - r.measuredCount) + ' not measured</span>'
                         : '') + '</div>';
                 html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
@@ -3676,9 +3674,9 @@
             '. Click any name for that person’s month-by-month history. Each metric shows value and rank (#).' +
             (_mom ? ' <strong>' + (MOVEMENT_COLUMN_LABEL[_mom.scope] || 'Move') + '</strong> is a separate ' +
                 _escapeHtml(_mom.previous.label) + ' &rarr; ' + _escapeHtml(_mom.current.label) +
-                ' comparison, re-ranked over the ' + _mom.total + ' people scored in both , the two ranks under the arrow are on that scale, ' +
+                ' comparison, re-ranked over the ' + _mom.total + ' people scored in both, the two ranks under the arrow are on that scale, ' +
                 'not on the Rank column\'s, so the two do not subtract.' +
-                ' A greyed value marked * moved with no change in KPIs met or score , position shifted among tied people, not performance.' : '') +
+                ' A greyed value marked * moved with no change in KPIs met or score, position shifted among tied people, not performance.' : '') +
             '</p>';
         html += '</div>';
 

@@ -1495,8 +1495,9 @@ suite('rankings view: reliability on the year card is the running total for the 
         Math.abs(rel('July').centerValue - (39 * 7 + 17) / 40) < 1e-9);
 
     const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });
-    t.check('the email gives the year\'s total and what the month added',
-        /Reliability 17\.0 hrs missed this year, 9\.0 hrs of it in July/.test(mail.body));
+    t.check('the email gives the year\'s total',
+        /Reliability 17\.0 hrs missed this year/.test(mail.body));
+    t.check('and never a month\'s own hours', !/hrs of it in/.test(mail.body));
     t.check('never "better by" on a total', !/Reliability[^\n]*better by/.test(mail.body));
 });
 
@@ -1535,9 +1536,8 @@ suite('rankings view: the YTD file wins reliability where it disagrees with the 
 
     const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });
     t.check('the email uses the YTD file too', /Reliability 1\.7 hrs missed this year/.test(mail.body));
-    t.check('and a total below the month before reads as a correction, not a month',
-        /Reliability 1\.7 hrs missed this year, after hours were corrected/.test(mail.body)
-        || /1\.3 hrs of it in July/.test(mail.body));
+    t.check('and a total below the month before carries no correction note',
+        !/corrected/.test(mail.body) && !/of it in July/.test(mail.body));
 });
 
 /* Reported: "CX Adv, some still don't have numbers." A month under three

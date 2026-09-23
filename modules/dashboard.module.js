@@ -232,7 +232,7 @@
 
         var html = '<h3 style="margin: 8px 0 6px 0; font-size: 1.1em; color: var(--text-secondary);">Year-End KPI Scorecard</h3>';
         html += '<p style="margin: 0 0 12px 0; color: var(--text-tertiary); font-size: 0.78em;">' +
-            'Adh · AHT · Sent · RepSat · Rel , ' +
+            'Adh · AHT · Sent · RepSat · Rel, ' +
             '<span style="color:var(--green-text);font-weight:600;">green</span>=Exceptional, ' +
             '<span style="color:#92400e;font-weight:600;">yellow</span>=Successful, ' +
             '<span style="color:var(--red-text);font-weight:600;">red</span>=Off-track' +
