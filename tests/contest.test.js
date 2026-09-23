@@ -1094,3 +1094,56 @@ suite('contest: a survey counts whichever question it answered', (t) => {
     t.equal('and a person with genuinely no surveys is not flagged',
         survey({ surveyTotal: 0 }).flagged, false);
 });
+
+suite('contest: a survey that arrives after the daily is still counted', (t) => {
+    const contest = load(t);
+
+    // A survey lands a day or more after the call. The daily for 9/12 was
+    // pulled with one perfect survey in it; the other two came in later and
+    // only a month to date uploaded afterwards holds them.
+    const stores = {
+        dailyData: {
+            '2026-09-12|2026-09-12': { metadata: { startDate: '2026-09-12', endDate: '2026-09-12' },
+                employees: [{ name: 'Ang Test', scheduleAdherence: 96, surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1,
+                              cxRepOverall: 100, fcr: 100, overallExperience: 100 }] },
+            '2026-09-15|2026-09-15': { metadata: { startDate: '2026-09-15', endDate: '2026-09-15' },
+                employees: [{ name: 'Ang Test', scheduleAdherence: 97, surveyTotal: 0 }] },
+            // After the month to date: its own survey still counts.
+            '2026-09-23|2026-09-23': { metadata: { startDate: '2026-09-23', endDate: '2026-09-23' },
+                employees: [{ name: 'Ang Test', scheduleAdherence: 95, surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1,
+                              cxRepOverall: 100, fcr: 100, overallExperience: 100 }] }
+        },
+        weeklyData: {
+            '2026-09-01|2026-09-22': { metadata: { startDate: '2026-09-01', endDate: '2026-09-22', periodType: 'month-to-date' },
+                employees: [{ name: 'Ang Test', scheduleAdherence: 93, surveyTotal: 3, repSurveyTotal: 3, fcrSurveyTotal: 3,
+                              cxRepOverall: 100, fcr: 100, overallExperience: 100 }] },
+            // A week crossing into August cannot speak for September.
+            '2026-08-31|2026-09-06': { metadata: { startDate: '2026-08-31', endDate: '2026-09-06', periodType: 'week' },
+                employees: [{ name: 'Ang Test', surveyTotal: 9, cxRepOverall: 100, fcr: 100, overallExperience: 100 }] }
+        }
+    };
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    const board = contest.buildLeaderboard(contest.mergeImportIntoMonth({ days: {} }, preview).month);
+    const ang = board.find((row) => row.associate === 'Ang Test');
+
+    t.equal('all three from the month to date, plus the one after it', ang.perfectSurvey, 4);
+    t.equal('the 9/12 daily is not counted on top', (preview.days['2026-09-12']['Ang Test'] || {}).perfectSurveys, undefined);
+    t.equal('adherence still comes off the dailies', preview.days['2026-09-12']['Ang Test'].adherence, 96);
+    t.equal('the month to date gives no adherence day', (preview.days['2026-09-22'] || {})['Ang Test'].adherence, undefined);
+
+    // A month already pulled from the dailies holds 1 on 9/12. Re-pulling must
+    // move it into the span's total rather than add to it.
+    const before = { days: { '2026-09-12': { 'Ang Test': { adherence: 96, perfectSurveys: 1 } } } };
+    const merged = contest.mergeImportIntoMonth(before, preview);
+    const again = contest.buildLeaderboard(merged.month).find((row) => row.associate === 'Ang Test');
+    t.equal('re-pulling over the old count gives the real one', again.perfectSurvey, 4);
+    t.equal('with nothing left to argue about', merged.kept, 0);
+
+    // A span whose count is open does not replace a certain daily.
+    const openStores = JSON.parse(JSON.stringify(stores));
+    Object.assign(openStores.weeklyData['2026-09-01|2026-09-22'].employees[0],
+        { cxRepOverall: 66.67, fcr: 66.67 });
+    const open = contest.buildImportPreview(openStores, { monthKey: '2026-09' });
+    t.equal('an open span leaves the daily count alone', open.days['2026-09-12']['Ang Test'].perfectSurveys, 1);
+});

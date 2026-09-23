@@ -1491,7 +1491,6 @@
         var days = {};
         var notes = [];
         var needsSurveyCheck = [];
-        var seenCheck = {};
         var spans = 0;
         var people = {};
 
@@ -1520,48 +1519,60 @@
             (stores && stores.dailyData) || {}
         ];
         var seenSpan = {};
-        var readPeriod = function (key, period) {
-            var date = importSingleDate(key, (period || {}).metadata);
+        var usedSpan = {};
+        // date|name -> the row, later stores replacing earlier ones.
+        var singles = {};
+        // name -> [{ key, start, end, order, surveys }] for spans inside the month.
+        var spanRows = {};
+        var order = 0;
 
-            // A span is counted once however many stores hold it, so the note
-            // does not report one stray upload twice.
+        var rowName = function (row) {
+            if (!row || !row.name) return '';
+            var name = String(row.name).trim();
+            if (!name) return '';
+            if (allowed && !allowed[name]) return '';
+            return name;
+        };
+
+        var readPeriod = function (key, period) {
+            order += 1;
+            var meta = (period || {}).metadata || {};
+            var date = importSingleDate(key, meta);
+
             if (!date) {
+                // A span is counted once however many stores hold it, so the
+                // note does not report one stray upload twice.
                 if (!seenSpan[key]) { seenSpan[key] = true; spans += 1; }
+
+                // Surveys, though, can come from a span, and have to. A survey
+                // arrives a day or more after the call it is about, so the daily
+                // for that call was pulled before it existed and never shows it.
+                // A week or month to date uploaded later has it. So a span that
+                // sits wholly inside the month is read for surveys, and only for
+                // surveys: a week's adherence is an average and still says
+                // nothing about any one day.
+                var start = String(meta.startDate || (String(key).indexOf('|') > -1 ? String(key).split('|')[0] : ''));
+                var end = String(meta.endDate || (String(key).indexOf('|') > -1 ? String(key).split('|')[1] : ''));
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) return;
+                if (monthKey && (start.slice(0, 7) !== monthKey || end.slice(0, 7) !== monthKey)) return;
+
+                var here = order;
+                ((period || {}).employees || []).forEach(function (row) {
+                    var name = rowName(row);
+                    if (!name) return;
+                    var list = spanRows[name] || (spanRows[name] = []);
+                    // The same span filed in two stores is one span.
+                    list = spanRows[name] = list.filter(function (s) { return s.key !== key; });
+                    list.push({ key: key, start: start, end: end, order: here, surveys: importPerfectSurveys(row) });
+                });
                 return;
             }
             if (monthKey && date.slice(0, 7) !== monthKey) return;
 
             ((period || {}).employees || []).forEach(function (row) {
-                if (!row || !row.name) return;
-                var name = String(row.name).trim();
+                var name = rowName(row);
                 if (!name) return;
-                if (allowed && !allowed[name]) return;
-
-                var adherence = importNumber(row.scheduleAdherence);
-                var surveys = importPerfectSurveys(row);
-
-                // One person day, whichever store it came from, is one thing
-                // to look at rather than one per store.
-                var flag = function () {
-                    var seen = date + '|' + name;
-                    if (seenCheck[seen]) return;
-                    seenCheck[seen] = true;
-                    needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
-                };
-
-                if (adherence === null && !surveys.count) {
-                    if (!surveys.certain) flag();
-                    return;
-                }
-
-                var day = days[date] || (days[date] = {});
-                var person = day[name] || (day[name] = {});
-
-                if (adherence !== null) person.adherence = adherence;
-                if (surveys.count) person.perfectSurveys = surveys.count;
-                if (!surveys.certain) flag();
-
-                people[name] = true;
+                singles[date + '|' + name] = { date: date, name: name, row: row };
             });
         };
 
@@ -1570,6 +1581,78 @@
                 readPeriod(key, store[key]);
             });
         });
+
+        // Which spans each person's surveys come from.
+        //
+        // Longest first, so a month to date beats the weeks inside it, then the
+        // newest end, then the store read last. Only a span whose count is
+        // proven is used: an open one would trade a daily's certain count for a
+        // guess. Spans that overlap one already chosen are skipped, so no
+        // survey is counted twice. Days no chosen span covers fall back to
+        // their daily.
+        var coverOf = {};
+        Object.keys(spanRows).forEach(function (name) {
+            var chosen = [];
+            spanRows[name]
+                .filter(function (s) { return s.surveys.certain; })
+                .sort(function (a, b) {
+                    var lengthA = Date.parse(a.end) - Date.parse(a.start);
+                    var lengthB = Date.parse(b.end) - Date.parse(b.start);
+                    if (lengthA !== lengthB) return lengthB - lengthA;
+                    if (a.end !== b.end) return a.end < b.end ? 1 : -1;
+                    return b.order - a.order;
+                })
+                .forEach(function (s) {
+                    var overlaps = chosen.some(function (c) { return !(s.end < c.start || s.start > c.end); });
+                    if (!overlaps) chosen.push(s);
+                });
+            if (chosen.length) coverOf[name] = chosen;
+        });
+
+        var coveringSpan = function (name, date) {
+            return (coverOf[name] || []).find(function (s) { return date >= s.start && date <= s.end; }) || null;
+        };
+
+        var surveySpans = [];
+        Object.keys(coverOf).forEach(function (name) {
+            coverOf[name].forEach(function (s) {
+                usedSpan[s.key] = true;
+                surveySpans.push({ name: name, start: s.start, end: s.end });
+                if (!s.surveys.count) return;
+                // Filed on the day the span ends, the last day it can speak for.
+                var day = days[s.end] || (days[s.end] = {});
+                var person = day[name] || (day[name] = {});
+                person.perfectSurveys = s.surveys.count;
+                people[name] = true;
+            });
+        });
+
+        Object.keys(singles).sort().forEach(function (id) {
+            var single = singles[id];
+            var date = single.date;
+            var name = single.name;
+            var row = single.row;
+
+            var adherence = importNumber(row.scheduleAdherence);
+            // Surveys on a day a chosen span covers are already in the span.
+            var covered = !!coveringSpan(name, date);
+            var surveys = covered ? { count: 0, certain: true } : importPerfectSurveys(row);
+
+            if (!surveys.certain) {
+                needsSurveyCheck.push({ date: date, name: name, responses: surveys.total });
+            }
+            if (adherence === null && !surveys.count) return;
+
+            var day = days[date] || (days[date] = {});
+            var person = day[name] || (day[name] = {});
+            if (adherence !== null) person.adherence = adherence;
+            if (surveys.count) person.perfectSurveys = surveys.count;
+            people[name] = true;
+        });
+        needsSurveyCheck.sort(function (a, b) {
+            return a.date === b.date ? a.name.localeCompare(b.name) : (a.date < b.date ? -1 : 1);
+        });
+        var spansUsed = Object.keys(usedSpan).length;
 
         var dayList = Object.keys(days).sort();
 
@@ -1587,8 +1670,11 @@
         });
 
         if (spans) {
-            notes.push(spans + ' upload' + (spans === 1 ? '' : 's') + ' cover more than one day, so '
-                + (spans === 1 ? 'it was' : 'they were') + ' left out. Only a single day upload can say what happened on a day.');
+            notes.push(spans + ' upload' + (spans === 1 ? '' : 's') + ' cover more than one day. '
+                + (spansUsed
+                    ? 'Surveys were counted from ' + spansUsed + ' of them that sit inside the month, since a survey often arrives after the daily for that day was pulled. '
+                    : '')
+                + 'Days on adherence only come from single day uploads.');
         }
         if (needsSurveyCheck.length) {
             notes.push(needsSurveyCheck.length + ' person day'
@@ -1609,6 +1695,7 @@
             days: days,
             notes: notes,
             needsSurveyCheck: needsSurveyCheck,
+            surveySpans: surveySpans,
             dateRange: { first: dayList[0] || '', last: dayList[dayList.length - 1] || '' },
             counts: {
                 days: dayList.length,
@@ -1642,6 +1729,28 @@
 
         var filled = 0;
         var kept = 0;
+
+        // Surveys a span now accounts for. Whatever a day inside it holds,
+        // from an earlier pull off the dailies or typed in, is part of the
+        // span's count, and leaving it would count the same survey twice. The
+        // span's own total lands on its last day below.
+        ((preview && preview.surveySpans) || []).forEach(function (span) {
+            Object.keys(merged).forEach(function (date) {
+                if (date < span.start || date >= span.end) return;
+                var person = merged[date][span.name];
+                if (!person || person.perfectSurveys === undefined) return;
+                delete person.perfectSurveys;
+                filled += 1;
+            });
+            // The last day too, so the span's total goes in as a fill rather
+            // than as a disagreement with a daily's partial count.
+            var last = merged[span.end] && merged[span.end][span.name];
+            var arriving = ((incoming[span.end] || {})[span.name] || {}).perfectSurveys;
+            if (last && last.perfectSurveys !== undefined) {
+                delete last.perfectSurveys;
+                if (arriving === undefined) filled += 1;
+            }
+        });
 
         Object.keys(incoming).forEach(function (date) {
             var day = merged[date] || (merged[date] = {});
