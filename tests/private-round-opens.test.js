@@ -113,3 +113,19 @@ suite('private round: still opens from the Pulse tab with no window', async (t) 
     t.equal('it does not throw', error && error.message, null);
     t.check('the modal is built', Boolean(modalIn(added)));
 });
+
+suite('private round: reopening keeps the window and the weekday it opened with', (t) => {
+    const src = require('fs').readFileSync(require('path').join(require('./harness').ROOT, 'modules/morning-pulse.module.js'), 'utf8');
+    const start = src.indexOf('async function showRunMyDayModal(container, options)');
+    // Up to the next function at the same depth, whichever kind it is. The
+    // Pulse tab's own button further down opens the round with no options on
+    // purpose, and must not be read as a reopen.
+    const ends = [src.indexOf('\n    async function ', start + 10), src.indexOf('\n    function ', start + 10)]
+        .filter((i) => i > -1);
+    const body = src.slice(start, ends.length ? Math.min(...ends) : undefined);
+
+    const reopens = body.match(/await showRunMyDayModal\([^)]*\)/g) || [];
+    t.check('clear sent flags and undo both reopen the round', reopens.length >= 2);
+    t.check('and every reopen hands the options back',
+        reopens.every((call) => call === 'await showRunMyDayModal(container, options)'));
+});

@@ -4196,7 +4196,10 @@
             resetBtn.addEventListener('click', async () => {
                 outreach.clearAllSentForStamp(plan.id, stamp);
                 overlay.remove();
-                await showRunMyDayModal(container);
+                // Reopened with what it was opened with. Without the options a
+                // round started from My Team came back on the Pulse period and
+                // today's real weekday, which is also a different sent log.
+                await showRunMyDayModal(container, options);
             });
         }
 
@@ -4284,7 +4287,7 @@
             btn.addEventListener('click', async () => {
                 outreach.clearSent(plan.id, stamp, btn.dataset.repName);
                 overlay.remove();
-                await showRunMyDayModal(container);
+                await showRunMyDayModal(container, options);
             });
         });
 
