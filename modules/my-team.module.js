@@ -523,10 +523,18 @@
             // is how one button on this page could disagree with the two
             // controls sitting directly above it.
             if (pulse?.showRunMyDayModal) {
-                await pulse.showRunMyDayModal(document.getElementById('morningPulseContainer'), {
-                    comparison: currentComparison(),
-                    plan: plan
-                });
+                // A throw in here used to leave the button doing nothing at all,
+                // with the reason only in a console nobody has open.
+                try {
+                    await pulse.showRunMyDayModal(document.getElementById('morningPulseContainer'), {
+                        comparison: currentComparison(),
+                        plan: plan
+                    });
+                } catch (e) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast(`Private round could not open: ${e?.message || e}`, 6000);
+                    }
+                }
             }
         });
 

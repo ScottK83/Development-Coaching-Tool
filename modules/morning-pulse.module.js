@@ -4117,7 +4117,10 @@
         const pending = cardData.filter(c => !c.sentEntry);
         const alreadySent = cardData.filter(c => c.sentEntry);
 
-        const endDate = getPeriodDisplayLabel(periodType, latestKey);
+        // Named as a week on purpose. This read an undeclared `periodType` after
+        // the window change took its declaration away, and the ReferenceError
+        // stopped the round before its modal ever opened.
+        const endDate = getPeriodDisplayLabel('week', latestKey);
         const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
         const weekdayName = getCurrentWeekdayName();
 
@@ -4140,13 +4143,18 @@
                 ? `${weekDaysCovered} day${weekDaysCovered === 1 ? '' : 's'} of this week uploaded`
                 : `${dailyThisWeek.dayCount} daily upload${dailyThisWeek.dayCount === 1 ? '' : 's'} so far`)
             : `week ending ${escapeHtml(endDate)}`;
+        // A window picked on My Team owns the period, so the header says what
+        // that window compares rather than what the weekday would have covered.
+        const coversLine = comparison
+            ? escapeHtml(comparison.headline || comparison.latestLabel || '')
+            : `covers ${escapeHtml(plan.coverageLabel)} • ${coversText}`;
 
         overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
             `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
                     `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Day. ${escapeHtml(plan.label)}</h2>` +
                     `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
-                        `${escapeHtml(weekdayName)} • covers ${escapeHtml(plan.coverageLabel)} • ${coversText}` +
+                        `${escapeHtml(weekdayName)} • ${coversLine}` +
                     `</div>` +
                     `<div style="margin-top:4px; font-size:0.88em; color:#546e7a;">` +
                         `<span style="font-weight:600;">${pending.length} to send</span> • ` +
