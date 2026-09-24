@@ -4063,8 +4063,8 @@
 
         const centerAvgs = centerAveragesFor(latestKey);
 
-        // Build card data + priority scoring so we can sort worst-first, and
-        // set aside anyone the day's data can't actually back a message for.
+        // Build card data, and set aside anyone the day's data can't actually
+        // back a message for.
         const cardData = [];
         const blocked = [];
         employees.forEach(emp => {
@@ -4090,11 +4090,8 @@
 
             const metrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
             const badge = getStatusBadge(metrics);
-            const needsFocus = metrics.filter(m => m.classification === 'Needs Focus').length;
-            const watch = metrics.filter(m => m.classification === 'Watch Area').length;
-            const priority = needsFocus * 10 + watch * 3;
             const sentEntry = outreach.getSentEntry(sentLog, plan.id, stamp, emp.name);
-            cardData.push({ emp, analysis, badge, priority, needsFocus, watch, dailyEntry, coverage, sentEntry });
+            cardData.push({ emp, analysis, badge, dailyEntry, coverage, sentEntry });
         });
 
         // Anyone with daily rows but no weekly row would otherwise vanish from
@@ -4111,7 +4108,10 @@
             blocked.push({ name, reason: 'Daily uploads only. No weekly numbers to coach against.' });
         });
 
-        cardData.sort((a, b) => b.priority - a.priority || a.emp.name.localeCompare(b.emp.name));
+        // Alphabetical, the same as every picker. Worst-first put the same
+        // person at the top of the round every week, and the badge on each
+        // card already says who needs the most.
+        cardData.sort((a, b) => a.emp.name.localeCompare(b.emp.name));
         blocked.sort((a, b) => a.name.localeCompare(b.name));
 
         const pending = cardData.filter(c => !c.sentEntry);
@@ -4162,7 +4162,7 @@
                     `<strong>${escapeHtml(periodCheck.reason)}</strong> ${escapeHtml(periodCheck.detail)}` +
                   `</div>`) +
             `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
-                `Sorted by priority. Copy each message and send it, then click <strong>Sent</strong>. That flag sticks, so re-running skips them.` +
+                `In alphabetical order. Copy each message and send it, then click <strong>Sent</strong>. That flag sticks, so re-running skips them.` +
             `</div>` +
             `<div id="runMyDayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
                 `<div style="text-align:center; color:var(--text-tertiary); padding:30px;">⏳ Generating messages…</div>` +
@@ -4403,15 +4403,9 @@
             cardData.push({ emp, analysis, weekDeltas, biggestJump });
         });
 
-        // Sort: needs support first, then watch, then others
-        const badgePriority = { '\uD83D\uDD34': 0, '\uD83D\uDFE1': 1, '\u26AA': 2, '\uD83D\uDD35': 3, '\uD83D\uDFE2': 4 };
-        cardData.sort((a, b) => {
-            const ba = getStatusBadge(a.analysis.allMetrics || []);
-            const bb = getStatusBadge(b.analysis.allMetrics || []);
-            const pa = Object.entries(badgePriority).find(([k]) => ba.icon.includes(k));
-            const pb = Object.entries(badgePriority).find(([k]) => bb.icon.includes(k));
-            return (pa ? pa[1] : 5) - (pb ? pb[1] : 5);
-        });
+        // Alphabetical, the same as every picker. The badge on each card
+        // already says who needs support.
+        cardData.sort((a, b) => a.emp.name.localeCompare(b.emp.name));
 
         let html = '';
 
