@@ -723,90 +723,6 @@
         'Thanks for the effort this month. Let\'s keep the conversation going.',
         'New month, new opportunities. Let\'s go.',
     ];
-    const QTR_GREETINGS = [
-        (name, quarter) => `Hey ${name}! Here's your ${quarter} recap.`,
-        (name, quarter) => `${name}, let's look at how ${quarter} shaped up.`,
-        (name, quarter) => `Hey ${name}, wrapping up ${quarter} for you.`,
-        (name, quarter) => `${name}, your ${quarter} numbers are in. Let's talk about it.`,
-        (name, quarter) => `${name}! ${quarter} is officially in the books.`,
-        (name, quarter) => `Alright ${name}, here's the ${quarter} breakdown.`,
-        (name, quarter) => `${name}, wanted to share your ${quarter} review with you.`,
-        (name, quarter) => `Hey ${name}, just put together your ${quarter} summary.`,
-        (name, quarter) => `${name}, let me walk you through how ${quarter} went.`,
-        (name, quarter) => `Quick ${quarter} debrief for you, ${name}.`,
-        (name, quarter) => `${name}! Big picture look at your ${quarter} right here.`,
-    ];
-    const QTR_JUMP = [
-        (label, delta, range) => `Big quarter for ${label}, ${delta}! (${range})`,
-        (label, delta, range) => `${label} moved nicely this quarter, ${delta}. (${range})`,
-        (label, delta, range) => `Standout improvement this quarter: ${label} at ${delta}. (${range})`,
-        (label, delta, range) => `${label} really came alive this quarter, ${delta}. (${range})`,
-        (label, delta, range) => `Over the quarter, ${label} moved by ${delta}. (${range}) That's real progress.`,
-        (label, delta, range) => `Your ${label} improvement of ${delta} was the story of the quarter. (${range})`,
-        (label, delta, range) => `The trajectory on ${label} this quarter was great, ${delta}. (${range})`,
-        (label, delta, range) => `${label} at ${delta} over the quarter shows sustained effort. (${range})`,
-    ];
-    const QTR_TWO_WINS = [
-        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} were strong all quarter.`,
-        (l1, v1, l2, v2) => `Consistently solid on ${l1} (${v1}) and ${l2} (${v2}).`,
-        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2}? Quarter-long wins right there.`,
-        (l1, v1, l2, v2) => `Sustained excellence on ${l1} (${v1}) and ${l2} (${v2}) all quarter.`,
-        (l1, v1, l2, v2) => `Two metrics that really defined your quarter: ${l1} at ${v1} and ${l2} at ${v2}.`,
-        (l1, v1, l2, v2) => `Keeping ${l1} at ${v1} and ${l2} at ${v2} for a full quarter is no small feat.`,
-        (l1, v1, l2, v2) => `${l1} at ${v1} and ${l2} at ${v2} over three months? That's consistency.`,
-        (l1, v1, l2, v2) => `Your ${l1} (${v1}) and ${l2} (${v2}) were rock solid all quarter long.`,
-    ];
-    const QTR_ONE_WIN = [
-        (label, val) => `${label} at ${val} was a highlight for the quarter.`,
-        (label, val) => `Really solid quarter on ${label} at ${val}.`,
-        (label, val) => `${label} at ${val} over the full quarter is genuinely impressive.`,
-        (label, val) => `Your ${label} at ${val} was one of the standout numbers for the quarter.`,
-        (label, val) => `Got to recognize ${label} at ${val}. That kind of sustained performance is hard.`,
-        (label, val) => `${label} at ${val} for the quarter tells me you were locked in.`,
-        (label, val) => `${label} finishing the quarter at ${val}? That's great work.`,
-        (label, val) => `The consistency you showed on ${label} at ${val} this quarter was notable.`,
-    ];
-    const QTR_NO_WINS = [
-        'This quarter was a grind but I see the effort.',
-        'Not the quarter we wanted, but we\'re going to build on it.',
-        'Tough quarter, but we\'ve got a clean slate ahead.',
-        'Some quarters test you. This was one of those. Let\'s come back stronger.',
-        'I appreciate the fight you put up this quarter even when the numbers were tough.',
-        'The effort was there this quarter. Let\'s channel it into results next time.',
-        'We learn the most from the hard quarters. Let\'s use this one.',
-        'Not the outcome we were after, but I\'m confident the next quarter tells a different story.',
-    ];
-    const QTR_FOCUS = [
-        (label, val, target) => `Heading into next quarter, let's target ${label} (${val} vs goal of ${target}).`,
-        (label, val, target) => `For next quarter, the priority is ${label} (sitting at ${val}, target ${target}).`,
-        (label, val, target) => `Main focus going forward: ${label} at ${val}, we need ${target}.`,
-        (label, val, target) => `The game plan for next quarter centers on ${label}. Currently ${val}, goal is ${target}.`,
-        (label, val, target) => `If there's one thing to own next quarter, it's ${label} at ${val}. Target is ${target}.`,
-        (label, val, target) => `I want ${label} to be the story of next quarter. We're at ${val}, let's push for ${target}.`,
-        (label, val, target) => `Next quarter starts with a focus on ${label}. Right now it's ${val}, we're aiming for ${target}.`,
-        (label, val, target) => `The biggest lever I see for next quarter is ${label} (${val} today, ${target} is where we want to be).`,
-    ];
-    const QTR_CONSISTENCY = [
-        (on, total) => `You hit target on ${on} of ${total} metrics for the quarter.`,
-        (on, total) => `${on} out of ${total} metrics at or above target this quarter.`,
-        (on, total) => `${on} of ${total} on target for a full quarter. That's discipline.`,
-        (on, total) => `Across ${total} metrics over three months, ${on} stayed on target. Well done.`,
-        (on, total) => `Finishing the quarter with ${on} of ${total} metrics on target shows real steadiness.`,
-        (on, total) => `${on} out of ${total} hitting target over the quarter. That kind of consistency matters.`,
-    ];
-    const QTR_CLOSERS = [
-        'Let\'s carry this into next quarter. I\'m here if you want to go over anything.',
-        'Solid quarter overall. Let me know if you want to sit down and talk through it.',
-        'Good work this quarter. Let\'s keep building.',
-        'On to the next one. Reach out if you need anything.',
-        'New quarter, fresh start. Let\'s make it a good one.',
-        'Appreciate everything you brought this quarter. I\'m here if you want to talk.',
-        'That\'s the quarter in review. Looking forward to what\'s next.',
-        'Here\'s to an even stronger quarter ahead. You\'ve got this.',
-        'Thanks for your work this quarter. Let\'s keep pushing forward together.',
-        'Quarter\'s done. Let\'s recharge and come back swinging.',
-    ];
-
     // --- Data helpers ---
 
     // Which uploads are week-shaped is a question period-index owns. This used
@@ -928,15 +844,6 @@
         }
     }
 
-    function savePulseSelection(selection) {
-        try {
-            localStorage.setItem(PULSE_SELECTION_STORAGE_KEY, JSON.stringify({
-                periodType: selection?.periodType || 'week',
-                periodKey: selection?.periodKey || null
-            }));
-        } catch (e) { /* ignore storage failure */ }
-    }
-
     function getMonthName(weekKey) {
         const period = getPeriodData(weekKey);
         const meta = period?.metadata?.endDate;
@@ -958,24 +865,6 @@
         if (periodType === 'month') return getMonthName(periodKey);
         if (periodType === 'quarter') return getQuarterName(periodKey);
         return getEndDateLabel(periodKey, getPeriodData(periodKey));
-    }
-
-    function getPeriodContextLabel(periodType) {
-        if (periodType === 'month') return 'this month';
-        if (periodType === 'quarter') return 'this quarter';
-        return 'this week';
-    }
-
-    function getReviewButtonLabel(periodType) {
-        if (periodType === 'quarter') return '📈 Quarterly Review';
-        if (periodType === 'month') return '📅 Monthly Review';
-        return '💬 Check-in';
-    }
-
-    function getReviewMessageType(periodType) {
-        if (periodType === 'quarter') return 'quarterly';
-        if (periodType === 'month') return 'monthly';
-        return 'checkin';
     }
 
     function getPeriodEndDate(weekKey) {
@@ -1504,7 +1393,7 @@
         if (biggestJump && biggestJump.delta > 0) {
             jumpHtml = `<div style="padding:6px 10px; background:var(--green-soft); border-radius:4px; font-size:0.83em; color:var(--green-text); border-left:3px solid #4caf50;">` +
                 `\uD83D\uDE80 <strong>Biggest improvement:</strong> ${escapeHtml(biggestJump.label)} ${fmtDelta(biggestJump.metricKey, biggestJump.delta)} ${deltaContextLabel} ` +
-                `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, periodType)})</div>`;
+                `(${fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, periodType, options.rangeLabels)})</div>`;
         }
 
         // Focal point
@@ -1519,7 +1408,7 @@
                 ? (focalMove.numberRose ? ' and still climbing' : ' and still slipping')
                 : '';
             focalHtml = `<div style="padding:8px; background:#fff3e0; border-radius:4px; border-left:3px solid #ff9800; font-size:0.85em;">` +
-                `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)}, last week ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
+                `<strong>\uD83C\uDFAF Focus:</strong> ${escapeHtml(focalPoint.label)}, ${escapeHtml(options.whenLabel || 'last week')} ${fmtVal(focalPoint)} vs target ${fmtTarget(focalPoint)}${dirLabel}</div>`;
         } else {
             focalHtml = `<div style="padding:8px; background:var(--green-soft); border-radius:4px; border-left:3px solid #4caf50; font-size:0.85em;">` +
                 `<strong>\u2705 On track!</strong> Keep up the consistency.</div>`;
@@ -1536,23 +1425,9 @@
                 `<div><div style="font-weight:600; font-size:0.8em; color:var(--text-secondary); margin-bottom:4px;">Opportunities</div>${oppsHtml}</div>` +
             `</div>` +
             focalHtml +
-            `<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:auto;">` +
-                (periodType === 'week'
-                    ? `<button type="button" class="pulse-kickoff-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">🌟 Mon Kickoff</button>` +
-                      `<button type="button" class="pulse-midweek-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="background:linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">📊 Midweek</button>` +
-                      `<button type="button" class="pulse-checkin-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">💬 Check-in</button>` +
-                      `<button type="button" class="pulse-highfive-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">🎉 High-Five</button>` +
-                      `<button type="button" class="pulse-growth-btn" data-employee="${escapeHtml(emp.name)}" data-period="${periodType}" ` +
-                        `style="grid-column:1/-1; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:white; border:none; border-radius:6px; padding:9px 10px; cursor:pointer; font-weight:bold; font-size:0.82em;">📈 Growth</button>`
-                    : `<button type="button" class="pulse-review-btn" data-employee="${escapeHtml(emp.name)}" ` +
-                        `style="grid-column:1/-1; background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">${getReviewButtonLabel(periodType)}</button>` +
-                      `<button type="button" class="pulse-growth-btn" data-employee="${escapeHtml(emp.name)}" data-period="${periodType}" ` +
-                        `style="grid-column:1/-1; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">📈 Growth Check</button>`) +
-            `</div>` +
+            (options.actionHtml
+                ? `<div style="margin-top:auto;">${options.actionHtml}</div>`
+                : '') +
         `</div>`;
     }
 
@@ -3016,10 +2891,6 @@
         return generatePeriodReviewMessage(employeeName, monthKey, prevMonthKey, 'month');
     }
 
-    async function generateQuarterlyCheckinMessage(employeeName, quarterKey, prevQuarterKey) {
-        return generatePeriodReviewMessage(employeeName, quarterKey, prevQuarterKey, 'quarter');
-    }
-
     async function generatePeriodReviewMessage(employeeName, periodKey, prevPeriodKey, periodType) {
         const period = getPeriodData(periodKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
@@ -3029,28 +2900,19 @@
             ? getEmployeeNickname(employeeName)
             : employeeName.split(/[\s,]+/)[0];
 
-        const periodName = periodType === 'quarter' ? getQuarterName(periodKey) : getMonthName(periodKey);
-        const reviewCopy = periodType === 'quarter'
-            ? {
-                greetings: QTR_GREETINGS,
-                jump: QTR_JUMP,
-                twoWins: QTR_TWO_WINS,
-                oneWin: QTR_ONE_WIN,
-                noWins: QTR_NO_WINS,
-                focus: QTR_FOCUS,
-                consistency: QTR_CONSISTENCY,
-                closers: QTR_CLOSERS
-            }
-            : {
-                greetings: MO_GREETINGS,
-                jump: MO_JUMP,
-                twoWins: MO_TWO_WINS,
-                oneWin: MO_ONE_WIN,
-                noWins: MO_NO_WINS,
-                focus: MO_FOCUS,
-                consistency: MO_CONSISTENCY,
-                closers: MO_CLOSERS
-            };
+        // Monthly only. The quarter is Review Prep's, which writes it from the
+        // whole quarter rather than from one upload against the one before.
+        const periodName = getMonthName(periodKey);
+        const reviewCopy = {
+            greetings: MO_GREETINGS,
+            jump: MO_JUMP,
+            twoWins: MO_TWO_WINS,
+            oneWin: MO_ONE_WIN,
+            noWins: MO_NO_WINS,
+            focus: MO_FOCUS,
+            consistency: MO_CONSISTENCY,
+            closers: MO_CLOSERS
+        };
 
         const centerAvgs = centerAveragesFor(periodKey);
 
@@ -3664,129 +3526,90 @@
         `</div>`;
     }
 
-    function buildSummaryBar(cardData, numUploads, periodType, hasComparison) {
+    function buildSummaryBar(cardData, comparison) {
         const counts = { red: 0, yellow: 0, green: 0, blue: 0, gray: 0 };
         cardData.forEach(d => {
             const badge = getStatusBadge(d.analysis.allMetrics || []);
-            if (badge.icon.includes('\uD83D\uDD34')) counts.red++;
-            else if (badge.icon.includes('\uD83D\uDFE1')) counts.yellow++;
-            else if (badge.icon.includes('\uD83D\uDFE2')) counts.green++;
-            else if (badge.icon.includes('\uD83D\uDD35')) counts.blue++;
+            if (badge.icon.includes('🔴')) counts.red++;
+            else if (badge.icon.includes('🟡')) counts.yellow++;
+            else if (badge.icon.includes('🟢')) counts.green++;
+            else if (badge.icon.includes('🔵')) counts.blue++;
             else counts.gray++;
         });
 
-        const uploadsNote = periodType === 'week'
-            ? (numUploads > 1
-                ? `<span style="color:#1a237e; font-weight:600;">${numUploads} uploads in selected week</span>`
-                : '<span style="color:var(--text-tertiary);">1 upload (no trajectory yet)</span>')
-            : (hasComparison
-                ? `<span style="color:#1a237e; font-weight:600;">Compared to previous ${periodType}</span>`
-                : `<span style="color:var(--text-tertiary);">No previous ${periodType} to compare</span>`);
+        const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((v) => String(v));
+        const compareNote = comparison?.baselineKey
+            ? `<span style="color:#1a237e; font-weight:600;">Moves are against ${escapeHtml(comparison.baselineLabel || 'the period before')}</span>`
+            : '<span style="color:var(--text-tertiary);">Nothing to compare against yet</span>';
 
         return `<div style="display:flex; gap:16px; flex-wrap:wrap; padding:14px 18px; background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius:8px; margin-bottom:16px; align-items:center;">` +
-            `<div style="font-weight:700; font-size:1em; color:var(--text-primary);">Team Pulse</div>` +
+            `<div style="font-weight:700; font-size:1em; color:#1a237e;">Team Pulse</div>` +
             `<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.9em;">` +
-                (counts.red > 0 ? `<span style="color:#e53935; font-weight:600;">\uD83D\uDD34 ${counts.red} Needs Support</span>` : '') +
-                (counts.yellow > 0 ? `<span style="color:#fb8c00; font-weight:600;">\uD83D\uDFE1 ${counts.yellow} Watch</span>` : '') +
-                (counts.blue > 0 ? `<span style="color:#1e88e5; font-weight:600;">\uD83D\uDD35 ${counts.blue} Solid</span>` : '') +
-                (counts.green > 0 ? `<span style="color:var(--green-text); font-weight:600;">\uD83D\uDFE2 ${counts.green} Crushing It</span>` : '') +
-                (counts.gray > 0 ? `<span style="color:#78909c; font-weight:600;">\u26AA ${counts.gray} Steady</span>` : '') +
+                (counts.red > 0 ? `<span style="color:#e53935; font-weight:600;">🔴 ${counts.red} Needs Support</span>` : '') +
+                (counts.yellow > 0 ? `<span style="color:#fb8c00; font-weight:600;">🟡 ${counts.yellow} Watch</span>` : '') +
+                (counts.blue > 0 ? `<span style="color:#1e88e5; font-weight:600;">🔵 ${counts.blue} Solid</span>` : '') +
+                (counts.green > 0 ? `<span style="color:#2e7d32; font-weight:600;">🟢 ${counts.green} Crushing It</span>` : '') +
+                (counts.gray > 0 ? `<span style="color:#78909c; font-weight:600;">⚪ ${counts.gray} Steady</span>` : '') +
             `</div>` +
-            `<div style="margin-left:auto; font-size:0.85em; color:var(--text-secondary);">${cardData.length} associates \u2022 ${uploadsNote}</div>` +
+            `<div style="margin-left:auto; font-size:0.85em; color:#37474f;">${cardData.length} associates • ${compareNote}</div>` +
         `</div>`;
+    }
+
+    /**
+     * The status cards, over the window My Team is showing.
+     *
+     * This was the Weekly Pulse tab, which kept its own Week/Month/Quarter
+     * picker and its own idea of "the week before" (the earliest upload in the
+     * seven days prior), so it could describe a different fortnight from the
+     * page that linked to it. The cards read the page's comparison now, and
+     * carry one action instead of six message buttons: the messages live in
+     * the tone row above, where the window already applies to them.
+     *
+     * options.person narrows it to one card. options.actionFor(name) supplies
+     * that card's button.
+     */
+    function buildTeamPulseHtml(comparison, options = {}) {
+        const latestKey = comparison?.latestKey;
+        if (!latestKey) return '';
+        const period = getPeriodData(latestKey);
+        if (!period) return '';
+
+        const baselineKey = comparison.baselineKey || null;
+        const only = options.person || null;
+        const employees = getFilteredEmployees(period).filter(emp => !only || emp.name === only);
+        if (!employees.length) return '';
+
+        const centerAvgs = centerAveragesFor(latestKey);
+        const cardData = [];
+        employees.forEach(emp => {
+            const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
+            if (!analysis || !analysis.allMetrics?.length) return;
+            const weekDeltas = baselineKey ? calcWeekDeltas(emp.name, baselineKey, latestKey) : [];
+            cardData.push({ emp, analysis, weekDeltas, biggestJump: getBiggestJump(weekDeltas) });
+        });
+        if (!cardData.length) return '';
+
+        // Alphabetical, the same as every picker.
+        cardData.sort((a, b) => a.emp.name.localeCompare(b.emp.name));
+
+        const when = comparison.latestLabel || 'this period';
+        const rangeLabels = baselineKey && comparison.baselineLabel
+            ? { when, prior: comparison.baselineLabel }
+            : null;
+        const cards = cardData.map(d => buildEmployeeCard(d.emp, d.analysis, d.weekDeltas, d.biggestJump, {
+            periodType: comparison.unit === 'month' ? 'month' : 'week',
+            deltaContextLabel: when,
+            whenLabel: when,
+            rangeLabels,
+            actionHtml: typeof options.actionFor === 'function' ? options.actionFor(d.emp.name) : ''
+        })).join('');
+
+        return (only ? '' : buildSummaryBar(cardData, comparison)) +
+            `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px;">${cards}</div>`;
     }
 
     // --- Modal ---
 
-    function showCheckinModal(employeeName, message, latestKey, baselineKey, messageType) {
-        const existing = document.getElementById('pulseCheckinModal');
-        if (existing) existing.remove();
-
-        const isKickoff = messageType === 'kickoff';
-        const isMidweek = messageType === 'midweek';
-        const isHighFive = messageType === 'highfive';
-        const isMonthly = messageType === 'monthly';
-        const isQuarterly = messageType === 'quarterly';
-        const firstName = typeof getEmployeeNickname === 'function'
-            ? getEmployeeNickname(employeeName)
-            : employeeName.split(/[\s,]+/)[0];
-
-        const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
-
-        const titleIcon = isKickoff ? '🌟' : isMidweek ? '📊' : isQuarterly ? '\uD83D\uDCC8' : isMonthly ? '\uD83D\uDCC5' : isHighFive ? '\uD83C\uDF89' : '\uD83D\uDCAC';
-        const titleText = isKickoff ? `Monday Kickoff for ${escapeHtml(firstName)}`
-            : isMidweek ? `Midweek Check-In for ${escapeHtml(firstName)}`
-            : isQuarterly ? `Quarterly Review for ${escapeHtml(firstName)}`
-            : isMonthly ? `Monthly Review for ${escapeHtml(firstName)}`
-            : isHighFive ? `High-Five for ${escapeHtml(firstName)}`
-            : `Check-in for ${escapeHtml(firstName)}`;
-        const copyGradient = isKickoff
-            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-            : isMidweek
-            ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
-            : isQuarterly
-            ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
-            : isMonthly
-            ? 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)'
-            : isHighFive
-            ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)'
-            : 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)';
-
-        const overlay = document.createElement('div');
-        overlay.id = 'pulseCheckinModal';
-        overlay.className = 'modal-overlay';
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
-
-        overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:12px; max-width:560px; width:100%; max-height:80vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">` +
-            `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">` +
-                `<h3 style="margin:0; color:#1a237e;">${titleIcon} ${titleText}</h3>` +
-                `<button id="pulseCheckinClose" style="background:none; border:none; font-size:1.4em; cursor:pointer; color:var(--text-tertiary); padding:4px 8px;">\u2715</button>` +
-            `</div>` +
-            `<textarea id="pulseCheckinText" style="width:100%; height:180px; padding:14px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
-            `<div style="display:flex; gap:10px; margin-top:14px;">` +
-                `<button id="pulseCheckinCopy" style="flex:1; background:${copyGradient}; color:white; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDCCB Copy to Clipboard</button>` +
-                `<button id="pulseCheckinRegenerate" style="flex:1; background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">\uD83D\uDD04 Regenerate</button>` +
-            `</div>` +
-        `</div>`;
-
-        document.body.appendChild(overlay);
-
-        document.getElementById('pulseCheckinClose').addEventListener('click', () => overlay.remove());
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-
-        document.getElementById('pulseCheckinCopy').addEventListener('click', async () => {
-            const textarea = document.getElementById('pulseCheckinText');
-            await copyToClipboard(textarea.value, { message: 'Copied!' });
-        });
-
-        const generateFn = isKickoff ? generateMondayKickoffMessage : isMidweek ? generateMidweekCheckinMessage : isQuarterly ? generateQuarterlyCheckinMessage : isMonthly ? generateMonthlyCheckinMessage : isHighFive ? generateHighFiveMessage : generateCheckinMessage;
-        document.getElementById('pulseCheckinRegenerate').addEventListener('click', async () => {
-            const regenBtn = document.getElementById('pulseCheckinRegenerate');
-            regenBtn.textContent = '\u23F3 Regenerating...';
-            regenBtn.disabled = true;
-            try {
-                const newMessage = await generateFn(employeeName, latestKey, baselineKey);
-                if (newMessage) {
-                    document.getElementById('pulseCheckinText').value = newMessage;
-                    await copyToClipboard(newMessage, { message: 'New check-in copied!' });
-                }
-            } catch (error) {
-                // Said on screen: there is no console to read, and a button that
-                // silently does nothing reads as broken.
-                console.error('[pulse] A button action failed:', error);
-                if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-            } finally {
-                regenBtn.textContent = '\uD83D\uDD04 Regenerate';
-                regenBtn.disabled = false;
-            }
-        });
-    }
-
-
-    // --- Run My Day (the whole-team sweep, any weekday) ---
-
-    // Plain-text twin of formatDailyCell. The sweep puts these numbers in a
-    // message, not a table cell, so the em-dash placeholder and markup are out.
     function formatDailyPlain(metricKey, value) {
         if (!Number.isFinite(value)) return '';
         if (metricKey === 'totalCalls') return Math.round(value).toString();
@@ -3994,8 +3817,9 @@
      * own remembered period selection and the REAL calendar weekday, so pressing
      * "Private round" under a Month to date header swept last week's file with
      * today's weekday tone, disagreeing with both the chips above it and the tab
-     * beside it. Left out, it still does exactly that, which is right for the
-     * Pulse tab's own button where no window has been picked.
+     * beside it. Left out, it still does exactly that. The Pulse tab's button
+     * that relied on it went with the tab, and the fallback stays only so a
+     * caller that forgets the window still gets a round rather than nothing.
      */
     async function showRunMyDayModal(container, options) {
         const outreach = window.DevCoachModules?.dailyOutreach;
@@ -4342,389 +4166,14 @@
 
     // --- Main render ---
 
-    function renderMorningPulse(container) {
-        if (!container) return;
-
-        const selection = loadPulseSelection();
-        const periodType = selection.periodType || 'week';
-        const availableKeys = getPeriodKeys(periodType);
-        const window_ = getPeriodWindow(periodType, selection.periodKey);
-        const selectedKey = window_?.latestKey || null;
-
-        if (selection.periodKey !== selectedKey) {
-            savePulseSelection({ periodType, periodKey: selectedKey });
-        }
-
-        const optionsHtml = availableKeys.length
-            ? availableKeys.slice().reverse().map(key => {
-                const selectedAttr = key === selectedKey ? ' selected' : '';
-                return `<option value="${key}"${selectedAttr}>${getPeriodDisplayLabel(periodType, key)}</option>`;
-            }).join('')
-            : '<option value="">No periods available</option>';
-
-        const controlsHtml = `<div style="margin-bottom:16px; padding:16px; background:var(--bg-surface); border:1px solid #e0e7ff; border-radius:10px; display:grid; grid-template-columns:180px 1fr; gap:12px; align-items:end;">` +
-            `<div>` +
-                `<label for="pulsePeriodTypeSelect" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Period Type</label>` +
-                `<select id="pulsePeriodTypeSelect" style="width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;">` +
-                    `<option value="week"${periodType === 'week' ? ' selected' : ''}>Week</option>` +
-                    `<option value="month"${periodType === 'month' ? ' selected' : ''}>Month</option>` +
-                    `<option value="quarter"${periodType === 'quarter' ? ' selected' : ''}>Quarter</option>` +
-                `</select>` +
-            `</div>` +
-            `<div>` +
-                `<label for="pulsePeriodKeySelect" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Selected ${periodType}</label>` +
-                `<select id="pulsePeriodKeySelect" style="width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;"${availableKeys.length ? '' : ' disabled'}>${optionsHtml}</select>` +
-            `</div>` +
-        `</div>`;
-
-        if (!window_) {
-            container.innerHTML = controlsHtml + '<div style="padding:20px; color:var(--text-secondary); text-align:center;">No data available for that period type yet.</div>';
-            bindPulseControls(container);
-            return;
-        }
-
-        const { latestKey, baselineKey, allRecentKeys } = window_;
-        const period = getPeriodData(latestKey);
-        if (!period) {
-            container.innerHTML = controlsHtml + '<div style="padding:20px; color:var(--text-secondary); text-align:center;">Could not load period data.</div>';
-            bindPulseControls(container);
-            return;
-        }
-
-        const endDate = getPeriodDisplayLabel(periodType, latestKey);
-        const employees = getFilteredEmployees(period);
-
-        if (!employees.length) {
-            container.innerHTML = controlsHtml + '<div style="padding:20px; color:var(--text-secondary); text-align:center;">No team members found for the selected period.</div>';
-            bindPulseControls(container);
-            return;
-        }
-
-        const centerAvgs = centerAveragesFor(latestKey);
-
-        // Build card data for each employee
-        const cardData = [];
-        employees.forEach(emp => {
-            const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
-            if (!analysis || !analysis.allMetrics?.length) return;
-
-            const weekDeltas = baselineKey ? calcWeekDeltas(emp.name, baselineKey, latestKey) : [];
-            const biggestJump = getBiggestJump(weekDeltas);
-
-            cardData.push({ emp, analysis, weekDeltas, biggestJump });
-        });
-
-        // Alphabetical, the same as every picker. The badge on each card
-        // already says who needs support.
-        cardData.sort((a, b) => a.emp.name.localeCompare(b.emp.name));
-
-        let html = '';
-
-        // Header
-        const baseDate = baselineKey ? getPeriodDisplayLabel(periodType, baselineKey) : null;
-        const rangeText = baseDate && baseDate !== endDate ? `${baseDate} to ${endDate}` : endDate;
-        const pulseDescription = periodType === 'week'
-            ? 'Your team\'s weekly trajectory at a glance. Use "Check-in" for coaching or "High-Five" for a straight shoutout.'
-            : periodType === 'month'
-            ? 'Your team\'s monthly snapshot. Use each card to generate an individual monthly review.'
-            : 'Your team\'s quarterly snapshot. Use each card to generate an individual quarterly review.';
-        const dayPlan = window.DevCoachModules?.dailyOutreach?.planForDate?.(new Date());
-        const runMyDayBtnHtml = periodType === 'week'
-            ? `<button type="button" id="runMyDayBtn" title="${dayPlan ? 'Covers ' + dayPlan.coverageLabel : ''}" style="background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; font-weight:bold; font-size:0.95em; box-shadow:0 4px 12px rgba(124,58,237,0.3);">🚀 Run My Day${dayPlan ? ': ' + dayPlan.label : ''}</button>`
-            : '';
-        const patternMemoryBtnHtml = periodType === 'week'
-            ? `<button type="button" id="patternMemoryBtn" style="background:var(--bg-surface); color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:bold; font-size:0.9em;">🧠 Patterns</button>`
-            : '';
-        html += controlsHtml + `<div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; gap:16px;">` +
-            `<div>` +
-                `<h3 style="color:#1a237e; margin:0 0 6px 0;">\u2600\uFE0F Weekly Pulse: ${rangeText}</h3>` +
-                `<p style="color:var(--text-secondary); margin:0; font-size:0.9em;">${pulseDescription}</p>` +
-            `</div>` +
-            `<div style="display:flex; gap:10px; flex-shrink:0;">` +
-                patternMemoryBtnHtml +
-                runMyDayBtnHtml +
-            `</div>` +
-        `</div>`;
-
-        // Summary bar
-        html += buildSummaryBar(cardData, allRecentKeys.length, periodType, Boolean(baselineKey));
-
-        // Daily check-in (shown only when periodType === 'week' and dailies
-        // have been uploaded this week). Sits between the team summary and
-        // the per-rep card grid so reps who need a "yesterday" nudge are
-        // surfaced before the full weekly drill-down.
-        if (periodType === 'week') {
-            html += buildDailyCheckinSection();
-        }
-
-        // Card grid
-        html += `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px;">`;
-        cardData.forEach(d => {
-            html += buildEmployeeCard(d.emp, d.analysis, d.weekDeltas, d.biggestJump, {
-                periodType,
-                deltaContextLabel: getPeriodContextLabel(periodType)
-            });
-        });
-        html += `</div>`;
-
-        container.innerHTML = html;
-        bindPulseControls(container);
-
-        // Bind Run My Day button
-        const runMyDayBtn = container.querySelector('#runMyDayBtn');
-        if (runMyDayBtn) {
-            runMyDayBtn.addEventListener('click', async () => {
-                runMyDayBtn.disabled = true;
-                const originalText = runMyDayBtn.textContent;
-                runMyDayBtn.textContent = '\u23F3 Building\u2026';
-                try {
-                    await showRunMyDayModal(container);
-                } catch (error) {
-                    // Said on screen: there is no console to read, and a button that
-                    // silently does nothing reads as broken.
-                    console.error('[pulse] A button action failed:', error);
-                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                } finally {
-                    runMyDayBtn.textContent = originalText;
-                    runMyDayBtn.disabled = false;
-                }
-            });
-        }
-
-        // Bind Pattern Memory button
-        const patternMemoryBtn = container.querySelector('#patternMemoryBtn');
-        if (patternMemoryBtn) {
-            patternMemoryBtn.addEventListener('click', () => {
-                const fn = window.DevCoachModules?.patternMemory?.showPatternMemoryModal;
-                if (typeof fn === 'function') fn();
-            });
-        }
-
-        // Bind check-in buttons
-        container.querySelectorAll('.pulse-checkin-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const empName = this.dataset.employee;
-                const originalText = this.textContent;
-                this.textContent = '\u23F3 Generating...';
-                this.disabled = true;
-
-                try {
-                    const message = await generateCheckinMessage(empName, latestKey, baselineKey);
-                    if (!message) {
-                        if (typeof showToast === 'function') showToast('Could not generate check-in for ' + empName, 3000);
-                        return;
-                    }
-                    showCheckinModal(empName, message, latestKey, baselineKey, 'checkin');
-
-                    await copyToClipboard(message, { message: 'Check-in copied to clipboard!' });
-                } catch (error) {
-                    // Said on screen: there is no console to read, and a button that
-                    // silently does nothing reads as broken.
-                    console.error('[pulse] A button action failed:', error);
-                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                } finally {
-                    this.textContent = originalText;
-                    this.disabled = false;
-                }
-            });
-        });
-
-        // Bind Monday Kickoff buttons
-        container.querySelectorAll('.pulse-kickoff-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const empName = this.dataset.employee;
-                const originalText = this.textContent;
-                this.textContent = '\u23F3 Generating...';
-                this.disabled = true;
-
-                try {
-                    const message = await generateMondayKickoffMessage(empName, latestKey, baselineKey);
-                    if (!message) {
-                        if (typeof showToast === 'function') showToast('Could not generate kickoff for ' + empName, 3000);
-                        return;
-                    }
-                    showCheckinModal(empName, message, latestKey, baselineKey, 'kickoff');
-
-                    await copyToClipboard(message, { message: 'Monday Kickoff copied to clipboard!' });
-                } catch (error) {
-                    // Said on screen: there is no console to read, and a button that
-                    // silently does nothing reads as broken.
-                    console.error('[pulse] A button action failed:', error);
-                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                } finally {
-                    this.textContent = originalText;
-                    this.disabled = false;
-                }
-            });
-        });
-
-        // Bind Midweek Check-In buttons
-        container.querySelectorAll('.pulse-midweek-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const empName = this.dataset.employee;
-                const originalText = this.textContent;
-                this.textContent = '\u23F3 Generating...';
-                this.disabled = true;
-
-                try {
-                    const message = await generateMidweekCheckinMessage(empName, latestKey, baselineKey);
-                    if (!message) {
-                        if (typeof showToast === 'function') showToast('Could not generate midweek check-in for ' + empName, 3000);
-                        return;
-                    }
-                    showCheckinModal(empName, message, latestKey, baselineKey, 'midweek');
-
-                    await copyToClipboard(message, { message: 'Midweek check-in copied to clipboard!' });
-                } catch (error) {
-                    // Said on screen: there is no console to read, and a button that
-                    // silently does nothing reads as broken.
-                    console.error('[pulse] A button action failed:', error);
-                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                } finally {
-                    this.textContent = originalText;
-                    this.disabled = false;
-                }
-            });
-        });
-
-        // Bind high-five buttons
-        container.querySelectorAll('.pulse-highfive-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const empName = this.dataset.employee;
-                const originalText = this.textContent;
-                this.textContent = '\u23F3 Generating...';
-                this.disabled = true;
-
-                try {
-                    const message = await generateHighFiveMessage(empName, latestKey, baselineKey);
-                    if (!message) {
-                        if (typeof showToast === 'function') showToast('Could not generate high-five for ' + empName, 3000);
-                        return;
-                    }
-                    showCheckinModal(empName, message, latestKey, baselineKey, 'highfive');
-
-                    await copyToClipboard(message, { message: 'High-five copied to clipboard!' });
-                } catch (error) {
-                    // Said on screen: there is no console to read, and a button that
-                    // silently does nothing reads as broken.
-                    console.error('[pulse] A button action failed:', error);
-                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                } finally {
-                    this.textContent = originalText;
-                    this.disabled = false;
-                }
-            });
-        });
-
-        // Bind growth buttons (week, month, and quarter views)
-        container.querySelectorAll('.pulse-growth-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const empName = this.dataset.employee;
-                const cardPeriod = this.dataset.period || 'week';
-                const defaultComparison = cardPeriod === 'quarter' ? 'qoq'
-                    : cardPeriod === 'month' ? 'mom'
-                    : 'wow';
-                const originalText = this.textContent;
-                this.textContent = '⏳ Opening...';
-                this.disabled = true;
-                try {
-                    await showGrowthModal(empName, defaultComparison);
-                } catch (error) {
-                    // Said on screen: there is no console to read, and a button that
-                    // silently does nothing reads as broken.
-                    console.error('[pulse] A button action failed:', error);
-                    if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                } finally {
-                    this.textContent = originalText;
-                    this.disabled = false;
-                }
-            });
-        });
-
-        // Bind month / quarter review buttons
-        if (periodType !== 'week') {
-            container.querySelectorAll('.pulse-review-btn').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const empName = this.dataset.employee;
-                    const originalText = this.textContent;
-                    this.textContent = '\u23F3 Generating...';
-                    this.disabled = true;
-
-                    const generateFn = periodType === 'quarter' ? generateQuarterlyCheckinMessage : generateMonthlyCheckinMessage;
-                    const messageType = getReviewMessageType(periodType);
-                    const reviewLabel = periodType === 'quarter' ? 'quarterly review' : 'monthly review';
-
-                    try {
-                        const message = await generateFn(empName, latestKey, baselineKey);
-                        if (!message) {
-                            if (typeof showToast === 'function') showToast('Could not generate ' + reviewLabel + ' for ' + empName, 3000);
-                            return;
-                        }
-                        showCheckinModal(empName, message, latestKey, baselineKey, messageType);
-
-                        await copyToClipboard(message, { message: (periodType === 'quarter' ? 'Quarterly' : 'Monthly') + ' review copied to clipboard!' });
-                    } catch (error) {
-                        // Said on screen: there is no console to read, and a button that
-                        // silently does nothing reads as broken.
-                        console.error('[pulse] A button action failed:', error);
-                        if (typeof showToast === 'function') showToast('⚠️ Could not finish that: ' + (error?.message || error), 5000);
-                    } finally {
-                        this.textContent = originalText;
-                        this.disabled = false;
-                    }
-                });
-            });
-        }
-    }
-
-    function bindPulseControls(container) {
-        const typeSelect = container.querySelector('#pulsePeriodTypeSelect');
-        const keySelect = container.querySelector('#pulsePeriodKeySelect');
-
-        if (typeSelect) {
-            typeSelect.addEventListener('change', function() {
-                const nextType = this.value || 'week';
-                const nextKeys = getPeriodKeys(nextType);
-                savePulseSelection({
-                    periodType: nextType,
-                    periodKey: nextKeys.length ? nextKeys[nextKeys.length - 1] : null
-                });
-                renderMorningPulse(container);
-            });
-        }
-
-        if (keySelect) {
-            keySelect.addEventListener('change', function() {
-                const current = loadPulseSelection();
-                savePulseSelection({
-                    periodType: current.periodType || 'week',
-                    periodKey: this.value || null
-                });
-                renderMorningPulse(container);
-            });
-        }
-    }
-
-    // Initialize - called when the Weekly Pulse tab is activated.
-    // Always snap to the newest available period so fresh uploads appear
-    // without requiring the user to touch the dropdown.
-    function initializeMorningPulse() {
-        const container = document.getElementById('morningPulseContainer');
-        const current = loadPulseSelection();
-        const periodType = current.periodType || 'week';
-        const keys = getPeriodKeys(periodType);
-        if (keys.length) {
-            savePulseSelection({ periodType, periodKey: keys[keys.length - 1] });
-        }
-        renderMorningPulse(container);
-    }
-
     // Export
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.morningPulse = {
-        initializeMorningPulse,
-        renderMorningPulse,
         resolveCheckinPeriods,
+        // The status cards and the day-file table, drawn on My Team over the
+        // window the page is showing.
+        buildTeamPulseHtml,
+        buildDailyCheckinSection,
         // Any period key, resolved the one way. day-posts needs to look
         // inside whichever period the window picked, and reaching into
         // weeklyData directly is exactly how it came to be blind to
@@ -4751,7 +4200,6 @@
         withNearMiss,
         collectDailyRowsThisWeek,
         generateMonthlyCheckinMessage,
-        generateQuarterlyCheckinMessage,
         generateGrowthMessage,
         showGrowthModal,
         // Exported for the pace tests rather than for any caller. These two

@@ -1867,7 +1867,7 @@ function bindNavigationHandlers() {
     // --- My Team ---
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showMyTeamSubSection('subSectionMyTeamDay', 'subNavHighlights');
+        showMyTeamSubSection('subSectionMyTeamDay');
         window.DevCoachModules?.myTeam?.initializeMyTeam?.();
     });
 

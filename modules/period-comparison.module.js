@@ -32,6 +32,8 @@
      *                   figure nobody has ever seen on a report.
      *   This week       the week so far against the last completed week.
      *   Last week       that week against the one before it.
+     *   Last month      that month's upload against the month before it,
+     *                   uploaded or rebuilt, by the same rule as month to date.
      *   Yesterday       that day file against the day file before it.
      *   Year to date    against the previous year-to-date report on file.
      *
@@ -51,6 +53,7 @@
         thisWeek: 'week',
         lastWeek: 'week',
         mtd: 'month',
+        lastMonth: 'month',
         ytd: 'year',
         latest: 'week'
     };
@@ -286,7 +289,7 @@
 
     function _baselineFor(windowId, index, entry) {
         if (windowId === 'day') return _dayBaseline(index, entry);
-        if (windowId === 'mtd') return _monthBaseline(entry);
+        if (windowId === 'mtd' || windowId === 'lastMonth') return _monthBaseline(entry);
         if (windowId === 'ytd') return _ytdBaseline(index, entry);
         if (windowId === 'thisWeek') return _weekBaseline(index, entry, false);
         if (windowId === 'lastWeek') return _weekBaseline(index, entry, true);
@@ -311,6 +314,7 @@
             return _friendly(entry.end);
         }
         if (windowId === 'mtd') return _monthLabel(String(entry.end).slice(0, 7)) + ' so far';
+        if (windowId === 'lastMonth') return _monthLabel(String(entry.end).slice(0, 7));
         if (windowId === 'thisWeek') return 'this week so far';
         if (windowId === 'lastWeek') return 'last week';
         if (windowId === 'ytd') return 'the year so far';

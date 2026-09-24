@@ -9,15 +9,14 @@
     // Teams shout-out messages.
     //
     // Features:
-    //  - Period selector (pick any uploaded period)
-    //  - Celebration history log (persisted)
-    //  - History view with per-person year stats
+    //  - The windows My Team's Covering chips offer (listShoutOutWindows)
+    //  - Celebration history log (persisted, written from the shout-out)
+    //  - History with per-person year stats, shown in the shout-out card
     // ============================================
 
     var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     var THRESHOLD_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsThreshold';
     var HISTORY_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsHistory';
-    var SELECTION_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsSelection';
     // The bands a placing can land in, and with it the bar for being in a
     // shout-out at all: the last one is the door. Fifteen rather than ten
     // because the center is 127 people deep, and 14th of 127 is a real week
@@ -259,24 +258,6 @@
     // Period selection / helpers
     // ==========================
 
-    function getAllPeriodKeys() {
-        var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-        var keys = [];
-        // weekly keys with enough employees to rank against (30+)
-        Object.keys(weekly).forEach(function(k) {
-            var emps = weekly[k]?.employees;
-            if (emps && emps.length >= 30) keys.push(k);
-        });
-        // ytd keys
-        Object.keys(ytd).forEach(function(k) {
-            var emps = ytd[k]?.employees;
-            if (emps && emps.length >= 30 && keys.indexOf(k) === -1) keys.push(k);
-        });
-        keys.sort();
-        return keys;
-    }
-
     function getPeriodLabel(key) {
         var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
         var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
@@ -287,34 +268,6 @@
             return formatDateFriendly(parts[0]) + ' - ' + formatDateFriendly(parts[1]);
         }
         return key;
-    }
-
-    function getPeriodEmployeeCount(key) {
-        var weekly = typeof weeklyData !== 'undefined' ? weeklyData : {};
-        var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-        var period = weekly[key] || ytd[key];
-        return period?.employees?.length || 0;
-    }
-
-    function loadCelebrationSelection() {
-        try {
-            var raw = localStorage.getItem(SELECTION_STORAGE_KEY);
-            if (!raw) return { periodKey: null, view: 'current' };
-            var parsed = JSON.parse(raw);
-            return {
-                periodKey: parsed?.periodKey || null,
-                view: parsed?.view === 'history' ? 'history' : 'current'
-            };
-        } catch (e) { return { periodKey: null, view: 'current' }; }
-    }
-
-    function saveCelebrationSelection(sel) {
-        var save = window.DevCoachModules?.storage?.saveWithSizeCheck;
-        if (save) {
-            save('celebrationsSelection', sel);
-            return;
-        }
-        try { localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(sel)); } catch (e) { /* ok */ }
     }
 
     function formatDateFriendly(dateStr) {
@@ -360,6 +313,10 @@
         { id: 'thisWeek', label: 'This week' },
         { id: 'lastWeek', label: 'Last week' },
         { id: 'mtd', label: 'Month to date' },
+        // A finished month, from its own upload. Month to date cannot stand in:
+        // the monthly review is written about a month that is over, and
+        // September to date is not.
+        { id: 'lastMonth', label: 'Last month' },
         { id: 'ytd', label: 'Year to date' }
     ];
 
@@ -374,6 +331,7 @@
         thisWeek: 'Nothing uploaded for this week yet.',
         lastWeek: 'No finished week on file yet.',
         mtd: 'No month-to-date upload for this month yet.',
+        lastMonth: 'Last month has not been uploaded yet. Upload it as the last completed month.',
         ytd: 'No year-to-date report uploaded yet.'
     };
 
@@ -425,6 +383,20 @@
             return hits.length ? hits[hits.length - 1] : null;
         };
         return inThisMonth(pi.ofTypes(index, 'month-to-date')) || inThisMonth(pi.ofTypes(index, 'month'));
+    }
+
+    // The month before this one, as uploaded. A month rebuilt from its weeks is
+    // not offered: it starts at the first week ending in the month, so it is a
+    // different stretch of time from the report people know as their August.
+    function _windowEntryLastMonth(pi, index, todayIso) {
+        var parts = String(todayIso).split('-');
+        var y = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10) - 1;
+        if (!y || isNaN(m)) return null;
+        if (m === 0) { m = 12; y -= 1; }
+        var month = y + '-' + String(m).padStart(2, '0');
+        var hits = pi.ofTypes(index, 'month').filter(function (e) { return String(e.end).slice(0, 7) === month; });
+        return hits.length ? hits[hits.length - 1] : null;
     }
 
     // An auto-generated YTD is weekly uploads added up, so it only knows about
@@ -490,6 +462,7 @@
                 : spec.id === 'thisWeek' ? _windowEntryThisWeek(pi, index, today)
                 : spec.id === 'lastWeek' ? pi.lastCompletedWeek(index, today)
                 : spec.id === 'mtd' ? _windowEntryMonthToDate(pi, index, today)
+                : spec.id === 'lastMonth' ? _windowEntryLastMonth(pi, index, today)
                 : _windowEntryYearToDate(pi, index);
 
             if (!entry) {
@@ -2082,15 +2055,6 @@
         return null;
     }
 
-    function getTierBadge(tier) {
-        var band = placementTier(tier);
-        if (band === 'first') return { bg: '#ffd700', color: '#7c5c00', text: '#1', glow: '0 0 8px rgba(255,215,0,0.6)' };
-        if (band === 'top5') return { bg: '#c0c0c0', color: '#444', text: 'Top 5', glow: '0 0 6px rgba(192,192,192,0.5)' };
-        if (band === 'top10') return { bg: '#cd7f32', color: '#fff', text: 'Top 10', glow: '0 0 6px rgba(205,127,50,0.4)' };
-        if (band === 'top15') return { bg: '#0f766e', color: '#fff', text: 'Top 15', glow: '0 0 6px rgba(15,118,110,0.4)' };
-        return { bg: '#667eea', color: '#fff', text: 'Top ' + tier, glow: 'none' };
-    }
-
     // The placings the post actually writes: "#1 in the Call Center",
     // "2nd best in the Call Center", either of those behind "Tied for".
     var PLACEMENT_RE = /(Tied for )?(?:#(\d+)|(\d+)(?:st|nd|rd|th) best) in the Call Center/g;
@@ -2118,210 +2082,32 @@
     }
 
     // =====================
-    // UI - Current View
+    // History, for My Team
     // =====================
 
-    function renderCelebrations(container) {
-        if (!container) return;
-
-        var selection = loadCelebrationSelection();
-        var allKeys = getAllPeriodKeys();
-        var selectedKey = selection.periodKey;
-        // Default to latest key if none selected or saved key no longer exists
-        if (!selectedKey || allKeys.indexOf(selectedKey) === -1) {
-            selectedKey = allKeys.length ? allKeys[allKeys.length - 1] : null;
-        }
-
-        var result = detectCelebrations(selectedKey);
-        var celebrations = result.celebrations;
-        var dateRange = result.dateRange;
-        var effectiveKey = result.periodKey;
-
-        // Auto-log to history
-        if (celebrations.length && effectiveKey) {
-            logCelebrations(effectiveKey, dateRange, celebrations);
-        }
-
-        var customThreshold = getCustomThreshold();
-        var tiers = getActiveTiers();
-
-        var html = '';
-
-        // View toggle (Current | History)
-        html += renderViewToggle('current');
-
-        // Period selector
-        html += '<div style="margin-bottom:12px; padding:12px 16px; background:var(--bg-surface); border:1px solid #e0e7ff; border-radius:10px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end;">';
-        html += '<div>';
-        html += '<label for="celebrationPeriodSelect" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Data Period</label>';
-        html += '<select id="celebrationPeriodSelect" style="width:100%; padding:10px 12px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;"' + (allKeys.length ? '' : ' disabled') + '>';
-        if (!allKeys.length) {
-            html += '<option value="">No periods with 30+ employees</option>';
-        } else {
-            allKeys.slice().reverse().forEach(function(key) {
-                var sel = key === selectedKey ? ' selected' : '';
-                html += '<option value="' + _escapeHtml(key) + '"' + sel + '>' + _escapeHtml(getPeriodLabel(key)) + ' (' + getPeriodEmployeeCount(key) + ' employees)</option>';
-            });
-        }
-        html += '</select></div>';
-        // Threshold controls
-        html += '<div style="display:flex; align-items:end; gap:8px;">';
-        html += '<div>';
-        html += '<label for="celebrationCustomThreshold" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">Custom Top N</label>';
-        html += '<input type="number" id="celebrationCustomThreshold" min="1" max="999" placeholder="e.g. 15" value="' + (customThreshold || '') + '" style="width:80px; padding:10px 8px; border:1px solid var(--border-strong); border-radius:8px; font-size:0.95em;">';
-        html += '</div>';
-        html += '<button type="button" id="celebrationSaveThreshold" style="padding:10px 14px; background:#4338ca; color:#fff; border:none; border-radius:8px; font-size:0.9em; cursor:pointer; font-weight:600;">Set</button>';
-        html += '</div>';
-        html += '</div>';
-
-        // Tiers indicator
-        html += '<div style="margin-bottom:16px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">';
-        html += '<span style="font-size:0.85em; color:var(--text-secondary); font-weight:600;">Active tiers:</span>';
-        tiers.forEach(function(t) {
-            var badge = getTierBadge(t);
-            html += '<span style="padding:3px 10px; background:' + badge.bg + '; color:' + badge.color + '; border-radius:12px; font-size:0.8em; font-weight:700;">' + (t === 1 ? '#1' : 'Top ' + t) + '</span>';
-        });
-        if (dateRange) {
-            html += '<span style="margin-left:auto; font-size:0.85em; color:var(--text-secondary);">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</span>';
-        }
-        html += '</div>';
-
-        if (!celebrations.length) {
-            html += '<div style="text-align:center; padding:40px 20px 20px; color:var(--text-tertiary);">';
-            html += '<div style="font-size:3em; margin-bottom:16px;">\uD83C\uDFC6</div>';
-            html += '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">Nobody cleared the bar this period</h3>';
-            html += '<p style="margin:0;">Celebrations fire on a <strong>top ' + tiers[tiers.length - 1] + '</strong> rank across the whole center, so a strong period can still come up empty here.</p>';
-            html += '</div>';
-            html += renderMissedList(result.missed);
-            container.innerHTML = html;
-            bindCurrentViewControls(container);
-            return;
-        }
-
-        // Generate All button
-        html += '<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap;">';
-        html += '<button type="button" id="celebrationGenerateAll" style="padding:12px 24px; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:1em; cursor:pointer; box-shadow:0 2px 8px rgba(234,88,12,0.3);">';
-        html += '\uD83C\uDF89 Generate All Shout-Outs</button>';
-        html += '<div style="display:flex; align-items:center; gap:8px; color:var(--text-secondary); font-size:0.9em;">';
-        html += '\uD83C\uDFC5 ' + celebrations.length + ' team member' + (celebrations.length !== 1 ? 's' : '') + ' with achievements';
-        html += '</div></div>';
-
-        // Cards
-        html += renderCelebrationCards(celebrations, dateRange);
-        html += renderMissedList(result.missed);
-
-        container.innerHTML = html;
-        bindCurrentViewControls(container);
-        bindCelebrationButtons(container, celebrations, dateRange);
+    /**
+     * Log the shout-out that was just built, when it is one worth keeping.
+     *
+     * The log used to grow only when somebody opened the Celebrations tab, so
+     * a year of shout-outs posted from My Team left it empty. It is written
+     * from the post now, with two limits. Only a finished week is logged: a day
+     * file and a month so far overlap the weeks around them, and counting them
+     * too would inflate "periods recognized". And only the whole team: each
+     * period's entry is replaced when it is logged again, so logging it while
+     * one person is picked would erase everybody else in that week.
+     */
+    function logShoutOut(windowId, result, wholeTeam) {
+        if (windowId !== 'lastWeek' || !wholeTeam) return false;
+        if (!result || !result.periodKey || !(result.celebrations || []).length) return false;
+        logCelebrations(result.periodKey, result.dateRange, result.celebrations);
+        return true;
     }
 
-    // A blank screen reads as "they did nothing". This says how close they
-    // actually were, so a near miss looks like a near miss.
-    function renderMissedList(missed) {
-        var list = missed || [];
-        if (!list.length) return '';
-
-        var open = list.length <= 3 ? ' open' : '';
-        var html = '<details' + open + ' style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);">';
-        html += '<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Not this time (' + list.length + '). How close they were</summary>';
-        html += '<div style="margin-top:10px;">';
-        list.forEach(function(info) {
-            html += '<div style="padding:6px 0; border-bottom:1px solid var(--border); font-size:0.9em; color:var(--text-primary);">'
-                + _escapeHtml(describeNoCelebration(info)) + '</div>';
-        });
-        html += '</div></details>';
-        return html;
-    }
-
-    function renderCelebrationCards(celebrations, dateRange) {
-        var html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px;">';
-
-        celebrations.forEach(function(person) {
-            var hasOnlyOne = person.achievements.some(function(a) { return a.soloRank1; });
-            var cardBorder = hasOnlyOne ? '#ffd700' : '#667eea';
-            var cardGlow = hasOnlyOne ? '0 0 8px rgba(255,215,0,0.6)' : 'none';
-
-            html += '<div class="celebration-card" style="background:var(--bg-surface); border-radius:10px; border:2px solid ' + cardBorder + '; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:' + cardGlow + ';">';
-
-            // Header
-            html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
-            html += '<div style="font-weight:700; font-size:1.1em; color:var(--text-primary);">' + _escapeHtml(person.firstName) + '</div>';
-            html += '<div style="display:flex; gap:4px;">';
-            if (hasOnlyOne) {
-                html += '<span style="padding:3px 10px; background:#ffd700; color:#7c5c00; border-radius:12px; font-size:0.8em; font-weight:700;">\uD83C\uDFC6 Only One!</span>';
-            } else {
-                html += '<span style="padding:3px 10px; background:#667eea; color:#fff; border-radius:12px; font-size:0.8em; font-weight:700;">\u2B50 Standout</span>';
-            }
-            html += '</div></div>';
-
-            // Date range
-            if (dateRange) {
-                html += '<div style="font-size:0.8em; color:var(--text-secondary);">\uD83D\uDCC5 ' + _escapeHtml(dateRange) + '</div>';
-            }
-
-            // Achievement list — fact-based, no ranking numbers
-            html += '<div style="display:flex; flex-direction:column; gap:6px;">';
-            if (person.perfectSurveys) {
-                html += '<div style="padding:8px 12px; background:#f0fdf4; border-left:3px solid #22c55e; border-radius:4px; font-size:0.9em;">' +
-                    '\uD83D\uDCAF ' + _escapeHtml(perfectSurveyLine(person.perfectSurveys)) + '</div>';
-            }
-            person.achievements.forEach(function(a) {
-                var valStr = a.value !== null && a.value !== undefined ? _escapeHtml(formatMetricValue(a.key, a.value)) : '';
-                var emoji = a.soloRank1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
-                var bg = a.soloRank1 ? '#fffbeb' : '#f0f9ff';
-                var border = a.soloRank1 ? '#fbbf24' : '#93c5fd';
-                var placing = centerPlacement(a);
-                html += '<div style="padding:8px 12px; background:' + bg + '; border-left:3px solid ' + border + '; border-radius:4px; font-size:0.9em;">';
-                if (a.soloRank1) {
-                    // "Only one" is about the number, not the metric — other
-                    // cards can show the same metric at a different value.
-                    html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>' + (valStr ? ': ' + valStr : '') +
-                        ' <span style="color:var(--text-secondary);">(#1 in the Call Center, nobody else got there)</span>';
-                } else {
-                    if (valStr) {
-                        html += emoji + ' <strong>' + _escapeHtml(a.label) + '</strong>: ' + valStr + '!';
-                    } else {
-                        html += emoji + ' Outstanding <strong>' + _escapeHtml(a.label) + '</strong>!';
-                    }
-                    // The placing, said on the card the same way the post says it.
-                    if (placing) {
-                        html += ' <span style="color:var(--text-secondary);">' +
-                            _escapeHtml(placing.charAt(0).toUpperCase() + placing.slice(1)) + '.</span>';
-                    }
-                }
-                html += '</div>';
-            });
-            html += '</div>';
-
-            // Action buttons
-            html += '<div style="display:flex; gap:8px; margin-top:auto;">';
-            html += '<button type="button" class="celebration-shoutout-btn" data-employee="' + _escapeHtml(person.name) + '" ' +
-                'style="flex:1; background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">' +
-                '\uD83C\uDF89 Shout-Out</button>';
-            html += '<button type="button" class="celebration-dm-btn" data-employee="' + _escapeHtml(person.name) + '" ' +
-                'style="flex:1; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">' +
-                '\uD83D\uDCAC Message</button>';
-            html += '</div>';
-
-            html += '</div>';
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    // =====================
-    // UI - History View
-    // =====================
-
-    function renderHistoryView(container) {
-        if (!container) return;
-
+    function buildHistoryHtml() {
         var history = loadHistory();
         var yearStats = buildYearStats();
 
         var html = '';
-        html += renderViewToggle('history');
 
         // Year-at-a-glance stats
         if (yearStats.length) {
@@ -2364,7 +2150,7 @@
 
         if (!history.length) {
             html += '<div style="text-align:center; padding:40px 20px; color:var(--text-tertiary);">';
-            html += '<p style="margin:0;">No celebration history yet. View the Current tab with uploaded data to start logging.</p>';
+            html += '<p style="margin:0;">No celebration history yet. Build the team shout-out over Last week on My Team and it is logged.</p>';
             html += '</div>';
         } else {
             history.forEach(function(entry) {
@@ -2394,260 +2180,15 @@
             });
         }
 
-        container.innerHTML = html;
-        bindHistoryViewControls(container);
-    }
-
-    // =====================
-    // UI - View toggle
-    // =====================
-
-    function renderViewToggle(activeView) {
-        var currentActive = activeView === 'current';
-        var historyActive = activeView === 'history';
-        var html = '<div style="display:flex; gap:0; margin-bottom:16px; border:2px solid #e0e7ff; border-radius:10px; overflow:hidden;">';
-        html += '<button type="button" id="celebViewCurrent" style="flex:1; padding:10px 20px; border:none; font-weight:700; font-size:0.95em; cursor:pointer; ' +
-            (currentActive ? 'background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color:#fff;' : 'background:#fff; color:var(--text-secondary);') + '">\uD83C\uDFC6 Current</button>';
-        html += '<button type="button" id="celebViewHistory" style="flex:1; padding:10px 20px; border:none; font-weight:700; font-size:0.95em; cursor:pointer; ' +
-            (historyActive ? 'background:linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color:#fff;' : 'background:#fff; color:var(--text-secondary);') + '">\uD83D\uDCCA History</button>';
-        html += '</div>';
         return html;
-    }
-
-    // =====================
-    // UI - Control binding
-    // =====================
-
-    function bindCurrentViewControls(container) {
-        // View toggle
-        var histBtn = container.querySelector('#celebViewHistory');
-        if (histBtn) {
-            histBtn.addEventListener('click', function() {
-                var sel = loadCelebrationSelection();
-                sel.view = 'history';
-                saveCelebrationSelection(sel);
-                renderHistoryView(container);
-            });
-        }
-
-        // Period selector
-        var periodSelect = container.querySelector('#celebrationPeriodSelect');
-        if (periodSelect) {
-            periodSelect.addEventListener('change', function() {
-                var sel = loadCelebrationSelection();
-                sel.periodKey = this.value || null;
-                saveCelebrationSelection(sel);
-                renderCelebrations(container);
-            });
-        }
-
-        // Threshold
-        var saveBtn = container.querySelector('#celebrationSaveThreshold');
-        var input = container.querySelector('#celebrationCustomThreshold');
-        if (saveBtn && input) {
-            saveBtn.addEventListener('click', function() {
-                saveCustomThreshold(input.value);
-                renderCelebrations(container);
-                if (typeof showToast === 'function') showToast('Threshold saved!', 2000);
-            });
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    saveCustomThreshold(input.value);
-                    renderCelebrations(container);
-                    if (typeof showToast === 'function') showToast('Threshold saved!', 2000);
-                }
-            });
-        }
-    }
-
-    function bindHistoryViewControls(container) {
-        var curBtn = container.querySelector('#celebViewCurrent');
-        if (curBtn) {
-            curBtn.addEventListener('click', function() {
-                var sel = loadCelebrationSelection();
-                sel.view = 'current';
-                saveCelebrationSelection(sel);
-                renderCelebrations(container);
-            });
-        }
-    }
-
-    function bindCelebrationButtons(container, celebrations, dateRange) {
-        // Generate All
-        var genAllBtn = container.querySelector('#celebrationGenerateAll');
-        if (genAllBtn) {
-            genAllBtn.addEventListener('click', function() {
-                var msg = generateAllShoutOuts(celebrations, dateRange);
-                showShoutOutModal('Team Shout-Outs', msg, function() {
-                    return generateAllShoutOuts(celebrations, dateRange);
-                });
-            });
-        }
-
-        // Individual shout-out buttons
-        container.querySelectorAll('.celebration-shoutout-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var empName = this.dataset.employee;
-                var person = celebrations.find(function(c) { return c.name === empName; });
-                if (!person) return;
-                var msg = generateShoutOut(person, dateRange);
-                showShoutOutModal(person.firstName + ' - Shout-Out', msg, function() {
-                    return generateShoutOut(person, dateRange);
-                });
-            });
-        });
-
-        // Individual DM buttons
-        container.querySelectorAll('.celebration-dm-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var empName = this.dataset.employee;
-                var person = celebrations.find(function(c) { return c.name === empName; });
-                if (!person) return;
-                var msg = generateDirectMessage(person, dateRange);
-                showShoutOutModal(person.firstName + ' - Direct Message', msg, function() {
-                    return generateDirectMessage(person, dateRange);
-                });
-            });
-        });
-    }
-
-    // =====================
-    // Modal
-    // =====================
-
-    function showShoutOutModal(title, message, regenerateFn) {
-        copyToClipboard(message, { message: 'Copied to clipboard!' });
-
-        var overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px;';
-
-        overlay.innerHTML =
-            '<div style="background:var(--bg-surface); border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
-                '<div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">' +
-                    '<h3 style="margin:0; color:var(--text-primary);">\uD83C\uDF89 ' + _escapeHtml(title) + '</h3>' +
-                    '<button type="button" id="shoutOutModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>' +
-                '</div>' +
-                '<div style="padding:20px; overflow-y:auto; flex:1;">' +
-                    '<textarea id="shoutOutModalText" style="width:100%; min-height:250px; border:1px solid var(--border); border-radius:8px; padding:12px; font-size:0.95em; font-family:inherit; resize:vertical; line-height:1.5;">' + _escapeHtml(message) + '</textarea>' +
-                '</div>' +
-                '<div style="padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end;">' +
-                    '<button type="button" id="shoutOutModalRegenerate" style="padding:10px 16px; background:var(--bg-surface-sunken); border:1px solid var(--border-strong); border-radius:8px; cursor:pointer; font-weight:600;">\uD83D\uDD04 Regenerate</button>' +
-                    '<button type="button" id="shoutOutModalCopy" style="padding:10px 16px; background:linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">\uD83D\uDCCB Copy</button>' +
-                '</div>' +
-            '</div>';
-
-        document.body.appendChild(overlay);
-
-        overlay.querySelector('#shoutOutModalClose').addEventListener('click', function() { overlay.remove(); });
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-
-        overlay.querySelector('#shoutOutModalCopy').addEventListener('click', function() {
-            var textarea = overlay.querySelector('#shoutOutModalText');
-            copyToClipboard(textarea.value, { message: 'Copied!' });
-        });
-
-        overlay.querySelector('#shoutOutModalRegenerate').addEventListener('click', function() {
-            if (!regenerateFn) return;
-            var newMessage = regenerateFn();
-            var textarea = overlay.querySelector('#shoutOutModalText');
-            if (textarea && newMessage) {
-                textarea.value = newMessage;
-                copyToClipboard(newMessage, { message: 'Regenerated & copied!' });
-            }
-        });
-    }
-
-    // =====================
-    // Inner tab toggle
-    // =====================
-
-    var INNER_TAB_STORAGE_KEY = STORAGE_PREFIX + 'celebrationsInnerTab';
-
-    // All inner tabs in the Celebrations sub-section.
-    var INNER_TABS = {
-        celebrations: { container: 'celebrationsContainer', btn: 'innerNavCelebrations', activeBg: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)', activeBorder: '#ea580c' },
-        morningPulse: { container: 'morningPulseContainer', btn: 'innerNavMorningPulse', activeBg: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)', activeBorder: '#2563eb' },
-        cheerleader:  { container: 'cheerleaderContainer', btn: 'innerNavCheerleader', activeBg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', activeBorder: '#059669' }
-    };
-
-    function getActiveInnerTab() {
-        try {
-            var val = localStorage.getItem(INNER_TAB_STORAGE_KEY);
-            return INNER_TABS[val] ? val : 'celebrations';
-        } catch (e) { return 'celebrations'; }
-    }
-
-    function saveActiveInnerTab(tab) {
-        try { localStorage.setItem(INNER_TAB_STORAGE_KEY, tab); } catch (e) { /* ok */ }
-    }
-
-    function switchInnerTab(tab) {
-        if (!INNER_TABS[tab]) tab = 'celebrations';
-
-        // Toggle container visibility and button styling for every tab.
-        Object.keys(INNER_TABS).forEach(function(key) {
-            var cfg = INNER_TABS[key];
-            var cont = document.getElementById(cfg.container);
-            var btn = document.getElementById(cfg.btn);
-            var isActive = key === tab;
-            if (cont) cont.style.display = isActive ? 'block' : 'none';
-            if (btn) {
-                btn.style.background = isActive ? cfg.activeBg : '#e2e8f0';
-                btn.style.color = isActive ? '#fff' : '#64748b';
-                btn.style.borderBottom = '3px solid ' + (isActive ? cfg.activeBorder : 'transparent');
-            }
-        });
-
-        // Render the active tab's content.
-        if (tab === 'morningPulse') {
-            var pulse = window.DevCoachModules?.morningPulse;
-            if (pulse?.renderMorningPulse) {
-                pulse.renderMorningPulse(document.getElementById('morningPulseContainer'));
-            }
-        } else if (tab === 'cheerleader') {
-            var cheer = window.DevCoachModules?.cheerleading;
-            if (cheer?.renderCheerleading) {
-                cheer.renderCheerleading(document.getElementById('cheerleaderContainer'));
-            }
-        } else {
-            var celebrationsContainer = document.getElementById('celebrationsContainer');
-            var sel = loadCelebrationSelection();
-            if (sel.view === 'history') {
-                renderHistoryView(celebrationsContainer);
-            } else {
-                renderCelebrations(celebrationsContainer);
-            }
-        }
-        saveActiveInnerTab(tab);
-    }
-
-    function bindInnerNav() {
-        Object.keys(INNER_TABS).forEach(function(tab) {
-            var btn = document.getElementById(INNER_TABS[tab].btn);
-            if (btn && !btn._celebBound) {
-                btn._celebBound = true;
-                btn.addEventListener('click', function() { switchInnerTab(tab); });
-            }
-        });
-    }
-
-    // =====================
-    // Initialization
-    // =====================
-
-    function initializeCelebrations() {
-        bindInnerNav();
-        var activeTab = getActiveInnerTab();
-        switchInnerTab(activeTab);
     }
 
     // Export
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.celebrations = {
-        initializeCelebrations: initializeCelebrations,
-        renderCelebrations: renderCelebrations,
-        renderHistoryView: renderHistoryView,
+        buildHistoryHtml: buildHistoryHtml,
+        logShoutOut: logShoutOut,
+        getActiveTiers: getActiveTiers,
         listShoutOutWindows: listShoutOutWindows,
         resolveShoutOutWindow: resolveShoutOutWindow,
         detectCelebrations: detectCelebrations,

@@ -126,7 +126,7 @@ suite('sub-sections: My Team offers every tab it registers', (t) => {
 
     const offered = [...myTeam.matchAll(/\{ id: '(subSection\w+)', btn: '\w+', label: '[^']+' \}/g)]
         .map(m => m[1]);
-    t.check('the quiet row is still readable', offered.length >= 6);
+    t.check('the quiet row is still readable', offered.length >= 4);
 
     const initialisers = myTeam.slice(myTeam.indexOf('TAB_INITIALISERS'));
     offered.forEach(id => {
@@ -136,9 +136,16 @@ suite('sub-sections: My Team offers every tab it registers', (t) => {
 
     // The tabs the hub itself owns are not in that row, so name them here
     // rather than letting the list quietly shrink to nothing.
-    ['subSectionHighlights', 'subSectionMorningPulse', 'subSectionCoachingEmail',
-     'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability'].forEach(id => {
+    ['subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening',
+     'subSectionReliability'].forEach(id => {
         t.check(`${id} is offered`, offered.indexOf(id) > -1);
+    });
+
+    // Highlights and Celebrations were folded into the day page. Offering a
+    // link to either would open a panel that is no longer there.
+    ['subSectionHighlights', 'subSectionMorningPulse'].forEach(id => {
+        t.check(`${id} is no longer offered`, offered.indexOf(id) === -1);
+        t.check(`and ${id} has no markup left behind`, divPosition(id) === -1);
     });
 
     // One owner for open-and-draw. Two owners is what let the snapshot open

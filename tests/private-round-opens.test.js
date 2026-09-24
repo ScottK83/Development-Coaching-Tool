@@ -12,8 +12,10 @@ const { suite } = require('./harness');
  * other test still passed: they read the copy out of the source, and none of
  * them ever ran the round.
  *
- * So this one runs it, from both doors: My Team, which hands over the window,
- * and the Pulse tab, which does not.
+ * So this one runs it, both ways: from My Team, which hands over the window,
+ * and with nothing handed over, which falls back to the newest weeks. The
+ * Pulse tab that used to open it that second way is gone, folded into My Team,
+ * but the fallback is kept so a caller that forgets the window still opens.
  */
 
 const LAST_WEEK = '2026-09-14|2026-09-20';
@@ -102,7 +104,7 @@ suite('private round: opens from My Team with the window handed over', async (t)
         Boolean(modal) && modal.innerHTML.indexOf('this week so far against last week') > -1);
 });
 
-suite('private round: still opens from the Pulse tab with no window', async (t) => {
+suite('private round: still opens with no window handed over', async (t) => {
     const { pulse, added } = load(t);
 
     let error = null;
@@ -117,9 +119,8 @@ suite('private round: still opens from the Pulse tab with no window', async (t) 
 suite('private round: reopening keeps the window and the weekday it opened with', (t) => {
     const src = require('fs').readFileSync(require('path').join(require('./harness').ROOT, 'modules/morning-pulse.module.js'), 'utf8');
     const start = src.indexOf('async function showRunMyDayModal(container, options)');
-    // Up to the next function at the same depth, whichever kind it is. The
-    // Pulse tab's own button further down opens the round with no options on
-    // purpose, and must not be read as a reopen.
+    // Up to the next function at the same depth, whichever kind it is, so a
+    // call from anywhere else in the file is not read as a reopen.
     const ends = [src.indexOf('\n    async function ', start + 10), src.indexOf('\n    function ', start + 10)]
         .filter((i) => i > -1);
     const body = src.slice(start, ends.length ? Math.min(...ends) : undefined);

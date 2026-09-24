@@ -10,8 +10,9 @@
      *
      * A day page is everything for that day — the message to send, and the
      * things that explain why it says what it says. Celebrations, the weekly
-     * pulse and the cheer lines are not destinations any more; they are the
-     * evidence underneath the message.
+     * pulse and the cheer lines are not destinations any more. Their messages
+     * are tones in the row above the day post, their status cards are the
+     * evidence underneath it, and all of it reads the one Covering window.
      *
      * Picking one associate hides whatever only makes sense for the whole team,
      * so nothing on screen is about somebody you didn't ask about.
@@ -34,6 +35,37 @@
     // or one of the two that aren't tied to a day. Session-only on purpose —
     // the day is the thing worth remembering between visits.
     let activeTone = null;
+
+    // How the public post is written: placings in the center, or everyone who
+    // beat a target. The second is what the Highlights tab used to post.
+    let shoutOutStyle = 'ranked';
+    // Whether the shout-out card has its history log open.
+    let showHistory = false;
+    // Which round the slot under the three team buttons is holding, so a
+    // window change rewrites that one rather than always the shout-out.
+    let openSlot = null;
+
+    // detectCelebrations is asked the same question by the tone row, the
+    // message and the panel in one render. Answered once per window.
+    let celebrationMemo = null;
+
+    function detectForWindow() {
+        const celebrations = mods().celebrations;
+        if (!celebrations?.detectCelebrations) return null;
+        const key = currentWindow().key;
+        if (celebrationMemo && celebrationMemo.key === key && celebrationMemo.source === celebrations) {
+            return celebrationMemo.result;
+        }
+        let result = null;
+        try { result = celebrations.detectCelebrations(key); } catch (e) { result = null; }
+        celebrationMemo = { key, source: celebrations, result };
+        return result;
+    }
+
+    function resetRenderCaches() {
+        celebrationMemo = null;
+        mods().periodComparison?.resetCache?.();
+    }
 
     function escapeHtml(value) {
         const shared = mods().sharedUtils?.escapeHtml;
@@ -77,7 +109,7 @@
      * and a month-to-date file would sit unannounced under a header that has to
      * name something.
      */
-    const DEFAULT_WINDOW_ORDER = ['lastWeek', 'thisWeek', 'mtd', 'day', 'ytd'];
+    const DEFAULT_WINDOW_ORDER = ['lastWeek', 'thisWeek', 'mtd', 'day', 'lastMonth', 'ytd'];
 
     function defaultWindowId() {
         try {
@@ -177,15 +209,10 @@
 
         // The rest of My Team is a quieter second group. Still one click away,
         // but visibly not the main thing you came here to do.
-        // Highlights and Celebrations belong here too. Replacing the seven-tab
-        // row left them with no way in at all: their markup, their modules and
-        // their buttons all still worked, and the only thing that reached them
-        // was a nav row that had been hidden. Celebrations carries the history
-        // and the per-metric thresholds, and the weekly pulse and the cheer
-        // lines sit inside it, so all four went with it.
+        // Highlights and Celebrations (with the Weekly Pulse and Cheerleader
+        // inside it) used to sit here too. Everything they did lives on this
+        // page now, under the one window, so they went.
         const others = [
-            { id: 'subSectionHighlights', btn: 'subNavHighlights', label: 'Highlights' },
-            { id: 'subSectionMorningPulse', btn: 'subNavMorningPulse', label: 'Celebrations' },
             { id: 'subSectionCoachingEmail', btn: 'subNavCoachingEmail', label: 'Coaching' },
             { id: 'subSectionTeamSnapshot', btn: 'subNavTeamSnapshot', label: 'Snapshot' },
             { id: 'subSectionCallListening', btn: 'subNavCallListening', label: 'Calls' },
@@ -212,10 +239,6 @@
      * panel rather than an empty one.
      */
     const TAB_INITIALISERS = {
-        subSectionHighlights: () => mods().teamHub?.initializeHighlights?.(),
-        // Also binds the inner tabs, so the weekly pulse and the cheer lines
-        // are reachable from the same click.
-        subSectionMorningPulse: () => mods().celebrations?.initializeCelebrations?.(),
         subSectionCoachingEmail: () => window.initializeCoachingEmail?.(),
         // The snapshot's markup ships in a standalone section and is moved into
         // this panel on first open. embedTeamSnapshot runs the initialiser
@@ -256,13 +279,13 @@
         let footer = '';
 
         const celebrations = mods().celebrations;
-        if (celebrations?.detectCelebrations) {
+        const result = detectForWindow();
+        if (celebrations && result) {
             try {
                 // The same window the post is built from. These two sit one
                 // under the other, so a panel measuring a different stretch of
                 // time than the message above it is worse than no panel at all.
                 const chosen = currentWindow();
-                const result = celebrations.detectCelebrations(chosen.key);
 
                 // A rank means nothing without the period it was earned in and
                 // the size of the field. Both were being left to memory.
@@ -371,11 +394,16 @@
         // A month rebuilt from its weeks is cached for the life of a render, so
         // eighteen messages do not rebuild August eighteen times. An upload
         // between renders must not leave a stale month behind the numbers.
-        mods().periodComparison?.resetCache?.();
+        resetRenderCaches();
 
         const person = scope?.getActiveMember?.() || null;
         const dayId = activeDayId();
         const plan = outreach.planById(dayId);
+
+        // A tone the window can no longer back, such as the monthly review once
+        // Last month is not picked, falls back to the day post rather than
+        // writing something the page above it does not support.
+        if (person && activeTone && !toneOptions(person).some(t => t.id === activeTone)) activeTone = null;
 
         container.innerHTML = renderDayTabs(dayId, person) +
             `<div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:12px;">` +
@@ -384,7 +412,7 @@
             `</div>` +
             renderWindowPicker(currentWindow().id) +
             renderComparisonLine() +
-            (person ? renderToneRow() : '') +
+            (person ? renderToneRow(person) : '') +
             `<div id="myTeamDayMessage"></div>` +
             `<details style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);" open>` +
                 `<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">What's behind it</summary>` +
@@ -422,35 +450,142 @@
 
         const messageEl = document.getElementById('myTeamDayMessage');
         if (person) {
-            if (activeTone === 'highfive') {
-                await renderHighFive(messageEl, person);
+            if (activeTone) {
+                await renderToneMessage(messageEl, person);
             } else {
                 if (mods().dayPosts?.saveDayChoice) mods().dayPosts.saveDayChoice(dayId);
                 await mods().dayPosts?.renderDayPosts?.(messageEl, person, currentComparison());
             }
         } else {
+            openSlot = null;
             renderTeamDay(messageEl, plan);
         }
 
-        const contextEl = document.getElementById('myTeamDayContext');
-        if (contextEl) contextEl.innerHTML = buildContextHtml(person);
+        paintBehind(person);
     }
 
-    // The two private messages that aren't tied to a weekday. They used to live
-    // on the Weekly Pulse cards, which is why it was never obvious they were
-    // the same kind of thing as a day post.
-    function renderToneRow() {
-        const tone = (id, label, hint) => {
-            const on = activeTone === id;
-            return `<button type="button" class="mt-tone-btn" data-tone="${id}" title="${escapeHtml(hint)}" ` +
+    // --- Messages for one person that are not the day post ---
+
+    /**
+     * The person's entry in this window's shout-out, if they made it.
+     */
+    function celebrationFor(person) {
+        if (!person) return null;
+        const result = detectForWindow();
+        const entry = (result?.celebrations || []).filter(c => c.name === person)[0];
+        return entry ? { entry, dateRange: result.dateRange || '' } : null;
+    }
+
+    /**
+     * Every message for one person that is not their day post.
+     *
+     * These were spread over three tabs, each with its own period control: the
+     * Weekly Pulse cards (high five, check-in, growth, the monthly review), the
+     * Celebrations cards (the placing message and a one-person shout-out) and
+     * the Cheerleader cards. They are tones of this page now, written from the
+     * window above them.
+     *
+     * Three only appear when the window can back them. The placing message and
+     * the one-person shout-out need the person to have made this window's
+     * shout-out. The monthly review needs a finished month, because its copy
+     * talks about a month that is over.
+     */
+    function toneOptions(person) {
+        const celebrated = Boolean(person && celebrationFor(person));
+        const lastMonth = currentWindow().id === 'lastMonth';
+        return [
+            { id: 'highfive', label: '🎉 High five', hint: 'Pure praise, no coaching attached' },
+            { id: 'celebrate', label: '🏅 Placings', hint: 'Where they placed in the center and how many they beat. Private.', show: celebrated },
+            { id: 'cheer', label: '🙌 Cheer', hint: 'Close to a year-to-date goal, and what is moving the right way' },
+            { id: 'checkin', label: '💬 Check-in', hint: 'Their wins and the one thing to work on' },
+            { id: 'growth', label: '📈 Growth', hint: 'How far they have come over a longer stretch' },
+            { id: 'monthly', label: '📅 Monthly review', hint: 'Their month in review', show: lastMonth },
+            { id: 'shoutout', label: '📣 Shout-out', hint: 'A channel post about just this person. Public.', show: celebrated, isPublic: true }
+        ].filter(t => t.show !== false);
+    }
+
+    function renderToneRow(person) {
+        const tone = (t) => {
+            const on = activeTone === t.id;
+            return `<button type="button" class="mt-tone-btn" data-tone="${t.id}" title="${escapeHtml(t.hint)}" ` +
                 `style="padding:6px 14px; border:1px solid ${on ? '#4527a0' : 'var(--border)'}; border-radius:999px; font-size:0.85em; cursor:pointer; ` +
-                `background:${on ? '#ede7f6' : 'var(--bg-surface)'}; color:${on ? '#4527a0' : 'var(--text-secondary)'}; font-weight:600;">${label}</button>`;
+                `background:${on ? '#ede7f6' : 'var(--bg-surface)'}; color:${on ? '#4527a0' : 'var(--text-secondary)'}; font-weight:600;">${t.label}</button>`;
         };
+        const tones = toneOptions(person);
+        const privateTones = tones.filter(t => !t.isPublic).map(tone).join('');
+        const publicTones = tones.filter(t => t.isPublic).map(tone).join('');
         return `<div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">` +
             `<span style="font-size:0.82em; color:var(--text-tertiary);">Also send:</span>` +
-            tone('highfive', '🎉 High five', 'Pure praise, no coaching attached') +
-            tone('growth', '📈 Growth', 'How far they have come over a longer stretch') +
+            privateTones +
+            (publicTones
+                ? `<span style="font-size:0.82em; color:var(--text-tertiary); margin-left:8px;">For the channel:</span>` + publicTones
+                : '') +
         `</div>`;
+    }
+
+    /**
+     * Write the lit tone for one person, from the window.
+     */
+    async function renderToneMessage(container, person) {
+        if (!container) return;
+        if (activeTone === 'highfive') return renderHighFive(container, person);
+
+        const cmp = currentComparison();
+        const pulse = mods().morningPulse;
+        const cel = mods().celebrations;
+        const writers = {
+            celebrate: () => {
+                const c = celebrationFor(person);
+                return c && cel?.generateDirectMessage ? cel.generateDirectMessage(c.entry, c.dateRange) : '';
+            },
+            shoutout: () => {
+                const c = celebrationFor(person);
+                return c && cel?.generateShoutOut ? cel.generateShoutOut(c.entry, c.dateRange) : '';
+            },
+            cheer: () => mods().cheerleading?.cheerMessageFor?.(person, cmp) || '',
+            checkin: () => pulse?.generateCheckinMessage?.(person, cmp?.latestKey, cmp?.baselineKey),
+            monthly: () => pulse?.generateMonthlyCheckinMessage?.(person, cmp?.latestKey, cmp?.baselineKey)
+        };
+        const write = writers[activeTone];
+        if (!write) return;
+
+        const isPublic = activeTone === 'shoutout';
+        await renderWritten(container, person, write, {
+            copyLabel: isPublic ? '📋 Copy for the channel' : '📋 Copy',
+            note: isPublic ? 'Public. This names them in the channel.' : ''
+        });
+    }
+
+    /**
+     * One written message in an editable box, with copy and regenerate.
+     */
+    async function renderWritten(container, person, write, options = {}) {
+        let message = '';
+        try { message = await write() || ''; } catch (e) { message = ''; }
+
+        if (!message) {
+            const periods = currentComparison();
+            const over = periods?.latestLabel ? ` over ${periods.latestLabel}` : '';
+            container.innerHTML = `<div style="padding:24px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;">` +
+                `Not enough${escapeHtml(over)} to write this for ${escapeHtml(person)} yet.` +
+            `</div>`;
+            return;
+        }
+
+        container.innerHTML = (options.note
+                ? `<div style="font-size:0.82em; color:#e65100; font-weight:600; margin-bottom:6px;">${escapeHtml(options.note)}</div>`
+                : '') +
+            `<textarea id="myTeamToneText" style="width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
+            `<div style="display:flex; gap:8px; margin-top:10px;">` +
+                `<button type="button" id="myTeamToneCopy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">${escapeHtml(options.copyLabel || '📋 Copy')}</button>` +
+                `<button type="button" id="myTeamToneRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Regenerate</button>` +
+            `</div>`;
+
+        container.querySelector('#myTeamToneCopy')?.addEventListener('click', () => {
+            const value = container.querySelector('#myTeamToneText')?.value || '';
+            if (typeof window.copyToClipboard === 'function') window.copyToClipboard(value, { message: `Copied ${person}` });
+        });
+        container.querySelector('#myTeamToneRegen')?.addEventListener('click', () => renderWritten(container, person, write, options));
     }
 
     /**
@@ -465,31 +600,77 @@
         // last week while the page announces the month is praise for a stretch
         // of time the person was not reading about.
         const periods = currentComparison();
+        await renderWritten(container, person,
+            () => pulse?.generateHighFiveMessage?.(person, periods?.latestKey, periods?.baselineKey));
+    }
 
-        let message = '';
+    // --- What's behind it ---
+
+    /**
+     * Everything underneath the message: how each person is tracking over the
+     * window, the day files when the window is a day or this week, and who made
+     * the shout-out and who did not.
+     *
+     * The status cards were the Weekly Pulse tab. They read the window now, and
+     * a card is a way in: it picks that person, which brings up their tones.
+     */
+    function buildBehindHtml(person) {
+        const pulse = mods().morningPulse;
+        const cmp = currentComparison();
+        const win = currentWindow();
+
+        let pulseHtml = '';
         try {
-            message = await pulse?.generateHighFiveMessage?.(person, periods?.latestKey, periods?.baselineKey) || '';
-        } catch (e) { message = ''; }
+            pulseHtml = pulse?.buildTeamPulseHtml?.(cmp, {
+                person,
+                actionFor: person ? null : (name) => {
+                    const first = typeof window.getEmployeeNickname === 'function'
+                        ? window.getEmployeeNickname(name)
+                        : String(name).split(/[\s,]+/)[0];
+                    return `<button type="button" class="mt-open-person" data-name="${escapeHtml(name)}" ` +
+                        `style="width:100%; background:var(--bg-surface-raised); color:#4527a0; border:1px solid #c7b3ff; border-radius:6px; padding:8px 10px; cursor:pointer; font-weight:600; font-size:0.85em;">✉️ Write to ${escapeHtml(first)}</button>`;
+                }
+            }) || '';
+        } catch (e) { pulseHtml = ''; }
 
-        if (!message) {
-            const over = periods?.latestLabel ? ` over ${periods.latestLabel}` : '';
-            container.innerHTML = `<div style="padding:24px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;">` +
-                `Not enough${escapeHtml(over)} to build a high five for ${escapeHtml(person)} yet.` +
-            `</div>`;
-            return;
+        let dailyHtml = '';
+        if (win.id === 'day' || win.id === 'thisWeek') {
+            try { dailyHtml = pulse?.buildDailyCheckinSection?.() || ''; } catch (e) { dailyHtml = ''; }
         }
 
-        container.innerHTML = `<textarea id="myTeamHighFiveText" style="width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
-            `<div style="display:flex; gap:8px; margin-top:10px;">` +
-                `<button type="button" id="myTeamHighFiveCopy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
-                `<button type="button" id="myTeamHighFiveRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Regenerate</button>` +
-            `</div>`;
+        const patterns = mods().patternMemory?.showPatternMemoryModal
+            ? `<button type="button" id="myTeamPatterns" style="background:var(--bg-surface); color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; font-size:0.85em;">🧠 Patterns</button>`
+            : '';
+        const heading = (text, extra) => `<div style="display:flex; align-items:center; gap:10px; margin:4px 0 10px;">` +
+            `<div style="font-weight:700; color:var(--text-secondary); font-size:0.9em;">${text}</div>` +
+            (extra ? `<span style="margin-left:auto;">${extra}</span>` : '') +
+        `</div>`;
 
-        container.querySelector('#myTeamHighFiveCopy')?.addEventListener('click', () => {
-            const value = container.querySelector('#myTeamHighFiveText')?.value || '';
-            if (typeof window.copyToClipboard === 'function') window.copyToClipboard(value, { message: `Copied ${person}` });
+        return (pulseHtml
+                ? heading(person ? 'How they are tracking' : 'How everyone is tracking', patterns) + pulseHtml
+                : (patterns ? heading('How everyone is tracking', patterns) : '')) +
+            (dailyHtml ? `<div style="margin-top:16px;">${dailyHtml}</div>` : '') +
+            `<div style="margin-top:${pulseHtml || dailyHtml ? '18px' : '0'};">` +
+                heading('The shout-out') +
+                buildContextHtml(person) +
+            `</div>`;
+    }
+
+    function paintBehind(person) {
+        const contextEl = document.getElementById('myTeamDayContext');
+        if (!contextEl) return;
+        contextEl.innerHTML = buildBehindHtml(person);
+
+        contextEl.querySelectorAll('.mt-open-person').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeTone = null;
+                const hub = mods().teamHub;
+                if (hub?.selectMember) hub.selectMember(btn.dataset.name);
+            });
         });
-        container.querySelector('#myTeamHighFiveRegen')?.addEventListener('click', () => renderHighFive(container, person));
+        contextEl.querySelector('#myTeamPatterns')?.addEventListener('click', () => {
+            mods().patternMemory?.showPatternMemoryModal?.();
+        });
     }
 
     /**
@@ -526,7 +707,7 @@
                 // A throw in here used to leave the button doing nothing at all,
                 // with the reason only in a console nobody has open.
                 try {
-                    await pulse.showRunMyDayModal(document.getElementById('morningPulseContainer'), {
+                    await pulse.showRunMyDayModal(null, {
                         comparison: currentComparison(),
                         plan: plan
                     });
@@ -622,6 +803,7 @@
     async function renderHighFiveRound() {
         const slot = document.getElementById('myTeamShoutOutSlot');
         if (!slot) return;
+        openSlot = 'highfive';
 
         // Eighteen of these takes long enough that a panel sitting still reads
         // as a broken one, so the count moves while they're being written.
@@ -813,19 +995,31 @@
     }
 
     /**
-     * Repaint the chips, the evidence panel and — only if it is already open —
-     * the post. Rebuilding a shout-out that nobody asked for would make picking
-     * a window the thing that opens the card, which is backwards: you change
-     * the window to see what the numbers say, and then decide whether to post.
+     * Repaint for a new window.
+     *
+     * With one person picked, the whole page is drawn again: which tones are on
+     * offer depends on the window (the placing message needs them in this
+     * window's shout-out, the monthly review needs Last month), so a partial
+     * repaint would leave the row offering the wrong things.
+     *
+     * For the whole team, the chips, the line under them and the panel are
+     * repainted, and whichever round is open is rewritten. Opening one that
+     * nobody asked for would make picking a window the thing that opens the
+     * card, which is backwards: you change the window to see what the numbers
+     * say, and then decide whether to post.
      */
     async function refreshForWindow() {
+        const person = mods().teamScope?.getActiveMember?.() || null;
+        if (person) {
+            await renderDayPage();
+            return;
+        }
+
         // The window decides which periods get read, so a month held over from
         // the previous window is a month nobody asked for.
-        mods().periodComparison?.resetCache?.();
+        resetRenderCaches();
 
         const chosen = currentWindow();
-        const person = mods().teamScope?.getActiveMember?.() || null;
-
         const pickerEl = document.getElementById('myTeamWindowPicker');
         if (pickerEl) {
             pickerEl.innerHTML = renderWindowPickerChips(chosen.id);
@@ -835,29 +1029,102 @@
         const comparisonEl = document.getElementById('myTeamComparison');
         if (comparisonEl) comparisonEl.outerHTML = renderComparisonLine();
 
-        // The private message is written from the window now, so it has to be
-        // rewritten with it. Leaving it alone was harmless while the weekday
-        // owned the period and is the whole bug once the chips do: you would
-        // switch to Month to date and read a message about two weeks.
-        const messageEl = document.getElementById('myTeamDayMessage');
-        if (messageEl && person && activeTone !== 'highfive') {
-            await mods().dayPosts?.renderDayPosts?.(messageEl, person, currentComparison());
-        } else if (messageEl && person && activeTone === 'highfive') {
-            await renderHighFive(messageEl, person);
-        }
+        paintBehind(null);
 
-        const contextEl = document.getElementById('myTeamDayContext');
-        if (contextEl) {
-            contextEl.innerHTML = buildContextHtml(person);
-        }
+        if (openSlot === 'shoutout') renderShoutOut();
+        else if (openSlot === 'highfive') await renderHighFiveRound();
+    }
 
-        const slot = document.getElementById('myTeamShoutOutSlot');
-        if (slot && slot.innerHTML.trim()) renderShoutOut();
+    /**
+     * The controls along the top of the shout-out card.
+     *
+     * The style is which post: placings in the center, or everyone who beat a
+     * target (what the Highlights tab posted). The bar and History came off
+     * the Celebrations tab. The bar only means anything for placings, so it is
+     * only shown for them.
+     */
+    function shoutOutControlsHtml() {
+        const cel = mods().celebrations;
+        const style = (id, label, hint) => {
+            const on = shoutOutStyle === id;
+            return `<button type="button" class="mt-so-style" data-style="${id}" title="${escapeHtml(hint)}" ` +
+                `style="padding:5px 12px; border:1px solid ${on ? '#e65100' : 'var(--border)'}; border-radius:999px; font-size:0.82em; font-weight:600; cursor:pointer; ` +
+                `background:${on ? '#fff3e0' : 'var(--bg-surface-raised)'}; color:${on ? '#e65100' : 'var(--text-secondary)'};">${label}</button>`;
+        };
+
+        const tiers = cel?.getActiveTiers?.() || [];
+        const custom = cel?.getCustomThreshold?.() || '';
+        const bar = shoutOutStyle === 'ranked' && cel?.saveCustomThreshold
+            ? `<label for="myTeamTopN" style="font-size:0.8em; color:var(--text-tertiary);" title="Adds a band to the placings. The widest band is the bar for being in the post at all.">Extra band: top</label>` +
+              `<input type="number" id="myTeamTopN" min="1" max="999" value="${escapeHtml(custom)}" placeholder="${escapeHtml(tiers.length ? tiers[tiers.length - 1] : 15)}" ` +
+                `style="width:64px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:0.85em; background:var(--bg-surface-raised); color:var(--text-primary);">` +
+              `<button type="button" id="myTeamTopNSet" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised); color:var(--text-secondary); cursor:pointer; font-size:0.82em;">Set</button>`
+            : '';
+        const history = cel?.buildHistoryHtml
+            ? `<button type="button" id="myTeamHistoryToggle" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised); color:var(--text-secondary); cursor:pointer; font-size:0.82em;">${showHistory ? 'Hide history' : '📊 History'}</button>`
+            : '';
+
+        return `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">` +
+            `<span style="font-size:0.82em; color:var(--text-tertiary);">Post:</span>` +
+            style('ranked', '🏅 Placings', 'Who placed high in the call center, with the placing') +
+            style('targets', '✨ Beat a target', 'Everyone who beat a target, with no placings') +
+            `<span style="margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${bar}${history}</span>` +
+        `</div>`;
+    }
+
+    function bindShoutOutControls(slot) {
+        slot.querySelectorAll('.mt-so-style').forEach(btn => {
+            btn.addEventListener('click', () => {
+                shoutOutStyle = btn.dataset.style === 'targets' ? 'targets' : 'ranked';
+                renderShoutOut();
+            });
+        });
+
+        const saveBar = () => {
+            const input = slot.querySelector('#myTeamTopN');
+            mods().celebrations?.saveCustomThreshold?.(input ? input.value : '');
+            // The bar changes who is celebrated, so every answer built from the
+            // old one goes: the post, and the panel under the page.
+            resetRenderCaches();
+            renderShoutOut();
+            paintBehind(null);
+            if (typeof window.showToast === 'function') window.showToast('Ranking bar saved', 2000);
+        };
+        slot.querySelector('#myTeamTopNSet')?.addEventListener('click', saveBar);
+        slot.querySelector('#myTeamTopN')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBar(); });
+
+        slot.querySelector('#myTeamHistoryToggle')?.addEventListener('click', () => {
+            showHistory = !showHistory;
+            renderShoutOut();
+        });
+    }
+
+    function historyHtml() {
+        if (!showHistory) return '';
+        const build = mods().celebrations?.buildHistoryHtml;
+        if (!build) return '';
+        let html = '';
+        try { html = build(); } catch (e) { html = ''; }
+        return html
+            ? `<div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">${html}</div>`
+            : '';
+    }
+
+    function shoutOutCard(border, inner) {
+        return `<div style="padding:14px; border:1px solid ${border}; border-radius:10px; background:var(--bg-surface);">` +
+            shoutOutControlsHtml() + inner + historyHtml() +
+        `</div>`;
     }
 
     function renderShoutOut() {
         const slot = document.getElementById('myTeamShoutOutSlot');
         if (!slot) return;
+        openSlot = 'shoutout';
+
+        if (shoutOutStyle === 'targets') {
+            renderTargetsPost(slot);
+            return;
+        }
 
         const celebrations = mods().celebrations;
         if (!celebrations?.detectCelebrations) {
@@ -871,27 +1138,33 @@
         let count = 0;
         let dateRange = '';
         try {
-            const result = celebrations.detectCelebrations(chosen.key);
-            count = (result.celebrations || []).length;
-            dateRange = result.dateRange || chosen.dateRange || '';
+            const result = detectForWindow();
+            count = (result?.celebrations || []).length;
+            dateRange = result?.dateRange || chosen.dateRange || '';
             text = count
                 ? celebrations.generateAllShoutOuts(result.celebrations, dateRange, result.periodKey || chosen.key)
                 : '';
+            // The history log is written from the post now. It used to grow
+            // only when the Celebrations tab was opened.
+            if (text && celebrations.logShoutOut) {
+                const wholeTeam = !mods().teamScope?.getActiveMember?.();
+                celebrations.logShoutOut(chosen.id, result, wholeTeam);
+            }
         } catch (e) { text = ''; }
 
         // An empty window is the reason to go and try a different one, so the
         // sentence names the window it came up empty on. The chips that switch
         // it sit above this card on the day page.
         if (!text) {
-            slot.innerHTML = `<div style="padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface);">` +
+            slot.innerHTML = shoutOutCard('var(--border)',
                 `<div style="color:var(--text-secondary); font-size:0.92em;">Nobody cleared both the ranking bar and their own target ` +
                     `${chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase())}, so there is nothing to put in the channel yet. ` +
-                    `Try another window in <strong>Covering</strong> above.</div>` +
-            `</div>`;
+                    `Try another window in <strong>Covering</strong> above, or <strong>Beat a target</strong>.</div>`);
+            bindShoutOutControls(slot);
             return;
         }
 
-        slot.innerHTML = `<div style="padding:14px; border:1px solid #ffcc80; border-radius:10px; background:var(--bg-surface);">` +
+        slot.innerHTML = shoutOutCard('#ffcc80',
             `<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">` +
                 `<div style="font-weight:700; color:#e65100;">📣 Team shout-out. ${count} ${count === 1 ? 'person' : 'people'}</div>` +
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
@@ -917,8 +1190,9 @@
             `<div style="display:flex; gap:8px; margin-top:10px;">` +
                 `<button type="button" id="myTeamShoutOutCopy" style="background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
                 `<button type="button" id="myTeamShoutOutRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Reword</button>` +
-            `</div>` +
-        `</div>`;
+            `</div>`);
+
+        bindShoutOutControls(slot);
 
         // Edits have to show up in the preview, or the colour is describing a
         // post that no longer exists.
@@ -938,6 +1212,47 @@
         // from pools, so this is just asking for another draw — worth having a
         // button for, since the alternative was leaving the page and coming back.
         slot.querySelector('#myTeamShoutOutRegen')?.addEventListener('click', () => renderShoutOut());
+    }
+
+    /**
+     * The other post: everyone on the team who beat a target over the window,
+     * with no placings in it. This was the Highlights tab, which had its own
+     * Yesterday / Last week toggle. It reads the Covering window now.
+     */
+    function renderTargetsPost(slot) {
+        const hub = mods().teamHub;
+        let built = { post: '', people: 0, scanned: 0, resolved: null };
+        try {
+            built = hub?.buildHighlightsForComparison?.(currentComparison()) || built;
+        } catch (e) { /* falls through to the empty card */ }
+
+        if (!built.post) {
+            const chosen = currentWindow();
+            const over = chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase());
+            const why = built.resolved
+                ? `Nobody on the team beat a target by enough to call out ${over}. ${built.scanned} checked.`
+                : `Nothing uploaded covers ${chosen.id === 'latest' ? 'this period' : escapeHtml(chosen.label.toLowerCase())} yet.`;
+            slot.innerHTML = shoutOutCard('var(--border)',
+                `<div style="color:var(--text-secondary); font-size:0.92em;">${why} Try another window in <strong>Covering</strong> above.</div>`);
+            bindShoutOutControls(slot);
+            return;
+        }
+
+        slot.innerHTML = shoutOutCard('#a7f3d0',
+            `<div style="font-weight:700; color:#047857; margin-bottom:8px;">✨ Beat a target. ${built.people} ${built.people === 1 ? 'person' : 'people'}</div>` +
+            `<label for="myTeamTargetsText" style="display:block; font-size:0.78em; color:var(--text-tertiary); margin:0 0 4px;">Edit before copying</label>` +
+            `<textarea id="myTeamTargetsText" style="width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(built.post)}</textarea>` +
+            `<div style="display:flex; gap:8px; margin-top:10px;">` +
+                `<button type="button" id="myTeamTargetsCopy" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
+            `</div>`);
+
+        bindShoutOutControls(slot);
+        slot.querySelector('#myTeamTargetsCopy')?.addEventListener('click', () => {
+            const value = slot.querySelector('#myTeamTargetsText')?.value || '';
+            if (typeof window.copyToClipboard === 'function') {
+                window.copyToClipboard(value, { message: 'Highlights copied' });
+            }
+        });
     }
 
     // Placement colouring lives in celebrations, which owns the placement

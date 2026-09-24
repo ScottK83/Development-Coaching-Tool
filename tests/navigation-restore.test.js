@@ -14,11 +14,11 @@ const { suite } = require('./harness');
  */
 
 const MY_TEAM_SECTIONS = [
-    'subSectionMyTeamDay', 'subSectionHighlights', 'subSectionMorningPulse', 'subSectionMondayPost',
+    'subSectionMyTeamDay', 'subSectionMondayPost',
     'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability'
 ];
 const MY_TEAM_BUTTONS = [
-    'subNavHighlights', 'subNavMorningPulse', 'subNavMondayPost', 'subNavCoachingEmail',
+    'subNavMondayPost', 'subNavCoachingEmail',
     'subNavTeamSnapshot', 'subNavCallListening', 'subNavReliability'
 ];
 const TOP_SECTIONS = [

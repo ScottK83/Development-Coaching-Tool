@@ -88,14 +88,15 @@
 
     // Include legacy sub-section IDs that are still children of coachingEmailSection
     // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionHighlights', 'subSectionMorningPulse', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
     // My Team renders its own tab row in JS and lights its own active tab, so
     // there are no buttons here to style. The row of hidden buttons this used
     // to name went with the seven-tab nav it belonged to.
     var MY_TEAM_NAV_BUTTONS = [];
+    // Highlights and Celebrations are gone: the day page does what they did. A
+    // saved id for either maps to no button, and restoreSub sends that to the
+    // day page, which is where their contents live now.
     var MY_TEAM_SUB_TO_BTN = {
-        subSectionHighlights: 'subNavHighlights',
-        subSectionMorningPulse: 'subNavMorningPulse',
         subSectionCoachingEmail: 'subNavCoachingEmail',
         subSectionTeamSnapshot: 'subNavTeamSnapshot',
         subSectionCallListening: 'subNavCallListening',
@@ -103,7 +104,7 @@
     };
 
     function showMyTeamSubSection(subSectionId, activeButtonId) {
-        var btnId = activeButtonId || MY_TEAM_SUB_TO_BTN[subSectionId] || 'subNavMorningPulse';
+        var btnId = activeButtonId || MY_TEAM_SUB_TO_BTN[subSectionId] || '';
         showSubSectionGeneric(subSectionId, btnId, MY_TEAM_SUB_SECTIONS, MY_TEAM_NAV_BUTTONS,
             'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 'myTeamSubSectionId');
         saveUiNavState({ sectionId: 'coachingEmailSection' });
@@ -225,7 +226,7 @@
         subSectionCoachingEmail:    { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionCoachingEmail' },
         subSectionTeamSnapshot:     { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionTeamSnapshot' },
         subSectionCallListening:    { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionCallListening' },
-        subSectionMorningPulse:     { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' },
+        subSectionMorningPulse:     { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMyTeamDay' },
         subSectionTrendIntelligence:{ section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaTrendIntelligence' },
         subSectionMetricTrends:     { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaMetricTrends' },
         subSectionCenterRanking:    { section: 'trendsAnalysisSection', key: 'trendsSubSectionId', value: 'subSectionTaCenterRanking' },
@@ -238,9 +239,9 @@
         subSectionPto:              { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionReliability' },
         // Dissolved wrapper IDs → defaults
         subSectionPerformance:      { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionOnOffTracker' },
-        subSectionTrends:           { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' },
+        subSectionTrends:           { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMyTeamDay' },
         subSectionReviewPrep:       { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
-        subSectionMoreTools:        { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMorningPulse' }
+        subSectionMoreTools:        { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMyTeamDay' }
     };
 
     function loadUiNavState() {

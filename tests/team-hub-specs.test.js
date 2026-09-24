@@ -58,8 +58,7 @@ suite('team hub: initializing without its markup is a no-op, not a crash', (t) =
     let threw = null;
     try {
         hub.initializeTeamHub();
-        hub.initializeHighlights();
-        hub.renderHighlights();
+        hub.buildHighlightsForComparison(null);
         hub.renderTeamSelector(null);
         hub.refreshVisibleMyTeamSection();
     } catch (err) {

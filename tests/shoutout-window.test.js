@@ -28,7 +28,9 @@ function stores() {
             // This week, two days in.
             '2026-08-17|2026-08-18': { metadata: { periodType: 'week-in-progress', endDate: '2026-08-18' }, employees: bigTeam(118) },
             // The month so far, straight from the source.
-            '2026-08-01|2026-08-17': { metadata: { periodType: 'month-to-date', endDate: '2026-08-17' }, employees: bigTeam(126) }
+            '2026-08-01|2026-08-17': { metadata: { periodType: 'month-to-date', endDate: '2026-08-17' }, employees: bigTeam(126) },
+            // July, finished and uploaded as its own month.
+            '2026-07-01|2026-07-31': { metadata: { periodType: 'month', startDate: '2026-07-01', endDate: '2026-07-31' }, employees: bigTeam(125) }
         },
         ytdData: {
             '2026-01-01|2026-08-16': { metadata: { periodType: 'ytd', endDate: '2026-08-16' }, employees: bigTeam(127) }
@@ -77,7 +79,7 @@ suite('shout-out window: each window resolves to the upload that actually covers
     const celebrations = load(t);
     const windows = celebrations.listShoutOutWindows(TODAY);
 
-    t.equal('all five windows plus the old behaviour are offered', windows.length, 6);
+    t.equal('all six windows plus the old behaviour are offered', windows.length, 7);
     t.equal('the latest upload stays available as itself', byId(windows, 'latest').key, null);
 
     t.equal('this week is the week in progress, not the finished one',
@@ -86,6 +88,8 @@ suite('shout-out window: each window resolves to the upload that actually covers
         byId(windows, 'lastWeek').key, '2026-08-10|2026-08-16');
     t.equal('month to date is the month-to-date upload',
         byId(windows, 'mtd').key, '2026-08-01|2026-08-17');
+    t.equal('last month is the uploaded month before this one',
+        byId(windows, 'lastMonth').key, '2026-07-01|2026-07-31');
     t.equal('year to date is the YTD report',
         byId(windows, 'ytd').key, '2026-01-01|2026-08-16');
 

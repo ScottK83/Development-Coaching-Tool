@@ -42,11 +42,6 @@
 
     /* ── Helpers ── */
 
-    function _escapeHtml(str) {
-        var mod = window.DevCoachModules && window.DevCoachModules.sharedUtils;
-        if (mod && mod.escapeHtml) return mod.escapeHtml(str);
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
     function _fmt(key, value) {
         return typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay(key, value) : String(value);
     }
@@ -220,13 +215,6 @@
             return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         } catch (e) { return _startDate(key); }
     }
-    function _weekLabel(key) {
-        try {
-            var d = new Date(_endDate(key) + 'T00:00:00');
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        } catch (e) { return _endDate(key); }
-    }
-
     // Weighted value for one employee across a set of weekly periods.
     // Rate metrics weight by call volume, survey metrics by survey count. 
     // the same rule as buildYtdAggregateForYear / computeTeamMetricValue.
@@ -472,7 +460,30 @@
 
     /* ── Build full data set ── */
 
-    function buildCheerData() {
+    // Whether a comparison is two week-shaped uploads, the only shape the
+    // week-over-week cheer can read. _empValue walks the weekly store, and a
+    // month or a year against its predecessor is not a week-over-week move.
+    function _isWeekShapedComparison(cmp) {
+        if (!cmp || !cmp.latestKey || !cmp.baselineKey) return false;
+        if (cmp.unit && cmp.unit !== 'week') return false;
+        var wData = _weeklyData();
+        var weekLike = function (key) {
+            var t = wData[key] && wData[key].metadata && wData[key].metadata.periodType || 'week';
+            return !!wData[key] && (t === 'week' || t === 'week-in-progress' || t === 'custom');
+        };
+        return weekLike(cmp.latestKey) && weekLike(cmp.baselineKey);
+    }
+
+    /**
+     * options.comparison is the window My Team is showing. When it is two weeks,
+     * those are the two weeks the cheer compares, named the way the page names
+     * them. When it is anything else, the week-over-week cheer is left out
+     * rather than quietly measured over two different weeks: the year pace and
+     * the monthly movement still stand, because they are about the year and the
+     * month and say so. Left out entirely, nothing changes: the newest two
+     * weekly uploads, as before.
+     */
+    function buildCheerData(options) {
         var futures = window.DevCoachModules && window.DevCoachModules.futures;
         if (!futures || !futures.buildFuturesData) return null;
 
@@ -484,9 +495,16 @@
         var weekKeys = _currentYearWeekKeys(false);
         var wowKeys = _currentYearWeekKeys(true);
 
-        // Week-over-week: the two most recent weekly points.
+        // Week-over-week: the two most recent weekly points, unless a window
+        // was handed over, in which case it decides.
+        var cmp = options && options.comparison;
         var wowCur = wowKeys.length >= 2 ? wowKeys[wowKeys.length - 1] : null;
         var wowPrev = wowKeys.length >= 2 ? wowKeys[wowKeys.length - 2] : null;
+        if (cmp) {
+            var weekShaped = _isWeekShapedComparison(cmp);
+            wowCur = weekShaped ? cmp.latestKey : null;
+            wowPrev = weekShaped ? cmp.baselineKey : null;
+        }
         var wowCurInProgress = wowCur ? (_periodType(wowCur) === 'week-in-progress') : false;
 
         // Monthly comparison. Waiting for a month to fully elapse means that
@@ -534,10 +552,16 @@
         // second date; otherwise both get named outright.
         var curPhrase = _weekPhrase(wowCur, now);
         var prevPhrase = _weekPhrase(wowPrev, now);
+        var fromWindow = Boolean(cmp && wowCur && cmp.latestLabel && cmp.baselineLabel);
         var curMon = wowCur ? _mondayOf(_startDate(wowCur)) : null;
         var prevMon = wowPrev ? _mondayOf(_startDate(wowPrev)) : null;
         var adjacent = curMon && prevMon && Math.round((curMon - prevMon) / (7 * 86400000)) === 1;
-        if (adjacent && (curPhrase === 'this week' || curPhrase === 'this week so far' || curPhrase === 'last week')) {
+        if (fromWindow) {
+            // The page already said "this week so far against last week" above
+            // the message. The cheer uses the same words for the same weeks.
+            curPhrase = cmp.latestLabel;
+            prevPhrase = cmp.baselineLabel;
+        } else if (adjacent && (curPhrase === 'this week' || curPhrase === 'this week so far' || curPhrase === 'last week')) {
             prevPhrase = curPhrase === 'last week' ? 'the week before' : 'last week';
         }
         // Never let both sides carry the same name. "from 0.0% last week to
@@ -645,203 +669,22 @@
         return lines.join('\n');
     }
 
-    // All team members' cheer messages in one document, divider-separated.
-    function buildAllCheers(people) {
-        if (!people || !people.length) return 'No cheers to share right now.';
-        return people.map(function (p) {
-            return buildCheerMessage(p);
-        }).join('\n\n--------------------\n\n');
-    }
-
-    /* ── Kind badges ── */
-
-    var KIND_BADGE = {
-        close: { text: '🎯 Knocking on the door', bg: '#dcfce7', color: '#166534' },
-        wow: { text: '📈 Improving', bg: '#dbeafe', color: '#1e40af' },
-        month: { text: '📈 Monthly gain', bg: '#dbeafe', color: '#1e40af' },
-        exceed: { text: '🏆 Crushing it', bg: '#fef3c7', color: '#92400e' },
-        meet: { text: '✅ At goal', bg: '#dcfce7', color: '#166534' }
-    };
-
-    /* ── Render ── */
-
-    function renderCheerleading(container) {
-        if (!container) return;
-
-        var data = buildCheerData();
-
-        if (!data) {
-            container.innerHTML = '<div style="text-align:center; padding:60px 20px; color:var(--text-tertiary);">' +
-                '<div style="font-size:3em; margin-bottom:16px;">📣</div>' +
-                '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">No Data Yet</h3>' +
-                '<p style="margin:0;">Upload weekly or YTD data to see cheer suggestions for your team.</p></div>';
-            return;
-        }
-
-        var html = '';
-
-        // Data transparency banner.
-        var p = data.periods;
-        html += '<div style="margin-bottom:16px; padding:12px 16px; background:#ecfdf5; border-left:4px solid #10b981; border-radius:8px; font-size:0.85em; color:#065f46;">';
-        html += '<strong>📣 Cheerleader</strong> builds an encouraging, copy-ready message for each team member from your live data.';
-        html += '<div style="margin-top:6px; color:#047857;">';
-        html += 'YTD source: ' + _escapeHtml(data.dataSource || 'n/a') + ' &nbsp;•&nbsp; ';
-        html += (p.wowCur && p.wowPrev)
-            ? 'Week over week: ' + _escapeHtml(_weekLabel(p.wowPrev)) + ' vs ' + _escapeHtml(_weekLabel(p.wowCur)) +
-                (p.wowCurInProgress ? ' (in progress)' : '')
-            : 'Week over week: needs two weekly uploads';
-        html += ' &nbsp;•&nbsp; ';
-        // Name the source per month. A month rebuilt from weekly buckets spans
-        // the weeks *ending* in it, not the calendar month, so it can disagree
-        // with the monthly report — say which one is being quoted.
-        var _monTag = function (mo) {
-            return _escapeHtml(_monthName(mo)) +
-                ((p.monFromUpload && p.monFromUpload[mo]) ? ' (upload)' : ' (from weeks)');
-        };
-        html += (p.monCur && p.monPrev)
-            ? 'Monthly: ' + _monTag(p.monPrev) + ' vs ' + _monTag(p.monCur)
-            : 'Monthly: needs two completed months';
-        html += ' &nbsp;•&nbsp; ' + data.weekInfo.weeksRemaining + ' weeks left in ' + data.weekInfo.currentYear;
-        html += '</div></div>';
-
-        if (!data.people.length) {
-            html += '<div style="text-align:center; padding:50px 20px; color:var(--text-tertiary);">' +
-                '<div style="font-size:2.5em; margin-bottom:12px;">🔍</div>' +
-                '<h3 style="color:var(--text-secondary); margin:0 0 8px 0;">No Cheers to Surface Right Now</h3>' +
-                '<p style="margin:0;">Once team members get close to a goal or improve week over week, they will show up here.</p></div>';
-            container.innerHTML = html;
-            return;
-        }
-
-        html += '<div style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">';
-        html += '<button type="button" id="cheerCopyAll" style="padding:12px 24px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:1em; cursor:pointer; box-shadow:0 2px 8px rgba(5,150,105,0.3);">📋 Copy All Cheers</button>';
-        html += '<span style="color:var(--text-secondary); font-size:0.9em;">📣 ' +
-            data.people.length + ' of ' + data.totalTeam + ' team member' + (data.totalTeam !== 1 ? 's' : '') +
-            ' have something to cheer.</span>';
-        html += '</div>';
-
-        html += renderCheerCards(data.people);
-
-        container.innerHTML = html;
-        bindCheerButtons(container, data.people);
-    }
-
-    function renderCheerCards(people) {
-        var html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px;">';
-
-        people.forEach(function (person) {
-            var headline = person.cheers[0];
-            var bullets = person.cheers.slice(1, 4);
-            var badge = KIND_BADGE[headline.kind] || KIND_BADGE.meet;
-
-            html += '<div class="cheer-card" style="background:var(--bg-surface); border-radius:10px; border:2px solid #10b981; padding:16px; display:flex; flex-direction:column; gap:10px;">';
-
-            // Header.
-            html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">';
-            html += '<div style="font-weight:700; font-size:1.1em; color:var(--text-primary);">' + _escapeHtml(person.firstName) + '</div>';
-            html += '<span style="padding:3px 10px; background:' + badge.bg + '; color:' + badge.color + '; border-radius:12px; font-size:0.78em; font-weight:700; white-space:nowrap;">' + badge.text + '</span>';
-            html += '</div>';
-
-            // Headline cheer.
-            html += '<div style="padding:10px 12px; background:#ecfdf5; border-left:3px solid #10b981; border-radius:4px; font-size:0.9em; color:#064e3b;">' +
-                (headline.icon ? headline.icon + ' ' : '') + _escapeHtml(headline.text) + '</div>';
-
-            // Supporting bullets.
-            if (bullets.length) {
-                html += '<div style="display:flex; flex-direction:column; gap:6px;">';
-                bullets.forEach(function (c) {
-                    html += '<div style="padding:7px 11px; background:#f0fdf4; border-left:3px solid #86efac; border-radius:4px; font-size:0.85em; color:var(--green-text);">' +
-                        (c.icon ? c.icon + ' ' : '') + _escapeHtml(c.text) + '</div>';
-                });
-                html += '</div>';
-            }
-
-            // Action button.
-            html += '<button type="button" class="cheer-msg-btn" data-employee="' + _escapeHtml(person.name) + '" ' +
-                'style="margin-top:auto; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.9em;">' +
-                '💬 Cheer Message</button>';
-
-            html += '</div>';
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    function bindCheerButtons(container, people) {
-        var copyAll = container.querySelector('#cheerCopyAll');
-        if (copyAll) {
-            copyAll.addEventListener('click', function () {
-                showCheerModal('All Cheer Messages', buildAllCheers(people), function () {
-                    return buildAllCheers(people);
-                });
-            });
-        }
-        container.querySelectorAll('.cheer-msg-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var person = people.find(function (x) { return x.name === btn.dataset.employee; });
-                if (!person) return;
-                showCheerModal(person.firstName + ' - Cheer Message', buildCheerMessage(person), function () {
-                    return buildCheerMessage(person);
-                });
-            });
-        });
-    }
-
-    /* ── Modal ── */
-
-    function showCheerModal(title, message, regenerateFn) {
-        copyToClipboard(message, { message: 'Copied to clipboard!' });
-
-        var overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px;';
-
-        overlay.innerHTML =
-            '<div style="background:var(--bg-surface); border-radius:12px; max-width:600px; width:100%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.3);">' +
-                '<div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">' +
-                    '<h3 style="margin:0; color:var(--text-primary);">📣 ' + _escapeHtml(title) + '</h3>' +
-                    '<button type="button" id="cheerModalClose" style="background:none; border:none; font-size:1.5em; cursor:pointer; color:var(--text-tertiary);">✕</button>' +
-                '</div>' +
-                '<div style="padding:20px; overflow-y:auto; flex:1;">' +
-                    '<textarea id="cheerModalText" style="width:100%; min-height:250px; border:1px solid var(--border); border-radius:8px; padding:12px; font-size:0.95em; font-family:inherit; resize:vertical; line-height:1.5;">' + _escapeHtml(message) + '</textarea>' +
-                '</div>' +
-                '<div style="padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end;">' +
-                    '<button type="button" id="cheerModalRegenerate" style="padding:10px 16px; background:var(--bg-surface-sunken); border:1px solid var(--border-strong); border-radius:8px; cursor:pointer; font-weight:600;">🔄 Regenerate</button>' +
-                    '<button type="button" id="cheerModalCopy" style="padding:10px 16px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">📋 Copy</button>' +
-                '</div>' +
-            '</div>';
-
-        document.body.appendChild(overlay);
-
-        overlay.querySelector('#cheerModalClose').addEventListener('click', function () { overlay.remove(); });
-        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
-
-        overlay.querySelector('#cheerModalCopy').addEventListener('click', function () {
-            var textarea = overlay.querySelector('#cheerModalText');
-            copyToClipboard(textarea.value, { message: 'Copied!' });
-        });
-
-        var regenBtn = overlay.querySelector('#cheerModalRegenerate');
-        if (regenerateFn) {
-            regenBtn.addEventListener('click', function () {
-                var newMessage = regenerateFn();
-                var textarea = overlay.querySelector('#cheerModalText');
-                if (textarea && newMessage) {
-                    textarea.value = newMessage;
-                    copyToClipboard(newMessage, { message: 'Regenerated & copied!' });
-                }
-            });
-        } else {
-            regenBtn.style.display = 'none';
-        }
+    /**
+     * One person's cheer over the window My Team is showing, or '' when there is
+     * nothing true to cheer. The day page's Cheer tone reads this.
+     */
+    function cheerMessageFor(name, comparison) {
+        var data = buildCheerData({ comparison: comparison || null });
+        if (!data) return '';
+        var person = data.people.filter(function (p) { return p.name === name; })[0];
+        return person ? buildCheerMessage(person) : '';
     }
 
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.cheerleading = {
-        renderCheerleading: renderCheerleading,
         buildCheerData: buildCheerData,
-        buildCheerMessage: buildCheerMessage
+        buildCheerMessage: buildCheerMessage,
+        cheerMessageFor: cheerMessageFor
     };
 })();
