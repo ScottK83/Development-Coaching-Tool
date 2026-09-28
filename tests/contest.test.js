@@ -1181,14 +1181,24 @@ suite('contest: the survey trace says where every count came from', (t) => {
     const trace = preview.surveyTrace['Christi Test'];
 
     t.equal('the week and the daily are both listed', trace.length, 2);
-    const week = trace.find((it) => it.kind === 'week');
-    t.check('the week was used, with its one perfect survey', week.used && week.count === 1);
-    t.equal('its rates are carried', week.questions.cxRepOverall.rate, 50);
+    // Both show the same one perfect survey, so the daily, which can say
+    // which day it was, is the one used.
     const daily = trace.find((it) => it.kind === 'daily');
-    t.check('the daily inside it is marked as counted there', !daily.used && /counted there/.test(daily.why));
+    t.check('the daily was used, with its one perfect survey', daily.used && daily.count === 1);
+    const week = trace.find((it) => it.kind === 'week');
+    t.check('the week says why it was not', !week.used && week.count === 1 && /as many or more/.test(week.why), week.why);
+    t.equal('its rates are carried', week.questions.cxRepOverall.rate, 50);
+
+    // A week that saw more than the daily is used, and the daily inside it
+    // says it was counted there.
+    stores.weeklyData['2026-09-07|2026-09-13'].employees[0] = Object.assign({ name: 'Christi Test' }, perfect,
+        { surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2 });
+    const more = contest.buildImportPreview(stores, { monthKey: '2026-09' }).surveyTrace['Christi Test'];
+    t.check('the fuller week is used', more.find((it) => it.kind === 'week').used);
+    t.check('and the daily inside it is marked as counted there', /counted there/.test(more.find((it) => it.kind === 'daily').why));
 });
 
-suite('contest: the newest upload wins, not the longest', (t) => {
+suite('contest: the uploads that saw the most surveys win, not the longest', (t) => {
     const contest = load(t);
     const one = { surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 };
     // The month to date was pulled on the 18th and had seen one survey. The
@@ -1239,6 +1249,44 @@ suite('contest: a daily re-pulled after its surveys landed beats an older week',
     t.equal('and the old stored count was replaced, not kept', merged.kept, 0);
     const trace = preview.surveyTrace['Ang Test'];
     t.check('the trace marks the dailies used', trace.filter((it) => it.kind === 'daily').every((it) => it.used));
+});
+
+suite('contest: dailies re-pulled after the week do not throw the week away', (t) => {
+    const contest = load(t);
+    const perfect = (n) => ({ surveyTotal: n, repSurveyTotal: n, fcrSurveyTotal: n, cxRepOverall: 100, fcr: 100, overallExperience: 100 });
+    const day = (date, uploadedAt, surveys) => ({ metadata: { startDate: date, endDate: date, periodType: 'daily', uploadedAt },
+        employees: [Object.assign({ name: 'Erica Test', scheduleAdherence: 95 }, surveys),
+                    Object.assign({ name: 'Oceane Test', scheduleAdherence: 95 }, date === '2026-09-23' ? perfect(1) : { surveyTotal: 0 })] });
+    // 9/28: the week of 9/21 holds Erica's perfect survey, from a day whose
+    // daily was pulled before it landed. The dailies for 9/23 to 9/27 were
+    // re-pulled a minute after the week, and none of them has it.
+    const stores = {
+        weeklyData: {
+            '2026-09-21|2026-09-27': { metadata: { startDate: '2026-09-21', endDate: '2026-09-27', periodType: 'week', uploadedAt: '2026-09-28T18:33:42Z' },
+                employees: [Object.assign({ name: 'Erica Test' }, perfect(1)), Object.assign({ name: 'Oceane Test' }, perfect(1))] }
+        },
+        dailyArchive: {
+            '2026-09-21|2026-09-21': day('2026-09-21', '2026-09-23T18:59:07Z', { surveyTotal: 0 }),
+            '2026-09-22|2026-09-22': day('2026-09-22', '2026-09-24T17:43:28Z', { surveyTotal: 0 })
+        },
+        dailyData: {}
+    };
+    ['2026-09-23', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-27'].forEach((date, i) => {
+        stores.dailyData[date + '|' + date] = day(date, '2026-09-28T18:3' + (4 + i) + ':00Z', { surveyTotal: 0 });
+    });
+
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    const board = contest.buildLeaderboard(contest.mergeImportIntoMonth({ days: {} }, preview).month, { asOf: '2026-09-28' });
+    const erica = board.find((row) => row.associate === 'Erica Test');
+    t.equal('the week still counts her survey', erica.perfectSurvey, 1);
+    const week = preview.surveyTrace['Erica Test'].find((it) => it.kind === 'week');
+    t.check('and the trace says the week was used', week.used, week.why);
+
+    // Oceane's one survey is in the week and in the 9/23 daily. It counts
+    // once, on the day the daily can pin it to.
+    const oceane = board.find((row) => row.associate === 'Oceane Test');
+    t.equal('a survey the week and a daily both hold counts once', oceane.perfectSurvey, 1);
+    t.equal('filed on its own day, not the Sunday', preview.days['2026-09-23']['Oceane Test'].perfectSurveys, 1);
 });
 
 suite('contest: a survey count typed in Enter a day outranks the uploads', (t) => {

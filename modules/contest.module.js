@@ -1638,34 +1638,59 @@
 
         // Which uploads each person's surveys come from.
         //
-        // Newest upload first. A survey lands days after its call, so the
-        // upload pulled last has seen the most of them: a month to date pulled
-        // on the 18th had missed surveys that the week pulled on the 21st
-        // holds, and ranking by length let the stale one win. Then the longest,
-        // then the newest end, then the store read last. Only a span whose count is
-        // proven is used: an open one would trade a daily's certain count for a
-        // guess. Spans that overlap one already chosen are skipped, so no
-        // survey is counted twice. Days no chosen span covers fall back to
-        // their daily.
+        // The most perfect surveys any set of uploads that do not overlap can
+        // show. A survey lands days after its call and never un-lands, so what
+        // an upload counted for its days is a floor: those surveys are still
+        // there, and a later look can only have found more. Uploads that do
+        // not overlap add up without counting anything twice, so the biggest
+        // total is the one that has seen the most.
+        //
+        // This used to take the newest upload and drop everything it
+        // overlapped, on the theory that the upload pulled last had seen the
+        // most. Mostly true, and badly wrong once: the week of 9/21 was
+        // uploaded, the dailies for 9/23 to 9/27 were re-pulled a minute
+        // later, and each of those dailies, newer and holding nothing, knocked
+        // out the whole week. Erica's perfect survey, on a day whose daily had
+        // been pulled before it landed, went with it.
+        //
+        // Only an upload whose count is proven, and above zero, is a
+        // candidate: an open one would trade a certain count for a guess, and
+        // an empty one has nothing to add. When two ways reach the same total,
+        // the one that pins its surveys to the fewest days wins, so a survey a
+        // daily can date is filed on its own day rather than on a week's
+        // Sunday. Days no chosen upload covers fall back to their daily.
+        var spanDays = function (s) {
+            return Math.round((Date.parse(s.end) - Date.parse(s.start)) / 86400000) + 1;
+        };
         var coverOf = {};
         Object.keys(spanRows).forEach(function (name) {
-            var chosen = [];
-            spanRows[name]
+            var pool = spanRows[name]
                 // An upload with no survey columns at all has nothing to say
                 // about surveys, which is not the same as saying there were none.
-                .filter(function (s) { return s.surveys.certain && hasSurveyColumns(s.row); })
+                .filter(function (s) { return s.surveys.certain && s.surveys.count > 0 && hasSurveyColumns(s.row); })
                 .sort(function (a, b) {
-                    if (a.uploadedAt !== b.uploadedAt) return a.uploadedAt < b.uploadedAt ? 1 : -1;
-                    var lengthA = Date.parse(a.end) - Date.parse(a.start);
-                    var lengthB = Date.parse(b.end) - Date.parse(b.start);
-                    if (lengthA !== lengthB) return lengthB - lengthA;
-                    if (a.end !== b.end) return a.end < b.end ? 1 : -1;
-                    return b.order - a.order;
-                })
-                .forEach(function (s) {
-                    var overlaps = chosen.some(function (c) { return !(s.end < c.start || s.start > c.end); });
-                    if (!overlaps) chosen.push(s);
+                    if (a.end !== b.end) return a.end < b.end ? -1 : 1;
+                    return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
                 });
+
+            // best[i] is the strongest plan using only the first i uploads.
+            var best = [{ count: 0, spread: 0, picks: [] }];
+            pool.forEach(function (s, i) {
+                // Everything ending before this one starts can sit beside it.
+                var fits = i;
+                while (fits > 0 && pool[fits - 1].end >= s.start) fits -= 1;
+                var base = best[fits];
+                var take = {
+                    count: base.count + s.surveys.count,
+                    spread: base.spread + s.surveys.count * spanDays(s),
+                    picks: base.picks.concat([s])
+                };
+                var skip = best[i];
+                var wins = take.count > skip.count
+                    || (take.count === skip.count && take.spread < skip.spread);
+                best.push(wins ? take : skip);
+            });
+            var chosen = best[pool.length].picks;
             if (chosen.length) coverOf[name] = chosen;
         });
 
@@ -1691,7 +1716,10 @@
                 trace(name, {
                     kind: s.kind, start: s.start, end: s.end, uploadedAt: s.uploadedAt, questions: traceRow(s.row),
                     count: s.surveys.count, certain: s.surveys.certain, used: chosen,
-                    why: chosen ? 'used' : (!s.surveys.certain ? 'mixed, cannot be worked out' : 'overlaps a newer upload that was used')
+                    why: chosen ? 'used'
+                        : !s.surveys.certain ? 'mixed, cannot be worked out'
+                        : !s.surveys.count ? 'none of them perfect'
+                        : 'the uploads used for these days show as many or more'
                 });
             });
         });
@@ -1742,10 +1770,13 @@
             var own = importPerfectSurveys(row);
             var surveys = covered ? { count: 0, certain: true } : own;
             if (own.count || own.total) {
+                // A proven daily nothing else covers stands on its own count,
+                // none perfect included.
+                var standing = covered ? !!span.daily : own.certain;
                 trace(name, {
                     kind: 'daily', start: date, end: date, uploadedAt: single.uploadedAt, questions: traceRow(row),
-                    count: own.count, certain: own.certain, used: !!(span && span.daily),
-                    why: span && span.daily ? 'used'
+                    count: own.count, certain: own.certain, used: standing,
+                    why: standing ? 'used'
                         : covered ? 'inside ' + span.start + ' to ' + span.end + ', counted there'
                         : 'mixed, cannot be worked out'
                 });
