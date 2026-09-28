@@ -163,7 +163,9 @@ suite('contest replay: re-upload every daily, pull once, and September comes out
 
     // ---- the pull, twice (idempotence) ----
     await ui.loadMonthAndRender();
+    check('before the pull, the panel says the board is behind the uploads', /behind the uploads/.test(el('contestCheck').innerHTML), el('contestCheck').innerHTML);
     await ui.importFromUploads();
+    check('after it, nobody is behind', !/behind the uploads/.test(el('contestCheck').innerHTML), el('contestCheck').innerHTML);
     const afterFirst = JSON.stringify(cloud);
     const status1 = el('contestDayStatus').textContent;
     await ui.loadMonthAndRender();

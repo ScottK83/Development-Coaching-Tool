@@ -1289,6 +1289,85 @@ suite('contest: dailies re-pulled after the week do not throw the week away', (t
     t.equal('filed on its own day, not the Sunday', preview.days['2026-09-23']['Oceane Test'].perfectSurveys, 1);
 });
 
+suite('contest: a fresh month to date settles the surveys that landed since', (t) => {
+    const contest = load(t);
+    const answers = (rep, fcr, oe) => ({
+        repSurveyTotal: rep[1], cxRepOverall: rep[1] ? rep[0] / rep[1] * 100 : '',
+        fcrSurveyTotal: fcr[1], fcr: fcr[1] ? fcr[0] / fcr[1] * 100 : '',
+        surveyTotal: oe[1], overallExperience: oe[1] ? oe[0] / oe[1] * 100 : ''
+    });
+    const daily = (date, row) => ({ metadata: { startDate: date, endDate: date, periodType: 'daily', uploadedAt: '2026-09-23T15:00:00Z' },
+        employees: [Object.assign({ name: 'Robert Test', scheduleAdherence: 95 }, row)] });
+    // Robert, pulled on the 23rd: one perfect survey on 9/10, and one on
+    // 9/14 that missed FCR and OE. Then a month to date on the 28th holding
+    // a third survey that landed since. Its rates are mixed, so on its own it
+    // cannot say which were perfect.
+    const stores = (late) => ({
+        dailyData: {
+            '2026-09-10|2026-09-10': daily('2026-09-10', answers([1, 1], [1, 1], [1, 1])),
+            '2026-09-14|2026-09-14': daily('2026-09-14', answers([1, 1], [0, 1], [0, 1]))
+        },
+        weeklyData: {
+            '2026-09-01|2026-09-27': { metadata: { startDate: '2026-09-01', endDate: '2026-09-27', periodType: 'month-to-date', uploadedAt: '2026-09-28T15:00:00Z' },
+                employees: [Object.assign({ name: 'Robert Test', scheduleAdherence: 94 },
+                    answers([2 + late[0], 3], [1 + late[1], 3], [1 + late[2], 3]))] }
+        }
+    });
+    const count = (preview) => (contest.buildLeaderboard(contest.mergeImportIntoMonth({ days: {} }, preview).month)
+        .find((row) => row.associate === 'Robert Test') || { perfectSurvey: 0 }).perfectSurvey;
+
+    const perfect = contest.buildImportPreview(stores([1, 1, 1]), { monthKey: '2026-09' });
+    t.equal('the survey that landed since is counted', count(perfect), 2);
+    t.check('and the count is proven', perfect.surveyProof['Robert Test'].proven);
+    const mtd = perfect.surveyTrace['Robert Test'].find((it) => it.kind === 'month-to-date');
+    t.check('the trace says the month to date was used for what landed since', mtd.used && /landed after/.test(mtd.why), mtd.why);
+    t.equal('filed on the last day the month to date covers', perfect.days['2026-09-27']['Robert Test'].perfectSurveys, 1);
+
+    const missedFcr = contest.buildImportPreview(stores([1, 0, 1]), { monthKey: '2026-09' });
+    t.equal('a late survey that missed a question adds nothing', count(missedFcr), 1);
+    t.check('and is still proven', missedFcr.surveyProof['Robert Test'].proven);
+
+    // A month to date pulled BEFORE the dailies cannot have the dailies taken
+    // off it: the dailies may hold surveys it never saw.
+    const stale = stores([1, 1, 1]);
+    stale.weeklyData['2026-09-01|2026-09-27'].metadata.uploadedAt = '2026-09-20T15:00:00Z';
+    t.equal('a month to date older than the dailies is not taken apart', count(contest.buildImportPreview(stale, { monthKey: '2026-09' })), 1);
+});
+
+suite('contest: the check names every survey the uploads cannot vouch for', (t) => {
+    const contest = load(t);
+    const stores = { dailyData: {
+        '2026-09-01|2026-09-01': { metadata: { startDate: '2026-09-01', endDate: '2026-09-01', uploadedAt: '2026-09-23T15:00:00Z' },
+            employees: [
+                // Matrece, 9/1: two surveys, rep 2 of 2, FCR 1 of 2, OE 1 of 2.
+                // Either one perfect and one bad, or two each missing one.
+                { name: 'Matrece Test', scheduleAdherence: 90, surveyTotal: 2, repSurveyTotal: 2, fcrSurveyTotal: 2,
+                  cxRepOverall: 100, fcr: 50, overallExperience: 50 },
+                { name: 'Johnathan Test', scheduleAdherence: 90, surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1,
+                  cxRepOverall: 100, fcr: 100, overallExperience: 100 }
+            ] }
+    } };
+    const preview = contest.buildImportPreview(stores, { monthKey: '2026-09' });
+    const matrece = preview.surveyProof['Matrece Test'];
+    t.check('an unsettled day is not proven', !matrece.proven);
+    t.equal('and names the day and how many surveys', JSON.stringify(matrece.open.map((o) => [o.start, o.responses])), JSON.stringify([['2026-09-01', 2]]));
+    const johnathan = preview.surveyProof['Johnathan Test'];
+    t.check('a settled one is proven', johnathan.proven && johnathan.surveys === 1 && johnathan.perfect === 1);
+    t.equal('the last read date comes with it', preview.lastRead[0].from, '2026-09-01');
+});
+
+suite('contest: the panel says when the board is behind the uploads', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8').replace(/\r\n/g, '\n');
+    const render = ui.slice(ui.indexOf('function renderStandings'));
+    t.check('the check runs every time the standings draw', render.indexOf('renderCheck()') > -1 && render.indexOf('renderCheck()') < render.indexOf('buildLeaderboard'));
+    t.check('it compares the board with what a pull would make it', /mergeImportIntoMonth\(month, preview, \{ overwrite: true \}\)/.test(ui));
+    const save = ui.slice(ui.indexOf('async function saveDay'));
+    t.check('a 0 typed into an empty survey box is saved as a ruling', save.indexOf("String(perfectInput.value).trim() === '0'") > -1);
+});
+
 suite('contest: a survey count typed in Enter a day outranks the uploads', (t) => {
     const contest = load(t);
     const perfect = { surveyTotal: 1, repSurveyTotal: 1, fcrSurveyTotal: 1, cxRepOverall: 100, fcr: 100, overallExperience: 100 };

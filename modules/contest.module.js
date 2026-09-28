@@ -1513,6 +1513,101 @@
     }
 
     /**
+     * How many answered one question and how many of them were top box, as
+     * whole numbers. Null when the upload cannot say: a rate that does not
+     * land on a whole number of responses, or a miss counted against a total
+     * borrowed from another question.
+     */
+    function importAnswers(row, key) {
+        var own = importNumber(row[IMPORT_SURVEY_TOTALS[key]]);
+        var total = own !== null ? own : importNumber(row.surveyTotal);
+        if (!total) return { total: 0, yes: 0 };
+        var rate = importNumber(row[key]);
+        if (rate === null) return null;
+        var yes = rate * total / 100;
+        if (Math.abs(yes - Math.round(yes)) > 0.05) return null;
+        yes = Math.round(yes);
+        if (own === null && yes < total) return null;
+        return { total: total, yes: yes };
+    }
+
+    /** Every answer an upload holds, all three questions, or null if unreadable. */
+    function importAnswered(row) {
+        var sum = 0;
+        for (var i = 0; i < IMPORT_SURVEY_KEYS.length; i++) {
+            var read = importAnswers(row, IMPORT_SURVEY_KEYS[i]);
+            if (!read) return null;
+            sum += read.total;
+        }
+        return sum;
+    }
+
+    /**
+     * The surveys in `newer` that none of `older` had, as an upload row of
+     * their own. Every survey an older upload of the same days counted is
+     * still in the newer one, so taking their answers off leaves only what
+     * landed in between. Null if the numbers do not allow that: something
+     * unreadable, or an older upload holding more than the newer one.
+     */
+    function importLateRow(newer, older) {
+        var row = {};
+        for (var i = 0; i < IMPORT_SURVEY_KEYS.length; i++) {
+            var key = IMPORT_SURVEY_KEYS[i];
+            var whole = importAnswers(newer, key);
+            if (!whole) return null;
+            var total = whole.total;
+            var yes = whole.yes;
+            for (var j = 0; j < older.length; j++) {
+                var part = importAnswers(older[j], key);
+                if (!part) return null;
+                total -= part.total;
+                yes -= part.yes;
+            }
+            if (total < 0 || yes < 0 || yes > total) return null;
+            row[IMPORT_SURVEY_TOTALS[key]] = total;
+            row[key] = total ? yes / total * 100 : '';
+        }
+        return row;
+    }
+
+    function importNextDay(iso) {
+        var at = new Date(iso + 'T12:00:00Z');
+        at.setUTCDate(at.getUTCDate() + 1);
+        return at.toISOString().slice(0, 10);
+    }
+
+    /** The calendar day an upload happened where Scott is, not in UTC. */
+    function importLocalDay(stamp) {
+        var at = new Date(stamp);
+        if (isNaN(at.getTime())) return '';
+        return at.getFullYear() + '-' + String(at.getMonth() + 1).padStart(2, '0') + '-'
+            + String(at.getDate()).padStart(2, '0');
+    }
+
+    /**
+     * The strongest set of uploads that do not overlap. `weigh` scores one as
+     * [score, spread]: the higher total score wins, then the lower spread.
+     */
+    function importBestPlan(items, weigh) {
+        var pool = items.slice().sort(function (a, b) {
+            if (a.end !== b.end) return a.end < b.end ? -1 : 1;
+            return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+        });
+        // best[i] is the strongest plan using only the first i uploads.
+        var best = [{ score: 0, spread: 0, picks: [] }];
+        pool.forEach(function (s, i) {
+            // Everything ending before this one starts can sit beside it.
+            var fits = i;
+            while (fits > 0 && pool[fits - 1].end >= s.start) fits -= 1;
+            var w = weigh(s);
+            var take = { score: best[fits].score + w[0], spread: best[fits].spread + w[1], picks: best[fits].picks.concat([s]) };
+            var skip = best[i];
+            best.push(take.score > skip.score || (take.score === skip.score && take.spread < skip.spread) ? take : skip);
+        });
+        return best[pool.length];
+    }
+
+    /**
      * What an import would do, without doing it.
      *
      * Pure: everything arrives through arguments, so the panel can show this
@@ -1565,6 +1660,19 @@
         var spanRows = {};
         var order = 0;
 
+        // The last time each day's surveys were read, by any upload the pull
+        // can use. A survey that landed after that is in no upload yet, and
+        // no amount of working out can count it, so the panel says how fresh
+        // each stretch of days is.
+        var readOn = {};
+        var markRead = function (start, end, uploadedAt) {
+            var when = String(uploadedAt || '');
+            if (!when) return;
+            for (var d = start; d <= end; d = importNextDay(d)) {
+                if (!readOn[d] || readOn[d] < when) readOn[d] = when;
+            }
+        };
+
         var rowName = function (row) {
             if (!row || !row.name) return '';
             var name = String(row.name).trim();
@@ -1595,6 +1703,7 @@
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) return;
                 if (monthKey && (start.slice(0, 7) !== monthKey || end.slice(0, 7) !== monthKey)) return;
 
+                markRead(start, end, meta.uploadedAt);
                 var here = order;
                 ((period || {}).employees || []).forEach(function (row) {
                     var name = rowName(row);
@@ -1607,6 +1716,7 @@
                 return;
             }
             if (monthKey && date.slice(0, 7) !== monthKey) return;
+            markRead(date, date, meta.uploadedAt);
 
             ((period || {}).employees || []).forEach(function (row) {
                 var name = rowName(row);
@@ -1626,13 +1736,71 @@
         // survey, and while dailies only filled the gaps between spans, a fresh
         // daily lost to a week uploaded before it. Only a certain one competes:
         // an open daily has no count to offer.
+        // The open ones are kept aside for the check at the end, which has to
+        // know about every survey an upload saw, settled or not.
+        var openDays = {};
         Object.keys(singles).forEach(function (id) {
             var single = singles[id];
             var surveys = importPerfectSurveys(single.row);
-            if (!surveys.certain) return;
-            (spanRows[single.name] || (spanRows[single.name] = [])).push({
+            var entry = {
                 key: 'day:' + single.date, start: single.date, end: single.date, order: 0, daily: true,
                 uploadedAt: single.uploadedAt, kind: 'daily', row: single.row, surveys: surveys
+            };
+            if (!surveys.certain) {
+                (openDays[single.name] || (openDays[single.name] = [])).push(entry);
+                return;
+            }
+            (spanRows[single.name] || (spanRows[single.name] = [])).push(entry);
+        });
+
+        var spanDays = function (s) {
+            return Math.round((Date.parse(s.end) - Date.parse(s.start)) / 86400000) + 1;
+        };
+
+        // Surveys that landed after the uploads already pulled.
+        //
+        // A month to date pulled today holds every survey that has landed so
+        // far, including the ones that came in after the daily or the week
+        // for their day was pulled. Once somebody has a few surveys, though,
+        // its rates are mixed and cannot say which were perfect. The uploads
+        // pulled before it can: every survey they counted is inside it too,
+        // since a survey never un-lands. Take their answers off and what is
+        // left is only what came in since, usually one or two surveys, which
+        // the rates can settle. Their count plus the older uploads' own is a
+        // proven count for the whole span, and competes like any other.
+        var lateOf = {};
+        Object.keys(spanRows).forEach(function (name) {
+            spanRows[name].forEach(function (big) {
+                if (big.daily || big.surveys.certain || !big.surveys.total || !big.uploadedAt) return;
+                if (!hasSurveyColumns(big.row)) return;
+                var inside = spanRows[name].filter(function (s) {
+                    return s !== big && s.surveys.certain && s.surveys.total > 0 && hasSurveyColumns(s.row)
+                        && s.uploadedAt && s.uploadedAt <= big.uploadedAt
+                        && s.start >= big.start && s.end <= big.end
+                        && importAnswered(s.row) !== null;
+                });
+                var older = importBestPlan(inside, function (s) { return [importAnswered(s.row), 0]; }).picks;
+                if (!older.length) return;
+                var lateRow = importLateRow(big.row, older.map(function (s) { return s.row; }));
+                if (!lateRow) return;
+                var late = importPerfectSurveys(lateRow);
+                if (!late.certain) return;
+
+                var count = late.count;
+                var spread = late.count * spanDays(big);
+                var parts = older.map(function (s) {
+                    count += s.surveys.count;
+                    spread += s.surveys.count * spanDays(s);
+                    return { key: s.key, end: s.end, count: s.surveys.count };
+                });
+                // What landed since has no day of its own, so it is filed on
+                // the last day the span speaks for.
+                parts.push({ key: big.key, end: big.end, count: late.count, late: importNumber(lateRow.surveyTotal) || 0 });
+                (lateOf[name] || (lateOf[name] = [])).push({
+                    key: 'late:' + big.key, start: big.start, end: big.end, uploadedAt: big.uploadedAt, kind: big.kind,
+                    row: big.row, base: big, parts: parts, spread: spread,
+                    surveys: { count: count, certain: true, total: big.surveys.total }
+                });
             });
         });
 
@@ -1659,39 +1827,55 @@
         // the one that pins its surveys to the fewest days wins, so a survey a
         // daily can date is filed on its own day rather than on a week's
         // Sunday. Days no chosen upload covers fall back to their daily.
-        var spanDays = function (s) {
-            return Math.round((Date.parse(s.end) - Date.parse(s.start)) / 86400000) + 1;
-        };
         var coverOf = {};
         Object.keys(spanRows).forEach(function (name) {
             var pool = spanRows[name]
                 // An upload with no survey columns at all has nothing to say
                 // about surveys, which is not the same as saying there were none.
                 .filter(function (s) { return s.surveys.certain && s.surveys.count > 0 && hasSurveyColumns(s.row); })
-                .sort(function (a, b) {
-                    if (a.end !== b.end) return a.end < b.end ? -1 : 1;
-                    return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
-                });
-
-            // best[i] is the strongest plan using only the first i uploads.
-            var best = [{ count: 0, spread: 0, picks: [] }];
-            pool.forEach(function (s, i) {
-                // Everything ending before this one starts can sit beside it.
-                var fits = i;
-                while (fits > 0 && pool[fits - 1].end >= s.start) fits -= 1;
-                var base = best[fits];
-                var take = {
-                    count: base.count + s.surveys.count,
-                    spread: base.spread + s.surveys.count * spanDays(s),
-                    picks: base.picks.concat([s])
-                };
-                var skip = best[i];
-                var wins = take.count > skip.count
-                    || (take.count === skip.count && take.spread < skip.spread);
-                best.push(wins ? take : skip);
-            });
-            var chosen = best[pool.length].picks;
+                .concat((lateOf[name] || []).filter(function (s) { return s.surveys.count > 0; }));
+            var chosen = importBestPlan(pool, function (s) {
+                return [s.surveys.count, s.spread !== undefined ? s.spread : s.surveys.count * spanDays(s)];
+            }).picks;
             if (chosen.length) coverOf[name] = chosen;
+        });
+
+        // Which upload each used count came from, so the trace can say so.
+        var usedBy = {};
+        Object.keys(coverOf).forEach(function (name) {
+            coverOf[name].forEach(function (s) {
+                (s.parts || [s]).forEach(function (part) { usedBy[name + '|' + part.key] = s; });
+            });
+        });
+
+        // The check. For each person, every survey any upload has seen, and
+        // whether each one's result is known. Proven means the uploads that
+        // settle every survey add up to exactly the count on the board.
+        // Anything short of that is named, upload by upload, rather than left
+        // for somebody to find on their own.
+        var surveyProof = {};
+        var responsesIn = function (s) { return importNumber(s.row.surveyTotal) || 0; };
+        Object.keys(spanRows).concat(Object.keys(openDays)).forEach(function (name) {
+            if (surveyProof[name]) return;
+            var everything = (spanRows[name] || []).filter(function (s) { return hasSurveyColumns(s.row); })
+                .concat(openDays[name] || []);
+            var seen = importBestPlan(everything, function (s) { return [responsesIn(s), 0]; });
+            if (!seen.score) return;
+            var settled = everything.filter(function (s) { return s.surveys.certain; }).concat(lateOf[name] || []);
+            // Among the ways to see every survey, the one with the most
+            // perfect, so a disagreement shows up rather than hides.
+            var known = importBestPlan(settled, function (s) { return [responsesIn(s), -s.surveys.count]; });
+            var knownPerfect = known.picks.reduce(function (sum, s) { return sum + s.surveys.count; }, 0);
+            var counted = (coverOf[name] || []).reduce(function (sum, s) { return sum + s.surveys.count; }, 0);
+            surveyProof[name] = {
+                surveys: seen.score,
+                known: known.score,
+                perfect: counted,
+                proven: known.score === seen.score && knownPerfect === counted,
+                open: known.score === seen.score ? [] : seen.picks.filter(function (s) { return !s.surveys.certain; })
+                    .map(function (s) { return { kind: s.kind, start: s.start, end: s.end, responses: responsesIn(s) }; }),
+                disagree: known.score === seen.score && knownPerfect !== counted
+            };
         });
 
         // Every upload that had surveys for a person, and what became of it.
@@ -1711,16 +1895,38 @@
         };
         Object.keys(spanRows).forEach(function (name) {
             spanRows[name].forEach(function (s) {
-                var chosen = (coverOf[name] || []).indexOf(s) > -1;
                 if (s.daily || !s.surveys.total) return;
-                trace(name, {
+                var by = usedBy[name + '|' + s.key];
+                var item = {
                     kind: s.kind, start: s.start, end: s.end, uploadedAt: s.uploadedAt, questions: traceRow(s.row),
-                    count: s.surveys.count, certain: s.surveys.certain, used: chosen,
-                    why: chosen ? 'used'
+                    count: s.surveys.count, certain: s.surveys.certain, used: !!by,
+                    why: by ? 'used'
                         : !s.surveys.certain ? 'mixed, cannot be worked out'
                         : !s.surveys.count ? 'none of them perfect'
                         : 'the uploads used for these days show as many or more'
-                });
+                };
+                // Worked out by taking the older uploads inside it off, whether
+                // or not that was the way the count went in the end.
+                var worked = (lateOf[name] || []).find(function (c) { return c.base === s; });
+                if (worked && !by) {
+                    var rest = worked.parts[worked.parts.length - 1];
+                    item.count = worked.surveys.count;
+                    item.certain = true;
+                    item.why = !rest.late ? 'every survey in it is already counted from the older uploads inside it'
+                        : !rest.count ? 'the ' + rest.late + ' survey' + (rest.late === 1 ? '' : 's')
+                            + ' that landed after the older uploads inside it: none perfect'
+                        : 'the uploads used for these days show as many or more';
+                }
+                if (by && by.base === s) {
+                    // Used for what landed after the uploads inside it.
+                    var late = by.parts[by.parts.length - 1];
+                    item.count = by.surveys.count;
+                    item.certain = true;
+                    item.why = 'used for the ' + late.late + ' survey' + (late.late === 1 ? '' : 's')
+                        + ' that landed after the ' + (by.parts.length - 1) + ' older upload'
+                        + (by.parts.length === 2 ? '' : 's') + ' inside it';
+                }
+                trace(name, item);
             });
         });
 
@@ -1746,13 +1952,17 @@
         });
         Object.keys(coverOf).forEach(function (name) {
             coverOf[name].forEach(function (s) {
-                if (!s.daily) usedSpan[s.key] = true;
-                if (!s.surveys.count) return;
-                // Filed on the day the span ends, the last day it can speak for.
-                var day = days[s.end] || (days[s.end] = {});
-                var person = day[name] || (day[name] = {});
-                person.perfectSurveys = s.surveys.count;
-                people[name] = true;
+                (s.parts || [{ key: s.key, end: s.end, count: s.surveys.count }]).forEach(function (part) {
+                    if (part.key.indexOf('day:') !== 0) usedSpan[part.key] = true;
+                    if (!part.count) return;
+                    // Filed on the day the span ends, the last day it can
+                    // speak for. Added, since what landed late can share its
+                    // day with a daily's own count.
+                    var day = days[part.end] || (days[part.end] = {});
+                    var person = day[name] || (day[name] = {});
+                    person.perfectSurveys = (person.perfectSurveys || 0) + part.count;
+                    people[name] = true;
+                });
             });
         });
 
@@ -1772,7 +1982,7 @@
             if (own.count || own.total) {
                 // A proven daily nothing else covers stands on its own count,
                 // none perfect included.
-                var standing = covered ? !!span.daily : own.certain;
+                var standing = covered ? !!usedBy[name + '|day:' + date] : own.certain;
                 trace(name, {
                     kind: 'daily', start: date, end: date, uploadedAt: single.uploadedAt, questions: traceRow(row),
                     count: own.count, certain: own.certain, used: standing,
@@ -1835,12 +2045,23 @@
                 + 'whichever kind it was uploaded as. An upload spanning a week cannot say what happened on a day.');
         }
 
+        // Runs of days last read on the same day, oldest first as they fall.
+        var lastRead = [];
+        Object.keys(readOn).sort().forEach(function (date) {
+            var on = importLocalDay(readOn[date]);
+            var run = lastRead[lastRead.length - 1];
+            if (run && run.on === on && importNextDay(run.to) === date) run.to = date;
+            else lastRead.push({ from: date, to: date, on: on });
+        });
+
         return {
             days: days,
             notes: notes,
             needsSurveyCheck: needsSurveyCheck,
             surveyRanges: surveyRanges,
             surveyTrace: surveyTrace,
+            surveyProof: surveyProof,
+            lastRead: lastRead,
             dateRange: { first: dayList[0] || '', last: dayList[dayList.length - 1] || '' },
             counts: {
                 days: dayList.length,

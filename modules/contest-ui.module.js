@@ -140,6 +140,7 @@
                 </div>
                 <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
                 <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
+                <div id="contestCheck" style="display: none; margin-bottom: 12px; padding: 10px 14px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; color: var(--text-primary);"></div>
                 <div id="contestStandings"></div>
                 <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
                     <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is the graphic. Post to Teams copies the words that go with it.</p>
@@ -171,7 +172,8 @@
         const rows = names.map((name) => {
             const row = day[name] || {};
             const adherence = row.adherence === undefined || row.adherence === null ? '' : row.adherence;
-            const perfect = row.perfectSurveys || '';
+            // A zero somebody typed shows as a zero, so it reads as decided.
+            const perfect = row.perfectSurveys || (row.surveysTyped ? 0 : '');
             return `<tr>
                 <td style="padding: 6px 8px; color: var(--text-primary);">${esc(name)}</td>
                 <td style="padding: 6px 8px;"><input type="number" step="0.1" min="0" max="100" data-contest-adherence="${esc(name)}" value="${esc(adherence)}" placeholder="%" style="width: 90px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);"></td>
@@ -189,10 +191,122 @@
         </table>`;
     }
 
+    function md(iso) {
+        var p = String(iso || '').split('-');
+        return Number(p[1]) + '/' + Number(p[2]);
+    }
+
+    function mdRange(from, to) {
+        return from === to ? md(from) : md(from) + ' to ' + md(to);
+    }
+
+    /**
+     * Every count on the board, checked against the uploads.
+     *
+     * Three things can make a count wrong, and each is named here rather than
+     * left for somebody to find by hand: the board is behind an upload that
+     * came in after the last pull, an upload holds surveys the rates cannot
+     * settle, or a survey landed after the last upload that covers its day,
+     * which only a fresh upload can show. Read only: nothing is saved.
+     */
+    function buildCheck() {
+        var api = contest();
+        if (!api?.buildImportPreview) return null;
+        var date = document.getElementById('contestDate')?.value;
+        var monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
+        var names = namesForTeam(selectedTeam());
+        var month = currentMonthData();
+        var preview = api.buildImportPreview(importStores(), { monthKey: monthKey, names: names });
+        if (!preview.counts.days) return null;
+
+        // What a pull would change. Uploads win here the way they do when a
+        // pull is told to replace, except a count typed in by hand.
+        var pulled = api.mergeImportIntoMonth(month, preview, { overwrite: true }).month;
+        var byName = function (board) {
+            var out = {};
+            board.forEach(function (row) { out[row.associate] = row; });
+            return out;
+        };
+        var now = byName(api.buildLeaderboard(month));
+        var next = byName(api.buildLeaderboard(pulled));
+        var behind = [];
+        names.forEach(function (name) {
+            var a = now[name] || { perfectSurvey: 0, dailyAdherence: 0 };
+            var b = next[name] || { perfectSurvey: 0, dailyAdherence: 0 };
+            var bits = [];
+            if (a.perfectSurvey !== b.perfectSurvey) bits.push('surveys ' + a.perfectSurvey + ' should be ' + b.perfectSurvey);
+            if (a.dailyAdherence !== b.dailyAdherence) bits.push('days ' + a.dailyAdherence + ' should be ' + b.dailyAdherence);
+            if (bits.length) behind.push(name + ' (' + bits.join(', ') + ')');
+        });
+
+        // Who the uploads cannot vouch for. A day somebody typed a count on
+        // is settled: that is what typing it was for.
+        var proof = preview.surveyProof || {};
+        var typed = function (name, day) {
+            var person = (month.days[day] || {})[name];
+            return !!(person && person.surveysTyped);
+        };
+        var proven = 0;
+        var open = [];
+        names.forEach(function (name) {
+            var p = proof[name];
+            if (!p || p.proven) { proven += 1; return; }
+            var left = (p.open || []).filter(function (o) { return !(o.start === o.end && typed(name, o.start)); });
+            if (!left.length && !p.disagree) { proven += 1; return; }
+            open.push(name + ': ' + (p.disagree
+                ? 'the uploads disagree about which surveys were perfect. Open Where surveys came from.'
+                : left.map(function (o) {
+                    return o.responses + ' survey' + (o.responses === 1 ? '' : 's')
+                        + (o.start === o.end ? ' on ' : ' in ') + mdRange(o.start, o.end);
+                }).join(' and ') + ' the rates cannot settle. Type the count in under Enter a day.'));
+        });
+
+        var runs = preview.lastRead || [];
+        var read = runs.length > 3
+            ? runs.slice().sort(function (a, b) { return a.on < b.on ? -1 : 1; })[0]
+            : null;
+        var fresh = read
+            ? 'The stalest look is ' + mdRange(read.from, read.to) + ', last read ' + md(read.on) + '.'
+            : 'Surveys last read: ' + runs.map(function (r) { return mdRange(r.from, r.to) + ' on ' + md(r.on); }).join(', ') + '.';
+
+        return {
+            behind: behind,
+            open: open,
+            proven: proven,
+            people: names.length,
+            fresh: fresh + ' A survey that landed after that is in no upload yet. Upload a fresh month to date to pick it up.'
+        };
+    }
+
+    function renderCheck() {
+        var host = document.getElementById('contestCheck');
+        if (!host) return;
+        var check = null;
+        try { check = buildCheck(); } catch (error) { check = null; }
+        if (!check) { host.style.display = 'none'; host.innerHTML = ''; return; }
+
+        var line = function (color, text) {
+            return '<div style="margin: 3px 0; padding-left: 8px; border-left: 3px solid ' + color + ';">' + esc(text) + '</div>';
+        };
+        var html = '';
+        if (check.behind.length) {
+            html += line('#c62828', 'The board is behind the uploads for ' + check.behind.length + ' '
+                + (check.behind.length === 1 ? 'person' : 'people') + ': ' + check.behind.join(', ') + '. Click Pull from uploads.');
+        }
+        check.open.forEach(function (text) { html += line('#ef6c00', text); });
+        var allGood = !check.behind.length && !check.open.length;
+        html += line(allGood ? '#2e7d32' : '#546e7a', (allGood ? 'Every count checked and proven against the uploads: ' : 'Proven against the uploads: ')
+            + check.proven + ' of ' + check.people + ' people.');
+        html += line('#546e7a', check.fresh);
+        host.innerHTML = html;
+        host.style.display = 'block';
+    }
+
     function renderStandings() {
         const host = document.getElementById('contestStandings');
         const date = document.getElementById('contestDate')?.value;
         if (!host) return;
+        renderCheck();
 
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
         const board = contest()?.buildLeaderboard(currentMonthData()) || [];
@@ -292,8 +406,12 @@
             // undo it. It is marked as typed when it differs from what was
             // there, or when it was typed before, so correcting one person does
             // not freeze everyone else saved on the same click.
+            // A 0 typed into an empty box is a ruling too: the day had
+            // surveys and none were perfect. Without this it looked like no
+            // change, and the day stayed flagged however often it was typed.
             const before = day[name] || {};
-            const typed = before.surveysTyped === true || perfect !== (Number(before.perfectSurveys) || 0);
+            const typed = before.surveysTyped === true || perfect !== (Number(before.perfectSurveys) || 0)
+                || (perfectInput && String(perfectInput.value).trim() === '0');
 
             if (adherence === null && !perfect && !typed) {
                 delete day[name];
@@ -443,7 +561,12 @@
             return q.rate + '% of ' + (q.responses === null ? '?' : q.responses);
         };
 
-        var out = ['Month ' + monthKey + ', team ' + selectedTeam() + '.', ''];
+        var out = ['Month ' + monthKey + ', team ' + selectedTeam() + '.'];
+        (preview.lastRead || []).forEach(function (r) {
+            out.push('Surveys for ' + (r.from === r.to ? md(r.from) : md(r.from) + ' to ' + md(r.to)) + ' last read ' + md(r.on) + '.');
+        });
+        out.push('');
+        var header = out.length;
         names.forEach(function (name) {
             var storedDays = Object.keys(stored).sort().filter(function (d) {
                 var p = stored[d] && stored[d][name];
@@ -454,6 +577,18 @@
 
             var row = board.find(function (r) { return r.associate === name; });
             out.push(name + ': standings show ' + (row ? row.perfectSurvey : 0) + ' perfect surveys');
+            var proof = (preview.surveyProof || {})[name];
+            if (proof) {
+                out.push('  Check: ' + (proof.proven
+                    ? 'proven. Every one of the ' + proof.surveys + ' survey' + (proof.surveys === 1 ? '' : 's')
+                        + ' the uploads hold has a known result, and ' + proof.perfect + ' were perfect.'
+                    : proof.disagree
+                        ? 'not proven. The uploads disagree about which surveys were perfect.'
+                        : 'not proven. ' + (proof.surveys - proof.known) + ' of ' + proof.surveys
+                            + ' surveys have no known result: ' + proof.open.map(function (o) {
+                                return o.kind + ' ' + (o.start === o.end ? md(o.start) : md(o.start) + ' to ' + md(o.end));
+                            }).join(', ') + '.'));
+            }
             out.push('  Stored: ' + (storedDays.length
                 ? storedDays.map(function (d) {
                     var p = stored[d][name];
@@ -472,7 +607,7 @@
                 });
             out.push('');
         });
-        if (out.length === 2) out.push('No surveys found in any upload or stored day for this team this month.');
+        if (out.length === header) out.push('No surveys found in any upload or stored day for this team this month.');
         return out.join('\n');
     }
 
