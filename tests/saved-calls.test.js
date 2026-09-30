@@ -236,24 +236,83 @@ suite('saved calls: reading an old call', (t) => {
         /\.saved-call-transcript[\s\S]{0,200}overflow: auto/.test(css));
 });
 
-suite('saved calls: nothing is saved without being asked', (t) => {
+/**
+ * A call is kept when it goes somewhere, once, and the toast says so.
+ *
+ * Copying a Verint note and generating a prompt both used to write a log on
+ * the way past. Nothing said so, and each save appended a fresh entry, which
+ * is how one call ended up stored twice under different dates and Scott could
+ * not account for what was in memory. The fix then was to save only from the
+ * Save button.
+ *
+ * On 2026-09-30 Scott asked for fewer buttons ("really still too many
+ * buttons"), and the Save button was one of them. So the three buttons that
+ * send a call somewhere (Copilot, Verint, the associate) keep it again, with
+ * both halves of the old problem fixed at the root: every one of them says in
+ * its toast that the call was saved, and a save finds the call it belongs to
+ * and updates it in place rather than appending.
+ */
+suite('saved calls: kept when it goes somewhere, once, and said out loud', (t) => {
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 
-    // Copying a Verint note and generating a prompt both used to write a log
-    // on the way past. Nothing said so, which is how one call ended up stored
-    // twice under different dates and Scott could not account for what was in
-    // memory. Reading the form is not a decision to keep it.
-    const saveCalls = script.match(/upsertCallListeningEntryFromForm\(/g) || [];
-    t.equal('only the definition and the Save button reference the saver', saveCalls.length, 2);
-    t.check('the Save button is the one that calls it',
+    t.check('there is one way on to the log',
+        /function keepCallOnTheWayOut\(\) \{\s*return Boolean\(upsertCallListeningEntryFromForm\(false\)\);/.test(script));
+    t.check('the Save button under More still uses the same saver',
         /bindElementOnce\(saveBtn, 'click', \(\) => upsertCallListeningEntryFromForm\(true\)\)/.test(script));
 
-    t.check('copying a Verint note builds an unsaved entry',
-        /function copyCallListeningVerintSummary[\s\S]{0,700}buildUnsavedCallListeningEntry\(\)/.test(script));
-    t.check('generating a prompt builds an unsaved entry',
-        /function generateCallListeningPromptAndCopy[\s\S]{0,300}buildUnsavedCallListeningEntry\(\)/.test(script));
-    t.check('and the unsaved entry never reaches the log',
-        /function buildUnsavedCallListeningEntry[\s\S]{0,500}return \{ id: '', \.\.\.draft/.test(script));
+    const body = (name) => {
+        const start = script.indexOf(`function ${name}(`);
+        const next = script.indexOf('\nfunction ', start + 10);
+        return start < 0 ? '' : script.slice(start, next < 0 ? undefined : next);
+    };
+    [
+        ['copyCallListeningVerintSummary', /and the call saved/],
+        ['writeCallSummaryInCopilot', /and the call saved/],
+        ['emailCallToAssociate', /and the call saved/]
+    ].forEach(([name, says]) => {
+        const text = body(name);
+        t.check(`${name} keeps the call`, /keepCallOnTheWayOut\(\)/.test(text));
+        t.check(`and says so`, says.test(text));
+    });
+
+    // A call copied out of the history is already saved.
+    t.check('a call copied from the history is not saved again',
+        /if \(!entry\) \{\s*entry = buildUnsavedCallListeningEntry\(\);\s*if \(!entry\) return;\s*saved = keepCallOnTheWayOut\(\);/.test(body('copyCallListeningVerintSummary')));
+
+    // The old Copilot email prompt under More still only reads the form.
+    t.check('the email prompt under More saves nothing',
+        !/keepCallOnTheWayOut|upsertCallListeningEntryFromForm/.test(body('generateCallListeningPromptAndCopy')));
+
+    // Updated in place, never appended twice.
+    const saver = body('upsertCallListeningEntryFromForm');
+    t.check('a save looks for the same call first', /findSameCall/.test(saver));
+    t.check('by the transcript fingerprint', /callFingerprint/.test(saver));
+    t.check('and updates it in place', /Object\.assign\(entry, draft/.test(saver));
+    t.check('appending only when it is a new call', /entry = createCallListeningEntry\(draft\);\s*appendCallListeningEntry/.test(saver));
+});
+
+suite('saved calls: which saved entry is the same call', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/call-transcript.module.js');
+    t.loadModule('modules/call-listening.module.js');
+    t.loadModule('modules/call-coaching-bridge.module.js');
+    const { callListening: L, callTranscript: T, callCoachingBridge: bridge } = global.window.DevCoachModules;
+    const print = bridge.callFingerprint;
+
+    const verint = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'verint-export.txt'), 'utf8');
+    const stored = { id: 'a', listenedOn: '2026-08-04', callTime: '12:38 PM', transcript: T.prepareForStorage(verint) };
+    const other = { id: 'b', listenedOn: '2026-08-04', callTime: '12:38 PM', transcript: T.prepareForStorage('Agent: Thank you for calling.\nCustomer: My power is out.') };
+
+    t.equal('the same conversation is the same call', L.findSameCall([other, stored], { transcript: verint }, print)?.id, 'a');
+    t.equal('even with the date changed', L.findSameCall([stored], { listenedOn: '2026-09-30', transcript: verint }, print)?.id, 'a');
+    t.equal('a different conversation is not', L.findSameCall([stored], { transcript: 'Agent: Hello.\nCustomer: Starting service.' }, print), null);
+
+    // With no transcript, the date, time and reference have to agree.
+    const noteOnly = { id: 'c', listenedOn: '2026-09-29', callTime: '10:14 AM', callReference: '', transcript: '' };
+    t.equal('a notes only call matches on when it was', L.findSameCall([noteOnly], { listenedOn: '2026-09-29', callTime: '10:14 AM', callReference: '', transcript: '' }, print)?.id, 'c');
+    t.equal('but not at another time', L.findSameCall([noteOnly], { listenedOn: '2026-09-29', callTime: '2:00 PM', callReference: '', transcript: '' }, print), null);
+    t.equal('and a transcript call never matches a notes only one', L.findSameCall([noteOnly], { listenedOn: '2026-09-29', callTime: '10:14 AM', transcript: verint }, print), null);
+    t.equal('nothing to match against', L.findSameCall([], { transcript: verint }, print), null);
 });
 
 suite('saved calls: the outcome of the last coaching is on this page', (t) => {

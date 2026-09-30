@@ -7476,11 +7476,6 @@ function validateCallListeningDraft(draft) {
     return true;
 }
 
-function getLatestCallListeningEntry(employeeName) {
-    const existing = Array.isArray(callListeningLogs[employeeName]) ? callListeningLogs[employeeName] : [];
-    return existing[existing.length - 1] || null;
-}
-
 function isSameCallListeningDraftAsEntry(draft, existingEntry) {
     if (!existingEntry) return false;
     return existingEntry.listenedOn === draft.listenedOn
@@ -7528,13 +7523,19 @@ function appendCallListeningEntry(employeeName, entry) {
     }
 }
 
-function updateCallListeningStatus(employeeName, listenedOn) {
-    const status = document.getElementById('callListeningStatus');
-    if (!status) return;
-    status.textContent = `Saved call listening log for ${employeeName} (${listenedOn}).`;
-    status.style.display = 'block';
-}
-
+/**
+ * Keeps the call on the form, once.
+ *
+ * Called by the Save button under More, and by the three buttons that send a
+ * call somewhere (Copilot, Verint, the associate), because the page has no
+ * Save button of its own any more ("still too many buttons"). Each of those
+ * says in its own toast that the call was saved, so nothing is kept without
+ * saying so.
+ *
+ * One entry per call. A second save of the same call updates it in place
+ * rather than appending, and appending is what once stored one call twice
+ * under two dates and counted it as two.
+ */
 function upsertCallListeningEntryFromForm(showSavedToast = false) {
     getCallListeningSyncConfigFromUI();
     const draft = getCallListeningDraftFromForm();
@@ -7542,23 +7543,36 @@ function upsertCallListeningEntryFromForm(showSavedToast = false) {
         return null;
     }
 
-    const latest = getLatestCallListeningEntry(draft.employeeName);
-    const isSameAsLatest = isSameCallListeningDraftAsEntry(draft, latest);
+    const same = window.DevCoachModules?.callListening?.findSameCall?.(
+        callListeningLogs[draft.employeeName] || [],
+        draft,
+        window.DevCoachModules?.callCoachingBridge?.callFingerprint
+    ) || null;
 
-    if (isSameAsLatest) {
+    if (same && isSameCallListeningDraftAsEntry(draft, same)) {
         if (showSavedToast) showToast('✅ Call log already saved.', 2500);
-        return latest;
+        return same;
     }
 
-    const entry = createCallListeningEntry(draft);
-    appendCallListeningEntry(draft.employeeName, entry);
+    let entry = same;
+    if (entry) {
+        Object.assign(entry, draft, { updatedAt: new Date().toISOString() });
+    } else {
+        entry = createCallListeningEntry(draft);
+        appendCallListeningEntry(draft.employeeName, entry);
+    }
 
     saveCallListeningLogs();
     renderCallListeningHistoryForSelectedEmployee();
-    updateCallListeningStatus(draft.employeeName, draft.listenedOn);
 
     if (showSavedToast) showToast('✅ Call listening log saved.', 2500);
     return entry;
+}
+
+// The three buttons that send a call somewhere keep it too. Returns whether
+// it was kept, for the toast that says so.
+function keepCallOnTheWayOut() {
+    return Boolean(upsertCallListeningEntryFromForm(false));
 }
 
 // The red flags for the Verint note, one line each: what a coaching log has
@@ -7625,13 +7639,19 @@ function copyCallListeningVerintSummary(entryId = null) {
     if (entryId && employeeName) {
         entry = findCallListeningEntryById(employeeName, entryId);
     }
+    // A call copied from the history is already saved. The one on the form is
+    // kept now: logging it in Verint is the moment the coaching is final.
+    let saved = false;
     if (!entry) {
         entry = buildUnsavedCallListeningEntry();
+        if (!entry) return;
+        saved = keepCallOnTheWayOut();
     }
-    if (!entry) return;
 
     const summaryText = buildCallListeningVerintSummary(entry);
-    copyToClipboard(summaryText, { message: '📋 Coaching summary copied. Paste it into Verint.' });
+    copyToClipboard(summaryText, {
+        message: `📋 Coaching summary copied${saved ? ' and the call saved' : ''}. Paste it into Verint.`
+    });
 }
 
 function loadCallListeningEntryIntoForm(entryId) {
@@ -8528,16 +8548,22 @@ function handleTranscriptPaste(event) {
     const clipboard = event?.clipboardData;
     if (!field || !clipboard) return;
 
-    const html = (() => {
-        try { return clipboard.getData('text/html') || ''; }
+    const read = (type) => {
+        try { return clipboard.getData(type) || ''; }
         catch (error) { return ''; }
-    })();
+    };
+    const html = read('text/html');
+    const plain = read('text/plain');
 
-    // A new call pasted over the whole box: what was read off the old one no
-    // longer describes anything on screen.
+    // A new call over the old one: what was read off the old one no longer
+    // describes anything on screen. A whole call pasted anywhere in a box that
+    // already holds one is a new call, wherever the cursor happened to be.
+    // Nobody pastes a second call into the middle of the first, and there is
+    // no Clear button on the page to empty the box beforehand.
     const hadCall = Boolean(field.value.trim());
     const replacesAll = !hadCall
-        || (field.selectionStart === 0 && field.selectionEnd === field.value.length);
+        || (field.selectionStart === 0 && field.selectionEnd === field.value.length)
+        || looksLikeWholeCall(plain);
     if (replacesAll) {
         resetCallListeningReadPanels();
         if (hadCall) startFreshCallFeedback();
@@ -8561,28 +8587,33 @@ function handleTranscriptPaste(event) {
         // Only now take the paste over, so a decline costs nothing.
         event.preventDefault();
         field.value = correct(converted.text);
-    } else if (replacesAll) {
-        const plain = (() => {
-            try { return clipboard.getData('text/plain') || ''; }
-            catch (error) { return ''; }
-        })();
-        const corrected = correct(plain);
-        if (plain && corrected !== plain) {
-            event.preventDefault();
-            field.value = corrected;
-        }
+    } else if (replacesAll && plain) {
+        // Written in rather than left to the browser, so the box holds only
+        // the new call, with APS already said as APS.
+        event.preventDefault();
+        field.value = correct(plain);
     }
 
     // Pasting is the whole job now: the call is read the moment it lands,
     // with no second button. After the browser has put the text in, which is
-    // why it waits a tick when the paste was not taken over. A paste into the
-    // middle of a transcript is somebody editing, and is left to Read The Call.
+    // why it waits a tick when the paste was not taken over. A few words
+    // pasted into the middle of a transcript are somebody editing it.
     if (replacesAll) {
         const labelled = converted?.labelled || 0;
         setTimeout(() => {
             if (field.value.trim()) analyzeCallListeningTranscript({ auto: true, labelled });
         }, 0);
     }
+}
+
+// Enough of a call to be a call rather than an edit: Verint's header, or a
+// few timestamped lines, or a few speaker lines.
+function looksLikeWholeCall(text) {
+    const value = String(text || '');
+    if (/Date\s*\/\s*Time:/i.test(value)) return true;
+    const stamps = (value.match(/^\s*\d{1,3}:[0-5]\d\s*$/gm) || []).length;
+    const speakers = (value.match(/^\s*(?:agent|advisor|customer|caller)\s*:/gim) || []).length;
+    return stamps >= 3 || speakers >= 3;
 }
 
 /*
@@ -8908,8 +8939,8 @@ function renderCallFlagStrip(analysis) {
 
 /**
  * "Copilot: Write The Summary". Builds a coaching summary prompt from the call
- * and the two note boxes, copies it and opens Copilot. Nothing is saved:
- * reading the form is not a decision to keep it.
+ * and the two note boxes, copies it and opens Copilot. The call is kept on the
+ * way out, and the toast says so.
  */
 function writeCallSummaryInCopilot() {
     const entry = buildUnsavedCallListeningEntry();
@@ -8922,12 +8953,65 @@ function writeCallSummaryInCopilot() {
         return;
     }
 
+    const saved = keepCallOnTheWayOut();
     const result = listening.copyPromptAndOpenCopilot?.({
         prompt,
         button: document.getElementById('callCopilotSummaryBtn'),
-        openWindow: window.open
+        openWindow: window.open,
+        message: `📋 Prompt copied${saved ? ' and the call saved' : ''}. Paste it into Copilot with Ctrl+V.`
     });
     if (!result?.ok) showToast('⚠️ Could not start the Copilot handoff. Try again.', 3500);
+}
+
+/**
+ * "Email The Associate". Writes the email from the two note boxes and opens
+ * it as an Outlook draft addressed to the associate, in one click. The words
+ * are the app's own, from the notes; Copilot's version is under More for a
+ * message that wants a second voice.
+ */
+function emailCallToAssociate() {
+    const draft = getCallListeningDraftFromForm();
+    if (!validateCallListeningDraft(draft)) return;
+
+    const listening = window.DevCoachModules?.callListening;
+    // Notes drafted before the mishearing fix still quote "at&t".
+    const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
+    const message = listening?.buildCallFeedbackMessage?.({
+        ...draft,
+        whatWentWell: correct(draft.whatWentWell),
+        improvementAreas: correct(draft.improvementAreas)
+    }, { getEmployeeNickname });
+    if (!message) {
+        showToast('⚠️ Add a note in what went well or what to work on first.', 3000);
+        return;
+    }
+
+    // Kept in the send box under More as well, to read back or reopen.
+    const body = document.getElementById('callListeningOutlookBody');
+    const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
+    if (body) {
+        body.value = message;
+        if (outlookBtn) updateCallListeningOutlookButtonState(body, outlookBtn);
+    }
+
+    const to = (document.getElementById('callListeningRecipient')?.value || '').trim();
+    const result = listening.generateOutlookDraft?.({
+        employeeName: draft.employeeName,
+        callDate: draft.listenedOn,
+        bodyText: message,
+        to,
+        getEmployeeNickname,
+        // One toast, below, that also says the call was saved.
+        showToast: () => {},
+        onError: (error) => console.error('Error opening Outlook draft from call listening:', error)
+    });
+    if (!result?.ok) {
+        showToast('⚠️ Could not open the Outlook draft. The email is under More, in Email the associate.', 4500);
+        return;
+    }
+
+    const saved = keepCallOnTheWayOut();
+    showToast(`📧 Email opened in Outlook${to ? ` for ${to}` : ', add the address there'}${saved ? ', and the call saved' : ''}.`, 4500);
 }
 
 function clearCallListeningTranscript() {
@@ -9613,6 +9697,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
     bindElementOnce(document.getElementById('callExplanationPanel'), 'click', handleCallExplanationClick);
     bindElementOnce(document.getElementById('callCopilotSummaryBtn'), 'click', writeCallSummaryInCopilot);
+    bindElementOnce(document.getElementById('emailCallToAssociateBtn'), 'click', emailCallToAssociate);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);

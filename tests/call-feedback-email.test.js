@@ -245,3 +245,51 @@ suite('call feedback email: wiring', (t) => {
         !fs.readFileSync(path.join(ROOT, 'modules/call-listening.module.js'), 'utf8')
             .includes('Paste the Copilot-generated email content first'));
 });
+
+suite('call feedback email: a serious point is never "nothing here is a concern"', (t) => {
+    const api = load(t);
+
+    // Four strengths and one of these is still not a message that ends with
+    // "nothing here is a concern". The lines are the ones call-red-flags
+    // writes, so this breaks if their wording drifts from the check.
+    [
+        ['a safety hazard nobody turned to', 'When a customer mentions sparks, a line down or a burning smell, it goes to the front of the call. Make sure they are clear of it and get it reported as an emergency before anything else.'],
+        ['a line that blamed the customer', 'That line lands as blame on the customer, however it was meant. Say what they are dealing with, then move straight to what you can do.'],
+        ['a promise about the outcome', 'A promise about how the bill or the service will turn out is one the customer holds you to, even when it is out of your hands. Say what you have done and what normally happens next, without guaranteeing how it ends.']
+    ].forEach(([what, line]) => {
+        const message = api.buildCallFeedbackMessage(entry({
+            whatWentWell: '- Great ownership.\n- Clear recap.\n- Warm close.\n- Good hold.',
+            improvementAreas: `- ${line}`
+        }));
+        t.check(`${what}: no all clear`, !/Nothing here is a concern/.test(message));
+        t.check(`${what}: and not called a strong call`, !/strong call/.test(message));
+    });
+});
+
+suite('call feedback email: a point ending on a quote gets no extra stop', (t) => {
+    const api = load(t);
+
+    const message = api.buildCallFeedbackMessage(entry({
+        whatWentWell: '- Solid close. You offered more help before wrapping up. ("okay is there anything else i can help you with today")'
+    }));
+    t.check('the quote closes the point', /today"\)\n|today"\)$/.test(message));
+    t.check('with no full stop after the bracket', !/"\)\./.test(message));
+    t.check('a plain point still gets its stop', /- Great ownership\./.test(api.buildCallFeedbackMessage(entry({ whatWentWell: '- Great ownership' }))));
+});
+
+suite('call feedback email: one click from the page to Outlook', (t) => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    t.check('the button is on the page', /id="emailCallToAssociateBtn" class="btn-primary"/.test(html));
+    t.check('it is bound',
+        /bindElementOnce\(document\.getElementById\('emailCallToAssociateBtn'\), 'click', emailCallToAssociate\)/.test(script));
+
+    const start = script.indexOf('function emailCallToAssociate(');
+    const body = script.slice(start, script.indexOf('\nfunction ', start + 10));
+    t.check('it writes the email from the notes', /buildCallFeedbackMessage/.test(body));
+    t.check('with Verint\'s mishearings corrected', /correctMishearings/.test(body));
+    t.check('and opens it as an Outlook draft to the associate', /generateOutlookDraft/.test(body) && /callListeningRecipient/.test(body));
+    t.check('keeping a copy in the send box under More', /callListeningOutlookBody/.test(body));
+    t.check('and saying the address is missing when it is', /add the address there/.test(body));
+});

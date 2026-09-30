@@ -77,16 +77,17 @@ suite('call listening layout: paste, good and bad, then Copilot and Verint', (t)
     const bad = at('id="callListeningImprovements"');
     const copilot = at('id="callCopilotSummaryBtn"');
     const verint = at('id="copyCallListeningVerintBtn"');
+    const email = at('id="emailCallToAssociateBtn"');
     const more = at('<details class="call-fold call-more"');
 
-    t.check('everything was found', [transcript, flags, good, bad, copilot, verint, more].every((index) => index > -1));
+    t.check('everything was found', [transcript, flags, good, bad, copilot, verint, email, more].every((index) => index > -1));
     t.check('the paste box comes first', transcript < flags && transcript < good);
     t.check('the flags sit under the paste box, before the notes', flags < good);
     const grid = section.lastIndexOf('class="grid-2col"', good);
     t.check('good and bad sit side by side in one grid',
         grid > transcript && good < bad && !section.slice(grid, bad).includes('class="call-panel"'));
-    t.check('Copilot and Verint come straight after the notes', bad < copilot && bad < verint);
-    t.check('and everything else comes after them', copilot < more && verint < more);
+    t.check('Copilot, Verint and the email come straight after the notes', bad < copilot && bad < verint && bad < email);
+    t.check('and everything else comes after them', copilot < more && verint < more && email < more);
 });
 
 suite('call listening layout: everything else is in one closed fold', (t) => {
@@ -102,27 +103,55 @@ suite('call listening layout: everything else is in one closed fold', (t) => {
         'callSummaryPanel', 'callQaPanel', 'callMetricCoachPanel', 'callWordChoicePanel',
         'writeCallFeedbackEmailBtn', 'generateCallListeningPromptBtn', 'callListeningOutlookBody',
         'generateCallListeningOutlookBtn', 'callListeningHistoryList', 'showAllSavedCallsBtn',
-        'summarizeCallInCopilotBtn', 'checkTranscriptPasteBtn', 'callListeningReference'
+        'summarizeCallInCopilotBtn', 'checkTranscriptPasteBtn', 'callListeningReference',
+        'analyzeCallTranscriptBtn', 'clearCallTranscriptBtn', 'saveCallListeningBtn'
     ].forEach((id) => t.check(`${id} is under More`, more.includes(`id="${id}"`)));
 });
 
-suite('call listening layout: little in the way at rest', (t) => {
+suite('call listening layout: three buttons at rest', (t) => {
     const section = callListeningSection();
     const visible = visiblePart(section);
 
+    // "Really still too many buttons" (2026-09-30), with five on the page.
+    // Pasting reads the call and a new paste replaces the old one, so Read
+    // Again and Clear went under More; the three that send a call somewhere
+    // save it, so Save went too.
     const buttons = (visible.match(/<button\b/g) || []).length;
     const total = (section.match(/<button\b/g) || []).length;
-    t.check(`five buttons or so at rest (${buttons} of ${total})`, buttons <= 6 && buttons < total);
+    t.equal(`three buttons at rest (${buttons} of ${total})`, buttons, 3);
 
     [
         'callListeningTranscript', 'callListeningEmployeeSelect', 'callListeningDate', 'callFlagStrip',
         'callListeningStrengths', 'callListeningImprovements',
-        'callCopilotSummaryBtn', 'copyCallListeningVerintBtn', 'saveCallListeningBtn'
+        'callCopilotSummaryBtn', 'copyCallListeningVerintBtn', 'emailCallToAssociateBtn'
     ].forEach((id) => t.check(`${id} is on the page at rest`, visible.includes(`id="${id}"`)));
 
     ['writeCallFeedbackEmailBtn', 'callListeningOutlookBody', 'generateCallListeningPromptBtn',
-        'callVerificationAlert', 'callExplanationPanel'
+        'callVerificationAlert', 'callExplanationPanel', 'analyzeCallTranscriptBtn',
+        'clearCallTranscriptBtn', 'saveCallListeningBtn'
     ].forEach((id) => t.check(`${id} is not`, !visible.includes(`id="${id}"`)));
+});
+
+suite('call listening layout: no Clear needed to paste the next call', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    // A whole call pasted anywhere in a box that already holds one replaces
+    // it. Otherwise, with Clear gone, the next call would land in the middle of
+    // the last one.
+    t.check('a paste is checked for being a whole call',
+        /const replacesAll = !hadCall\s*\|\| \(field\.selectionStart === 0 && field\.selectionEnd === field\.value\.length\)\s*\|\| looksLikeWholeCall\(plain\);/.test(script));
+    t.check('and the box is written with the new call alone',
+        /else if \(replacesAll && plain\) \{[\s\S]{0,300}field\.value = correct\(plain\);/.test(script));
+
+    // The test the paste handler uses, run for real.
+    const start = script.indexOf('function looksLikeWholeCall(');
+    const source = script.slice(start, script.indexOf('\n}\n', start) + 2);
+    const looksLikeWholeCall = new Function(`${source}; return looksLikeWholeCall;`)();
+    t.check('a Verint export is a whole call', looksLikeWholeCall('Date/Time:\n09/29/2026 10:14:05 AM\nDimes, Alyssa'));
+    t.check('so are a few timestamped lines', looksLikeWholeCall('00:03\nthank you\n00:09\nhi\n00:14\nokay'));
+    t.check('and a few labelled lines', looksLikeWholeCall('Agent: hi\nCustomer: hello\nAgent: how can i help'));
+    t.check('a few words are an edit', !looksLikeWholeCall('budget billing'));
+    t.check('and so is one line with a time in it', !looksLikeWholeCall('01:21\ni guarantee your bill'));
 });
 
 suite('call listening layout: what inflates on a read is folded', (t) => {
@@ -174,9 +203,10 @@ suite('call listening layout: the buttons do what they say', (t) => {
         /bindElementOnce\(document\.getElementById\('callCopilotSummaryBtn'\), 'click', writeCallSummaryInCopilot\)/.test(script));
     t.check('it builds the coaching summary prompt',
         /function writeCallSummaryInCopilot[\s\S]{0,400}buildCoachingSummaryPrompt/.test(script));
-    // Reading the form is not a decision to keep it.
-    t.check('and saves nothing',
-        /function writeCallSummaryInCopilot\(\) \{\s*const entry = buildUnsavedCallListeningEntry\(\);/.test(script));
+    // There is no Save button on the page, so a call is kept when it goes
+    // somewhere, and the toast says so. See saved-calls for the once only rule.
+    t.check('and keeps the call, saying so',
+        /function writeCallSummaryInCopilot[\s\S]{0,900}keepCallOnTheWayOut\(\)[\s\S]{0,400}and the call saved/.test(script));
 
     t.check('Copy For Verint is still the Verint copy',
         /bindElementOnce\(copyVerintBtn, 'click', \(\) => copyCallListeningVerintSummary\(\)\)/.test(script));

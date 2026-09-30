@@ -261,11 +261,41 @@ Requirements:
         const handoff = window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(prompt, {
             button: options.button,
             successLabel: '✅ Copied + Opening Copilot',
-            message: '📋 Call listening prompt copied. Paste into Copilot with Ctrl+V',
+            message: options.message || '📋 Call listening prompt copied. Paste into Copilot with Ctrl+V',
             openWindow: options.openWindow
         });
 
         return { ok: true, handoff };
+    }
+
+    /**
+     * The saved entry this draft is the same call as, if there is one.
+     *
+     * The page has no Save button any more: a call is kept when it goes
+     * somewhere, to Copilot, to Verint or to the associate. Saving on the way
+     * past once appended a fresh entry every time, which is how one call was
+     * stored twice under two dates and counted as two calls. So a save finds
+     * the call it belongs to and updates it in place.
+     *
+     * The same call is the same conversation: the transcript fingerprint,
+     * which ignores the Verint header and the storage header. With no
+     * transcript there is nothing to fingerprint, so the date, time and
+     * reference have to agree instead.
+     */
+    function findSameCall(entries, draft, fingerprint) {
+        const list = Array.isArray(entries) ? entries : [];
+        if (!draft) return null;
+        const print = typeof fingerprint === 'function' ? fingerprint : null;
+        const key = draft.transcript && print ? print(draft.transcript) : '';
+
+        if (key) {
+            return list.find((entry) => entry && entry.transcript && print(entry.transcript) === key) || null;
+        }
+        return list.find((entry) => entry
+            && !entry.transcript
+            && (entry.listenedOn || '') === (draft.listenedOn || '')
+            && (entry.callTime || '') === (draft.callTime || '')
+            && (entry.callReference || '') === (draft.callReference || '')) || null;
     }
 
     function buildOutlookSubject(employeeName, callDate, getEmployeeNickname) {
@@ -338,11 +368,17 @@ Requirements:
         return note.bullets.length || (note.lead ? 1 : 0);
     }
 
-    /** Ends a line the way a person would, without doubling the stop. */
+    /**
+     * Ends a line the way a person would, without doubling the stop.
+     *
+     * A point that closes on a quote from the call, `...everybody. ("okay can
+     * i have the last four")`, already ended its sentence before the quote, so
+     * a full stop after the bracket is one too many.
+     */
     function sentence(text) {
         const trimmed = String(text || '').trim();
         if (!trimmed) return '';
-        return /[.!?:]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+        return /[.!?:]$|["'”]\)$/.test(trimmed) ? trimmed : `${trimmed}.`;
     }
 
     function lowerFirst(text) {
@@ -375,6 +411,10 @@ Requirements:
     // A point about verifying or authorizing the caller, as Analyze writes it
     // or as a supervisor would type it.
     const ACCOUNT_SECURITY_NOTE = /\bverif(?:y|ied|ying|ication)\b|\bauthori[sz]ed\b/i;
+    // The other points that are never "nothing here is a concern": a safety
+    // hazard the call did not turn to, a line that blamed the customer, and a
+    // promise about an outcome, in the words call-red-flags writes them.
+    const SERIOUS_NOTE = /\breported as an emergency\b|\blands as blame\b|\bpromise about how\b|\bguarantee(?:d|ing)?\b/i;
 
     const OPENERS = {
         clean: 'It was a good listen and there is nothing I need you to change.',
@@ -413,7 +453,8 @@ Requirements:
         const fullName = String(record.employeeName || '').trim();
         const name = String(nickname || '').trim() || fullName.split(/\s+/)[0] || '';
 
-        const tone = toneFor(wellCount, workCount, ACCOUNT_SECURITY_NOTE.test(record.improvementAreas || ''));
+        const workText = record.improvementAreas || '';
+        const tone = toneFor(wellCount, workCount, ACCOUNT_SECURITY_NOTE.test(workText) || SERIOUS_NOTE.test(workText));
         const moment = describeCallMoment(record);
         const lines = [];
 
@@ -592,6 +633,7 @@ Requirements:
         describeCallMoment,
         buildPrompt,
         buildCoachingSummaryPrompt,
+        findSameCall,
         copyPromptAndOpenCopilot,
         buildOutlookSubject,
         generateOutlookDraft,

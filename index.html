@@ -554,11 +554,7 @@ Box 2 - Future Improvement Areas:
                     <div id="subSectionCallListening" class="panel-section" style="display: none;">
                         <div class="call-panel">
                             <h3>🗒️ Paste The Call</h3>
-                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 140px;" placeholder="Copy the transcript in Verint and paste it here (Ctrl+V). It reads itself."></textarea>
-                            <div class="flex-row" style="margin-top: var(--space-2);">
-                                <button type="button" id="analyzeCallTranscriptBtn">🔍 Read It Again</button>
-                                <button type="button" id="clearCallTranscriptBtn">Clear</button>
-                            </div>
+                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 140px;" placeholder="Copy the transcript in Verint and paste it here (Ctrl+V). It reads itself. Paste the next call straight over it."></textarea>
                             <div id="callListeningStatus" class="call-note call-note-warn" style="display: none; margin-top: var(--space-3);"></div>
                             <div class="call-grid-setup" style="margin-top: var(--space-3);">
                                 <div>
@@ -596,13 +592,13 @@ Box 2 - Future Improvement Areas:
                             <div class="flex-row" style="margin-top: var(--space-4);">
                                 <button type="button" id="callCopilotSummaryBtn" class="btn-primary">🤖 Copilot: Write The Summary</button>
                                 <button type="button" id="copyCallListeningVerintBtn" class="btn-primary">📋 Copy For Verint</button>
-                                <button type="button" id="saveCallListeningBtn">💾 Save Call</button>
+                                <button type="button" id="emailCallToAssociateBtn" class="btn-primary">📧 Email The Associate</button>
                             </div>
-                            <p class="text-muted-sm" style="margin-top: var(--space-2);">Copilot writes it up in its own words, ready to paste into Verint. Copy For Verint gives you these notes as they stand.</p>
+                            <p class="text-muted-sm" style="margin-top: var(--space-2);">Each one saves the call to history.</p>
                         </div>
 
                         <details class="call-fold call-more">
-                            <summary><strong>More</strong> <span class="text-muted-sm">the full read of the call, QA form, email to the associate, history</span></summary>
+                            <summary><strong>More</strong> <span class="text-muted-sm">the full read of the call, QA form, email options, history, read again, clear</span></summary>
 
                             <div class="call-panel">
                                 <h3>🔎 The Full Read</h3>
@@ -622,6 +618,9 @@ Box 2 - Future Improvement Areas:
                                     <input type="text" id="callListeningReference" placeholder="Interaction ID / case #">
                                 </div>
                                 <div class="flex-row" style="margin-top: var(--space-3);">
+                                    <button type="button" id="analyzeCallTranscriptBtn">🔍 Read it again</button>
+                                    <button type="button" id="clearCallTranscriptBtn">🧹 Clear the call</button>
+                                    <button type="button" id="saveCallListeningBtn">💾 Save without sending</button>
                                     <button type="button" id="summarizeCallInCopilotBtn">🤖 Summarize the call in Copilot</button>
                                     <button type="button" id="checkTranscriptPasteBtn">🎨 Why no speaker labels?</button>
                                 </div>
