@@ -545,23 +545,22 @@ Box 2 - Future Improvement Areas:
                     <!-- End Mid-Year Review Sub-section -->
 
                     <!-- Call Listening Sub-section -->
+                    <!-- Paste, good and bad, Copilot, Verint. That is the whole
+                         job in Scott's words, and "there's too much here" was
+                         his verdict on the page that did more (2026-09-30).
+                         Everything else it can do sits in one closed fold at
+                         the bottom, so none of it is lost and none of it is in
+                         the way. -->
                     <div id="subSectionCallListening" class="panel-section" style="display: none;">
-                        <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Paste a call from Verint and it reads itself: who was talking, which associate, any red flags, where the customer got lost, and a first draft of your feedback. Then write the email and send it.</p>
-
-                        <!-- The paste box comes first because pasting is the
-                             whole job now. A paste reads the call on its own;
-                             the fields under the box fill themselves from the
-                             Verint header and are only there to check. -->
                         <div class="call-panel">
                             <h3>🗒️ Paste The Call</h3>
-                            <p>In Verint, select the transcript, copy it, and paste it here. The colour coding tells it who was talking and the header fills in the associate and the date. Everything it writes is editable.</p>
-                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 180px;" placeholder="Paste the Verint transcript here (Ctrl+V). It reads itself as soon as it lands."></textarea>
-                            <div class="flex-row" style="margin-top: var(--space-3);">
-                                <button type="button" id="analyzeCallTranscriptBtn" class="btn-primary">🔍 Read The Call</button>
+                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 140px;" placeholder="Copy the transcript in Verint and paste it here (Ctrl+V). It reads itself."></textarea>
+                            <div class="flex-row" style="margin-top: var(--space-2);">
+                                <button type="button" id="analyzeCallTranscriptBtn">🔍 Read It Again</button>
                                 <button type="button" id="clearCallTranscriptBtn">Clear</button>
                             </div>
                             <div id="callListeningStatus" class="call-note call-note-warn" style="display: none; margin-top: var(--space-3);"></div>
-                            <div class="call-grid-setup" style="margin-top: var(--space-4);">
+                            <div class="call-grid-setup" style="margin-top: var(--space-3);">
                                 <div>
                                     <label class="label-bold" for="callListeningEmployeeSelect">Associate</label>
                                     <select id="callListeningEmployeeSelect">
@@ -574,169 +573,162 @@ Box 2 - Future Improvement Areas:
                                 </div>
                                 <div>
                                     <label class="label-bold" for="callListeningTime">Call Time</label>
-                                    <input type="text" id="callListeningTime" placeholder="Filled from a Verint paste">
-                                </div>
-                                <div>
-                                    <label class="label-bold" for="callListeningReference">Call Ref (optional)</label>
-                                    <input type="text" id="callListeningReference" placeholder="Interaction ID / case #">
+                                    <input type="text" id="callListeningTime" placeholder="Filled from the paste">
                                 </div>
                             </div>
-                            <details class="call-fold" style="margin-top: var(--space-3);">
-                                <summary>Other things I can do with this transcript</summary>
-                                <div class="flex-row" style="margin-top: var(--space-3);">
-                                    <button type="button" id="summarizeCallInCopilotBtn">🤖 Summarize in Copilot</button>
-                                    <button type="button" id="checkTranscriptPasteBtn">🎨 Why no speaker labels?</button>
-                                </div>
-                            </details>
-                            <div id="callPasteDiagnosis" class="call-note" style="display: none; margin-top: var(--space-3);"></div>
-                            <div id="callTranscriptAnalysisSummary" class="call-note call-note-success" style="display: none; margin-top: var(--space-3);"></div>
-                            <!-- Verified and authorized before account details
-                                 went out. Not folded like the other reads: a
-                                 red flag here cannot wait to be looked for. -->
-                            <div id="callVerificationAlert" style="display: none; margin-top: var(--space-3);"></div>
-                            <!-- Everything else that cannot wait: a safety
-                                 hazard, a promise, a blame line, a supervisor
-                                 request left hanging. -->
-                            <div id="callRedFlagsAlert" style="display: none; margin-top: var(--space-3);"></div>
-                            <!-- Where the customer got lost, how it was
-                                 explained, and ways to say it that land. -->
-                            <div id="callExplanationPanel" style="display: none; margin-top: var(--space-3);"></div>
-                            <div id="callSummaryPanel" style="display: none; margin-top: var(--space-4);"></div>
+                            <!-- Only what is wrong, one line each with the time
+                                 to listen at. The detail behind each line is in
+                                 the full read under More. -->
+                            <div id="callFlagStrip" style="display: none; margin-top: var(--space-3);"></div>
                         </div>
 
                         <div class="call-panel">
-                            <h3>📝 Your Feedback</h3>
-                            <p>Drafted from the call, red flags first. Edit anything, add your own, then write the email.</p>
                             <div class="grid-2col">
                                 <div>
-                                    <label class="label-bold" for="callListeningStrengths">What went well</label>
-                                    <textarea id="callListeningStrengths" style="min-height: 140px;" placeholder="Example: Great empathy, ownership, and clear next steps..."></textarea>
+                                    <label class="label-bold" for="callListeningStrengths">✅ What went well</label>
+                                    <textarea id="callListeningStrengths" style="min-height: 220px;" placeholder="Filled in when you paste a call. Edit anything."></textarea>
                                 </div>
                                 <div>
-                                    <label class="label-bold" for="callListeningImprovements">What to work on next time</label>
-                                    <textarea id="callListeningImprovements" style="min-height: 140px;" placeholder="Example: Slow down discovery, confirm root cause before transferring..."></textarea>
+                                    <label class="label-bold" for="callListeningImprovements">🔧 What to work on</label>
+                                    <textarea id="callListeningImprovements" style="min-height: 220px;" placeholder="Filled in when you paste a call. Edit anything."></textarea>
                                 </div>
                             </div>
-                            <details class="call-fold" style="margin-top: var(--space-4);">
-                                <summary>Add context (optional)</summary>
-                                <div class="call-field" style="margin-top: var(--space-3);">
-                                    <label class="label-bold" for="callListeningOscarUrl">Oscar / Knowledge Base URL</label>
-                                    <input type="url" id="callListeningOscarUrl" placeholder="https://...">
-                                </div>
+                            <div class="flex-row" style="margin-top: var(--space-4);">
+                                <button type="button" id="callCopilotSummaryBtn" class="btn-primary">🤖 Copilot: Write The Summary</button>
+                                <button type="button" id="copyCallListeningVerintBtn" class="btn-primary">📋 Copy For Verint</button>
+                                <button type="button" id="saveCallListeningBtn">💾 Save Call</button>
+                            </div>
+                            <p class="text-muted-sm" style="margin-top: var(--space-2);">Copilot writes it up in its own words, ready to paste into Verint. Copy For Verint gives you these notes as they stand.</p>
+                        </div>
+
+                        <details class="call-fold call-more">
+                            <summary><strong>More</strong> <span class="text-muted-sm">the full read of the call, QA form, email to the associate, history</span></summary>
+
+                            <div class="call-panel">
+                                <h3>🔎 The Full Read</h3>
+                                <div id="callTranscriptAnalysisSummary" class="call-note call-note-success" style="display: none; margin-bottom: var(--space-3);"></div>
+                                <!-- Verified and authorized before account
+                                     details went out. -->
+                                <div id="callVerificationAlert" style="display: none; margin-bottom: var(--space-3);"></div>
+                                <!-- A safety hazard, a promise, a blame line, a
+                                     supervisor request left hanging. -->
+                                <div id="callRedFlagsAlert" style="display: none; margin-bottom: var(--space-3);"></div>
+                                <!-- Where the customer got lost, how it was
+                                     explained, and ways to say it that land. -->
+                                <div id="callExplanationPanel" style="display: none; margin-bottom: var(--space-3);"></div>
+                                <div id="callSummaryPanel" style="display: none; margin-bottom: var(--space-3);"></div>
                                 <div class="call-field">
-                                    <label class="label-bold" for="callListeningRelevantInfo">Relevant information to include</label>
-                                    <textarea id="callListeningRelevantInfo" style="min-height: 100px;" placeholder="Add policy notes, process reminders, or examples you want included in the message..."></textarea>
+                                    <label class="label-bold" for="callListeningReference">Call Ref (optional, goes in the Verint note)</label>
+                                    <input type="text" id="callListeningReference" placeholder="Interaction ID / case #">
                                 </div>
-                                <div class="call-field">
-                                    <label class="label-bold" for="callListeningManagerNotes">Additional manager notes</label>
-                                    <textarea id="callListeningManagerNotes" style="min-height: 90px;" placeholder="Any tone/context notes for how you want this communicated..."></textarea>
-                                    <div class="text-muted-sm" style="margin-top: 4px;">Guidance for the wording. This one is not put in front of the associate.</div>
+                                <div class="flex-row" style="margin-top: var(--space-3);">
+                                    <button type="button" id="summarizeCallInCopilotBtn">🤖 Summarize the call in Copilot</button>
+                                    <button type="button" id="checkTranscriptPasteBtn">🎨 Why no speaker labels?</button>
                                 </div>
-                            </details>
-                            <div class="flex-row" style="margin-top: var(--space-4);">
-                                <button type="button" id="writeCallFeedbackEmailBtn" class="btn-primary">✍️ Write The Email</button>
-                                <button type="button" id="saveCallListeningBtn">💾 Save Call Log</button>
-                                <button type="button" id="copyCallListeningVerintBtn">📝 Copy Verint Note</button>
+                                <div id="callPasteDiagnosis" class="call-note" style="display: none; margin-top: var(--space-3);"></div>
                             </div>
-                        </div>
 
-                        <div class="call-panel">
-                            <details class="call-fold">
-                                <summary><strong>🤖 Rather have Copilot write it</strong> <span class="text-muted-sm">optional, the app writes it without this</span></summary>
-                                <p>Builds a prompt from the same notes, with the transcript, the QA read and the language read attached. Copy it, run it in Copilot, then paste the result into the send box above. Worth it when you want a second voice on a difficult message.</p>
-                                <textarea id="callListeningPromptArea" class="call-mono" readonly style="height: 190px;"></textarea>
-                                <div class="flex-row" style="margin-top: var(--space-4);">
-                                    <button type="button" id="generateCallListeningPromptBtn">🤖 Generate Call Listening Prompt</button>
+                            <div id="callQaPanel" class="call-panel" style="display: none;">
+                                <details class="call-fold">
+                                    <summary><strong>✅ QA form, answered from the transcript</strong> <span id="callQaCount" class="text-muted-sm"></span></summary>
+                                    <p>Every line below is read off the call. Anything the transcript cannot show says so instead of guessing. Check it before you submit the review.</p>
+                                    <div id="callQaResults"></div>
+                                    <div class="flex-row" style="margin-top: var(--space-4);">
+                                        <button type="button" id="copyCallQaBtn">📋 Copy QA Answers</button>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <div id="callMetricCoachPanel" class="call-panel" style="display: none;">
+                                <details class="call-fold">
+                                    <summary><strong>🎯 What her numbers say, answered from her calls</strong> <span id="callMetricCount" class="text-muted-sm"></span></summary>
+                                    <p>The metrics she is missing that these calls can actually speak to. Click one to see what the calls show and what to ask her to try.</p>
+                                    <div id="callMetricChips" class="call-metric-chips"></div>
+                                    <div id="callMetricBrief" style="margin-top: var(--space-4);"></div>
+                                    <div class="flex-row" style="margin-top: var(--space-4);">
+                                        <button type="button" id="writeMetricMessageBtn" class="btn-primary">✍️ Write The Message For Me</button>
+                                        <button type="button" id="generateMetricCoachPromptBtn">🤖 Copilot Prompt Instead</button>
+                                        <button type="button" id="copyMetricCoachBtn">📋 Copy The Read</button>
+                                    </div>
+                                    <div id="callMetricCoachStatus" class="text-muted-sm" style="margin-top: var(--space-3);"></div>
+                                </details>
+                            </div>
+
+                            <div id="callWordChoicePanel" class="call-panel" style="display: none;">
+                                <details class="call-fold">
+                                    <summary><strong>🗣️ Language, against the scored phrase lists</strong> <span id="callWordChoiceCount" class="text-muted-sm"></span></summary>
+                                    <p>Read off the call using the Verint phrase lists in Settings, matched to the side that said them. Positive and negative phrases are what the associate is graded on, so these are the exact words that move those scores.</p>
+                                    <div id="callWordChoiceResults"></div>
+                                    <div class="flex-row" style="margin-top: var(--space-4);">
+                                        <button type="button" id="copyCallWordChoiceBtn">📋 Copy Language Read</button>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <div class="call-panel">
+                                <details class="call-fold">
+                                    <summary><strong>📧 Email the associate</strong> <span class="text-muted-sm">written from the same notes</span></summary>
+                                    <div class="call-field" style="margin-top: var(--space-3);">
+                                        <label class="label-bold" for="callListeningOscarUrl">Oscar / Knowledge Base URL</label>
+                                        <input type="url" id="callListeningOscarUrl" placeholder="https://...">
+                                    </div>
+                                    <div class="call-field">
+                                        <label class="label-bold" for="callListeningRelevantInfo">Relevant information to include</label>
+                                        <textarea id="callListeningRelevantInfo" style="min-height: 80px;" placeholder="Policy notes, process reminders, or examples you want included in the message..."></textarea>
+                                    </div>
+                                    <div class="call-field">
+                                        <label class="label-bold" for="callListeningManagerNotes">Additional manager notes</label>
+                                        <textarea id="callListeningManagerNotes" style="min-height: 70px;" placeholder="Any tone/context notes for how you want this communicated..."></textarea>
+                                        <div class="text-muted-sm" style="margin-top: 4px;">Guidance for the wording. This one is not put in front of the associate.</div>
+                                    </div>
+                                    <div class="flex-row" style="margin-top: var(--space-4);">
+                                        <button type="button" id="writeCallFeedbackEmailBtn" class="btn-primary">✍️ Write The Email</button>
+                                        <button type="button" id="generateCallListeningPromptBtn">🤖 Copilot Writes The Email Instead</button>
+                                    </div>
+                                    <textarea id="callListeningPromptArea" class="call-mono" readonly style="height: 120px; margin-top: var(--space-3);" placeholder="The Copilot email prompt appears here."></textarea>
+                                    <div id="callListeningOutlookSection" class="call-panel-action" style="margin-top: var(--space-4); padding: var(--space-4); border-radius: var(--radius-md);">
+                                        <div class="call-field">
+                                            <label class="label-bold" for="callListeningRecipient">To</label>
+                                            <input type="email" id="callListeningRecipient" placeholder="Set an address pattern in Settings > Team Members, or type one here">
+                                            <div id="callListeningRecipientNote" class="text-muted-sm" style="margin-top: 4px;"></div>
+                                        </div>
+                                        <textarea id="callListeningOutlookBody" class="call-mono" style="height: 180px;" placeholder="Press Write The Email, or paste a message from Copilot in here."></textarea>
+                                        <div class="flex-row" style="margin-top: var(--space-3);">
+                                            <button type="button" id="generateCallListeningOutlookBtn" class="btn-primary" style="opacity: 0.6;" disabled>📧 Generate Outlook Email</button>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <!-- No heading here: renderForEmployee draws its own
+                                 "Did it land?" header and subtitle, so a panel
+                                 title above it said the same thing twice. -->
+                            <div id="callOutcomesPanel"></div>
+
+                            <div class="call-panel">
+                                <h3>🗂️ Call Listening History</h3>
+                                <div id="callListeningHistorySummary" class="text-muted-sm" style="margin-bottom: var(--space-3);"></div>
+                                <div id="callListeningTrends" style="display: none; margin-bottom: var(--space-4);"></div>
+                                <ul id="callListeningHistoryList" class="call-history"></ul>
+                                <div class="flex-row" style="margin-top: var(--space-3);">
+                                    <button type="button" id="exportCallListeningCsvBtn">📥 Export Call Logs (CSV)</button>
                                 </div>
-                            </details>
-                        </div>
-
-                        <div id="callListeningOutlookSection" class="call-panel call-panel-action">
-                            <h3>📧 Send It</h3>
-                            <p>Press Write The Email above and the message lands here, drafted from your notes. Edit anything, then open the Outlook draft. Pasting one in from Copilot works exactly the same.</p>
-                            <div class="call-field">
-                                <label class="label-bold" for="callListeningRecipient">To</label>
-                                <input type="email" id="callListeningRecipient" placeholder="Set an address pattern in Settings > Team Members, or type one here">
-                                <div id="callListeningRecipientNote" class="text-muted-sm" style="margin-top: 4px;"></div>
                             </div>
-                            <textarea id="callListeningOutlookBody" class="call-mono" style="height: 200px;" placeholder="Press Write The Email above, or paste a message in here."></textarea>
-                            <div class="flex-row" style="margin-top: var(--space-4);">
-                                <button type="button" id="generateCallListeningOutlookBtn" class="btn-primary" style="opacity: 0.6;" disabled>📧 Generate Outlook Email</button>
-                            </div>
-                        </div>
 
-                        <!-- Everything the app read off the call, below the
-                             email rather than above it. These three used to sit
-                             between the transcript and the feedback boxes and
-                             all three inflate on Analyze, so pressing the
-                             button pushed the thing you came to do three panels
-                             further down the page at the exact moment you were
-                             ready to do it. -->
-                        <div id="callQaPanel" class="call-panel" style="display: none;">
-                            <details class="call-fold">
-                                <summary><strong>✅ QA form, answered from the transcript</strong> <span id="callQaCount" class="text-muted-sm"></span></summary>
-                                <p>Every line below is read off the call. Anything the transcript cannot show says so instead of guessing. Check it before you submit the review.</p>
-                                <div id="callQaResults"></div>
-                                <div class="flex-row" style="margin-top: var(--space-4);">
-                                    <button type="button" id="copyCallQaBtn">📋 Copy QA Answers</button>
+                            <div class="call-panel">
+                                <h3>🧠 Everything Saved In Memory</h3>
+                                <p>Every call stored for the associate on screen. Click a call to read the transcript and the notes saved with it, or load it back into the form to work on. Earlier versions of this page saved a log automatically when a prompt was generated or a Verint note copied, so calls can appear here that you did not save by hand. Remove anything that should not be feeding the coaching.</p>
+                                <div class="flex-row">
+                                    <button type="button" id="showAllSavedCallsBtn">🔎 Show Saved Calls</button>
+                                    <label class="text-muted-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                                        <input type="checkbox" id="savedCallsEveryoneToggle">
+                                        Everyone, not just this associate
+                                    </label>
                                 </div>
-                            </details>
-                        </div>
-
-                        <div id="callMetricCoachPanel" class="call-panel" style="display: none;">
-                            <details class="call-fold">
-                                <summary><strong>🎯 What her numbers say, answered from her calls</strong> <span id="callMetricCount" class="text-muted-sm"></span></summary>
-                                <p>The metrics she is missing that these calls can actually speak to. Click one to see what the calls show and what to ask her to try. This writes about her numbers; the email above writes about this call.</p>
-                            <div id="callMetricChips" class="call-metric-chips"></div>
-                            <div id="callMetricBrief" style="margin-top: var(--space-4);"></div>
-                            <div class="flex-row" style="margin-top: var(--space-4);">
-                                <button type="button" id="writeMetricMessageBtn" class="btn-primary">✍️ Write The Message For Me</button>
-                                <button type="button" id="generateMetricCoachPromptBtn">🤖 Copilot Prompt Instead</button>
-                                <button type="button" id="copyMetricCoachBtn">📋 Copy The Read</button>
+                                <div id="allSavedCallsSummary" class="text-muted-sm" style="margin-top: var(--space-3);"></div>
+                                <div id="allSavedCalls" style="display: none; margin-top: var(--space-3);"></div>
                             </div>
-                                <div id="callMetricCoachStatus" class="text-muted-sm" style="margin-top: var(--space-3);"></div>
-                            </details>
-                        </div>
-
-                        <div id="callWordChoicePanel" class="call-panel" style="display: none;">
-                            <details class="call-fold">
-                                <summary><strong>🗣️ Language, against the scored phrase lists</strong> <span id="callWordChoiceCount" class="text-muted-sm"></span></summary>
-                                <p>Read off the call using the Verint phrase lists in Settings, matched to the side that said them. Positive and negative phrases are what the associate is graded on, so these are the exact words that move those scores.</p>
-                                <div id="callWordChoiceResults"></div>
-                                <div class="flex-row" style="margin-top: var(--space-4);">
-                                    <button type="button" id="copyCallWordChoiceBtn">📋 Copy Language Read</button>
-                                </div>
-                            </details>
-                        </div>
-
-                        <!-- No heading here: renderForEmployee draws its own
-                             "Did it land?" header and subtitle, so a panel
-                             title above it said the same thing twice. -->
-                        <div id="callOutcomesPanel"></div>
-
-                        <div class="call-panel">
-                            <h3>🗂️ Call Listening History</h3>
-                            <div id="callListeningHistorySummary" class="text-muted-sm" style="margin-bottom: var(--space-3);"></div>
-                            <div id="callListeningTrends" style="display: none; margin-bottom: var(--space-4);"></div>
-                            <ul id="callListeningHistoryList" class="call-history"></ul>
-                            <div class="flex-row" style="margin-top: var(--space-3);">
-                                <button type="button" id="exportCallListeningCsvBtn">📥 Export Call Logs (CSV)</button>
-                            </div>
-                        </div>
-
-                        <div class="call-panel">
-                            <h3>🧠 Everything Saved In Memory</h3>
-                            <p>Every call stored for the associate on screen. Click a call to read the transcript and the notes saved with it, or load it back into the form to work on. Generating a prompt or copying a Verint note saves a log automatically, so calls can appear here that you did not save by hand. Remove anything that should not be feeding the coaching.</p>
-                            <div class="flex-row">
-                                <button type="button" id="showAllSavedCallsBtn">🔎 Show Saved Calls</button>
-                                <label class="text-muted-sm" style="display: inline-flex; align-items: center; gap: 6px;">
-                                    <input type="checkbox" id="savedCallsEveryoneToggle">
-                                    Everyone, not just this associate
-                                </label>
-                            </div>
-                            <div id="allSavedCallsSummary" class="text-muted-sm" style="margin-top: var(--space-3);"></div>
-                            <div id="allSavedCalls" style="display: none; margin-top: var(--space-3);"></div>
-                        </div>
+                        </details>
                     </div>
 
                     <!-- Team Snapshot Sub-section (embedded from standalone) -->

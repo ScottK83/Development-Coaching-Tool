@@ -148,6 +148,97 @@ Requirements:
     }
 
     /**
+     * The prompt behind "Copilot: Write The Summary".
+     *
+     * Scott's flow is paste, sort the good from the bad, have Copilot write it
+     * up, and put it in Verint. So this asks for a coaching summary shaped for
+     * the Verint log rather than an email: a line on what the call was, then
+     * what went well and what to work on, from his notes.
+     *
+     * Where the customer got lost on something, the moment goes over with it
+     * and Copilot is asked for one plainer way to explain it. That is the part
+     * of this a rules engine cannot do well and Copilot can.
+     *
+     * Same framing as the email prompt, because it is what does not get
+     * refused: the review is done, only the wording is wanted, and the
+     * associate is never named. The customer's numbers are masked first, since
+     * none of them are needed to summarise a call.
+     */
+    function buildCoachingSummaryPrompt(entry) {
+        if (!entry) return '';
+        const transcriptModule = window.DevCoachModules?.callTranscript;
+        const correct = transcriptModule?.correctMishearings || ((value) => String(value || ''));
+        const mask = transcriptModule?.maskIdentifiers || ((value) => String(value || ''));
+        const prepare = transcriptModule?.prepareForPrompt || ((value) => String(value || '').trim());
+
+        // Masked a line at a time. Run over the whole text, the digit pattern
+        // reaches across a line break, so "is 2" above "01:03" became one
+        // [number] and the timestamp went with it, and the whitespace tidy
+        // pulled the next timestamp up onto the customer's line.
+        const transcript = entry.transcript
+            ? prepare(entry.transcript).split('\n').map((line) => mask(line)).join('\n')
+            : '';
+        const meta = entry.transcript ? transcriptModule?.extractMetadata?.(entry.transcript) : null;
+        const moment = describeCallMoment(entry);
+
+        const summarizer = window.DevCoachModules?.callSummary;
+        const recap = summarizer?.summarizeCall && entry.transcript
+            ? summarizer.buildSummaryText(summarizer.summarizeCall(entry.transcript, {
+                associateName: entry.employeeName,
+                callDate: entry.listenedOn,
+                callTime: entry.callTime
+            }), { voice: 'supervisor' })
+            : '';
+
+        const explainer = window.DevCoachModules?.callExplanation;
+        const explained = entry.transcript ? explainer?.readExplanationsFromText?.(entry.transcript) : null;
+        const lost = explained?.ok ? explained.lost : [];
+
+        const lines = [];
+        lines.push('I supervise a call center for APS, an electric utility in Arizona. I have already listened to this call and written my notes, so the review is done. I am not asking you to assess anybody or rate the call. I need the wording: turn my notes into a short coaching summary I can paste into our coaching log in Verint.');
+        lines.push('');
+
+        const details = [];
+        if (moment) details.push(`- Call taken: ${moment}`);
+        if (meta?.durationLabel) details.push(`- Call length: ${meta.durationLabel}`);
+        if (recap) details.push(`- My recap of the call: ${recap}`);
+        if (details.length) {
+            lines.push('Call details:', ...details, '');
+        }
+
+        if (transcript) {
+            lines.push('Call transcript. It is speech to text, so some words are misheard, and numbers the customer read out have been replaced with [number]:');
+            lines.push('"""', transcript, '"""', '');
+        }
+
+        lines.push('My notes on what went well:', correct(entry.whatWentWell) || '- None', '');
+        lines.push('My notes on what to work on:', correct(entry.improvementAreas) || '- None', '');
+
+        if (lost.length) {
+            const first = lost[0];
+            const subject = first.topicKey === 'general' ? 'what was being explained' : first.topicLabel;
+            lines.push(`Where the customer got lost: ${subject}${first.time ? ` at ${first.time}` : ''}. `
+                + (first.beforeQuote ? `After the associate said "${mask(first.beforeQuote)}", ` : '')
+                + `the customer said "${mask(first.customerQuote)}". Include one plainer way to explain ${subject} that the associate could use next time, in under 40 words, in everyday words. Leave any amount or date as a placeholder in square brackets, and do not state APS policy you cannot see in the transcript.`);
+            lines.push('');
+        }
+
+        lines.push('Write the coaching summary.');
+        lines.push('');
+        lines.push('Requirements:');
+        lines.push('- Plain text only, ready to paste into Verint. No markdown, no bold, no symbols in front of headings');
+        lines.push('- Open with one or two sentences on what the call was about and how it ended');
+        lines.push('- Then "What went well:" with two to four short bullets, and "What to work on:" with one to three short bullets, each with one specific thing to keep doing or to try');
+        lines.push('- Use only my notes and the transcript. Do not add findings of your own, and do not rate or score the call');
+        lines.push('- Write to the associate as "you" and do not use their name');
+        lines.push('- Our company is APS. If the transcript names another company in the greeting, that is the speech to text mishearing APS');
+        lines.push('- Quote the call only where a short phrase makes a point clearer');
+        lines.push('- Keep it under 180 words. Do not use em dashes, or hyphens with spaces around them');
+
+        return lines.join('\n');
+    }
+
+    /**
      * Start the Copilot handoff for this call.
      *
      * The returned ok means "there was a prompt and the handoff began", which
@@ -500,6 +591,7 @@ Requirements:
     window.DevCoachModules.callListening = {
         describeCallMoment,
         buildPrompt,
+        buildCoachingSummaryPrompt,
         copyPromptAndOpenCopilot,
         buildOutlookSubject,
         generateOutlookDraft,

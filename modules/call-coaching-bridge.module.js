@@ -386,8 +386,13 @@
         // the same conversation inside them.
         const strip = window.DevCoachModules?.callTranscript?.stripBoilerplate;
         const spoken = typeof strip === 'function' ? (strip(raw) || raw) : raw;
+        // Storage corrects Verint's "at&t" and "a t s" to APS and a paste
+        // does not until it is read, so both are corrected here. That also
+        // keeps a call saved before the correction matching its new copy.
+        const correct = window.DevCoachModules?.callTranscript?.correctMishearings;
+        const said = typeof correct === 'function' ? correct(spoken) : spoken;
 
-        const body = spoken
+        const body = said
             .replace(/^\s*\[[^\]]*\]\s*/, '')
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, ' ')

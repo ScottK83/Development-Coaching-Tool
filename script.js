@@ -7561,80 +7561,60 @@ function upsertCallListeningEntryFromForm(showSavedToast = false) {
     return entry;
 }
 
-function buildCallListeningQaText(entry) {
-    if (!entry?.transcript) return '';
-    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
-        associateName: entry.employeeName
-    });
-    const qa = scoreCallListeningQa(entry.transcript, entry.employeeName, analysis);
-    return window.DevCoachModules?.callQa?.buildQaText?.(qa) || '';
-}
-
-function buildCallListeningWordChoiceText(entry) {
-    if (!entry?.transcript) return '';
-    const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript, {
-        associateName: entry.employeeName
-    });
-    const scan = scanCallListeningWordChoice(entry.transcript, entry.employeeName, analysis);
-    return window.DevCoachModules?.callWordChoice?.buildWordChoiceText?.(scan) || '';
-}
-
-// The red flag, if the call has one, for the top of the Verint note: the one
-// finding that should not have to be found in the QA list at the bottom.
-function buildCallListeningVerificationAlertText(entry) {
-    if (!entry?.transcript) return '';
-    const verifier = window.DevCoachModules?.callVerification;
-    const read = verifier?.readVerificationFromText?.(entry.transcript, { associateName: entry.employeeName });
-    return read?.ok ? (verifier.buildAlertText?.(read) || '') : '';
-}
-
-// The other flags and where the customer got lost, under the verification
-// flag in the Verint note, in the supervisor's voice.
-function buildCallListeningOtherFlagsText(entry) {
-    if (!entry?.transcript) return '';
+// The red flags for the Verint note, one line each: what a coaching log has
+// to record, without the timeline the box on screen carries.
+function buildCallListeningRedFlagLines(entry) {
+    if (!entry?.transcript) return [];
     const modules = window.DevCoachModules || {};
     const options = { associateName: entry.employeeName };
+    const lines = [];
+
+    const verification = modules.callVerification?.readVerificationFromText?.(entry.transcript, options);
+    if (verification?.ok && verification.status === 'breach') {
+        const said = modules.callVerification.describe(verification);
+        const at = verification.breach?.time ? ` (at ${verification.breach.time})` : '';
+        lines.push(`Red flag: ${said.headline}${at}.`);
+    }
+
     const flags = modules.callRedFlags?.readRedFlagsFromText?.(entry.transcript, options);
-    const explained = modules.callExplanation?.readExplanationsFromText?.(entry.transcript, options);
-    return [
-        flags?.ok ? modules.callRedFlags.buildAlertText(flags) : '',
-        explained?.ok ? modules.callExplanation.buildPanelText(explained) : ''
-    ].filter(Boolean).join('\n\n');
+    (flags?.flags || []).filter(item => item.level === 'red').forEach(item => {
+        lines.push(`Red flag: ${item.title}${item.time ? ` (at ${item.time})` : ''}.`);
+    });
+    return lines;
 }
 
+/**
+ * The coaching summary for Verint.
+ *
+ * Short on purpose. It used to carry the QA form's answers, the language
+ * read, "N/A" under every empty field and the manager's private notes on
+ * tone, and Scott's verdict on the page it came from was "there's too much
+ * here". A coaching log needs which call, anything red, what happened, and
+ * the good and the bad. The QA answers and the language read keep their own
+ * copy buttons under More.
+ */
 function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
-    const alertText = [buildCallListeningVerificationAlertText(entry), buildCallListeningOtherFlagsText(entry)]
-        .filter(Boolean)
-        .join('\n\n');
-    const qaText = buildCallListeningQaText(entry);
-    const wordChoiceText = buildCallListeningWordChoiceText(entry);
+    const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
     const moment = window.DevCoachModules?.callTranscript?.formatCallMoment?.(entry.listenedOn, entry.callTime);
     const recap = window.DevCoachModules?.callSummary?.buildSummaryText?.(
         buildCallSummary(entry.transcript, entry.employeeName, null, entry),
         { voice: 'supervisor' }
     ) || '';
+    const flags = buildCallListeningRedFlagLines(entry);
+    // Notes drafted before the mishearing fix still quote "at&t", so they are
+    // corrected on the way out as well.
+    const section = (title, text) => (text ? ['', title, correct(text)] : []);
+
     return [
-        `Call Listening Date: ${entry.listenedOn || ''}${entry.callTime ? ` ${entry.callTime}` : ''}`,
-        ...(moment ? [`Call Taken: ${moment}`] : []),
-        `Associate: ${entry.employeeName || ''}`,
-        `Call Reference: ${entry.callReference || 'N/A'}`,
-        ...(alertText ? ['', alertText] : []),
+        `Call coaching: ${entry.employeeName || ''}`,
+        moment ? `Call Taken: ${moment}` : `Call Date: ${entry.listenedOn || ''}`,
+        ...(entry.callReference ? [`Call Reference: ${entry.callReference}`] : []),
+        ...(flags.length ? ['', ...flags] : []),
         ...(recap ? ['', 'Call summary:', recap] : []),
-        '',
-        'What went well:',
-        entry.whatWentWell || 'N/A',
-        '',
-        'What to work on next time:',
-        entry.improvementAreas || 'N/A',
-        '',
-        'Relevant info shared:',
-        entry.relevantInfo || 'N/A',
-        '',
-        'Manager notes:',
-        entry.managerNotes || 'N/A',
-        ...(qaText ? ['', qaText] : []),
-        ...(wordChoiceText ? ['', wordChoiceText] : [])
+        ...section('What went well:', entry.whatWentWell),
+        ...section('What to work on:', entry.improvementAreas),
+        ...section('Relevant info shared:', entry.relevantInfo)
     ].join('\n');
 }
 
@@ -7651,7 +7631,7 @@ function copyCallListeningVerintSummary(entryId = null) {
     if (!entry) return;
 
     const summaryText = buildCallListeningVerintSummary(entry);
-    copyToClipboard(summaryText, { message: '📋 Verint call summary copied to clipboard' });
+    copyToClipboard(summaryText, { message: '📋 Coaching summary copied. Paste it into Verint.' });
 }
 
 function loadCallListeningEntryIntoForm(entryId) {
@@ -8572,10 +8552,25 @@ function handleTranscriptPaste(event) {
     const advisorName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const converted = html && typeof converter === 'function' ? converter(html, { advisorName }) : null;
 
+    // Verint writes "thank you for calling APS" as "at&t". Corrected in the box
+    // as well as where the call is read, so what is on screen is what gets
+    // quoted, saved and sent.
+    const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
+
     if (converted?.text) {
         // Only now take the paste over, so a decline costs nothing.
         event.preventDefault();
-        field.value = converted.text;
+        field.value = correct(converted.text);
+    } else if (replacesAll) {
+        const plain = (() => {
+            try { return clipboard.getData('text/plain') || ''; }
+            catch (error) { return ''; }
+        })();
+        const corrected = correct(plain);
+        if (plain && corrected !== plain) {
+            event.preventDefault();
+            field.value = corrected;
+        }
     }
 
     // Pasting is the whole job now: the call is read the moment it lands,
@@ -8698,7 +8693,7 @@ function showTranscriptPasteDiagnosis() {
             + '</p>'
             + '<p style="margin-top: var(--space-2);">Either way the call still reads. Without labels the '
             + 'two sides are worked out from what each turn says and from the shape of the conversation, '
-            + 'and Read The Call will tell you which of the two it used.</p>';
+            + 'and the line under the paste box says when that happened.</p>';
         return;
     }
 
@@ -8824,6 +8819,7 @@ function analyzeCallListeningTranscript(options) {
         rememberCallDrafts();
 
         renderCallListeningReadPanels(transcript, forName, analysis);
+        renderCallFlagStrip(analysis);
 
         if (summary) {
             summary.textContent = buildCallListeningAnalysisSummary(analysis, forName);
@@ -8861,7 +8857,77 @@ function buildCallReadToast(analysis, applied, labelled, associateName) {
         : '';
     const needsName = associateName ? '' : ' Pick the associate so it is ordered by their numbers.';
 
-    return `${lead}${didSentence} Drafts are in Your Feedback.${needsName}`;
+    return `${lead}${didSentence} Good and bad are drafted below.${needsName}`;
+}
+
+const CALL_FLAG_ICONS = { red: '🚩', warn: '⚠️', info: 'ℹ️' };
+
+/**
+ * The one thing under the paste box besides the fields: what is wrong, one
+ * line each with the time to listen at. The detail behind every line is in
+ * the full read under More. A clean call gets a single quiet line.
+ */
+function renderCallFlagStrip(analysis) {
+    const host = document.getElementById('callFlagStrip');
+    if (!host) return;
+    if (!analysis?.ok) {
+        host.innerHTML = '';
+        host.style.display = 'none';
+        return;
+    }
+
+    const items = [];
+    const verification = analysis.verification;
+    if (verification?.ok && verification.status === 'breach') {
+        const said = window.DevCoachModules?.callVerification?.describe?.(verification);
+        if (said?.headline) items.push({ level: 'red', text: said.headline, time: verification.breach?.time || '' });
+    }
+    (analysis.redFlags?.flags || []).forEach(flag => {
+        items.push({ level: flag.level, text: flag.title, time: flag.time || '' });
+    });
+    (analysis.explanation?.lost || []).forEach(moment => {
+        const subject = moment.topicKey === 'general' ? 'what was being explained' : moment.topicLabel;
+        items.push({ level: 'warn', icon: '💬', text: `The customer got lost on ${subject}`, time: moment.time || '' });
+    });
+
+    // Said once, here, because every quote below depends on it.
+    const inferred = analysis.stats && !analysis.stats.labeled
+        ? 'The colours did not come through, so who said what was worked out from the conversation. Check a quote before you send it.'
+        : '';
+
+    if (!items.length) {
+        host.innerHTML = `<div class="call-alert call-alert-ok"><strong>✅ No red flags.</strong>${inferred ? ` <span>${escapeHtml(inferred)}</span>` : ''}</div>`;
+    } else {
+        const rows = items.map(item => `<li class="call-flag-${item.level}">${item.icon || CALL_FLAG_ICONS[item.level] || ''} ${escapeHtml(item.text)}`
+            + `${item.time ? ` <span class="call-alert-time">${escapeHtml(item.time)}</span>` : ''}</li>`).join('');
+        host.innerHTML = `<ul class="call-flag-strip">${rows}</ul>`
+            + `<div class="text-muted-sm" style="margin-top: var(--space-1);">${inferred ? `${escapeHtml(inferred)} ` : ''}The detail behind each line is in the full read under More.</div>`;
+    }
+    host.style.display = 'block';
+}
+
+/**
+ * "Copilot: Write The Summary". Builds a coaching summary prompt from the call
+ * and the two note boxes, copies it and opens Copilot. Nothing is saved:
+ * reading the form is not a decision to keep it.
+ */
+function writeCallSummaryInCopilot() {
+    const entry = buildUnsavedCallListeningEntry();
+    if (!entry) return;
+
+    const listening = window.DevCoachModules?.callListening;
+    const prompt = listening?.buildCoachingSummaryPrompt?.(entry);
+    if (!prompt) {
+        showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
+        return;
+    }
+
+    const result = listening.copyPromptAndOpenCopilot?.({
+        prompt,
+        button: document.getElementById('callCopilotSummaryBtn'),
+        openWindow: window.open
+    });
+    if (!result?.ok) showToast('⚠️ Could not start the Copilot handoff. Try again.', 3500);
 }
 
 function clearCallListeningTranscript() {
@@ -8882,12 +8948,12 @@ function clearCallListeningTranscript() {
  * describing a call that was no longer there.
  */
 function resetCallListeningReadPanels() {
-    ['callTranscriptAnalysisSummary', 'callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel',
+    ['callTranscriptAnalysisSummary', 'callFlagStrip', 'callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel',
         'callSummaryPanel', 'callPasteDiagnosis', 'callQaPanel', 'callWordChoicePanel', 'callMetricCoachPanel'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    ['callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel', 'callSummaryPanel',
+    ['callFlagStrip', 'callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel', 'callSummaryPanel',
         'callQaResults', 'callWordChoiceResults', 'callMetricChips', 'callMetricBrief'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '';
@@ -8908,7 +8974,10 @@ function resetCallListeningReadPanels() {
 function buildCallListeningPrompt(entry) {
     const preferredName = getEmployeeNickname(entry.employeeName) || entry.employeeName.split(' ')[0] || entry.employeeName;
     const delegated = window.DevCoachModules?.callListening?.buildPrompt?.(entry, preferredName);
-    return delegated || '';
+    // The notes can still quote "at&t" when they were drafted before the
+    // mishearing fix, and Copilot quotes whatever it is given.
+    const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
+    return correct(delegated || '');
 }
 
 function generateCallListeningPromptAndCopy() {
@@ -9543,6 +9612,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(employeeSelect, 'change', rereadCallForSelectedAssociate);
     bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
     bindElementOnce(document.getElementById('callExplanationPanel'), 'click', handleCallExplanationClick);
+    bindElementOnce(document.getElementById('callCopilotSummaryBtn'), 'click', writeCallSummaryInCopilot);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);

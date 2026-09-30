@@ -208,18 +208,22 @@ suite('red flags: wiring', (t) => {
             html.indexOf(`modules/${name}.module.js`) < html.indexOf('modules/call-listening.module.js'));
     });
 
-    // Both unfolded, under the transcript, beside the verification box.
+    // The full boxes sit in the full read under More, beside the verification
+    // box. What is on the page at rest is the one line strip under the paste.
     const section = html.slice(html.indexOf('id="subSectionCallListening"'));
     const at = (needle) => section.indexOf(needle);
     t.check('the red flags box sits under verification', at('id="callVerificationAlert"') < at('id="callRedFlagsAlert"'));
     t.check('and the explanation read under that', at('id="callRedFlagsAlert"') < at('id="callExplanationPanel"'));
-    t.check('both before the feedback boxes', at('id="callExplanationPanel"') < at('id="callListeningStrengths"'));
+    t.check('the strip that sums them up is under the paste box, before the notes',
+        at('id="callListeningTranscript"') < at('id="callFlagStrip"') && at('id="callFlagStrip"') < at('id="callListeningStrengths"'));
 
     t.check('both are rendered on a read', /renderCallRedFlagsAlert\(transcript/.test(script) && /renderCallExplanationPanel\(transcript/.test(script));
     t.check('both are cleared with the rest', /'callRedFlagsAlert', 'callExplanationPanel'/.test(script));
     t.check('the Copilot wording button is wired',
         /bindElementOnce\(document\.getElementById\('callExplanationPanel'\), 'click', handleCallExplanationClick\)/.test(script));
-    t.check('and the Verint note carries both', /buildCallListeningOtherFlagsText\(entry\)/.test(script));
+    t.check('the strip reads both', /function renderCallFlagStrip[\s\S]{0,1600}analysis\.redFlags[\s\S]{0,400}analysis\.explanation/.test(script));
+    t.check('and the Verint note records the red ones',
+        /function buildCallListeningRedFlagLines[\s\S]{0,1200}readRedFlagsFromText[\s\S]{0,200}level === 'red'/.test(script));
 });
 
 suite('call listening: the header picks the associate, and a new call starts fresh', (t) => {

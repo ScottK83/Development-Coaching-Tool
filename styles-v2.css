@@ -1163,6 +1163,52 @@ textarea:focus-visible {
     border-top: 1px solid var(--border);
 }
 
+/* The flag strip under the paste box: only what is wrong, one line each. */
+.panel-section .call-flag-strip {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.panel-section .call-flag-strip li {
+    padding: var(--space-2) var(--space-3);
+    border-left: 3px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface-sunken);
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.panel-section .call-flag-strip li + li {
+    margin-top: var(--space-1);
+}
+
+.panel-section .call-flag-strip .call-flag-red {
+    border-left-color: var(--red);
+    background: var(--red-soft);
+    font-weight: 650;
+}
+
+.panel-section .call-flag-strip .call-flag-warn {
+    border-left-color: var(--yellow);
+    background: var(--yellow-soft);
+}
+
+/* Everything that is not paste, good and bad, Copilot or Verint. One closed
+   fold, styled as a card so it reads as a place rather than a stray link. */
+.panel-section .call-more {
+    margin-bottom: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+.panel-section .call-more[open] > .call-panel,
+.panel-section .call-more[open] > #callOutcomesPanel {
+    margin-top: var(--space-4);
+}
+
 /* The explanation read: one block per moment the customer got lost. */
 .panel-section .call-explain-moment + .call-explain-moment {
     margin-top: var(--space-4);

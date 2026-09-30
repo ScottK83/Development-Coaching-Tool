@@ -114,6 +114,36 @@
         return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     }
 
+    /* ── What Verint mishears ──
+     *
+     * Verint's speech to text does not know the company's name. "Thank you
+     * for calling APS" comes out as "thank you for calling at&t", and "your APS
+     * account number" as "your a t s account number", both on real exports.
+     * Left alone, the greeting was quoted back to the associate as naming
+     * another company, and Copilot, told the transcript was verbatim, quoted it
+     * again in the message it wrote.
+     *
+     * Corrected where the transcript is read (parseTranscript, prepareForPrompt,
+     * prepareForStorage), so the drafts, the saved log and every prompt agree.
+     * Narrow on purpose. AT&T is also a phone company customers really do
+     * mention, so a mention with a phone word straight after it is left alone.
+     * And letters in a row are how names get spelled out on these calls, so the
+     * a t s inside "w a t s o n" is left alone too.
+     */
+    const PHONE_WORDS = '(?:phone|phones|wireless|internet|cell|cellphone|mobile|u ?verse|fiber|store|tower|landline|cable|tv)';
+    const MISHEARD = [
+        // at&t, at & t, at and t, a t and t, a t & t
+        new RegExp(`\\ba ?t ?(?:&|and) ?t\\b(?!(?:'s)? ${PHONE_WORDS}\\b)`, 'gi'),
+        // a t t, a t s, a p s as letters on their own, not inside a spelled
+        // out name
+        /(?<!\b[a-z] )\ba (?:t [ts]|p s)\b(?! [a-z]\b)/gi,
+        /\baps\b/gi
+    ];
+
+    function correctMishearings(value) {
+        return MISHEARD.reduce((text, pattern) => text.replace(pattern, 'APS'), String(value || ''));
+    }
+
     /* ── Verint export metadata ── */
 
     const DATE_TIME = /Date\s*\/\s*Time:\s*[\r\n\s]*(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?)/;
@@ -595,7 +625,7 @@
      * plain pasted notes.
      */
     function parseTranscript(rawText, options = {}) {
-        const text = stripBoilerplate(rawText) || String(rawText || '');
+        const text = correctMishearings(stripBoilerplate(rawText) || String(rawText || ''));
         const rawLines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 
         const timestampCount = rawLines.filter(line => TIMESTAMP_ONLY_LINE.test(line)).length;
@@ -1441,7 +1471,7 @@
     // keeps the facts that the chrome was carrying.
     function prepareForStorage(rawText) {
         const meta = extractMetadata(rawText);
-        const body = stripBoilerplate(rawText) || String(rawText || '').trim();
+        const body = correctMishearings(stripBoilerplate(rawText) || String(rawText || '').trim());
         const firedCategories = (meta.categories || [])
             .filter(item => item.count > 0)
             .map(item => `${item.name}=${item.count}`)
@@ -1459,7 +1489,7 @@
     }
 
     function prepareForPrompt(rawText) {
-        return clampForPrompt(stripBoilerplate(rawText) || String(rawText || '').trim());
+        return clampForPrompt(correctMishearings(stripBoilerplate(rawText) || String(rawText || '').trim()));
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
@@ -1470,6 +1500,7 @@
         analyzeTranscript,
         buildCallSummaryPrompt,
         maskIdentifiers,
+        correctMishearings,
         // Exported so the word-choice scan can ask "was this emotion cue
         // acknowledged" using the same empathy definition scored here, rather
         // than keeping a second copy of the pattern that can drift from it.

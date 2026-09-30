@@ -5,19 +5,20 @@ const path = require('path');
 const { suite, ROOT } = require('./harness');
 
 /**
- * WHAT IS IN THE WAY ON THE CALL LISTENING SCREEN
+ * WHAT IS ON THE CALLS PAGE
  *
- * The screen carried 28 controls and 5 of them were on the path to the thing
- * it exists for, which is emailing an associate about a call.
+ * Paste, good and bad, Copilot, Verint. That is the job in Scott's words
+ * (2026-09-30), and "there's too much here" was his verdict on the page that
+ * did more: an email flow, a Copilot email prompt, three folded reads, a
+ * verification box, a red flag box, an explanation box and a recap, all on
+ * the way from the paste to the thing he came to do.
  *
- * The worst of it was the ordering. Three panels sat between the transcript
- * and the feedback boxes, and all three inflate on Analyze, so pressing the
- * main button pushed the send box three panels further down the page at the
- * exact moment it was wanted. The most important click moved furthest away
- * the moment you were ready to make it.
+ * Everything else sits in one closed fold at the bottom. Nothing was removed:
+ * the history, the saved calls, the QA form and the email all still have
+ * their uses. They are just not in the way.
  *
- * They are below the email now, folded shut, with a count in the summary so a
- * closed panel still says whether it is worth opening.
+ * The version of this file before it pinned the email to the associate as the
+ * main job. It stopped being the main job, so these pin the new order.
  */
 
 function callListeningSection() {
@@ -35,32 +36,96 @@ function callListeningSection() {
     return html.slice(start, end);
 }
 
-suite('call listening layout: the email comes before the reading', (t) => {
+// The outermost folds, whole, so what is inside one can be told apart from
+// what is on the page at rest.
+function outermostFolds(section) {
+    const blocks = [];
+    const open = /<details class="call-fold[^"]*"[^>]*>/g;
+    let match;
+    let consumedTo = 0;
+    while ((match = open.exec(section))) {
+        if (match.index < consumedTo) continue;
+        let depth = 0;
+        const tag = /<(\/?)details\b[^>]*>/g;
+        tag.lastIndex = match.index;
+        let inner;
+        while ((inner = tag.exec(section))) {
+            depth += inner[1] ? -1 : 1;
+            if (depth === 0) {
+                blocks.push(section.slice(match.index, tag.lastIndex));
+                consumedTo = tag.lastIndex;
+                break;
+            }
+        }
+    }
+    return blocks;
+}
+
+function visiblePart(section) {
+    let visible = section;
+    outermostFolds(section).forEach((block) => { visible = visible.replace(block, ''); });
+    return visible;
+}
+
+suite('call listening layout: paste, good and bad, then Copilot and Verint', (t) => {
     const section = callListeningSection();
-
     const at = (needle) => section.indexOf(needle);
+
     const transcript = at('id="callListeningTranscript"');
-    const feedback = at('id="callListeningStrengths"');
-    const writeBtn = at('id="writeCallFeedbackEmailBtn"');
-    const sendBox = at('id="callListeningOutlookBody"');
-    const qa = at('id="callQaPanel"');
-    const metric = at('id="callMetricCoachPanel"');
-    const language = at('id="callWordChoicePanel"');
+    const flags = at('id="callFlagStrip"');
+    const good = at('id="callListeningStrengths"');
+    const bad = at('id="callListeningImprovements"');
+    const copilot = at('id="callCopilotSummaryBtn"');
+    const verint = at('id="copyCallListeningVerintBtn"');
+    const more = at('<details class="call-fold call-more"');
 
-    t.check('everything was found', [transcript, feedback, writeBtn, sendBox, qa, metric, language]
-        .every((index) => index > -1));
-
-    t.check('transcript comes before the feedback boxes', transcript < feedback);
-    t.check('the feedback boxes come before the write button', feedback < writeBtn);
-    t.check('and the write button comes before the send box', writeBtn < sendBox);
-
-    // The three that inflate on Analyze. All of them below the send box now.
-    t.check('the QA read is below the email', qa > sendBox);
-    t.check('the metric read is below the email', metric > sendBox);
-    t.check('the language read is below the email', language > sendBox);
+    t.check('everything was found', [transcript, flags, good, bad, copilot, verint, more].every((index) => index > -1));
+    t.check('the paste box comes first', transcript < flags && transcript < good);
+    t.check('the flags sit under the paste box, before the notes', flags < good);
+    const grid = section.lastIndexOf('class="grid-2col"', good);
+    t.check('good and bad sit side by side in one grid',
+        grid > transcript && good < bad && !section.slice(grid, bad).includes('class="call-panel"'));
+    t.check('Copilot and Verint come straight after the notes', bad < copilot && bad < verint);
+    t.check('and everything else comes after them', copilot < more && verint < more);
 });
 
-suite('call listening layout: what inflates on Analyze is folded', (t) => {
+suite('call listening layout: everything else is in one closed fold', (t) => {
+    const section = callListeningSection();
+    const folds = outermostFolds(section);
+    const more = folds.find((block) => block.startsWith('<details class="call-fold call-more"')) || '';
+
+    t.check('there is a More fold', Boolean(more));
+    t.check('and it starts closed', !/<details class="call-fold call-more"[^>]*\sopen/.test(section));
+
+    [
+        'callTranscriptAnalysisSummary', 'callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel',
+        'callSummaryPanel', 'callQaPanel', 'callMetricCoachPanel', 'callWordChoicePanel',
+        'writeCallFeedbackEmailBtn', 'generateCallListeningPromptBtn', 'callListeningOutlookBody',
+        'generateCallListeningOutlookBtn', 'callListeningHistoryList', 'showAllSavedCallsBtn',
+        'summarizeCallInCopilotBtn', 'checkTranscriptPasteBtn', 'callListeningReference'
+    ].forEach((id) => t.check(`${id} is under More`, more.includes(`id="${id}"`)));
+});
+
+suite('call listening layout: little in the way at rest', (t) => {
+    const section = callListeningSection();
+    const visible = visiblePart(section);
+
+    const buttons = (visible.match(/<button\b/g) || []).length;
+    const total = (section.match(/<button\b/g) || []).length;
+    t.check(`five buttons or so at rest (${buttons} of ${total})`, buttons <= 6 && buttons < total);
+
+    [
+        'callListeningTranscript', 'callListeningEmployeeSelect', 'callListeningDate', 'callFlagStrip',
+        'callListeningStrengths', 'callListeningImprovements',
+        'callCopilotSummaryBtn', 'copyCallListeningVerintBtn', 'saveCallListeningBtn'
+    ].forEach((id) => t.check(`${id} is on the page at rest`, visible.includes(`id="${id}"`)));
+
+    ['writeCallFeedbackEmailBtn', 'callListeningOutlookBody', 'generateCallListeningPromptBtn',
+        'callVerificationAlert', 'callExplanationPanel'
+    ].forEach((id) => t.check(`${id} is not`, !visible.includes(`id="${id}"`)));
+});
+
+suite('call listening layout: what inflates on a read is folded', (t) => {
     const section = callListeningSection();
 
     ['callQaPanel', 'callMetricCoachPanel', 'callWordChoicePanel'].forEach((id) => {
@@ -102,45 +167,31 @@ suite('call listening layout: the counts are filled in', (t) => {
         /setCallFoldCount\('callMetricCount', ''\)/.test(script));
 });
 
-suite('call listening layout: fewer controls in the way at rest', (t) => {
-    const section = callListeningSection();
+suite('call listening layout: the buttons do what they say', (t) => {
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 
-    // What is behind a fold is not in the way. Counting what a supervisor
-    // actually sees on arrival is the number that matters.
-    const folded = [];
-    const foldRe = /<details class="call-fold"[^>]*>/g;
-    let match;
-    while ((match = foldRe.exec(section))) {
-        let depth = 0;
-        const tag = /<(\/?)details\b[^>]*>/g;
-        tag.lastIndex = match.index;
-        let inner;
-        while ((inner = tag.exec(section))) {
-            depth += inner[1] ? -1 : 1;
-            if (depth === 0) { folded.push(section.slice(match.index, tag.lastIndex)); break; }
-        }
-    }
-    t.check('there are folds', folded.length >= 5);
+    t.check('the Copilot button is bound',
+        /bindElementOnce\(document\.getElementById\('callCopilotSummaryBtn'\), 'click', writeCallSummaryInCopilot\)/.test(script));
+    t.check('it builds the coaching summary prompt',
+        /function writeCallSummaryInCopilot[\s\S]{0,400}buildCoachingSummaryPrompt/.test(script));
+    // Reading the form is not a decision to keep it.
+    t.check('and saves nothing',
+        /function writeCallSummaryInCopilot\(\) \{\s*const entry = buildUnsavedCallListeningEntry\(\);/.test(script));
 
-    let visible = section;
-    folded.forEach((block) => { visible = visible.replace(block, ''); });
+    t.check('Copy For Verint is still the Verint copy',
+        /bindElementOnce\(copyVerintBtn, 'click', \(\) => copyCallListeningVerintSummary\(\)\)/.test(script));
 
-    const count = (text, pattern) => (text.match(pattern) || []).length;
-    const visibleButtons = count(visible, /<button\b/g);
-    const totalButtons = count(section, /<button\b/g);
+    // Short enough to paste: no QA checklist, no language read, no "N/A"
+    // under every empty field, no private notes on tone.
+    const verint = script.slice(script.indexOf('function buildCallListeningVerintSummary'),
+        script.indexOf('function copyCallListeningVerintSummary'));
+    t.check('the Verint summary was found', verint.length > 100);
+    t.check('it carries no QA checklist', !/buildQaText|scoreCallListeningQa/.test(verint));
+    t.check('nor the language read', !/buildWordChoiceText|scanCallListeningWordChoice/.test(verint));
+    t.check('nor the manager notes', !/managerNotes/.test(verint));
+    t.check('nor N/A filler', !/'N\/A'/.test(verint));
+    t.check('it leads with the red flags', /buildCallListeningRedFlagLines\(entry\)/.test(verint));
 
-    t.check(`buttons in the way dropped (${visibleButtons} of ${totalButtons})`,
-        visibleButtons <= 8 && visibleButtons < totalButtons);
-
-    // The five that are actually on the path have to be among the visible ones.
-    ['callListeningEmployeeSelect', 'callListeningDate', 'callListeningTranscript',
-        'analyzeCallTranscriptBtn', 'writeCallFeedbackEmailBtn',
-        'callListeningOutlookBody', 'generateCallListeningOutlookBtn'
-    ].forEach((id) => {
-        t.check(`${id} is not hidden behind a fold`, visible.includes(`id="${id}"`));
-    });
-
-    // And the Copilot round trip is opt in now rather than the default path.
-    t.check('the Copilot prompt is behind a fold',
-        !visible.includes('id="generateCallListeningPromptBtn"'));
+    t.check('the flag strip is drawn on every read', /renderCallFlagStrip\(analysis\)/.test(script));
+    t.check('and taken down with the rest', /'callTranscriptAnalysisSummary', 'callFlagStrip'/.test(script));
 });

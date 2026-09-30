@@ -154,8 +154,11 @@ suite('saved calls: wiring', (t) => {
     t.check('duplicates are flagged in the list', script.includes('looks like a duplicate'));
     t.check('and styled so they stand out', css.includes('.saved-call-duplicate'));
 
-    // The panel says why calls appear that were never saved by hand.
-    t.check('the panel explains the silent saves', html.includes('saves a log automatically'));
+    // The panel says why calls appear that were never saved by hand. In the
+    // past tense since 2026-09-30: nothing saves on the way past any more (see
+    // "nothing is saved without being asked" below), and the present tense
+    // told Scott something the page no longer does.
+    t.check('the panel explains the silent saves', html.includes('saved a log automatically'));
 
     t.check('the open transcript is handed to the bridge', /transcript,\s*\n\s*callDate/.test(script));
 });
