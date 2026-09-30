@@ -184,8 +184,8 @@ const CLEAN = {
     laterIDontKnow: verint([
         GREETING,
         ['00:06', 'hi i have a question about my bill'],
-        ['00:10', 'sure for security purposes can you verify your date of birth'],
-        ['00:15', 'march fifth nineteen eighty'],
+        ['00:10', 'sure for security purposes can you verify the last four of your social'],
+        ['00:15', 'four four one two'],
         ['00:19', 'thank you and what can i help with'],
         ['00:23', 'i do not know why my bill is so high this month it doubled'],
         ['00:31', 'okay let me look your usage went up in july because of the heat']
@@ -204,8 +204,8 @@ const CLEAN = {
         ['00:06', 'i need my balance'],
         ['00:09', 'are you calling on behalf of the account holder'],
         ['00:12', 'no it is my account'],
-        ['00:15', 'okay can you verify your date of birth'],
-        ['00:19', 'june second'],
+        ['00:15', 'okay can you verify the last four of your social'],
+        ['00:19', 'six six one two'],
         ['00:24', 'thank you your balance is eighty dollars']
     ]),
     jointHolder: verint([
@@ -218,8 +218,8 @@ const CLEAN = {
     relayed: verint([
         GREETING,
         ['00:06', 'hi they told me the balance is two hundred and i wanted to check'],
-        ['00:12', 'okay for security purposes can you verify your date of birth'],
-        ['00:16', 'march fifth'],
+        ['00:12', 'okay for security purposes can you verify the last four of your social'],
+        ['00:16', 'three three one two'],
         ['00:20', 'thank you so your balance is two hundred']
     ]),
     phoneSystem: verint([
@@ -248,8 +248,8 @@ const CLEAN = {
     bareAmountVerified: verint([
         GREETING,
         ['00:06', 'hi what do i owe right now'],
-        ['00:09', 'okay and your date of birth'],
-        ['00:13', 'april ninth'],
+        ['00:09', 'okay and the last four of your social'],
+        ['00:13', 'four nine one two'],
         ['00:18', 'thank you it is one hundred eighty seven dollars']
     ]),
     feeNotBalance: verint([
@@ -277,7 +277,10 @@ suite('call verification: every way the account went out is a red flag', (t) => 
         failedThenShared: ['failed', 'unauthorized'],
         verifyThat: ['unverified'],
         phoneOnFile: ['unverified'],
-        nameOnly: ['unverified'],
+        // The name was given, and a call that came in authorized needs no
+        // more, so this is its own finding for the supervisor to check how
+        // the call came in, not "never verified".
+        nameOnly: ['nameOnly'],
         saidNoThenShared: ['denied'],
         readsTheScreen: ['unverified'],
         bareAmount: ['unverified'],
@@ -328,19 +331,39 @@ suite('call verification: finding the account is not proving who is calling', (t
     const modules = load(t);
     const ask = modules.callVerification.IDENTITY_ASK;
 
-    // Proof of identity.
+    // Proof of identity, as APS defines it: the last four of the social, the
+    // driver's license, or the password on the account (Scott, 2026-09-30).
     [
         'for security purposes can you please verify the last four digits of your social',
         'can i get the last four of the social on the account',
+        'we do need security number for you and a good email address',
+        'i am gonna need the last four of your social',
+        'and the last four of the social please',
+        'can i have the last four of your driver\'s license',
+        'and your driver\'s license number please',
+        'what\'s the password on the account',
+        'can you verify the passcode on the account for me'
+    ].forEach((line) => t.check(`identity: "${line}"`, ask.test(line)));
+
+    // Not APS verification. The app used to count these; none of them is on
+    // the standard, so asking for one is not verifying the caller.
+    [
         'and to verify can i have your date of birth',
         'what is the pin on the account',
         'can you answer your security question for me',
-        'we do need security number for you and a good email address',
-        'i am gonna need the last four of your social',
         "i'm going to need your date of birth",
-        'okay and your date of birth',
-        'and the last four of the social please'
-    ].forEach((line) => t.check(`identity: "${line}"`, ask.test(line)));
+        'okay and your date of birth'
+    ].forEach((line) => t.check(`not verification any more: "${line}"`, !ask.test(line)));
+
+    // The licence is named as the licence, not read as the social.
+    t.equal('"the last four of your license" is the licence',
+        modules.callVerification.readVerificationFromText([
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Customer: What do I owe?',
+            'Agent: Can I have the last four of your license?',
+            'Customer: 8 8 1 2.',
+            'Agent: Thank you, your balance is forty dollars.'
+        ].join('\n')).identity.what, 'the driver\'s license');
 
     // Lookups, and "verify" used about something else.
     [
@@ -429,7 +452,8 @@ suite('call verification: what the supervisor is told', (t) => {
     t.check('the box is red', /call-alert-red/.test(html));
     t.check('it says the speakers were inferred, with the time to listen at',
         /worked out from the flow of the call.*Listen at 0:31/.test(html));
-    t.check('it states the rule it judged by', /Counted as verification: the last four of the social/.test(html));
+    t.check('it states the rule it judged by',
+        /Counted as verification: the caller's name with the last four of the social, the driver's license or the password on the account, or the name alone when the call came in authorized/.test(html.replace(/&#39;|&amp;#39;/g, '\'')));
     t.check('no em dashes', !/[—–]/.test(html));
 
     const late = cv.describe(read(modules, CALLS.verifiedAfter));
@@ -609,33 +633,45 @@ suite('call verification: the known limits are still the known limits', (t) => {
 suite('call verification: answers in words, and callers offering', (t) => {
     const modules = load(t);
 
-    // A security question is answered in words. Requiring a number there
-    // would flag every call verified that way.
+    // The password on the account is answered in words ("what's the password
+    // on the account?", Scott). Requiring a number there would flag every
+    // call verified that way.
     const secret = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'sure what\'s the password on the account'],
+        ['00:15', 'bluebird'],
+        ['00:18', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('a one word answer to the password verifies', secret.status, 'verified');
+    t.equal('and is named as the password', secret.identity?.what, 'the password on the account');
+
+    // But not a refusal dressed as an answer.
+    const refusedAnswer = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'sure what\'s the password on the account'],
+        ['00:15', 'why do you need that'],
+        ['00:18', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('"why do you need that" is not an answer', refusedAnswer.status, 'breach');
+
+    // A security question was never APS verification, however it is answered.
+    const securityQuestion = read(modules, verint([
         GREETING,
         ['00:06', 'hi what is my balance'],
         ['00:09', 'sure for security purposes can you answer your security question what was your first pet'],
         ['00:15', 'rex'],
         ['00:18', 'okay your balance is sixty dollars']
     ]));
-    t.equal('a one word answer to a security question verifies', secret.status, 'verified');
-
-    // But not a refusal dressed as an answer.
-    const refusedAnswer = read(modules, verint([
-        GREETING,
-        ['00:06', 'hi what is my balance'],
-        ['00:09', 'sure for security purposes can you answer your security question'],
-        ['00:15', 'why do you need that'],
-        ['00:18', 'okay your balance is sixty dollars']
-    ]));
-    t.equal('"why do you need that" is not an answer', refusedAnswer.status, 'breach');
+    t.equal('a security question answered is still not verification', securityQuestion.status, 'breach');
 
     // The advisor saying they have the account up, then asking, is asking.
     const haveItUp = read(modules, verint([
         GREETING,
         ['00:06', 'hi what is my balance'],
-        ['00:09', 'okay i have the account up now can you verify your date of birth'],
-        ['00:14', 'march fifth nineteen eighty'],
+        ['00:09', 'okay i have the account up now can you verify the last four of your social'],
+        ['00:14', 'four four one two'],
         ['00:18', 'thank you your balance is sixty dollars']
     ]));
     t.equal('"i have the account up, can you verify" is the advisor asking', haveItUp.status, 'verified');
@@ -689,4 +725,85 @@ suite('call verification: the coaching bridge keeps it first and counts it once'
         analysis, transcript: CALLS.addressThenBalance, associateName: 'Oceane Test', callDate: '2026-09-02'
     });
     t.equal('said once, in the associate\'s words', findings.filter((f) => /verification/i.test(f.key)).length, 1);
+});
+
+/**
+ * APS's own standard (Scott, 2026-09-30): "If the call comes in as
+ * authorized, they just need to ask for name. But last 4 of social/dl. And
+ * they need to know their name." And: "Verification could be password on the
+ * account. Associate would get that by 'what's the password on the account?'"
+ */
+suite('call verification: APS\'s standard, name and social, licence or password', (t) => {
+    const modules = load(t);
+    const cv = modules.callVerification;
+
+    // The name alone, then the balance. Enough on a call that came in
+    // authorized, which the transcript cannot show, so it is its own finding.
+    const nameOnly = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi my name is dana price and i want to know my balance'],
+        ['00:12', 'sure one moment'],
+        ['00:20', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('the name alone is its own finding', verdictOf(nameOnly), 'breach(nameOnly)');
+    const said = cv.describe(nameOnly);
+    t.check('headed as only the name', /Only the caller's name was confirmed/.test(said.headline));
+    t.check('and asks the supervisor to check how the call came in', /check how the call came in/.test(said.detail));
+    t.check('the timeline shows the name', cv.buildTimeline(nameOnly).some((row) => /gave their name/.test(row.text)));
+    t.check('never "no identity check anywhere" when the name was given',
+        !cv.buildTimeline(nameOnly).some((row) => /No identity check anywhere/.test(row.text)));
+    t.check('still red, so the listen box opens', nameOnly.redFlag === true);
+
+    const coaching = cv.coachingFor(nameOnly);
+    t.check('the associate is told when a name is enough', /enough only when the call comes in authorized/.test(coaching.text));
+    t.check('and what to get when it is not', /the last four of the social, the driver's license or the password on the account/.test(coaching.text));
+    t.equal('weighted as a red flag', coaching.severity, 'red');
+
+    // The name asked for and given, then the last four: verified.
+    const nameThenSocial = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi i want to know my balance'],
+        ['00:09', 'sure can i have your first and last name'],
+        ['00:12', 'dana price'],
+        ['00:15', 'thank you and the last four of your social'],
+        ['00:19', 'four four one two'],
+        ['00:24', 'thank you your balance is sixty dollars']
+    ]));
+    t.equal('name and the last four is verified', nameThenSocial.status, 'verified');
+
+    // The driver's license.
+    const licence = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi i want to know my balance'],
+        ['00:09', 'sure can i have the last four of your driver\'s license'],
+        ['00:14', 'eight eight one two'],
+        ['00:19', 'thank you your balance is sixty dollars']
+    ]));
+    t.equal('the driver\'s license verifies', licence.status, 'verified');
+    t.equal('and is named as the licence', licence.identity?.what, 'the driver\'s license');
+
+    // "Okay" to the password question is stalling, not the password.
+    const stalled = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'sure what\'s the password on the account'],
+        ['00:14', 'okay'],
+        ['00:18', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('"okay" is not the password', stalled.status, 'breach');
+
+    // A date of birth, then the balance, is no longer verified.
+    const birthday = read(modules, verint([
+        GREETING,
+        ['00:06', 'hi what is my balance'],
+        ['00:09', 'sure for security purposes can you verify your date of birth'],
+        ['00:14', 'march fifth nineteen eighty'],
+        ['00:18', 'okay your balance is sixty dollars']
+    ]));
+    t.equal('a date of birth is not APS verification', birthday.status, 'breach');
+
+    // Somebody calling about another person's account gives that person's
+    // name, which proves nothing about who is calling.
+    t.equal('a third party giving the holder\'s name is not "name only"',
+        verdictOf(read(modules, CALLS.momsAccount)), 'breach(unverified,unauthorized)');
 });

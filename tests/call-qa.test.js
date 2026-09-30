@@ -93,7 +93,7 @@ suite('call QA: catches what the advisor missed', (t) => {
     const outOfOrder = score(modules, [
         'Agent: Your account number is 8568 and your balance is two hundred dollars.',
         'Customer: Ok.',
-        'Agent: Can I verify your date of birth?'
+        'Agent: Can I verify the last four of your social?'
     ].join('\n'));
     t.equal('flags verifying after the fact', verdictFor(outOfOrder, 'verification'), 'opportunity');
     t.check('and quotes what went out early',
@@ -109,7 +109,7 @@ suite('call QA: disclosures are judged only when they apply', (t) => {
 
     // A plan was discussed but no rate was ever quoted.
     const noRate = score(modules, [
-        'Agent: Thank you for calling, my name is Sam. Can I verify your date of birth?',
+        'Agent: Thank you for calling, my name is Sam. Can I verify the last four of your social?',
         'Customer: Sure.',
         'Agent: We can move you to the time of use plan.',
         'Customer: Ok.'
@@ -121,8 +121,8 @@ suite('call QA: disclosures are judged only when they apply', (t) => {
 
     // No plan discussed at all: the plan scripts must not be held against it.
     const noPlan = score(modules, [
-        'Agent: Thank you for calling, my name is Sam. Can I verify your date of birth?',
-        'Customer: Yes it is May 4th.',
+        'Agent: Thank you for calling, my name is Sam. Can I verify the last four of your social?',
+        'Customer: Yes it is 4 4 1 2.',
         'Agent: Your service is set up.'
     ].join('\n'));
     const short = noPlan.checks.find((item) => item.id === 'disclosures');
@@ -135,7 +135,7 @@ suite('call QA: resolution and opportunities', (t) => {
     const modules = load(t);
 
     const handedOff = score(modules, [
-        'Agent: Thank you for calling. I can verify your date of birth?',
+        'Agent: Thank you for calling. I can verify the last four of your social?',
         'Customer: Sure.',
         'Agent: You will have to call the billing team about that, there is nothing I can do.'
     ].join('\n'));
@@ -187,7 +187,7 @@ suite('call QA: output', (t) => {
     t.check('styles from theme tokens, not hex', !/#[0-9a-fA-F]{6}/.test(html));
 
     // Untrusted transcript text reaches the DOM, so it must be escaped.
-    const injected = score(modules, 'Agent: <img src=x onerror=alert(1)> can I verify your date of birth?\nCustomer: Your balance is 5.');
+    const injected = score(modules, 'Agent: <img src=x onerror=alert(1)> can I verify the last four of your social?\nCustomer: Your balance is 5.');
     const escaped = modules.callQa.buildQaHtml(injected, (value) => String(value || '').replace(/</g, '&lt;'));
     t.check('passes evidence through the escaper', !/<img/.test(escaped));
 

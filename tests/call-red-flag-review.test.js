@@ -76,9 +76,12 @@ suite('red flag review: what the listen box is built from', (t) => {
     t.check('headed the way the verification read says it', /shared/.test(item.headline));
     t.check('with the time to listen at', /^\d+:\d{2}$/.test(item.time));
     t.check('and every moment, in order, with what was said', item.timeline.length >= 2 && item.timeline.every(row => row.text));
-    t.check('the rule is the plain one, never the unconfirmed list of identifiers',
-        /nothing on it is shared unless they are authorized|Verify the caller before anything/.test(item.rule)
-        && !/last four|date of birth|PIN|passcode/i.test(item.rule));
+    // APS's standard, as Scott confirmed it: name, and the last four of the
+    // social, the driver's license or the password on the account.
+    t.check('the rule is APS\'s own standard',
+        /nothing on it is shared unless they are authorized/.test(item.rule)
+        && /their name, and the last four of the social, the driver's license or the password on the account/.test(item.rule));
+    t.check('and never names what does not count', !/date of birth|PIN\b|security question/i.test(item.rule));
 
     const lines = L.redFlagLines(record);
     t.check('it writes out as lines for the note', lines.some(line => /^- \d+:\d{2} /.test(line)) && lines.some(line => /^The rule: /.test(line)));

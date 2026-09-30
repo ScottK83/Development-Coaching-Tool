@@ -43,8 +43,8 @@ function coachingLines(T) {
             'Agent: Thank you for calling APS, my name is Jamie. How can I help you today?',
             'Customer: My bill doubled this month and I have no idea why.',
             'Agent: I completely understand how frustrating that is. Let me take care of this for you.',
-            'Agent: Before I pull it up, can you confirm your date of birth for verification?',
-            'Customer: Sure, it is May 4th 1983.',
+            'Agent: Before I pull it up, can you confirm the last four of your social for verification?',
+            'Customer: Sure, it is 4 4 1 2.',
             'Agent: May I place you on a brief hold while I check the billing detail?',
             'Customer: That is fine.',
             'Agent: Thank you for holding. I found a duplicate charge and I have credited it back.',
@@ -89,13 +89,20 @@ function coachingLines(T) {
             'Customer: No, it is my husband\'s account.',
             'Agent: Okay, the balance is ninety dollars.'
         ].join('\n'),
+        // Only the caller's name before the balance: enough only on a call
+        // that came in authorized.
+        [
+            'Agent: Thank you for calling APS, my name is Jamie.',
+            'Customer: Hi, my name is Dana Price and I want my balance.',
+            'Agent: Your balance is sixty dollars.'
+        ].join('\n'),
         // Verified, but only after.
         [
             'Agent: Thank you for calling APS, my name is Jamie.',
             'Customer: What do I owe?',
             'Agent: Your balance is two hundred dollars.',
-            'Agent: For security purposes can you verify your date of birth?',
-            'Customer: May 4th.'
+            'Agent: For security purposes can you verify the last four of your social?',
+            'Customer: 4 4 1 2.'
         ].join('\n'),
         // A caller who was not on the account, and was told no.
         [

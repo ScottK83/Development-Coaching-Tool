@@ -32,14 +32,24 @@
      *
      * WHAT COUNTS AS VERIFIED
      *
-     * Something only the account holder would know that is not printed on the
-     * bill: the last four of the social, the date of birth, a PIN or passcode,
-     * a security question, an ID number. The name, the address, the account
-     * number and the phone number find the account; they do not prove who is
-     * calling. A real APS call verifies with "for security purposes can you
-     * please verify the last four digits of your social". If the floor's
-     * standard is different, IDENTIFIERS and LOOKUPS below are the two lists
-     * to move things between, and the tests name each case.
+     * APS's standard, as Scott gave it on 2026-09-30: "If the call comes in as
+     * authorized, they just need to ask for name. But last 4 of social/dl. And
+     * they need to know their name." And: "Verification could be password on
+     * the account. Associate would get that by 'what's the password on the
+     * account?'" So the caller gives their name and the last four of the
+     * social, the driver's license or the password on the account. A call
+     * that came in
+     * authorized (verified by the phone system before it reached the
+     * associate) needs only the name.
+     *
+     * Before that the app guessed, and counted a date of birth, a PIN or
+     * passcode and a security question too. None of those is APS verification.
+     *
+     * The transcript usually cannot show whether a call came in authorized,
+     * so a name on its own before account details went out is not read as
+     * "never verified". It is its own finding, nameOnly, which asks the
+     * supervisor to check how the call came in. The address, the account
+     * number and the phone number find the account; they never verify.
      *
      * WHO SAID IT
      *
@@ -61,8 +71,14 @@
     // A value being read out, as a transcript writes it.
     const VALUE = `(?:\\$|\\d|(?:about |around |roughly |only |just |over |under |a |an )?(?:${SPOKEN_NUMBER}|a hundred|a thousand)\\b)`;
 
-    // Proof of identity. Each carries the words the supervisor reads.
+    // Proof of identity: the last four of the social, the driver's license, or
+    // the password on the account ("what's the password on the account?",
+    // Scott, 2026-09-30). Each carries the words the supervisor reads. The
+    // licence comes first so "the last four of your license" is named as the
+    // licence, not the social.
     const IDENTIFIERS = [
+        { what: "the driver's license", source: "driver'?s? licen[cs]e\\b|d ?l number\\b|licen[cs]e number\\b|last (?:four|4)(?: digits)? of (?:your |the |my |his |her )?licen[cs]e\\b" },
+        { what: 'the password on the account', source: 'pass ?word\\b|pass ?code\\b|pass ?phrase\\b' },
         {
             what: 'the last four of the social',
             // "last four of the account number" is on the bill, so it is not
@@ -76,11 +92,7 @@
             // Not the benefits: "are you getting your social security" on an
             // assistance call is a question about income, not identity.
             source: "social(?! media| security (?:benefits|income|checks?|office|administration|disability|comes?|deposits?|payments?|money|pays?)| (?:worker|services))(?: security| insurance)?(?: number)?\\b|security number\\b|s ?s ?n\\b"
-        },
-        { what: 'the date of birth', source: 'date of birth\\b|birth ?date\\b|birthday\\b|d o b\\b' },
-        { what: 'a PIN or passcode', source: 'pin(?: number)?\\b|pass ?code\\b|pass ?word\\b' },
-        { what: 'a security question', source: 'security (?:word|answer|question)s?\\b' },
-        { what: 'an ID number', source: "driver'?s? licen[cs]e\\b|passport\\b|i ?d number\\b|state i ?d\\b" }
+        }
     ].map(item => ({ ...item, pattern: new RegExp(`\\b(?:${item.source})`, 'i') }));
 
     const IDENTIFIER_SOURCE = IDENTIFIERS.map(item => `(?:${item.source})`).join('|');
@@ -118,7 +130,14 @@
     const CONFIRMATION_NUMBER = /\bconfirmation (?:number|code)\b/i;
 
     // The caller reading their own out: "the last four of my social is".
-    const GIVES_IDENTIFIER = /\b(?:the )?last (?:four|4)(?: digits)?(?: of)?(?: my| the)?(?: social| ssn| s s n)?(?: number)? (?:is|are)\b|\bmy (?:social(?: security)?|ssn|date of birth|birth ?date|birthday|pin|pass ?code)(?: number)? (?:is|would be)\b/i;
+    const GIVES_IDENTIFIER = /\b(?:the )?last (?:four|4)(?: digits)?(?: of)?(?: my| the)?(?: social| ssn| s s n| driver'?s? licen[cs]e| licen[cs]e)?(?: number)? (?:is|are)\b|\bmy (?:social(?: security)?|ssn|driver'?s? licen[cs]e|licen[cs]e|pass ?word|pass ?code)(?: number)? (?:is|would be)\b|\bthe pass ?(?:word|code) (?:on the account )?is\b/i;
+
+    // The caller's name: asked for by the advisor, or said by the caller.
+    // Part of verification, and on a call that came in authorized, all of it.
+    const NAME_ASK = /\bwho (?:do i have the pleasure|am i (?:speaking|talking) (?:with|to)|is (?:this|calling|speaking))\b|\bpleasure (?:of )?(?:speaking|talking) (?:with|to)\b|\b(?:can|could|may) i (?:please )?(?:have|get|grab) (?:your|the) (?:first and last |full )?name\b|\bwhat(?:'s| is) (?:your|the) (?:first and last |full )?name\b|\b(?:your|the) (?:first and last |full )?name,? please\b|\bname on the account\b/i;
+    const GIVES_NAME = /\bmy name(?:'s| is) [a-z]/i;
+    // How many turns after the question the name can come back.
+    const NAME_WINDOW = 2;
 
     // First person about an identifier is the caller, whichever side the
     // parser put the line on.
@@ -165,10 +184,10 @@
      * Any reply used to count, so "why do you need that", or "okay no problem"
      * after "i do not have it on me", answered the question and the balance
      * that followed read as verified, with the associate praised for it. The
-     * social, the date of birth and an ID number are read out as numbers or a
-     * date, so the answer has to carry one. A security question or a password
-     * is answered in words, so when one was asked outright a short reply that
-     * is not a refusal is taken as the answer.
+     * social and the driver's license are read out as numbers, so the answer
+     * has to carry one. The password on the account is answered in words, so
+     * when it was asked outright a short reply that is not a refusal is taken
+     * as the answer. NOT_AN_ANSWER is what neither a password nor a name is.
      */
     const ANSWER_VALUE = new RegExp('\\b(?:' + MONTH + ')\\b|\\d{3,}|\\b(?:' + SPOKEN_NUMBER + '|\\d+)\\b.*\\b(?:' + SPOKEN_NUMBER + '|\\d+)\\b', 'i');
     const WORD_ANSWER_WORDS = 6;
@@ -446,6 +465,8 @@
                 asksIdentity,
                 identityWhat: asksIdentity ? identifierWhat(text) : '',
                 givesIdentity: caller && !cannot && !NO_MATCH.test(text) && GIVES_IDENTIFIER.test(text),
+                asksName: advisor && NAME_ASK.test(text),
+                givesName: caller && GIVES_NAME.test(text),
                 ivr: IVR_VERIFIED.test(text) && !NOT_THE_PHONE_SYSTEM.test(text),
                 confirmed: advisor && CONFIRMED.test(text),
                 cannot: caller && cannot,
@@ -481,10 +502,15 @@
             : mark.text;
         if (ANSWER_VALUE.test(said)) return true;
 
-        const inWords = /security question|PIN or passcode/.test(ask.identityWhat) && ASKED_OUTRIGHT.test(ask.text);
+        const inWords = ask.identityWhat === 'the password on the account' && ASKED_OUTRIGHT.test(ask.text);
         const words = collapse(said).split(' ').filter(Boolean).length;
-        return inWords && !mark.disclosure && words > 0 && words <= WORD_ANSWER_WORDS && !NOT_AN_ANSWER.test(said);
+        return inWords && !mark.disclosure && words > 0 && words <= WORD_ANSWER_WORDS
+            && !NOT_AN_ANSWER.test(said) && !FILLER_ONLY.test(collapse(said));
     }
+
+    // "Okay" or "sure" in reply to the password question is somebody
+    // stalling, not the password.
+    const FILLER_ONLY = /^(?:okay|ok|sure|yes|yeah|yep|alright|all right|um+|uh+|hmm+)[\s.,!?]*$/i;
 
     function event(turn, extra) {
         return {
@@ -523,6 +549,8 @@
         let lastOnBehalfQuestion = null;
         let lastAmountQuestion = null;
         let denial = null;           // told "no, I'm not on it", unresolved
+        let lastNameAsk = null;
+        let nameCheck = null;        // the caller giving their name
         let handoffAfterDenial = false;
         let refusal = null;
         const authorizations = [];
@@ -602,6 +630,15 @@
                 failure = null;
             }
 
+            // The caller's name: said outright, or given in answer to the
+            // advisor asking for it a turn or two before.
+            if (mark.asksName) lastNameAsk = mark.index;
+            const answersName = lastNameAsk !== null && mark.index > lastNameAsk
+                && mark.index - lastNameAsk <= NAME_WINDOW && !mark.cannot && !NOT_AN_ANSWER.test(mark.text);
+            if (!nameCheck && mark.caller && !mark.thirdParty && (mark.givesName || answersName)) {
+                nameCheck = event(mark);
+            }
+
             // Whose account it is.
             if (mark.thirdParty && !thirdParty) thirdParty = event(mark);
 
@@ -662,7 +699,15 @@
 
             const types = [];
             const verified = identity && identity.index < mark.index;
-            if (!verified) types.push(failure ? 'failed' : 'unverified');
+            // Only the name before it went out is enough on a call that came
+            // in authorized, and the transcript cannot say whether this one
+            // did, so it is its own finding rather than "never verified". Not
+            // for a caller who said it was somebody else's account: the name
+            // they give is the account holder's, which proves nothing about
+            // who is calling.
+            const aboutSomebodyElse = Boolean(thirdParty && thirdParty.index < mark.index);
+            const namedFirst = Boolean(nameCheck && nameCheck.index < mark.index) && !aboutSomebodyElse;
+            if (!verified) types.push(failure ? 'failed' : (namedFirst ? 'nameOnly' : 'unverified'));
 
             if (thirdParty && thirdParty.index < mark.index) {
                 if (denial) {
@@ -684,16 +729,17 @@
                     failure,
                     thirdParty,
                     denial,
+                    nameCheck: namedFirst ? nameCheck : null,
                     identityBefore: verified ? identity : null
                 };
             }
         });
 
         // Verified, but only once the detail was already out.
-        if (breach && breach.types.includes('unverified')) {
+        if (breach && (breach.types.includes('unverified') || breach.types.includes('nameOnly'))) {
             const later = identityAsks.find(ask => ask.index > breach.index);
             if (later) {
-                breach.types = breach.types.map(type => (type === 'unverified' ? 'late' : type));
+                breach.types = breach.types.map(type => (type === 'unverified' || type === 'nameOnly' ? 'late' : type));
                 breach.lateCheck = later;
             }
         }
@@ -720,6 +766,7 @@
             breach,
             identity: identity || (identityAsks[0] || null),
             identityAsks,
+            nameCheck,
             failure,
             thirdParty,
             denial,
@@ -746,21 +793,29 @@
         failed: 'Verification did not go through, and account details were shared anyway',
         unauthorized: 'Account details were shared with a caller who said it was not their account',
         unverified: 'Account details were shared before the caller was verified',
+        nameOnly: 'Only the caller\'s name was confirmed before account details were shared',
         late: 'Account details were shared before verification, which only came later'
     };
-    const HEADLINE_ORDER = ['denied', 'failed', 'unauthorized', 'unverified', 'late'];
+    const HEADLINE_ORDER = ['denied', 'failed', 'unauthorized', 'unverified', 'nameOnly', 'late'];
 
-    // The wording used to decide, stated where the supervisor can check it.
-    const POLICY_NOTE = 'Counted as verification: the last four of the social, the date of birth, a PIN or passcode, a security question, or an ID number. The name, address, account number and phone number find the account; they do not prove who is calling.';
+    // What verifies a caller, in the words every sentence that states it uses.
+    const STANDARD = 'the last four of the social, the driver\'s license or the password on the account';
+
+    // The standard used to decide, stated where the supervisor can check it.
+    const POLICY_NOTE = `Counted as verification: the caller's name with ${STANDARD}, or the name alone when the call came in authorized. The address, account number and phone number find the account; they do not prove who is calling.`;
 
     function atTime(item) {
         return item && item.time ? ` at ${item.time}` : '';
     }
 
+    // The name is part of verification now, so it is never listed among the
+    // things that only find the account.
+    const NAME_LOOKUP = 'the name on the account';
+
     function lookupPhrase(lookups) {
         const named = [];
         (lookups || []).forEach(item => (item.what || []).forEach(what => {
-            if (!named.includes(what)) named.push(what);
+            if (what !== NAME_LOOKUP && !named.includes(what)) named.push(what);
         }));
         return joinList(named);
     }
@@ -792,6 +847,8 @@
                 sentences.push(`${capitalize(b.what)} was shared${atTime(b)}, and verification did not come until${b.lateCheck?.time ? ` ${b.lateCheck.time}` : ' later'}.`);
             } else if (b.types.includes('unverified')) {
                 sentences.push(`${capitalize(b.what)} was shared${atTime(b)} and nothing only the account holder would know was asked for before it.`);
+            } else if (b.types.includes('nameOnly')) {
+                sentences.push(`${capitalize(b.what)} was shared${atTime(b)} with only the caller's name confirmed${atTime(b.nameCheck)}. That is enough if the call came in authorized. If it did not, ${STANDARD} was needed first, so check how the call came in.`);
             }
 
             if (b.types.includes('denied')) {
@@ -857,13 +914,26 @@
         const b = read.breach;
         const rows = [];
 
-        const looked = (read.lookups || []).filter(item => item.index < b.index).slice(0, 2);
+        const looked = (read.lookups || [])
+            .filter(item => item.index < b.index)
+            .map(item => ({ ...item, what: (item.what || []).filter(what => what !== NAME_LOOKUP) }))
+            .filter(item => item.what.length)
+            .slice(0, 2);
         looked.forEach(item => rows.push({
             index: item.index,
             time: item.time,
             text: `Asked for ${joinList(item.what)}. That finds the account, it does not verify the caller.`,
             quote: item.quote
         }));
+
+        if (b.nameCheck) {
+            rows.push({
+                index: b.nameCheck.index,
+                time: b.nameCheck.time,
+                text: 'The caller gave their name. On its own that is enough only if the call came in authorized.',
+                quote: b.nameCheck.quote
+            });
+        }
 
         if (b.thirdParty) {
             rows.push({ index: b.thirdParty.index, time: b.thirdParty.time, text: 'The caller said it was somebody else\'s account.', quote: b.thirdParty.quote });
@@ -954,13 +1024,14 @@
      * no form vocabulary, no label in front, nothing that assumes one call.
      */
     const COACHING = {
-        unverified: (what) => `You shared ${what} before verifying who you were talking to. An address or an account number finds the account, but it does not prove the caller is the account holder. Verify first, every time, before anything on the account comes up.`,
-        late: (what) => `You did verify, but only after ${what} had already been shared. Verification has to come first, before anything on the account comes up.`,
-        failed: (what) => `The caller could not get through verification and you shared ${what} anyway. When verification does not go through, nothing on the account gets shared: ask for another way to verify, or help with what does not touch the account.`,
+        unverified: (what) => `You shared ${what} before verifying who you were talking to. An address or an account number finds the account, but it does not prove the caller is the account holder. Get their name and ${STANDARD} first, every time, before anything on the account comes up.`,
+        nameOnly: (what) => `You shared ${what} with only the caller's name confirmed. A name on its own is enough only when the call comes in authorized. When it does not, get ${STANDARD} before anything on the account comes up.`,
+        late: (what) => `You did verify, but only after ${what} had already been shared. The name and ${STANDARD} come first, before anything on the account comes up.`,
+        failed: (what) => `The caller could not get through verification and you shared ${what} anyway. When verification does not go through, nothing on the account gets shared: try another of ${STANDARD}, or help with what does not touch the account.`,
         unauthorized: (what) => `The caller said the account belonged to someone else, and you shared ${what} without checking they were authorized on it. When somebody calls about another person's account, confirm they are authorized before anything on it is shared.`,
         denied: (what) => `The caller told you they were not on the account, and you shared ${what} anyway. Nothing on an account goes to somebody who is not authorized on it, however reasonable the request sounds.`
     };
-    const COACHING_ORDER = ['denied', 'failed', 'unauthorized', 'unverified', 'late'];
+    const COACHING_ORDER = ['denied', 'failed', 'unauthorized', 'unverified', 'nameOnly', 'late'];
 
     // Heavier than anything else the engine can say, so it leads the draft
     // and is never the one trimmed to keep the email short.
@@ -975,7 +1046,7 @@
         // failures. The first in COACHING_ORDER leads; the other still has to
         // be said, or it reads as though it would not have mattered.
         const AUTHORITY = ['denied', 'unauthorized'];
-        const IDENTITY = ['failed', 'unverified', 'late'];
+        const IDENTITY = ['failed', 'unverified', 'nameOnly', 'late'];
         let text = COACHING[type](b.what);
         if (AUTHORITY.includes(type) && b.types.some(item => IDENTITY.includes(item))) {
             text += ' Verification comes first as well, every time, before anything on the account comes up.';
@@ -1028,6 +1099,7 @@
         coachingFor,
         praiseFor,
         POLICY_NOTE,
+        STANDARD,
         RED_FLAG_WEIGHT,
         // Exported for the tests, which pin what each list does and does not
         // accept.

@@ -178,14 +178,18 @@ Requirements:
         return bridge.tipsForCall(points, { max: 5, perFinding: 2 });
     }
 
-    // The rule each kind of red flag broke, in words that are true whatever
-    // APS's exact verification standard turns out to be. Which identifiers
-    // count is still the app's assumption, so it is never stated as policy.
-    const RED_FLAG_RULES = {
-        identity: 'Verify the caller before anything on the account is shared.',
-        authority: 'When the caller is not on the account, nothing on it is shared unless they are authorized on it.',
-        safety: 'A safety hazard is handled first: get the customer clear of it and report it as an emergency.'
-    };
+    // The rule each kind of red flag broke. The verification standard is
+    // APS's, as Scott confirmed it on 2026-09-30, and is taken from
+    // call-verification so the two can never state it differently.
+    function redFlagRules() {
+        const standard = window.DevCoachModules?.callVerification?.STANDARD
+            || 'the last four of the social, the driver\'s license or the password on the account';
+        return {
+            identity: `Verify the caller before anything on the account is shared: their name, and ${standard}. The name alone is enough only when the call comes in authorized.`,
+            authority: 'When the caller is not on the account, nothing on it is shared unless they are authorized on it.',
+            safety: 'A safety hazard is handled first: get the customer clear of it and report it as an emergency.'
+        };
+    }
 
     /**
      * The red flags on a call, written out in full for documenting: what
@@ -199,6 +203,7 @@ Requirements:
     function redFlagRecord(analysis) {
         if (!analysis) return null;
         const verifier = window.DevCoachModules?.callVerification;
+        const RULES = redFlagRules();
         const items = [];
 
         const read = analysis.verification;
@@ -206,8 +211,8 @@ Requirements:
             const said = verifier.describe(read);
             const types = read.breach?.types || [];
             const rules = [];
-            if (types.some(type => ['unverified', 'late', 'failed'].includes(type))) rules.push(RED_FLAG_RULES.identity);
-            if (types.some(type => ['unauthorized', 'denied'].includes(type))) rules.push(RED_FLAG_RULES.authority);
+            if (types.some(type => ['unverified', 'nameOnly', 'late', 'failed'].includes(type))) rules.push(RULES.identity);
+            if (types.some(type => ['unauthorized', 'denied'].includes(type))) rules.push(RULES.authority);
             items.push({
                 key: 'verification',
                 headline: said.headline,
@@ -226,7 +231,7 @@ Requirements:
                 detail: flag.detail || '',
                 time: flag.time || '',
                 timeline: flag.quote ? [{ time: flag.time || '', text: 'What the customer said', quote: flag.quote }] : [],
-                rule: flag.key === 'safety' ? RED_FLAG_RULES.safety : ''
+                rule: flag.key === 'safety' ? RULES.safety : ''
             });
         });
 

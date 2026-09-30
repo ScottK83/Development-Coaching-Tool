@@ -29,8 +29,8 @@ function load(t) {
 const NEW_SERVICE = [
     'Agent: Thank you for calling, my name is Jamie.',
     'Customer: Hi, I just moved into a new apartment and I need to set up service in my name.',
-    'Agent: Happy to help. Can you confirm your date of birth for verification?',
-    'Customer: Sure, it is May 4th 1983.',
+    'Agent: Happy to help. Can you confirm the last four of your social for verification?',
+    'Customer: Sure, it is 4 4 1 2.',
     'Agent: We have three plans available. The first plan is the standard rate.',
     'Agent: Based on your usage I would recommend the time of use plan.',
     'Customer: That sounds good to me.',
