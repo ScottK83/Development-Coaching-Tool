@@ -492,8 +492,13 @@
 
         ctx.metrics.forEach(function (m) {
             var moved = m.movedAcross;
-            var improving = moved && moved.improved === true;
-            var declining = moved && moved.improved === false;
+            // A move inside the noise band is not a direction. Without the
+            // band, transfers going 6.9% to 7.0% ranked as "missed and
+            // falling" and led the focus box, while the sentence written about
+            // it said, correctly, that it held steady.
+            var clear = moved && moved.size > _stableBand(m.metricKey);
+            var improving = clear && moved.improved === true;
+            var declining = clear && moved.improved === false;
 
             if (m.meetsTarget === true) {
                 strengths.push(Object.assign({}, m, {
@@ -545,7 +550,26 @@
         }
 
         var focusRank = { 'missed-and-falling': 0, 'missed': 1, 'missed-but-rising': 2, 'partial-year': 3 };
+        var overAllowance = function (m) { return m.metricKey === RELIABILITY && m.why === 'missed'; };
+        // A reading from an earlier quarter, because the check-in quarter had
+        // too few surveys to quote. It is still true, but a Q3 check-in that
+        // leads on a Q2 number is talking about the wrong quarter.
+        // Only when the check-in quarter has readings at all: with nothing in
+        // it every metric is equally old, and demoting all of them just
+        // promoted whatever was exempt.
+        var currentName = ctx.current ? ctx.current.name : null;
+        var anyCurrent = ctx.metrics.some(function (m) { return m.latestQuarter === currentName; });
+        var stale = function (m) {
+            return anyCurrent && m.metricKey !== RELIABILITY && !!m.latestQuarter && m.latestQuarter !== currentName;
+        };
         focus.sort(function (a, b) {
+            // Hours over the annual allowance come first, whatever else is
+            // behind. A rate can recover in a quarter; missed hours only ever
+            // go up. Ranked alongside the rates they were pushed out of a two
+            // item box by any rate that happened to be falling, so an associate
+            // a hundred hours over had a document that never mentioned it.
+            if (overAllowance(a) !== overAllowance(b)) return overAllowance(a) ? -1 : 1;
+            if (stale(a) !== stale(b)) return stale(a) ? 1 : -1;
             var ra = focusRank[a.why] === undefined ? 1 : focusRank[a.why];
             var rb = focusRank[b.why] === undefined ? 1 : focusRank[b.why];
             if (ra !== rb) return ra - rb;
@@ -1067,6 +1091,18 @@
         var name = ctx.firstName;
         var lead = focus[0];
         var over = _overRemainingPhrase(ctx);
+        if (lead.metricKey === RELIABILITY && lead.why === 'missed') {
+            // "Steady progress toward goal" is not a thing missed hours can
+            // do: the total only rises. The conversation is about the hours.
+            var line = 'Attendance is the first conversation. ' + name
+                + ' and I will talk through the time missed and what is behind it.';
+            var second = focus[1];
+            if (second && second.metricKey !== RELIABILITY) {
+                line += ' On ' + second.label.toLowerCase()
+                    + ', the expectation is visible movement ' + over + '.';
+            }
+            return line;
+        }
         if (lead.why === 'missed-and-falling') {
             return 'This is the one to move first. ' + name
                 + ' and I will work it in our one to ones, and the expectation is visible movement '
@@ -1151,6 +1187,269 @@
         if (!lines.length) return '';
         return 'How each measure moved across the quarters of ' + ctx.year + ':\n'
             + lines.join('\n');
+    }
+
+    /* ── Talking points for the meeting ──
+     *
+     * The document above is a file note: finished prose, third person, for
+     * the record. This is the sheet the supervisor reads from with the
+     * associate in the room. It takes the same split, so what is said in the
+     * meeting and what goes on file cannot disagree, but as short lines with
+     * every quarter's number on them, and a few questions to open each part.
+     *
+     * The questions are the one place in this module written as "you": they
+     * are said to the associate, not filed about them.
+     */
+    function buildTalkingPoints(ctx, options) {
+        var opts = options || {};
+        var split = splitForBoxes(ctx);
+        var rel = ctx.reliability;
+        var next = ctx.quarter < 4 ? 'Q' + (ctx.quarter + 1) : 'next year';
+        var watchKeys = split.watch.map(function (m) { return m.metricKey; });
+
+        var wins = split.strengths.filter(function (m) {
+            return m.metricKey !== RELIABILITY && watchKeys.indexOf(m.metricKey) < 0;
+        });
+        var winItems = wins.slice(0, 3).map(function (m) { return _talkItem(m, ctx); });
+        // Inside the allowance is only something to open the meeting on when
+        // the hours are also inside an even share of it. 16.5 of 18 with a
+        // quarter still to go is inside, and it is not a win.
+        var hoursInside = rel.hasValue && rel.meetsTarget === true;
+        var hoursOnPace = hoursInside && rel.target
+            && rel.yearToDate <= rel.target.value * Math.min(ctx.quarter, 4) / 4 + 0.05;
+        if (hoursOnPace) winItems.push(_reliabilityItem(rel, ctx));
+
+        var focusItems = split.focus.slice(0, 2).map(function (m) {
+            return m.metricKey === RELIABILITY ? _reliabilityItem(rel, ctx) : _talkItem(m, ctx);
+        });
+
+        var sections = [];
+        if (winItems.length) {
+            sections.push({ id: 'wins', heading: 'Start with what is working', items: winItems });
+        }
+        if (focusItems.length) {
+            sections.push({ id: 'focus', heading: 'What to work on in ' + next, items: focusItems });
+        } else {
+            sections.push({
+                id: 'focus', heading: 'What to work on in ' + next,
+                lines: ['Every tracked metric is at goal for ' + ctx.quarterLabel + '. The ask for '
+                    + next + ' is to hold it.']
+            });
+        }
+        var moreFocus = split.focus.slice(2).map(function (m) {
+            return m.metricKey === RELIABILITY ? _reliabilityLine(rel) : _briefLine(m, ctx);
+        }).filter(Boolean);
+        if (moreFocus.length) {
+            sections.push({ id: 'moreFocus', heading: 'Also below goal, if there is time', lines: moreFocus });
+        }
+        var watchItems = split.watch.map(function (m) { return _talkItem(m, ctx); });
+        if (hoursInside && !hoursOnPace) watchItems.push(_reliabilityItem(rel, ctx));
+        if (watchItems.length) {
+            sections.push({ id: 'watch', heading: 'Keep an eye on', items: watchItems });
+        }
+        var moreWins = wins.slice(3).map(function (m) { return _briefLine(m, ctx); }).filter(Boolean);
+        if (moreWins.length) {
+            sections.push({ id: 'moreWins', heading: 'Also at goal', lines: moreWins });
+        }
+
+        var together = _togetherLine(ctx);
+        if (together) sections.push({ id: 'together', heading: 'Worked on together this year', lines: [together] });
+
+        sections.push({ id: 'ask', heading: 'Questions to ask', lines: _questions(wins, split, rel, next) });
+
+        if (opts.notes && String(opts.notes).trim()) {
+            sections.push({ id: 'notes', heading: 'My notes', lines: [String(opts.notes).trim()] });
+        }
+
+        var title = ctx.quarterLabel + ' check in: ' + ctx.name;
+        return { title: title, sections: sections, text: _talkingText(title, sections) };
+    }
+
+    /* One metric: every quarter's number, which way it went, where it stands. */
+    function _talkItem(m, ctx) {
+        var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
+        var numbers = points.map(function (p) {
+            return p.name + ' ' + _display(m.metricKey, p.value);
+        }).join(', ');
+        // How many surveys the newest figure rests on. A swing from 100% to
+        // 61.5% reads differently once it is known to be 13 people.
+        var isSurvey = !!(window.SURVEY_WEIGHT_FIELD || {})[m.metricKey];
+        var last = points[points.length - 1];
+        var sample = (isSurvey && last && last.surveyCount > 0)
+            ? (last.surveyCount === 1 ? 'one survey' : last.surveyCount + ' surveys') + ' in ' + last.name
+            : '';
+
+        var said = [];
+        if (points.length >= 2) {
+            var kind = _pathShape(m, points).kind;
+            said.push(kind === 'steady' ? 'Held steady.'
+                : kind === 'climbing' ? 'Better each quarter.'
+                    : kind === 'falling' ? 'Slipped each quarter.'
+                        : 'Up and down this year.');
+        }
+        said.push(_standingPhrase(m));
+        said.push(_thinCurrentPhrase(m, ctx));
+
+        return {
+            metricKey: m.metricKey,
+            label: m.label,
+            numbers: numbers,
+            goal: m.target ? _goalWords(m.metricKey, m.target) : '',
+            sample: sample,
+            said: said.filter(Boolean).join(' ')
+        };
+    }
+
+    function _goalWords(metricKey, target) {
+        return 'goal ' + _display(metricKey, target.value)
+            + (target.type === 'min' ? ' or better' : ' or lower');
+    }
+
+    // "1.7 points short", "45 seconds over".
+    function _gapShort(m) {
+        if (!m.gap) return '';
+        return _movementAmount(m.metricKey, m.gap.size) + (m.isReverse ? ' over' : ' short');
+    }
+
+    function _standingPhrase(m) {
+        if (!m.target || m.meetsTarget === null || m.meetsTarget === undefined) return '';
+        var story = _goalStory(m);
+        var at = m.latestQuarter;
+        if (m.meetsTarget) {
+            if (story.shape === 'always') return 'At goal all year.';
+            if (story.shape === 'crossed-up') {
+                return story.at.name === at ? 'Reached goal in ' + at + '.' : 'At goal since ' + story.at.name + '.';
+            }
+            return 'At goal in ' + at + '.';
+        }
+        var side = _missSide(m);
+        var gap = _gapShort(m);
+        if (story.shape === 'crossed-down' && story.onlyLast) {
+            return 'First quarter ' + side + ' goal, ' + gap + '.';
+        }
+        if (story.shape === 'crossed-down') {
+            return _cap(side) + ' goal since ' + story.at.name + ', ' + gap + ' in ' + at + '.';
+        }
+        if (story.shape === 'never') return _cap(side) + ' goal all year, ' + gap + ' in ' + at + '.';
+        return _cap(side) + ' goal in ' + at + ', ' + gap + '.';
+    }
+
+    /* The check-in quarter had a reading too thin to quote, so the line
+     * above is about an earlier quarter. Said, so it is not mistaken for
+     * this quarter's number. */
+    function _thinCurrentPhrase(m, ctx) {
+        if (!ctx.current || m.latestQuarter === ctx.current.name) return '';
+        var cur = m.series.points.filter(function (p) { return p.quarter === ctx.quarter; })[0];
+        // No reading at all is an empty quarter, not a thin one, and is not
+        // worth a line on every metric.
+        if (!cur || !cur.hasValue) return '';
+        if (cur.surveyCount > 0) {
+            return ctx.current.name + ' had ' + (cur.surveyCount === 1 ? 'one survey' : cur.surveyCount + ' surveys')
+                + ', too few to read.';
+        }
+        return ctx.current.name + ' had too few surveys to read.';
+    }
+
+    /* Missed hours: the year's running total, always. */
+    function _reliabilityItem(rel, ctx) {
+        var hrs = function (v) { return _display(RELIABILITY, v); };
+        var withValues = rel.checkpoints.filter(function (c) { return c.runningTotal !== null; });
+        var lastRunning = withValues.length ? withValues[withValues.length - 1].runningTotal : null;
+        var numbers = hrs(rel.yearToDate) + ' missed this year';
+        // The climb quarter by quarter, only when it lands on the year figure.
+        // Two different totals for the year on one line is worse than one.
+        if (rel.checkpointsReconcile && withValues.length >= 2 && hrs(lastRunning) === hrs(rel.yearToDate)) {
+            numbers = withValues.map(function (c) {
+                return hrs(c.runningTotal) + ' through ' + c.name;
+            }).join(', ');
+        }
+
+        var said = '';
+        var left = _quartersLeftPhrase(ctx);
+        if (rel.partialYear && rel.firstQuarterWithData) {
+            said = hrs(rel.yearToDate) + ' missed since ' + rel.firstQuarterWithData.name
+                + '. The allowance is set for a full year.';
+        } else if (rel.meetsTarget === false) {
+            said = hrs(rel.overBy) + ' over the allowance'
+                + (left ? ', with ' + left + ' still to go.' : ' for the year.');
+        } else if (rel.meetsTarget === true && rel.target) {
+            var room = _round1(rel.target.value - rel.yearToDate);
+            said = room > 0
+                ? hrs(room) + ' left in the allowance' + (left ? ' for the rest of the year.' : '.')
+                : 'Right at the allowance.';
+        }
+
+        return {
+            metricKey: RELIABILITY,
+            label: _label(RELIABILITY),
+            numbers: numbers,
+            goal: rel.target ? 'allowance ' + hrs(rel.target.value) + ' for the year' : '',
+            said: said
+        };
+    }
+
+    function _reliabilityLine(rel) {
+        if (!rel || !rel.hasValue) return '';
+        return _label(RELIABILITY) + ': ' + _display(RELIABILITY, rel.yearToDate) + ' missed this year'
+            + (rel.target ? ', allowance ' + _display(RELIABILITY, rel.target.value) : '') + '.';
+    }
+
+    // "Transfers: 7.0% in Q3, 1 point over goal."
+    function _briefLine(m, ctx) {
+        if (!Number.isFinite(m.latestValue)) return '';
+        var line = m.label + ': ' + _display(m.metricKey, m.latestValue) + ' in ' + m.latestQuarter;
+        if (m.meetsTarget === false && m.gap) line += ', ' + _gapShort(m) + (m.isReverse ? ' goal' : ' of goal');
+        else if (m.target) line += ' (' + _goalWords(m.metricKey, m.target) + ')';
+        var thin = ctx ? _thinCurrentPhrase(m, ctx) : '';
+        return line + '.' + (thin ? ' ' + thin : '');
+    }
+
+    function _togetherLine(ctx) {
+        var sup = ctx.support;
+        if (!sup) return '';
+        var parts = [];
+        if (sup.coachingSessions > 0) {
+            parts.push(sup.coachingSessions === 1 ? 'one coaching session' : sup.coachingSessions + ' coaching sessions');
+        }
+        if (sup.callsReviewed > 0) {
+            parts.push(sup.callsReviewed === 1 ? 'one call reviewed' : sup.callsReviewed + ' calls reviewed');
+        }
+        if (!parts.length) return '';
+        var discussed = ctx.metrics.map(function (m) { return m.metricKey; });
+        var named = sup.metricsCoached
+            .filter(function (k) { return discussed.indexOf(k) >= 0; })
+            .map(function (k) { return _label(k).toLowerCase(); });
+        return _cap(parts.join(' and ')) + (named.length ? ', on ' + named.join(', ') : '') + '.';
+    }
+
+    function _questions(wins, split, rel, next) {
+        var out = [];
+        if (wins.length) out.push('What has been working for you on ' + wins[0].label.toLowerCase() + '?');
+        var firstRate = split.focus.filter(function (m) { return m.metricKey !== RELIABILITY; })[0];
+        if (firstRate) out.push('What gets in the way on ' + firstRate.label.toLowerCase() + '?');
+        else if (split.watch.length) out.push('What has changed on ' + split.watch[0].label.toLowerCase() + ' lately?');
+        var hoursRaised = split.focus.some(function (m) { return m.metricKey === RELIABILITY; });
+        if (hoursRaised && rel.yearToDate > 0) out.push('Is there anything I can help with on attendance?');
+        out.push('What do you want to work on in ' + next + ', and what do you need from me?');
+        return out;
+    }
+
+    function _talkingText(title, sections) {
+        var out = [title];
+        sections.forEach(function (s) {
+            out.push('');
+            out.push(s.heading.toUpperCase());
+            (s.items || []).forEach(function (item) {
+                var line = '- ' + item.label + ': ' + item.numbers;
+                var aside = [item.goal, item.sample].filter(Boolean).join(', ');
+                if (aside) line += ' (' + aside + ')';
+                line += '.';
+                if (item.said) line += ' ' + item.said;
+                out.push(line);
+            });
+            (s.lines || []).forEach(function (line) { out.push('- ' + line); });
+        });
+        return out.join('\n') + '\n';
     }
 
     /* ── The Copilot prompt ──
@@ -1244,6 +1543,7 @@
         buildHeader: buildHeader,
         buildNotes: buildNotes,
         buildPrompt: buildPrompt,
+        buildTalkingPoints: buildTalkingPoints,
         factLines: factLines,
         buildProgressionBlock: buildProgressionBlock
     };

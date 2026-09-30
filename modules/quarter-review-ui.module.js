@@ -64,11 +64,54 @@
         quarter: null,
         employee: '',
         quarters: null,
-        notes: {}
+        notes: {},
+        // Stays open from one associate to the next, so a morning of back to
+        // back check-ins is one click, not one per person.
+        showTalking: false
     };
 
-    function _defaultYear() {
-        return new Date().getFullYear();
+    var MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+    /* The check-in the tab opens on: the newest quarter with at least half of
+     * it uploaded.
+     *
+     * It used to open on the newest quarter to have started. From the first
+     * of October that is a Q4 with nothing in it, so every Q3 check-in opened
+     * on a document titled "Q4 2026 Check In" that closed on "going into next
+     * year". Early in a quarter, the one worth talking about is the one that
+     * just ended.
+     */
+    function _defaultQuarter(quarters) {
+        var qt = _qt();
+        for (var i = quarters.length - 1; i >= 0; i--) {
+            var q = quarters[i];
+            if (q.empty) continue;
+            var b = qt.quarterBounds(q.year, q.quarter);
+            var days = Math.round((b.endMs - b.startMs) / MS_PER_DAY) + 1;
+            if ((q.coveredDays || 0) / days >= 0.5) return q.quarter;
+        }
+        return null;
+    }
+
+    /* The year and quarter to open on. In the first weeks of January the
+     * current year has nothing worth a check-in, and last year's Q4 is the
+     * one due. */
+    function _openingCheckIn() {
+        var qt = _qt();
+        var year = new Date().getFullYear();
+        var quarters = qt.buildYearQuarters(year);
+        var pick = _defaultQuarter(quarters);
+        if (pick !== null) return { year: year, quarter: pick, quarters: quarters };
+        var lastYear = qt.buildYearQuarters(year - 1);
+        var prior = _defaultQuarter(lastYear);
+        if (prior !== null) return { year: year - 1, quarter: prior, quarters: lastYear };
+        return { year: year, quarter: null, quarters: quarters };
+    }
+
+    // Quarters with nothing uploaded are not offered. A check-in for one would
+    // carry an empty quarter's name over the numbers of the one before it.
+    function _offeredQuarters() {
+        return (state.quarters || []).filter(function (q) { return !q.empty; });
     }
 
     function _loadNotes() {
@@ -106,17 +149,28 @@
         }
         var qt = _qt();
 
-        if (state.year === null) state.year = _defaultYear();
         if (!Object.keys(state.notes).length) state.notes = _loadNotes();
 
-        state.quarters = qt.buildYearQuarters(state.year);
-        var elapsed = state.quarters.map(function (q) { return q.quarter; });
-        if (!elapsed.length) {
+        if (state.year === null) {
+            var opening = _openingCheckIn();
+            state.year = opening.year;
+            state.quarter = opening.quarter;
+            state.quarters = opening.quarters;
+        } else {
+            state.quarters = qt.buildYearQuarters(state.year);
+        }
+        if (!state.quarters.length) {
             host.innerHTML = _shell(_emptyYear());
             _bindTopControls();
             return;
         }
-        if (elapsed.indexOf(state.quarter) < 0) state.quarter = elapsed[elapsed.length - 1];
+        var offered = _offeredQuarters().map(function (q) { return q.quarter; });
+        if (offered.indexOf(state.quarter) < 0) {
+            var pick = _defaultQuarter(state.quarters);
+            state.quarter = pick !== null ? pick
+                : offered.length ? offered[offered.length - 1]
+                    : state.quarters[state.quarters.length - 1].quarter;
+        }
 
         var names = _namesWithData();
         if (state.employee && names.indexOf(state.employee) < 0) state.employee = '';
@@ -204,7 +258,7 @@
                     + _escape(n) + '</option>';
             }).join('');
 
-        var quarterButtons = (state.quarters || []).map(function (q) {
+        var quarterButtons = _offeredQuarters().map(function (q) {
             var active = q.quarter === state.quarter;
             return '<button type="button" class="quarter-review-q" data-quarter="' + q.quarter + '"'
                 + ' style="padding:7px 16px;border-radius:6px;cursor:pointer;font-weight:600;'
@@ -247,7 +301,77 @@
 
         var note = state.notes[_noteKey()] || '';
         var notes = qr.buildNotes(ctx, { notes: note });
-        return _progressionTable(ctx) + _notesPanel(ctx, notes, note);
+        return _talkingBar(ctx)
+            + (state.showTalking ? _talkingPanel(qr.buildTalkingPoints(ctx, { notes: note })) : '')
+            + _progressionTable(ctx) + _notesPanel(ctx, notes, note);
+    }
+
+    /* ── Talking points ──
+     *
+     * The button Scott asked for: the associate is in the room, one click,
+     * and the numbers are on the screen as things to say rather than as a
+     * table to read out.
+     */
+    function _talkingBar(ctx) {
+        var label = state.showTalking ? 'Hide talking points' : '🗣️ Talking points for the meeting';
+        return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">'
+            + '<button type="button" id="quarterReviewTalkToggle" aria-expanded="' + (state.showTalking ? 'true' : 'false') + '"'
+            + ' style="background:#d84315;color:#fff;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;'
+            + 'font-weight:700;font-size:0.98em;">' + _escape(label) + '</button>'
+            + (state.showTalking ? '' : '<span style="font-size:0.88em;color:var(--text-tertiary);">'
+                + _escape(ctx.quarterLabel) + ' for ' + _escape(ctx.firstName)
+                + ': what is working, what to work on, and questions to ask.</span>')
+            + '</div>';
+    }
+
+    var TALK_TONES = {
+        wins: '#16a34a',
+        focus: '#c2410c',
+        moreFocus: '#c2410c',
+        watch: '#d97706',
+        moreWins: '#16a34a',
+        together: '#0f766e',
+        ask: '#4f46e5',
+        notes: '#64748b'
+    };
+
+    function _talkingPanel(tp) {
+        return '<div style="padding:16px 18px;background:var(--bg-surface);border-radius:8px;border:2px solid #d84315;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'
+            + '<h4 style="margin:0;color:var(--text-primary);font-size:1.1em;">' + _escape(tp.title) + '</h4>'
+            + _button('quarterReviewTalkCopy', 'Copy talking points', '#0f766e')
+            + '</div>'
+            + '<div id="quarterReviewTalkBody">' + _talkingSections(tp) + '</div>'
+            + '</div>';
+    }
+
+    function _talkingSections(tp) {
+        return tp.sections.map(function (s) {
+            var tone = TALK_TONES[s.id] || 'var(--border)';
+            var items = (s.items || []).map(function (item) {
+                var aside = [item.goal, item.sample].filter(Boolean).join(', ');
+                return '<div style="padding:7px 0;border-bottom:1px solid var(--border);">'
+                    + '<div style="font-weight:700;color:var(--text-primary);">' + _escape(item.label)
+                    + (aside ? ' <span style="font-weight:400;font-size:0.84em;color:var(--text-tertiary);">'
+                        + _escape(aside) + '</span>' : '')
+                    + '</div>'
+                    + '<div style="font-size:0.95em;color:var(--text-primary);font-variant-numeric:tabular-nums;">'
+                    + _escape(item.numbers) + '</div>'
+                    + (item.said ? '<div style="font-size:0.92em;color:var(--text-secondary);margin-top:2px;">'
+                        + _escape(item.said) + '</div>' : '')
+                    + '</div>';
+            }).join('');
+            var lines = (s.lines || []).length
+                ? '<ul style="margin:4px 0 0;padding-left:20px;">' + s.lines.map(function (line) {
+                    return '<li style="padding:3px 0;font-size:0.94em;color:var(--text-primary);white-space:pre-wrap;">'
+                        + _escape(line) + '</li>';
+                }).join('') + '</ul>'
+                : '';
+            return '<div style="margin-top:12px;padding-left:12px;border-left:4px solid ' + tone + ';">'
+                + '<div style="font-weight:700;font-size:0.8em;letter-spacing:0.04em;text-transform:uppercase;color:' + tone + ';">'
+                + _escape(s.heading) + '</div>'
+                + items + lines + '</div>';
+        }).join('');
     }
 
     /* The table Scott asked for: one row per measure, one column per quarter,
@@ -481,6 +605,15 @@
             _refreshBoxes();
         });
 
+        _on('quarterReviewTalkToggle', 'click', function () {
+            state.showTalking = !state.showTalking;
+            render();
+        });
+        _on('quarterReviewTalkCopy', 'click', function () {
+            var built = _currentDocument();
+            if (built) _copy(built.talking.text, 'Talking points copied.');
+        });
+
         // Rebuilt at click time rather than captured now, so a note typed
         // since the last render is in whatever gets copied.
         _on('quarterReviewCopyAll', 'click', function () {
@@ -522,6 +655,9 @@
         var two = document.getElementById('quarterReviewBox2');
         if (one) one.textContent = built.notes.box1;
         if (two) two.textContent = built.notes.box2;
+        // The note is the last section of the talking points too.
+        var talk = document.getElementById('quarterReviewTalkBody');
+        if (talk) talk.innerHTML = _talkingSections(built.talking);
     }
 
     function _currentDocument() {
@@ -536,7 +672,8 @@
         return {
             ctx: ctx,
             notes: qr.buildNotes(ctx, { notes: note }),
-            prompt: qr.buildPrompt(ctx, { notes: note })
+            prompt: qr.buildPrompt(ctx, { notes: note }),
+            talking: qr.buildTalkingPoints(ctx, { notes: note })
         };
     }
 
