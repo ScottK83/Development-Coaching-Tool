@@ -9703,6 +9703,21 @@ function toggleAllSavedCalls() {
     if (button) button.textContent = opening ? '🔎 Hide Saved Calls' : '🔎 Show Saved Calls';
 }
 
+/**
+ * The "Saved calls" link on the More line. Opens More, opens the list if it
+ * is shut, and takes you to it, in one click. The link sits inside the
+ * summary, so its own click must not also fold More back up.
+ */
+function openSavedCallsFromLink(event) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const more = document.querySelector('#subSectionCallListening .call-more');
+    if (more) more.open = true;
+    const list = document.getElementById('allSavedCalls');
+    if (list && list.style.display === 'none') toggleAllSavedCalls();
+    list?.closest('.call-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 /** Re-renders in place, for the scope toggle and for changing associate. */
 function refreshAllSavedCallsIfOpen() {
     const container = document.getElementById('allSavedCalls');
@@ -9847,6 +9862,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('copyCallWordChoiceBtn'), 'click', copyCallListeningWordChoice);
     bindElementOnce(document.getElementById('callMetricChips'), 'click', handleCallMetricChipClick);
     bindElementOnce(document.getElementById('showAllSavedCallsBtn'), 'click', toggleAllSavedCalls);
+    bindElementOnce(document.getElementById('openSavedCallsLink'), 'click', openSavedCallsFromLink);
     bindElementOnce(document.getElementById('savedCallsEveryoneToggle'), 'change', refreshAllSavedCallsIfOpen);
     // Changing associate while the panel is open has to move it too, or it
     // keeps showing the last person's calls under the new person's name.

@@ -1225,6 +1225,21 @@ textarea:focus-visible {
     border-radius: var(--radius-lg);
 }
 
+/* The More line carries the saved calls link at its right-hand end. */
+.panel-section .call-more > summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.panel-section .call-more-link {
+    margin-left: auto;
+    color: var(--brand-text);
+    font-size: 0.95em;
+    text-decoration: underline;
+}
+
 .panel-section .call-more[open] > .call-panel,
 .panel-section .call-more[open] > #callOutcomesPanel {
     margin-top: var(--space-4);

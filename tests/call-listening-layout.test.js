@@ -243,3 +243,25 @@ suite('call listening layout: the buttons do what they say', (t) => {
     t.check('the flag strip is drawn on every read', /renderCallFlagStrip\(analysis\)/.test(script));
     t.check('and taken down with the rest', /'callTranscriptAnalysisSummary', 'callFlagStrip'/.test(script));
 });
+
+suite('call listening layout: saved calls, one click from the More line', (t) => {
+    const section = callListeningSection();
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    // "Did you remove the saved calls button?" It had gone under More with
+    // everything else, so it looked removed. The link sits on the More line,
+    // which shows with More still shut.
+    const start = section.indexOf('<details class="call-fold call-more"');
+    const summary = section.slice(section.indexOf('<summary>', start), section.indexOf('</summary>', start));
+    t.check('the link is on the More line', /id="openSavedCallsLink"/.test(summary));
+    t.check('and says what it is', />🗂️ Saved calls</.test(summary));
+    t.check('a link, not a fourth button', !/<button\b/.test(summary));
+
+    const start2 = script.indexOf('function openSavedCallsFromLink(');
+    const body = script.slice(start2, script.indexOf('\nfunction ', start2 + 10));
+    t.check('it is wired', /bindElementOnce\(document\.getElementById\('openSavedCallsLink'\), 'click', openSavedCallsFromLink\)/.test(script));
+    t.check('it does not fold More back up', /event\?\.preventDefault\?\.\(\);\s*event\?\.stopPropagation\?\.\(\);/.test(body));
+    t.check('it opens More', /more\.open = true/.test(body));
+    t.check('opens the list if it is shut', /if \(list && list\.style\.display === 'none'\) toggleAllSavedCalls\(\);/.test(body));
+    t.check('and takes you to it', /scrollIntoView/.test(body));
+});
