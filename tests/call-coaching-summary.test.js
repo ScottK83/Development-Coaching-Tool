@@ -179,8 +179,10 @@ suite('email prompt: Copilot turns the pasted summary into the email', (t) => {
     t.check('not the notes, when there is a summary', !/a note that should not be used/.test(prompt));
     t.check('the transcript does not go over again', !/my name is alyssa/.test(prompt));
     t.check('it names the call', /Tuesday, September 29 at 10:14 AM/.test(prompt));
-    t.check('good first, then the work', /Lead with what went well/.test(prompt));
-    t.check('keeping any better wording from the summary', /better way to say something to a customer/.test(prompt));
+    t.check('good first, then the work', /Say what went well, specifically/.test(prompt) && /Then what to do better/.test(prompt));
+    t.check('with the words or steps to use for each point', /give the words or the steps to use/.test(prompt));
+    // "Want more so in the form of what can do better. Tips. Tricks. Etc."
+    t.check('and a list of tips and tricks', /"A few things to try:" with three to five practical tips or tricks/.test(prompt));
     t.check('nothing added', /Do not add findings of your own/.test(prompt));
     t.check('just the body back', /Return only the email body/.test(prompt));
     t.check('no em dashes asked for or used', /Do not use em dashes/.test(prompt) && !/[—–]/.test(prompt));

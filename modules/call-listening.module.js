@@ -147,6 +147,119 @@ Requirements:
 - Return ONLY the final email body text.`;
     }
 
+    /* ── What both Copilot prompts carry ── */
+
+    function analysisFor(entry) {
+        const analyzer = window.DevCoachModules?.callTranscript;
+        if (!entry?.transcript || !analyzer?.analyzeTranscript) return null;
+        const analysis = analyzer.analyzeTranscript(entry.transcript, { associateName: entry.employeeName });
+        return analysis?.ok ? analysis : null;
+    }
+
+    /**
+     * Tips from Scott's library for the points being coached.
+     *
+     * Only the points still in his notes, so a point he deleted does not come
+     * back as a tip. If he rewrote the notes entirely nothing matches, and the
+     * call's own points are still the best guide to what fits.
+     */
+    function tipsForEntry(entry, analysis) {
+        const bridge = window.DevCoachModules?.callCoachingBridge;
+        if (!bridge?.tipsForCall || !analysis) return [];
+        const notes = String(entry?.improvementAreas || '');
+        // Never for a red flag. A confirmed one carries its own record and
+        // its rule, and the library's "verify" tips are mostly about other
+        // things: on the first real run, "Verify contact info at end of call"
+        // came back beside account details given to the wrong caller, where
+        // it reads as if it were the fix.
+        let points = (analysis.allImprovements || []).filter(item => item.severity !== 'red');
+        const kept = points.filter(item => item.text && notes.includes(item.text));
+        if (kept.length) points = kept;
+        return bridge.tipsForCall(points, { max: 5, perFinding: 2 });
+    }
+
+    // The rule each kind of red flag broke, in words that are true whatever
+    // APS's exact verification standard turns out to be. Which identifiers
+    // count is still the app's assumption, so it is never stated as policy.
+    const RED_FLAG_RULES = {
+        identity: 'Verify the caller before anything on the account is shared.',
+        authority: 'When the caller is not on the account, nothing on it is shared unless they are authorized on it.',
+        safety: 'A safety hazard is handled first: get the customer clear of it and report it as an emergency.'
+    };
+
+    /**
+     * The red flags on a call, written out in full for documenting: what
+     * happened, in order, with the time to listen at and what was said, and
+     * the rule it broke.
+     *
+     * Scott: "if there are major red flags, like didn't authenticate or
+     * verify ... Flag me to actually listen to the call and in the email
+     * summary, if it's valid, it needs to be heavily documented."
+     */
+    function redFlagRecord(analysis) {
+        if (!analysis) return null;
+        const verifier = window.DevCoachModules?.callVerification;
+        const items = [];
+
+        const read = analysis.verification;
+        if (read?.ok && read.status === 'breach' && typeof verifier?.describe === 'function') {
+            const said = verifier.describe(read);
+            const types = read.breach?.types || [];
+            const rules = [];
+            if (types.some(type => ['unverified', 'late', 'failed'].includes(type))) rules.push(RED_FLAG_RULES.identity);
+            if (types.some(type => ['unauthorized', 'denied'].includes(type))) rules.push(RED_FLAG_RULES.authority);
+            items.push({
+                key: 'verification',
+                headline: said.headline,
+                detail: said.detail,
+                time: read.breach?.time || '',
+                timeline: (verifier.buildTimeline?.(read) || [])
+                    .map(row => ({ time: row.time || '', text: row.text || '', quote: row.quote || '' })),
+                rule: rules.join(' ')
+            });
+        }
+
+        (analysis.redFlags?.flags || []).filter(flag => flag.level === 'red').forEach(flag => {
+            items.push({
+                key: flag.key,
+                headline: flag.title,
+                detail: flag.detail || '',
+                time: flag.time || '',
+                timeline: flag.quote ? [{ time: flag.time || '', text: 'What the customer said', quote: flag.quote }] : [],
+                rule: flag.key === 'safety' ? RED_FLAG_RULES.safety : ''
+            });
+        });
+
+        return items.length ? { items, labeled: Boolean(analysis.stats?.labeled) } : null;
+    }
+
+    function redFlagLines(record) {
+        const lines = [];
+        (record?.items || []).forEach((item) => {
+            lines.push(`${item.headline}${item.time ? ` (at ${item.time})` : ''}.`);
+            if (item.detail) lines.push(item.detail);
+            item.timeline.forEach(row => {
+                lines.push(`- ${row.time ? `${row.time} ` : ''}${row.text}${row.quote ? ` ("${row.quote}")` : ''}`);
+            });
+            if (item.rule) lines.push(`The rule: ${item.rule}`);
+        });
+        return lines;
+    }
+
+    // The pieces each prompt adds on top of the notes: the red flag when
+    // Scott has confirmed it, the tips, and the Oscar steps.
+    function promptExtras(entry) {
+        const analysis = analysisFor(entry);
+        const mask = window.DevCoachModules?.callTranscript?.maskIdentifiers || ((value) => String(value || ''));
+        const record = entry?.redFlagReview === 'valid' ? redFlagRecord(analysis) : null;
+        return {
+            redFlag: record ? redFlagLines(record).map(line => mask(line)) : [],
+            tips: tipsForEntry(entry, analysis).map(tip => tip.text),
+            oscarSteps: String(entry?.relevantInfo || '').trim(),
+            oscarUrl: String(entry?.oscarUrl || '').trim()
+        };
+    }
+
     /**
      * The prompt behind "Copilot: Write The Summary".
      *
@@ -211,6 +324,12 @@ Requirements:
             lines.push('"""', transcript, '"""', '');
         }
 
+        const extras = promptExtras(entry);
+        if (extras.redFlag.length) {
+            lines.push('The most serious thing on this call. I listened to it myself and it is confirmed:');
+            lines.push(...extras.redFlag, '');
+        }
+
         lines.push('My notes on what went well:', correct(entry.whatWentWell) || '- None', '');
         lines.push('My notes on what to work on:', correct(entry.improvementAreas) || '- None', '');
 
@@ -223,17 +342,36 @@ Requirements:
             lines.push('');
         }
 
+        if (extras.tips.length) {
+            lines.push('Tips from our own coaching library that fit this call. Use the ones that fit, reworded to fit the call:');
+            extras.tips.forEach(tip => lines.push(`- ${tip}`));
+            lines.push('');
+        }
+
+        if (extras.oscarSteps) {
+            lines.push('The Oscar steps for this, from our knowledge base:', '"""', extras.oscarSteps, '"""');
+            if (extras.oscarUrl) lines.push(`Link to the Oscar article: ${extras.oscarUrl}`);
+            lines.push('');
+        }
+
         lines.push('Write the coaching summary.');
         lines.push('');
         lines.push('Requirements:');
         lines.push('- Plain text only, ready to paste into Verint. No markdown, no bold, no symbols in front of headings');
+        if (extras.redFlag.length) {
+            lines.push('- Put the confirmed issue first, under "Most important:", and document it in full: what happened, in order, with the times; the rule it broke; and what has to happen on every call from now on. State it plainly and respectfully. Do not soften it into a tip or put it after the praise');
+        }
         lines.push('- Open with one or two sentences on what the call was about and how it ended');
-        lines.push('- Then "What went well:" with two to four short bullets, and "What to work on:" with one to three short bullets, each with one specific thing to keep doing or to try');
-        lines.push('- Use only my notes and the transcript. Do not add findings of your own, and do not rate or score the call');
-        lines.push('- Write to the associate as "you" and do not use their name');
+        lines.push('- Then "What went well:" with two to four short bullets, and "What to work on:" with two or three bullets, each saying exactly what to do differently');
+        lines.push('- Then "Tips to try:" with three to five practical tips or tricks, each with an example of what to say or do on the next call. Draw them from my notes and the tips above');
+        if (extras.oscarSteps) {
+            lines.push('- Then "Oscar steps:" with the steps that apply, short and in order, saying which step to focus on next time. Use the steps as given and do not add to them');
+        }
+        lines.push('- Use only my notes, the tips above and the transcript. Do not add findings of your own, and do not rate or score the call');
+        lines.push('- Write to the associate as "you" and do not use their name. Do not use the words "red flag"');
         lines.push('- Our company is APS. If the transcript names another company in the greeting, that is the speech to text mishearing APS');
         lines.push('- Quote the call only where a short phrase makes a point clearer');
-        lines.push('- Keep it under 180 words. Do not use em dashes, or hyphens with spaces around them');
+        lines.push(`- Keep it under ${extras.redFlag.length ? 400 : 300} words. Do not use em dashes, or hyphens with spaces around them`);
 
         return lines.join('\n');
     }
@@ -296,6 +434,12 @@ Requirements:
         lines.push('');
         if (moment) lines.push(`The call: ${moment}.`, '');
 
+        const extras = promptExtras(entry);
+        if (extras.redFlag.length) {
+            lines.push('The most serious thing on this call. I listened to it myself and it is confirmed:');
+            lines.push(...extras.redFlag, '');
+        }
+
         if (summary) {
             lines.push('My coaching write-up:', '"""', summary, '"""', '');
         } else {
@@ -303,16 +447,35 @@ Requirements:
             lines.push('What to work on:', correct(entry.improvementAreas) || '- None', '');
         }
 
+        if (extras.tips.length) {
+            lines.push('Tips from our own coaching library that fit this call:');
+            extras.tips.forEach(tip => lines.push(`- ${tip}`));
+            lines.push('');
+        }
+
+        if (extras.oscarSteps) {
+            lines.push('The Oscar steps for this, from our knowledge base:', '"""', extras.oscarSteps, '"""');
+            if (extras.oscarUrl) lines.push(`Link to the Oscar article: ${extras.oscarUrl}`);
+            lines.push('');
+        }
+
         lines.push('Write the email.');
         lines.push('');
         lines.push('Requirements:');
         lines.push(`- From me to ${name}, in my voice: warm, direct and supportive, the way a supervisor who works with them every day would write`);
         lines.push(moment ? `- Say which call it is about in the opening line: ${moment}` : '- Say which call it is about in the opening line');
-        lines.push('- Lead with what went well, specifically, and why it mattered to the customer. Then what to work on, as one or two things to try next time');
-        lines.push('- Where my write-up gives a better way to say something to a customer, include it so they have the words');
-        lines.push('- Use only what is in my write-up. Do not add findings of your own, and do not rate or score the call');
-        lines.push('- Keep it under 170 words: a short opening, the points, and a one line close');
-        lines.push('- Plain text: no subject line, no bold, no headings. Do not use em dashes, or hyphens with spaces around them');
+        if (extras.redFlag.length) {
+            lines.push('- Straight after the opening line, set out the confirmed issue in full: what happened, in order, with the times; why it matters, which is protecting the customer and their account; and exactly what has to happen on every call from now on. Plain and respectful, but not softened, not turned into a tip, and not put after the praise. Do not use the words "red flag"');
+        }
+        lines.push('- Say what went well, specifically, and why it mattered to the customer');
+        lines.push('- Then what to do better: for each point, say exactly what to do differently and give the words or the steps to use');
+        lines.push('- Then a short list headed "A few things to try:" with three to five practical tips or tricks, each with an example of what to say or do. Draw them from my write-up and the tips above');
+        if (extras.oscarSteps) {
+            lines.push(`- Then the Oscar steps as a short numbered list, so they have the process in front of them. Use the steps as given and do not add to them${extras.oscarUrl ? ', and include the link' : ''}`);
+        }
+        lines.push('- Use only my write-up, the tips and the steps above. Do not add findings of your own, and do not rate or score the call');
+        lines.push(`- Keep it under ${extras.redFlag.length ? 400 : 300} words, with a one line close`);
+        lines.push('- Plain text: no subject line, no bold. Do not use em dashes, or hyphens with spaces around them');
         lines.push('- Our company is APS. If another company name appears, that is speech to text mishearing APS');
         lines.push('- Return only the email body');
 
@@ -650,6 +813,8 @@ Requirements:
      */
     function hasVerificationRedFlag(entry) {
         if (!entry?.transcript) return false;
+        // Listened to and set aside: not a flag on this call any more.
+        if (entry.redFlagReview === 'dismissed') return false;
         const read = window.DevCoachModules?.callVerification?.readVerificationFromText?.(entry.transcript, {
             associateName: entry.employeeName
         });
@@ -685,6 +850,9 @@ Requirements:
         buildPrompt,
         buildCoachingSummaryPrompt,
         buildEmailFromSummaryPrompt,
+        redFlagRecord,
+        redFlagLines,
+        tipsForEntry,
         findSameCall,
         copyPromptAndOpenCopilot,
         buildOutlookSubject,

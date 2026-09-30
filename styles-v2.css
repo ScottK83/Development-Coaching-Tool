@@ -1194,6 +1194,27 @@ textarea:focus-visible {
     background: var(--yellow-soft);
 }
 
+/* The red flag box that has to be answered before anything goes out. */
+.panel-section .call-listen .call-alert-title {
+    font-size: 1.1em;
+}
+
+.panel-section .call-listen .call-alert-detail + .call-alert-timeline + .call-alert-detail,
+.panel-section .call-listen .call-alert-detail + .call-alert-detail {
+    margin-top: var(--space-3);
+}
+
+/* A button that reads as a link: changing an answer already given. */
+.panel-section .call-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--brand-text);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: inherit;
+}
+
 /* Everything that is not paste, good and bad, Copilot or Verint. One closed
    fold, styled as a card so it reads as a place rather than a stray link. */
 .panel-section .call-more {

@@ -7457,6 +7457,9 @@ function getCallListeningDraftFromForm() {
         // What Copilot wrote, pasted back. Copy For Verint and the email
         // prompt both work from it when it is there.
         copilotSummary: (document.getElementById('callListeningCopilotSummary')?.value || '').trim(),
+        // Scott's answer to the red flag after listening: 'valid',
+        // 'dismissed', or '' when the call has none or it is unanswered.
+        redFlagReview: callRedFlagRecord ? callRedFlagReview : '',
         oscarUrl: (document.getElementById('callListeningOscarUrl')?.value || '').trim(),
         relevantInfo: (document.getElementById('callListeningRelevantInfo')?.value || '').trim(),
         managerNotes: (document.getElementById('callListeningManagerNotes')?.value || '').trim()
@@ -7488,6 +7491,7 @@ function isSameCallListeningDraftAsEntry(draft, existingEntry) {
         && (existingEntry.whatWentWell || '') === draft.whatWentWell
         && (existingEntry.improvementAreas || '') === draft.improvementAreas
         && (existingEntry.copilotSummary || '') === (draft.copilotSummary || '')
+        && (existingEntry.redFlagReview || '') === (draft.redFlagReview || '')
         && (existingEntry.oscarUrl || '') === draft.oscarUrl
         && (existingEntry.relevantInfo || '') === draft.relevantInfo
         && (existingEntry.managerNotes || '') === draft.managerNotes;
@@ -7583,12 +7587,23 @@ function keepCallOnTheWayOut() {
     return Boolean(upsertCallListeningEntryFromForm(false));
 }
 
-// The red flags for the Verint note, one line each: what a coaching log has
-// to record, without the timeline the box on screen carries.
+// The red flags for the Verint note. Confirmed after listening, in full: what
+// happened in order, with the times, and the rule it broke. Set aside, not at
+// all. Not yet answered (a call saved before the review existed), one line
+// each, as it always was.
 function buildCallListeningRedFlagLines(entry) {
     if (!entry?.transcript) return [];
+    if (entry.redFlagReview === 'dismissed') return [];
     const modules = window.DevCoachModules || {};
     const options = { associateName: entry.employeeName };
+
+    if (entry.redFlagReview === 'valid') {
+        const analysis = modules.callTranscript?.analyzeTranscript?.(entry.transcript, options);
+        const record = modules.callListening?.redFlagRecord?.(analysis?.ok ? analysis : null);
+        const detail = modules.callListening?.redFlagLines?.(record) || [];
+        if (detail.length) return ['Red flag, confirmed after listening to the call:', ...detail];
+    }
+
     const lines = [];
 
     const verification = modules.callVerification?.readVerificationFromText?.(entry.transcript, options);
@@ -7631,15 +7646,15 @@ function buildCallListeningVerintSummary(entry) {
     ];
 
     // Copilot's summary, when Scott has pasted it back, is the version he read
-    // and agreed with. It already says what the call was and carries the good
-    // and the bad, so it goes in whole in place of the recap and the notes.
+    // and agreed with. It already says what the call was, carries the good
+    // and the bad, and was asked to include the Oscar steps, so it goes in
+    // whole in place of the recap, the notes and the steps.
     const copilotSummary = String(entry.copilotSummary || '').trim();
     if (copilotSummary) {
         return [
             ...header,
             '',
-            correct(copilotSummary),
-            ...section('Relevant info shared:', entry.relevantInfo)
+            correct(copilotSummary)
         ].join('\n');
     }
 
@@ -7652,7 +7667,7 @@ function buildCallListeningVerintSummary(entry) {
         ...(recap ? ['', 'Call summary:', recap] : []),
         ...section('What went well:', entry.whatWentWell),
         ...section('What to work on:', entry.improvementAreas),
-        ...section('Relevant info shared:', entry.relevantInfo)
+        ...section('Oscar steps:', entry.relevantInfo)
     ].join('\n');
 }
 
@@ -7667,6 +7682,7 @@ function copyCallListeningVerintSummary(entryId = null) {
     // kept now: logging it in Verint is the moment the coaching is final.
     let saved = false;
     if (!entry) {
+        if (redFlagNeedsListening()) return;
         entry = buildUnsavedCallListeningEntry();
         if (!entry) return;
         saved = keepCallOnTheWayOut();
@@ -7710,6 +7726,10 @@ function loadCallListeningEntryIntoForm(entryId) {
     const analysis = window.DevCoachModules?.callTranscript?.analyzeTranscript?.(entry.transcript || '', {
         associateName
     });
+    // The red flag answer it was saved with, so a confirmed flag is not
+    // asked about again and a set aside one stays out.
+    pendingRedFlagReview = entry.redFlagReview || '';
+    renderCallFlagStrip(analysis);
     if (analysis?.ok) {
         renderCallListeningReadPanels(entry.transcript, associateName, analysis);
         const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -8937,27 +8957,108 @@ function buildCallReadToast(analysis, applied, labelled, associateName) {
 
 const CALL_FLAG_ICONS = { red: '🚩', warn: '⚠️', info: 'ℹ️' };
 
+/*
+ * THE RED FLAG REVIEW
+ *
+ * Account details shared before the caller was verified, or with somebody
+ * who said they were not on the account, or a safety hazard nobody turned to.
+ * These decide whether an associate gave an account away, the read of them is
+ * good and not perfect, and Scott's instruction is plain: "Flag me to actually
+ * listen to the call and in the email summary, if it's valid, it needs to be
+ * heavily documented."
+ *
+ * So a red flag opens a box with every moment to listen at and two choices.
+ * Until one is made, the three buttons that send a call anywhere wait. Valid:
+ * it is documented in full, in order, with the times, in the summary, the
+ * email and the Verint note. Not valid: it comes out of the notes and out of
+ * everything that goes out.
+ */
+let callRedFlagRecord = null;
+let callRedFlagReview = '';
+// The coaching lines taken out of What to work on when a flag is set aside,
+// so changing the answer puts them back.
+let callRedFlagRemovedLines = [];
+// The red coaching lines the last read drafted, for taking out.
+let callRedFlagCoachingLines = [];
+let callFlagStripAnalysis = null;
+// A saved call's answer, waiting for the read that shows its flag.
+let pendingRedFlagReview = null;
+
+function redFlagSignature(record) {
+    return (record?.items || []).map(item => `${item.key}@${item.time}`).join('|');
+}
+
+function renderCallRedFlagBox(record) {
+    const items = record.items;
+    const heard = items.map(item => {
+        const rows = item.timeline.map(row => `<li>`
+            + `${row.time ? `<span class="call-alert-time">${escapeHtml(row.time)}</span>` : ''}`
+            + `<span>${escapeHtml(row.text)}</span>`
+            + `${row.quote ? `<div class="call-alert-quote">"${escapeHtml(row.quote)}"</div>` : ''}</li>`).join('');
+        return `<div class="call-alert-detail"><strong>🚩 ${escapeHtml(item.headline)}${item.time ? ` at ${escapeHtml(item.time)}` : ''}.</strong> ${escapeHtml(item.detail)}</div>`
+            + (rows ? `<ol class="call-alert-timeline">${rows}</ol>` : '');
+    }).join('');
+
+    if (callRedFlagReview === 'valid') {
+        return `<div class="call-alert call-alert-red call-listen">`
+            + `<div class="call-alert-title">🚩 Confirmed after listening</div>`
+            + heard
+            + `<div class="call-alert-note">Documented in full in the Copilot summary, the email and the Verint note. `
+            + `<button type="button" class="call-link-btn" data-red-flag-review="">Change</button></div>`
+            + `</div>`;
+    }
+    if (callRedFlagReview === 'dismissed') {
+        return `<div class="call-alert"><strong>Red flag set aside after listening.</strong> `
+            + `<span>Left out of the notes, the summary, the email and the Verint note.</span> `
+            + `<button type="button" class="call-link-btn" data-red-flag-review="">Change</button></div>`;
+    }
+
+    const first = items.find(item => item.time);
+    const caveat = record.labeled ? '' : '<div class="call-alert-note">Who said what was worked out from the conversation, not the colours, so the listen matters more than usual.</div>';
+    return `<div class="call-alert call-alert-red call-listen" role="alert">`
+        + `<div class="call-alert-title">🎧 Listen to this call before anything goes out${first ? `, starting at ${escapeHtml(first.time)}` : ''}</div>`
+        + heard
+        + caveat
+        + `<div class="flex-row" style="margin-top: var(--space-3);">`
+        + `<button type="button" class="btn-primary" data-red-flag-review="valid">🚩 It's valid, document it</button>`
+        + `<button type="button" data-red-flag-review="dismissed">Not valid, leave it out</button>`
+        + `</div></div>`;
+}
+
 /**
  * The one thing under the paste box besides the fields: what is wrong, one
- * line each with the time to listen at. The detail behind every line is in
- * the full read under More. A clean call gets a single quiet line.
+ * line each with the time to listen at, and a red flag as its own box that
+ * has to be answered. The detail behind every line is in the full read under
+ * More. A clean call gets a single quiet line.
  */
 function renderCallFlagStrip(analysis) {
     const host = document.getElementById('callFlagStrip');
     if (!host) return;
+    callFlagStripAnalysis = analysis?.ok ? analysis : null;
     if (!analysis?.ok) {
         host.innerHTML = '';
         host.style.display = 'none';
         return;
     }
 
-    const items = [];
-    const verification = analysis.verification;
-    if (verification?.ok && verification.status === 'breach') {
-        const said = window.DevCoachModules?.callVerification?.describe?.(verification);
-        if (said?.headline) items.push({ level: 'red', text: said.headline, time: verification.breach?.time || '' });
+    // A re-read of the same call keeps the answer; a different flag asks
+    // again; a saved call brings back the answer it was saved with.
+    const record = window.DevCoachModules?.callListening?.redFlagRecord?.(analysis) || null;
+    if (pendingRedFlagReview !== null) {
+        callRedFlagReview = record ? pendingRedFlagReview : '';
+        callRedFlagRemovedLines = [];
+        pendingRedFlagReview = null;
+    } else if (redFlagSignature(record) !== redFlagSignature(callRedFlagRecord)) {
+        callRedFlagReview = '';
+        callRedFlagRemovedLines = [];
     }
-    (analysis.redFlags?.flags || []).forEach(flag => {
+    callRedFlagRecord = record;
+    callRedFlagCoachingLines = (analysis.allImprovements || [])
+        .filter(item => item.severity === 'red')
+        .map(item => `- ${item.text}`);
+
+    const items = [];
+    (analysis.redFlags?.flags || []).filter(flag => flag.level !== 'red').forEach(flag => {
         items.push({ level: flag.level, text: flag.title, time: flag.time || '' });
     });
     (analysis.explanation?.lost || []).forEach(moment => {
@@ -8970,15 +9071,62 @@ function renderCallFlagStrip(analysis) {
         ? 'The colours did not come through, so who said what was worked out from the conversation. Check a quote before you send it.'
         : '';
 
-    if (!items.length) {
+    const box = record ? renderCallRedFlagBox(record) : '';
+    if (!items.length && !box) {
         host.innerHTML = `<div class="call-alert call-alert-ok"><strong>✅ No red flags.</strong>${inferred ? ` <span>${escapeHtml(inferred)}</span>` : ''}</div>`;
     } else {
         const rows = items.map(item => `<li class="call-flag-${item.level}">${item.icon || CALL_FLAG_ICONS[item.level] || ''} ${escapeHtml(item.text)}`
             + `${item.time ? ` <span class="call-alert-time">${escapeHtml(item.time)}</span>` : ''}</li>`).join('');
-        host.innerHTML = `<ul class="call-flag-strip">${rows}</ul>`
-            + `<div class="text-muted-sm" style="margin-top: var(--space-1);">${inferred ? `${escapeHtml(inferred)} ` : ''}The detail behind each line is in the full read under More.</div>`;
+        host.innerHTML = box
+            + (rows ? `<ul class="call-flag-strip"${box ? ' style="margin-top: var(--space-2);"' : ''}>${rows}</ul>` : '')
+            + `<div class="text-muted-sm" style="margin-top: var(--space-1);">${inferred && !record ? `${escapeHtml(inferred)} ` : ''}The detail behind each line is in the full read under More.</div>`;
     }
     host.style.display = 'block';
+}
+
+/**
+ * Valid, not valid, or change the answer. Setting a flag aside takes its
+ * coaching line out of What to work on; changing the answer puts it back.
+ */
+function handleCallFlagStripClick(event) {
+    const button = event.target?.closest?.('button[data-red-flag-review]');
+    if (!button || !callRedFlagRecord) return;
+    const next = button.getAttribute('data-red-flag-review') || '';
+
+    const box = document.getElementById('callListeningImprovements');
+    if (box) {
+        const before = box.value;
+        if (next === 'dismissed') {
+            const lines = box.value.split('\n');
+            callRedFlagRemovedLines = lines.filter(line => callRedFlagCoachingLines.some(red => line.startsWith(red)));
+            box.value = lines.filter(line => !callRedFlagRemovedLines.includes(line)).join('\n').trim();
+        } else if (callRedFlagReview === 'dismissed' && callRedFlagRemovedLines.length) {
+            box.value = [...callRedFlagRemovedLines, box.value].filter(Boolean).join('\n');
+            callRedFlagRemovedLines = [];
+        }
+        // Still an untouched draft if it was one, so the next call does not
+        // stop to ask about a change the app made itself.
+        if (before.trim() === (lastCallDrafts.callListeningImprovements || '')) {
+            lastCallDrafts.callListeningImprovements = box.value.trim();
+        }
+    }
+
+    callRedFlagReview = next;
+    renderCallFlagStrip(callFlagStripAnalysis);
+    if (next === 'valid') showToast('🚩 Confirmed. It will be documented in full in the summary, the email and the Verint note.', 4500);
+    if (next === 'dismissed') showToast('Set aside. It is out of the notes and everything that goes out.', 4000);
+}
+
+/**
+ * The three buttons that send a call anywhere wait for a red flag to be
+ * answered. Returns true when they have to.
+ */
+function redFlagNeedsListening() {
+    if (!callRedFlagRecord || callRedFlagReview) return false;
+    const first = callRedFlagRecord.items.find(item => item.time);
+    showToast(`🎧 Listen to the call first${first ? ` at ${first.time}` : ''}, then mark the red flag valid or not.`, 5500);
+    document.getElementById('callFlagStrip')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return true;
 }
 
 /**
@@ -8987,6 +9135,7 @@ function renderCallFlagStrip(analysis) {
  * way out, and the toast says so.
  */
 function writeCallSummaryInCopilot() {
+    if (redFlagNeedsListening()) return;
     const entry = buildUnsavedCallListeningEntry();
     if (!entry) return;
 
@@ -9015,6 +9164,7 @@ function writeCallSummaryInCopilot() {
  * out, like the other two.
  */
 function writeCallEmailInCopilot() {
+    if (redFlagNeedsListening()) return;
     const entry = buildUnsavedCallListeningEntry();
     if (!entry) return;
 
@@ -9075,6 +9225,13 @@ function resetCallListeningReadPanels() {
     callMetricLedgerCallName = '';
     callMetricSummary = null;
     callExplanationRead = null;
+    // A new call's red flag is a new question.
+    callRedFlagRecord = null;
+    callRedFlagReview = '';
+    callRedFlagRemovedLines = [];
+    callRedFlagCoachingLines = [];
+    callFlagStripAnalysis = null;
+    pendingRedFlagReview = null;
     lastTranscriptPasteHtml = '';
     sawTranscriptPaste = false;
 }
@@ -9362,7 +9519,7 @@ function buildSavedCallDetailHtml(employeeName, entry) {
         ['Copilot summary', entry.copilotSummary],
         ['What went well', entry.whatWentWell],
         ['What to work on next time', entry.improvementAreas],
-        ['Relevant info shared', entry.relevantInfo],
+        ['Oscar steps', entry.relevantInfo],
         ['Manager notes', entry.managerNotes],
         ['Oscar / knowledge base', entry.oscarUrl]
     ].filter(([, value]) => String(value || '').trim());
@@ -9681,6 +9838,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('callExplanationPanel'), 'click', handleCallExplanationClick);
     bindElementOnce(document.getElementById('callCopilotSummaryBtn'), 'click', writeCallSummaryInCopilot);
     bindElementOnce(document.getElementById('callCopilotEmailBtn'), 'click', writeCallEmailInCopilot);
+    bindElementOnce(document.getElementById('callFlagStrip'), 'click', handleCallFlagStripClick);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);

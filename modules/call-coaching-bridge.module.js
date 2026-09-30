@@ -514,13 +514,17 @@
 
         scored.forEach(({ entry, analysis, scan, qa }) => {
             const date = entry.listenedOn || '';
+            // Scott listened and set the flag aside, so it is not counted or
+            // coached as one, here or anywhere else.
+            const setAside = entry.redFlagReview === 'dismissed';
 
-            if (analysis.verification?.redFlag) {
+            if (analysis.verification?.redFlag && !setAside) {
                 securityRow.count += 1;
                 if (date) securityRow.dates.push(date);
             }
 
             (analysis.allImprovements || []).forEach(item => {
+                if (setAside && item.severity === 'red') return;
                 bump(item.key, 'behaviour', item.text, {
                     date, quote: item.quote, weight: item.weight
                 });
@@ -890,6 +894,42 @@
             matchedEvidence: item.relevant,
             effectiveness: item.effectiveness
         }));
+    }
+
+    /**
+     * Tips from the library for one call's coaching points, for the Copilot
+     * prompts.
+     *
+     * Scott read the first Copilot email and wanted more on what to do
+     * better: "Tips. Tricks. Etc." Copilot left to itself invents generic
+     * advice, and the library is Scott's own: plain language, fitted to what
+     * an APS rep can actually do. So the prompts carry the tips that match the
+     * call and Copilot works them in.
+     *
+     * Most serious point first, up to `perFinding` tips each, and only a tip
+     * that matches the point. A point the library has nothing specific for
+     * gets nothing, rather than generic advice presented as a fit.
+     */
+    function tipsForCall(improvements, options = {}) {
+        const max = options.max || 5;
+        const perFinding = options.perFinding || 2;
+        const seen = new Set();
+        const chosen = [];
+
+        (improvements || []).forEach(item => {
+            if (chosen.length >= max || !item || !item.key) return;
+            const metrics = metricsForFinding(item.key);
+            if (!metrics.length) return;
+            selectTips(metrics[0], [{ key: item.key }], options)
+                .filter(tip => tip.matchedEvidence && !seen.has(tip.id))
+                .slice(0, perFinding)
+                .forEach(tip => {
+                    if (chosen.length >= max) return;
+                    seen.add(tip.id);
+                    chosen.push({ findingKey: item.key, id: tip.id, text: tip.text });
+                });
+        });
+        return chosen;
     }
 
     /**
@@ -1475,6 +1515,7 @@ Requirements:
         metricsInFocus,
         metricsForFinding,
         prioritizeByMetrics,
+        tipsForCall,
         missedMetricsCovered,
         selectTips,
         buildMetricBrief,

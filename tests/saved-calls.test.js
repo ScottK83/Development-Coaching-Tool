@@ -277,7 +277,7 @@ suite('saved calls: kept when it goes somewhere, once, and said out loud', (t) =
 
     // A call copied out of the history is already saved.
     t.check('a call copied from the history is not saved again',
-        /if \(!entry\) \{\s*entry = buildUnsavedCallListeningEntry\(\);\s*if \(!entry\) return;\s*saved = keepCallOnTheWayOut\(\);/.test(body('copyCallListeningVerintSummary')));
+        /if \(!entry\) \{\s*if \(redFlagNeedsListening\(\)\) return;\s*entry = buildUnsavedCallListeningEntry\(\);\s*if \(!entry\) return;\s*saved = keepCallOnTheWayOut\(\);/.test(body('copyCallListeningVerintSummary')));
 
     // Updated in place, never appended twice.
     const saver = body('upsertCallListeningEntryFromForm');

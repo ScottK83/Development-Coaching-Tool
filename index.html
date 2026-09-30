@@ -589,6 +589,15 @@ Box 2 - Future Improvement Areas:
                                     <textarea id="callListeningImprovements" style="min-height: 220px;" placeholder="Filled in when you paste a call. Edit anything."></textarea>
                                 </div>
                             </div>
+                            <!-- The knowledge base steps that apply, pasted in.
+                                 Both Copilot prompts carry them, so the summary
+                                 and the email give the associate the process
+                                 as well as the coaching. Saved as relevantInfo,
+                                 the field this used to be. -->
+                            <div class="call-field" style="margin-top: var(--space-4);">
+                                <label class="label-bold" for="callListeningRelevantInfo">📘 Oscar steps <span class="text-muted-sm">optional</span></label>
+                                <textarea id="callListeningRelevantInfo" style="min-height: 90px;" placeholder="Paste the Oscar steps that apply to this call. Copilot works them into the summary and the email."></textarea>
+                            </div>
                             <div class="flex-row" style="margin-top: var(--space-4);">
                                 <button type="button" id="callCopilotSummaryBtn" class="btn-primary">🤖 Copilot: Write The Summary</button>
                             </div>
@@ -681,10 +690,6 @@ Box 2 - Future Improvement Areas:
                                     <div class="call-field" style="margin-top: var(--space-3);">
                                         <label class="label-bold" for="callListeningOscarUrl">Oscar / Knowledge Base URL</label>
                                         <input type="url" id="callListeningOscarUrl" placeholder="https://...">
-                                    </div>
-                                    <div class="call-field">
-                                        <label class="label-bold" for="callListeningRelevantInfo">Relevant information to include</label>
-                                        <textarea id="callListeningRelevantInfo" style="min-height: 80px;" placeholder="Policy notes, process reminders, or examples you want included in the message..."></textarea>
                                     </div>
                                     <div class="call-field">
                                         <label class="label-bold" for="callListeningManagerNotes">Additional manager notes</label>
