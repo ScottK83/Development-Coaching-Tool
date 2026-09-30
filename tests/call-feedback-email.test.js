@@ -52,7 +52,7 @@ suite('call feedback email: it writes from the notes and nothing else', (t) => {
         improvementAreas: '- Slow down before you transfer.'
     }), { getEmployeeNickname: () => 'Alyssa' });
 
-    t.check('it greets her by name', message.startsWith('Hi Alyssa,'));
+    t.check('it greets her by name', message.startsWith('Hey Alyssa,'));
     t.check('every point she wrote is in it', message.indexOf('owned the billing question') > -1
         && message.indexOf('recap at the end was clear') > -1
         && message.indexOf('Slow down before you transfer') > -1);
@@ -74,7 +74,13 @@ suite('call feedback email: it says which call', (t) => {
         whatWentWell: '- Good ownership.'
     }));
     t.check('the opening names the day', /September/.test(message) || /2026-09-04/.test(message));
-    t.check('and it is in the first paragraph', message.split('\n\n')[1].indexOf('listened back') > -1);
+    t.check('and it is in the first paragraph', message.split('\n\n')[1].indexOf('I reviewed a call you took on') > -1);
+
+    // Scott's own opening (2026-09-30): "Hey I was doing call listening to
+    // help Coach you all. I reviewed a call on this day and wanted to provide
+    // all the feedback."
+    t.check('it opens the way Scott does',
+        /^Hey Alyssa,\n\nI was doing call listening to help coach you all\. I reviewed a call you took on .+ and wanted to give you all the feedback\./.test(message));
 
     // With no date on the entry it says less rather than saying something
     // wrong.

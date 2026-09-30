@@ -412,6 +412,17 @@ Requirements:
     }
 
     /**
+     * How Scott opens an email about a call. His words, 2026-09-30: "Hey I was
+     * doing call listening to help Coach you all. I reviewed a call on this
+     * day and wanted to provide all the feedback." Used by the Copilot email
+     * prompt and the email the app writes itself, so both open the same way.
+     */
+    function callEmailOpening(moment) {
+        const which = moment ? `a call you took on ${moment}` : 'one of your recent calls';
+        return `I was doing call listening to help coach you all. I reviewed ${which} and wanted to give you all the feedback.`;
+    }
+
+    /**
      * The prompt behind "Copilot: Write The Email".
      *
      * Scott's flow (2026-09-30): Copilot writes the coaching summary, he
@@ -468,7 +479,7 @@ Requirements:
         lines.push('');
         lines.push('Requirements:');
         lines.push(`- From me to ${name}, in my voice: warm, direct and supportive, the way a supervisor who works with them every day would write`);
-        lines.push(moment ? `- Say which call it is about in the opening line: ${moment}` : '- Say which call it is about in the opening line');
+        lines.push(`- Open with this, or something very close to it: "Hey ${name}, ${callEmailOpening(moment)}"`);
         if (extras.redFlag.length) {
             lines.push('- Straight after the opening line, set out the confirmed issue in full: what happened, in order, with the times; why it matters, which is protecting the customer and their account; and exactly what has to happen on every call from now on. Plain and respectful, but not softened, not turned into a tip, and not put after the praise. Do not use the words "red flag"');
         }
@@ -677,15 +688,13 @@ Requirements:
         const moment = describeCallMoment(record);
         const lines = [];
 
-        lines.push(name ? `Hi ${name},` : 'Hi,');
+        lines.push(name ? `Hey ${name},` : 'Hey,');
         lines.push('');
 
-        // Which call, in the opening line. She takes dozens a week, so
-        // feedback that does not say which one is feedback she cannot check.
-        const opening = moment
-            ? `I listened back to the call you took on ${moment}.`
-            : 'I listened back to one of your recent calls.';
-        lines.push(`${opening} ${OPENERS[tone]}`);
+        // Scott's own opening, which says why the email is coming and which
+        // call it is about. She takes dozens a week, so feedback that does
+        // not say which one is feedback she cannot check.
+        lines.push(`${callEmailOpening(moment)} ${OPENERS[tone]}`);
 
         if (wellCount) {
             lines.push('');

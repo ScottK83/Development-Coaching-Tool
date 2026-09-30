@@ -179,6 +179,10 @@ suite('email prompt: Copilot turns the pasted summary into the email', (t) => {
     t.check('not the notes, when there is a summary', !/a note that should not be used/.test(prompt));
     t.check('the transcript does not go over again', !/my name is alyssa/.test(prompt));
     t.check('it names the call', /Tuesday, September 29 at 10:14 AM/.test(prompt));
+    // "Hey I was doing call listening to help Coach you all. I reviewed a call
+    // on this day and wanted to provide all the feedback." (Scott)
+    t.check('it opens the way Scott does',
+        /Open with this, or something very close to it: "Hey Alyssa, I was doing call listening to help coach you all\. I reviewed a call you took on Tuesday, September 29 at 10:14 AM and wanted to give you all the feedback\."/.test(prompt));
     t.check('good first, then the work', /Say what went well, specifically/.test(prompt) && /Then what to do better/.test(prompt));
     t.check('with the words or steps to use for each point', /give the words or the steps to use/.test(prompt));
     // "Want more so in the form of what can do better. Tips. Tricks. Etc."
