@@ -680,6 +680,9 @@
         };
         const repSurveyTotal = countOrNull(colMap.repSurveyTotal);
         const fcrSurveyTotal = countOrNull(colMap.fcrSurveyTotal);
+        // With no calls column the survey count stands in, so the row still
+        // weighs something. It is not a call volume: see hasRealCallCount
+        // below before setting it beside one.
         const totalCalls = Number.isInteger(parsedTotalCalls)
             ? parsedTotalCalls
             : (surveyTotal > 0 ? surveyTotal : 0);
@@ -738,6 +741,28 @@
             fcrSurveyTotal: fcrSurveyTotal,
             totalCalls: totalCalls
         };
+    }
+
+    /* Whether a stored row's call count is a real one.
+     *
+     * The year-to-date export has no calls-answered column, so parseEmployeeRow
+     * fills every YTD row's totalCalls with its survey count: 28 calls for
+     * somebody who took four thousand. Inside that one file it is a passable
+     * relative weight, and the screens that rank off a YTD file depend on it
+     * being a number, so it stays. What it cannot be is a volume set beside a
+     * real weekly count. The YTD blend did exactly that and let two days of
+     * calls outweigh nine months, and the rest-of-year projection did it and
+     * told everybody their handle time only needed to reach the goal.
+     *
+     * Surveys are a small share of calls, so a real count is always the larger
+     * number. Equal is the fill; lower is a broken row.
+     */
+    function hasRealCallCount(row) {
+        if (!row) return false;
+        const calls = parseFloat(row.totalCalls);
+        if (!Number.isFinite(calls) || calls <= 0) return false;
+        const surveys = parseFloat(row.surveyTotal);
+        return !Number.isFinite(surveys) || calls > surveys;
     }
 
     function validateEmployeeData(employeeData) {
@@ -870,6 +895,7 @@
         // Pure, and the one place a mis-mapped hold column is repaired.
         // Exported so the repair can be asserted without a full paste.
         autoCorrectHoldTimeColumn,
+        hasRealCallCount,
         // Constants
         POWERBI_COLUMNS,
         CANONICAL_SCHEMA,

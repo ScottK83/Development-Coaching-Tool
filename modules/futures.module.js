@@ -173,6 +173,18 @@
     // Metrics that should be weighted by surveyTotal instead of totalCalls
     var SURVEY_WEIGHTED = new Set(['cxRepOverall', 'fcr', 'overallExperience']);
 
+    // Through the parser, which is what fills the gap, so the rule lives beside
+    // the fill. Mirrored here only for a page where that module failed to load.
+    function _hasRealCallCount(row) {
+        var parsing = window.DevCoachModules?.dataParsing;
+        if (parsing && typeof parsing.hasRealCallCount === 'function') return parsing.hasRealCallCount(row);
+        if (!row) return false;
+        var calls = parseFloat(row.totalCalls);
+        if (!Number.isFinite(calls) || calls <= 0) return false;
+        var surveys = parseFloat(row.surveyTotal);
+        return !Number.isFinite(surveys) || calls > surveys;
+    }
+
     // Rate metrics that get weighted-averaged (matches buildYtdAggregateForYear)
     var RATE_METRICS = new Set([
         'scheduleAdherence', 'transfers', 'cxRepOverall', 'fcr', 'overallExperience',
@@ -440,10 +452,24 @@
     function projectedVolume(ytdEmp, rate, metricKey, weekInfo) {
         if (!ytdEmp || !weekInfo) return null;
         var isSurvey = SURVEY_WEIGHTED.has(metricKey);
-        var done = parseFloat(isSurvey ? ytdEmp.surveyTotal : ytdEmp.totalCalls);
+        var perWeek = rate ? (isSurvey ? rate.surveysPerWeek : rate.callsPerWeek) : null;
+
+        // A year-to-date file carries no calls column, and the parser fills
+        // the gap with the survey count, so its "calls" were 28 against a
+        // weekly run rate of 120. Weighted like that the year already banked
+        // counted for almost nothing, and every required average came out a
+        // hair under goal: 559s of handle time "needed 424s". The calls banked
+        // are the run rate over the weeks that file covers instead, which is
+        // the same uploads answering both sides of the blend.
+        var done;
+        if (!isSurvey && !_hasRealCallCount(ytdEmp)) {
+            if (!(Number.isFinite(perWeek) && perWeek > 0) || !(weekInfo.weeksCompleted > 0)) return null;
+            done = perWeek * weekInfo.weeksCompleted;
+        } else {
+            done = parseFloat(isSurvey ? ytdEmp.surveyTotal : ytdEmp.totalCalls);
+        }
         if (!Number.isFinite(done) || done <= 0) return null;
 
-        var perWeek = rate ? (isSurvey ? rate.surveysPerWeek : rate.callsPerWeek) : null;
         if (!Number.isFinite(perWeek) || perWeek <= 0) {
             // No weekly uploads to read a current run rate from. Spreading the
             // banked volume evenly over the weeks it covers is the only remaining
@@ -514,6 +540,48 @@
         if (requiredAvg < 0) return false;
         if (metric.unit === '%' && requiredAvg > 100) return false;
         return true;
+    }
+
+    /*
+     * The best this associate has managed in any period this year, or null.
+     *
+     * Periods under the call floor are skipped: a twelve call week says
+     * nothing about what somebody can do. The same rule Morning Pulse uses
+     * for its pace line.
+     */
+    function bestPeriodValue(employeeName, metricKey, yearKeys) {
+        var wData = _getWeeklyData();
+        var reverse = !!window.METRICS_REGISTRY?.[metricKey]?.isReverse;
+        var floor = window.DevCoachModules?.metricsRegistryHelpers?.MIN_CALLS_TO_JUDGE || 20;
+        var best = null;
+        (yearKeys || []).forEach(function (key) {
+            var emp = (wData[key]?.employees || []).find(function (e) { return e && e.name === employeeName; });
+            if (!emp) return;
+            var calls = parseInt(emp.totalCalls, 10);
+            if (Number.isFinite(calls) && calls < floor) return;
+            var value = parseFloat(emp[metricKey]);
+            if (!Number.isFinite(value)) return;
+            if (best === null || (reverse ? value < best : value > best)) best = value;
+        });
+        return best;
+    }
+
+    /*
+     * A required average that is both possible arithmetic and a real ask.
+     *
+     * Weighted honestly, 559s of handle time over 38 weeks leaves the rest of
+     * the year needing 65s. That is arithmetic, not a target, and the check-in
+     * summary would have told the associate to aim for it each day. Anything
+     * better than their best period this year is treated as out of reach, the
+     * rule Morning Pulse already applies to its pace line. With no periods to
+     * read, only the arithmetic is judged, as before.
+     */
+    function isWithinReach(employeeName, metricKey, requiredAvg, yearKeys) {
+        if (!isAchievable(metricKey, requiredAvg)) return false;
+        var best = bestPeriodValue(employeeName, metricKey, yearKeys);
+        if (best === null) return true;
+        var reverse = !!window.METRICS_REGISTRY?.[metricKey]?.isReverse;
+        return reverse ? requiredAvg >= best : requiredAvg <= best;
     }
 
     /**
@@ -683,8 +751,8 @@
 
                     requiredToMeet = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, meetTarget, volume);
                     requiredToExceed = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, exceedTarget, volume);
-                    meetAchievable = requiredToMeet !== null ? isAchievable(metricKey, requiredToMeet) : null;
-                    exceedAchievable = requiredToExceed !== null ? isAchievable(metricKey, requiredToExceed) : null;
+                    meetAchievable = requiredToMeet !== null ? isWithinReach(empName, metricKey, requiredToMeet, weekInfo.yearKeys) : null;
+                    exceedAchievable = requiredToExceed !== null ? isWithinReach(empName, metricKey, requiredToExceed, weekInfo.yearKeys) : null;
                 }
 
                 empResult.metrics[metricKey] = {
@@ -1126,7 +1194,7 @@
             var dailyTarget = null;
             if (!m.isCumulative) {
                 var requiredAvg = calculateDailyTarget(m.currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, nextTarget, m.volume);
-                if (requiredAvg !== null && isAchievable(metricKey, requiredAvg)) {
+                if (requiredAvg !== null && isWithinReach(empName, metricKey, requiredAvg, weekInfo.yearKeys)) {
                     dailyTarget = requiredAvg;
                 }
             }
@@ -1238,6 +1306,8 @@
         // what a person is told they have to do for the rest of the year, and
         // they are worth pinning down without a DOM in the way.
         calculateRequiredAverage: calculateRequiredAverage,
+        isWithinReach: isWithinReach,
+        bestPeriodValue: bestPeriodValue,
         // Exported so the table's order and KPI marking can be read back.
         renderFuturesTable: renderFuturesTable,
         calculateDailyTarget: calculateDailyTarget,

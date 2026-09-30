@@ -3365,6 +3365,48 @@ function findRealYtdAnchor(yearNum) {
 }
 
 /**
+ * The calls behind each anchor row that has none of its own.
+ *
+ * The YTD export carries no calls column and the parser fills it with the
+ * survey count, so the anchor claimed 28 calls for nine months beside a real
+ * two-day upload of 50, and the blend was two days with the year as seasoning:
+ * handle time 393s in the file came out 510s. Where the row has no real count
+ * it is given the associate's run rate from the year's uploads over the weeks
+ * the file covers, the same estimate the rest-of-year projection makes, read
+ * through the same two functions so the two cannot drift apart.
+ *
+ * Returns { name: calls } for the rows it could estimate. A row left out keeps
+ * the weight it had.
+ */
+function estimateAnchorCalls(anchor, yearNum) {
+    const out = {};
+    const modules = window.DevCoachModules || {};
+    const isReal = modules.dataParsing?.hasRealCallCount;
+    const futures = modules.futures;
+    if (typeof isReal !== 'function' || !futures?.weeklyVolumeRates || !futures?.weeksCompletedThroughDate) {
+        return out;
+    }
+
+    const needing = (anchor?.entry?.employees || []).filter(emp => emp?.name && !isReal(emp));
+    if (!needing.length) return out;
+
+    const weeks = futures.weeksCompletedThroughDate(anchor.endDateText, anchor.endDate);
+    if (!(weeks > 0)) return out;
+
+    const yearKeys = Object.keys(weeklyData || {}).filter(key => {
+        const endText = weeklyData[key]?.metadata?.endDate || (key.includes('|') ? key.split('|')[1] : '');
+        return parseInt(String(endText).split('-')[0], 10) === yearNum;
+    });
+    const rates = futures.weeklyVolumeRates(yearKeys) || {};
+
+    needing.forEach(emp => {
+        const perWeek = rates[emp.name]?.callsPerWeek;
+        if (Number.isFinite(perWeek) && perWeek > 0) out[emp.name] = Math.round(perWeek * weeks);
+    });
+    return out;
+}
+
+/**
  * Build auto-YTD aggregate for a year.
  *
  * Strategy:
@@ -3373,9 +3415,10 @@ function findRealYtdAnchor(yearNum) {
  * 2. If no anchor exists, aggregate all periods from scratch (original behavior).
  *
  * When a real YTD is the anchor, its employees are seeded directly
- * (their totalCalls/surveyTotal act as the weight), then newer periods
- * are layered on via weighted averaging. This preserves accurate survey
- * data from the real YTD while extending with newer daily/weekly data.
+ * (their call and survey counts act as the weight, the calls estimated by
+ * estimateAnchorCalls when the file has none), then newer periods are
+ * layered on via weighted averaging. This preserves accurate survey data
+ * from the real YTD while extending with newer daily/weekly data.
  */
 function buildYtdAggregateForYear(year, uptoEndDateText) {
     const yearNum = parseInt(year, 10);
@@ -3444,6 +3487,10 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
     // Step 4: Build aggregation
     const aggregatedEmployees = {};
 
+    // Only needed when something is being layered on: with no extension the
+    // anchor's own weight never meets another period's.
+    const anchorCalls = (anchor && extensionPeriods.length) ? estimateAnchorCalls(anchor, yearNum) : {};
+
     // Helper to add an employee record into the aggregate.
     //
     // isAnchor marks the seed pass over a real YTD upload. That upload already
@@ -3467,7 +3514,9 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
 
         const agg = aggregatedEmployees[emp.name];
         const surveyTotal = parseInt(emp.surveyTotal, 10);
-        const totalCalls = parseInt(emp.totalCalls, 10);
+        const totalCalls = (isAnchor && Number.isInteger(anchorCalls[emp.name]))
+            ? anchorCalls[emp.name]
+            : parseInt(emp.totalCalls, 10);
 
         agg.transfersCount += Number.isFinite(parseFloat(emp.transfersCount)) ? parseFloat(emp.transfersCount) : 0;
         agg.surveyTotal += Number.isInteger(surveyTotal) ? surveyTotal : 0;
