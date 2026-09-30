@@ -78,6 +78,12 @@
         verification: ['cxRepOverall'],
         empathy: ['managingEmotions', 'cxRepOverall', 'overallSentiment'],
         supervisorRequest: ['managingEmotions', 'cxRepOverall', 'fcr'],
+        // From call-explanation and call-red-flags. A customer who never
+        // understood the answer is the callback next week.
+        explanation: ['fcr', 'cxRepOverall'],
+        promise: ['cxRepOverall', 'fcr'],
+        blame: ['negativeWord', 'managingEmotions', 'cxRepOverall'],
+        safety: ['cxRepOverall'],
         // Synthetic keys, produced from the word choice scan rather than the
         // behaviour rules.
         negativePhrase: ['negativeWord', 'overallSentiment', 'cxRepOverall'],
@@ -251,6 +257,10 @@
         // Was mapped to a metric with no keywords, so a verification finding
         // could only ever return generic advice.
         verification: ['verif', 'identity', 'date of birth', 'last four', 'security question'],
+        explanation: ['explain', 'plain', 'example', 'make sense', 'own words', 'simple'],
+        promise: ['promise', 'guarantee', 'expect', 'next step'],
+        blame: ['blame', 'acknowledge', 'calm', 'what i can'],
+        safety: ['safety', 'emergency', 'hazard'],
         emotionUnanswered: ['acknowledge', 'empath', 'frustrat', 'hear', 'calm', 'upset'],
         qaDisclosures: ['disclos', 'rate plan', 'deposit', 'quote', 'explain', 'cover'],
         qaVerification: ['verif', 'identity', 'date of birth', 'last four'],

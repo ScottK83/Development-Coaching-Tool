@@ -282,3 +282,28 @@ suite('call summary: a hold announced a moment earlier still counts', (t) => {
     t.check('so no dead air is coached at that moment', !deadAir || !/5:54/.test(deadAir.text));
     t.check('a long hold is still coached, which is the honest finding', keys.includes('longHold'));
 });
+
+suite('call summary: budget billing is not a payment arrangement', (t) => {
+    const summary = load(t).callSummary;
+
+    // "Budget billing" sat in the arrangement pattern, so a call that only
+    // explained it was recapped as setting up a payment arrangement, on the
+    // calls where the customer is already unsure what budget billing is.
+    const recap = summary.buildSummaryText(summary.summarizeCall([
+        'Agent: Thank you for calling APS, my name is Jamie. How can I help you today?',
+        'Customer: My budget billing amount changed this month and I want to know why.',
+        'Agent: Budget billing takes your whole year and spreads it out so every month is about the same.',
+        'Customer: Oh okay, that makes sense.'
+    ].join('\n'), { associateName: 'Jamie' }));
+
+    t.check('the topic is budget billing', /about budget billing/.test(recap));
+    t.check('it went over budget billing', /went over budget billing/.test(recap));
+    t.check('and set up no arrangement', !/payment arrangement/.test(recap));
+
+    const arrangement = summary.buildSummaryText(summary.summarizeCall([
+        'Agent: Thank you for calling APS, my name is Jamie.',
+        'Customer: I can\'t afford the full amount this month.',
+        'Agent: I can set up a payment arrangement for you.'
+    ].join('\n'), { associateName: 'Jamie' }));
+    t.check('a real arrangement still reads as one', /set up a payment arrangement/.test(arrangement));
+});

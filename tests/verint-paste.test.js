@@ -241,10 +241,15 @@ suite('verint paste: wiring', (t) => {
     // Only take the paste over once the conversion has actually worked, so a
     // decline costs the supervisor nothing.
     t.check('the default paste is only prevented after a successful read',
-        /if \(!converted\?\.text\) return;[\s\S]{0,200}event\.preventDefault\(\)/.test(script));
+        /if \(converted\?\.text\) \{[\s\S]{0,200}event\.preventDefault\(\)/.test(script));
     t.check('and the associate name is passed in to help identify the advisor',
         /handleTranscriptPaste[\s\S]{0,1400}advisorName/.test(script));
-    t.check('it says what it did', /Read the colour coding/.test(script));
+    t.check('it says what it did', /lines labelled from the colours/.test(script));
+
+    // Pasting is the whole job: a paste over the whole box reads the call on
+    // its own, after the browser has put the text in.
+    t.check('a paste reads the call without a second button',
+        /if \(replacesAll\) \{[\s\S]{0,300}setTimeout\([\s\S]{0,200}analyzeCallListeningTranscript\(\{ auto: true/.test(script));
 
     // The button exists, is wired, and the markup is kept even when the
     // conversion declined, which is the only case anybody presses it in.
@@ -252,8 +257,8 @@ suite('verint paste: wiring', (t) => {
     t.check('and somewhere to put the answer', html.includes('id="callPasteDiagnosis"'));
     t.check('the button is bound',
         /bindElementOnce\(document\.getElementById\('checkTranscriptPasteBtn'\), 'click', showTranscriptPasteDiagnosis\)/.test(script));
-    t.check('the markup is kept before the early return',
-        /lastTranscriptPasteHtml = html;[\s\S]{0,120}if \(!html\) return;/.test(script));
+    t.check('the markup is kept before the conversion runs',
+        /lastTranscriptPasteHtml = html;[\s\S]{0,400}converter\(html/.test(script));
     // A paste that carried no formatting is a different report from no paste
     // at all, and telling somebody nothing was pasted while they look at a
     // full transcript box is the kind of wrong that costs trust in the tool.

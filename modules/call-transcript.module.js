@@ -1069,6 +1069,22 @@
         if (verificationPraise) strengths.push(verificationPraise);
         if (verificationCoaching) improvements.push(verificationCoaching);
 
+        // Where the customer got lost, and whether it landed. Coached only on
+        // strong evidence; the panel shows every moment to the supervisor.
+        const explainer = window.DevCoachModules?.callExplanation;
+        const explanation = explainer?.readExplanations ? explainer.readExplanations(parsed) : null;
+        const explanationPraise = explainer?.praiseFor?.(explanation);
+        const explanationCoaching = explainer?.coachingFor?.(explanation);
+        if (explanationPraise) strengths.push(explanationPraise);
+        if (explanationCoaching) improvements.push(explanationCoaching);
+
+        // The rest of what a supervisor needs to see without looking: a
+        // promise, a blame line, a safety hazard, a supervisor request left
+        // hanging. Only the ones that are hers to change become coaching.
+        const flagger = window.DevCoachModules?.callRedFlags;
+        const redFlags = flagger?.readRedFlags ? flagger.readRedFlags(parsed) : null;
+        (flagger?.coachingFor?.(redFlags) || []).forEach(item => improvements.push(item));
+
         const frustrated = FRUSTRATION.test(customerText);
         const emotionalCall = frustrated || TROUBLE.test(customerText);
         const empathyGapIndex = improvements.findIndex(item => item.key === 'empathy');
@@ -1190,7 +1206,7 @@
         improvements.sort((a, b) => b.weight - a.weight);
 
         const heavyIssues = improvements.filter(item => item.weight >= 8).length;
-        const redFlag = Boolean(verification?.redFlag);
+        const redFlag = Boolean(verification?.redFlag) || Boolean(redFlags?.red);
 
         return {
             ok: true,
@@ -1200,6 +1216,10 @@
             // The verification read, for the red box and anything else that
             // needs it without reading the call a second time.
             verification,
+            // Where the customer got lost, and everything else flagged, for
+            // the boxes under the transcript.
+            explanation,
+            redFlags,
             // A call that gave an account away does not open with "Solid
             // call", however much else went well on it.
             headline: redFlag ? '' : buildHeadline(strengths.length, heavyIssues, meta),

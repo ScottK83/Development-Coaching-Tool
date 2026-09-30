@@ -22,6 +22,10 @@ function load(t) {
     t.installFakeBrowser();
     t.loadModule('modules/call-transcript.module.js');
     t.loadModule('modules/call-verification.module.js');
+    // Their lines reach the drafts through the analyzer, so they are swept
+    // with everything else.
+    t.loadModule('modules/call-explanation.module.js');
+    t.loadModule('modules/call-red-flags.module.js');
     return global.window.DevCoachModules.callTranscript;
 }
 
@@ -102,6 +106,29 @@ function coachingLines(T) {
             'Agent: I am not able to discuss the account unless he is on the line.'
         ].join('\n')
     ];
+
+    // A customer lost twice on budget billing, after our own words, and a
+    // promise, a blame line and a safety hazard nobody turned to.
+    CALLS.push([
+        '00:03', 'Agent: thank you for calling aps my name is jamie how can i help',
+        '00:09', 'Customer: my budget billing amount changed and i don\'t get why',
+        '00:15', 'Agent: the levelized amount had a true up against the deferred balance',
+        '00:30', 'Customer: wait so i still owe more',
+        '00:34', 'Agent: the levelized amount had a true up against the deferred balance so it changed',
+        '00:44', 'Customer: i\'m still confused',
+        '00:50', 'Agent: calm down, i guarantee your bill will be lower next month',
+        '01:02', 'Customer: also there are sparks coming out of the meter',
+        '01:08', 'Agent: okay is there anything else'
+    ].join('\n'));
+    // Lost once, then an example, and it landed.
+    CALLS.push([
+        'Agent: Thank you for calling APS, my name is Jamie.',
+        'Customer: What is budget billing?',
+        'Agent: Budget billing averages the bill over your usage history.',
+        'Customer: I do not understand.',
+        'Agent: Let\'s say summer is three hundred and winter is one hundred, you would pay about the same amount every month all year instead.',
+        'Customer: Oh okay, that makes sense.'
+    ].join('\n'));
 
     // A real Verint export, timestamps and all. The lines built from measured
     // silence only exist on a timed call, and none of the calls above has

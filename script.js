@@ -7588,9 +7588,25 @@ function buildCallListeningVerificationAlertText(entry) {
     return read?.ok ? (verifier.buildAlertText?.(read) || '') : '';
 }
 
+// The other flags and where the customer got lost, under the verification
+// flag in the Verint note, in the supervisor's voice.
+function buildCallListeningOtherFlagsText(entry) {
+    if (!entry?.transcript) return '';
+    const modules = window.DevCoachModules || {};
+    const options = { associateName: entry.employeeName };
+    const flags = modules.callRedFlags?.readRedFlagsFromText?.(entry.transcript, options);
+    const explained = modules.callExplanation?.readExplanationsFromText?.(entry.transcript, options);
+    return [
+        flags?.ok ? modules.callRedFlags.buildAlertText(flags) : '',
+        explained?.ok ? modules.callExplanation.buildPanelText(explained) : ''
+    ].filter(Boolean).join('\n\n');
+}
+
 function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
-    const alertText = buildCallListeningVerificationAlertText(entry);
+    const alertText = [buildCallListeningVerificationAlertText(entry), buildCallListeningOtherFlagsText(entry)]
+        .filter(Boolean)
+        .join('\n\n');
     const qaText = buildCallListeningQaText(entry);
     const wordChoiceText = buildCallListeningWordChoiceText(entry);
     const moment = window.DevCoachModules?.callTranscript?.formatCallMoment?.(entry.listenedOn, entry.callTime);
@@ -7746,14 +7762,19 @@ function applyCallListeningTranscriptMetadata(meta) {
         }
     }
 
+    // The Verint header names who took the call, and it is the system of
+    // record, so it wins over whatever the dropdown was left on. It used to
+    // fill only an empty dropdown, which meant pasting a second associate's
+    // call quietly filed it under the first one. Changed through a real change
+    // event so the recipient, the history and the saved calls all follow.
     const employeeSelect = document.getElementById('callListeningEmployeeSelect');
     const matchOption = window.DevCoachModules?.callTranscript?.matchAssociateOption;
-    if (meta.advisorDisplayName && employeeSelect && !employeeSelect.value && typeof matchOption === 'function') {
+    if (meta.advisorDisplayName && employeeSelect && typeof matchOption === 'function') {
         const options = Array.from(employeeSelect.options).map(option => option.value).filter(Boolean);
         const match = matchOption(options, meta.advisorDisplayName);
-        if (match) {
+        if (match && employeeSelect.value !== match) {
             employeeSelect.value = match;
-            renderCallListeningHistoryForSelectedEmployee();
+            employeeSelect.dispatchEvent(new Event('change'));
             applied.push(match);
         }
     }
@@ -8117,7 +8138,7 @@ function handleCallMetricChipClick(event) {
 function getSelectedCallMetricBrief() {
     const brief = callMetricBriefs.find(item => item.metricKey === callMetricSelectedKey);
     if (!brief) {
-        showToast('⚠️ Analyze a transcript first, then pick a metric.', 3000);
+        showToast('⚠️ Paste a call first, then pick a metric.', 3000);
         return null;
     }
     return brief;
@@ -8435,8 +8456,71 @@ function renderCallVerificationAlert(transcript, associateName, analysis) {
     return read || null;
 }
 
+/**
+ * The other red flags, under the verification box and just as unfolded: a
+ * safety hazard, a promise, a blame line, a supervisor request left hanging.
+ * A clean call gets one quiet line saying what was checked.
+ */
+function renderCallRedFlagsAlert(transcript, associateName, analysis) {
+    const host = document.getElementById('callRedFlagsAlert');
+    if (!host) return null;
+
+    const flagger = window.DevCoachModules?.callRedFlags;
+    const read = analysis?.redFlags
+        || (transcript ? flagger?.readRedFlagsFromText?.(transcript, { associateName }) : null);
+    const html = read ? (flagger?.buildAlertHtml?.(read, escapeHtml) || '') : '';
+
+    host.innerHTML = html;
+    host.style.display = html ? 'block' : 'none';
+    return read || null;
+}
+
+// The explanation read on screen, held so its Copilot buttons can find the
+// moment they belong to without reading the call again.
+let callExplanationRead = null;
+
+/**
+ * Where the customer got lost, how it was explained, and ways to say it that
+ * land. Unfolded, because it is the read Scott asked for by name.
+ */
+function renderCallExplanationPanel(transcript, associateName, analysis) {
+    const host = document.getElementById('callExplanationPanel');
+    if (!host) return null;
+
+    const explainer = window.DevCoachModules?.callExplanation;
+    const read = analysis?.explanation
+        || (transcript ? explainer?.readExplanationsFromText?.(transcript, { associateName }) : null);
+    const html = read ? (explainer?.buildPanelHtml?.(read, escapeHtml) || '') : '';
+
+    callExplanationRead = read?.ok ? read : null;
+    host.innerHTML = html;
+    host.style.display = html ? 'block' : 'none';
+    return read || null;
+}
+
+function handleCallExplanationClick(event) {
+    const button = event.target?.closest?.('button[data-call-explain-copilot]');
+    if (!button) return;
+
+    const index = Number(button.getAttribute('data-call-explain-copilot'));
+    const moment = callExplanationRead?.moments?.[index];
+    const prompt = window.DevCoachModules?.callExplanation?.buildCopilotPrompt?.(moment);
+    if (!prompt) {
+        showToast('⚠️ Nothing to send for that moment. Read the call again and retry.', 3000);
+        return;
+    }
+
+    if (typeof openCopilotWithPrompt === 'function') {
+        openCopilotWithPrompt(prompt, 'Clearer Wording');
+        return;
+    }
+    copyToClipboard(prompt, { message: '📋 Wording prompt copied. Paste it into Copilot.' });
+}
+
 function renderCallListeningReadPanels(transcript, associateName, analysis) {
     renderCallVerificationAlert(transcript, associateName, analysis);
+    renderCallRedFlagsAlert(transcript, associateName, analysis);
+    renderCallExplanationPanel(transcript, associateName, analysis);
     renderCallSummaryPanel(transcript, associateName, analysis);
     renderCallQaScorecard(transcript, associateName, analysis);
     renderCallWordChoicePanel(transcript, associateName, analysis);
@@ -8471,27 +8555,88 @@ function handleTranscriptPaste(event) {
 
     // A new call pasted over the whole box: what was read off the old one no
     // longer describes anything on screen.
-    const replacesAll = !field.value.trim()
+    const hadCall = Boolean(field.value.trim());
+    const replacesAll = !hadCall
         || (field.selectionStart === 0 && field.selectionEnd === field.value.length);
-    if (replacesAll) resetCallListeningReadPanels();
+    if (replacesAll) {
+        resetCallListeningReadPanels();
+        if (hadCall) startFreshCallFeedback();
+    }
 
     // Kept whether or not it converts, because the one that does not convert
     // is the one somebody needs to be able to look at.
     lastTranscriptPasteHtml = html;
     sawTranscriptPaste = true;
-    if (!html) return;
 
     const converter = window.DevCoachModules?.verintPaste?.toLabelledTranscript;
-    if (typeof converter !== 'function') return;
-
     const advisorName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
-    const converted = converter(html, { advisorName });
-    if (!converted?.text) return;
+    const converted = html && typeof converter === 'function' ? converter(html, { advisorName }) : null;
 
-    // Only now take the paste over, so a decline costs nothing.
-    event.preventDefault();
-    field.value = converted.text;
-    showToast(`✅ Read the colour coding: ${converted.labelled} lines labelled, so it knows who was talking.`, 4000);
+    if (converted?.text) {
+        // Only now take the paste over, so a decline costs nothing.
+        event.preventDefault();
+        field.value = converted.text;
+    }
+
+    // Pasting is the whole job now: the call is read the moment it lands,
+    // with no second button. After the browser has put the text in, which is
+    // why it waits a tick when the paste was not taken over. A paste into the
+    // middle of a transcript is somebody editing, and is left to Read The Call.
+    if (replacesAll) {
+        const labelled = converted?.labelled || 0;
+        setTimeout(() => {
+            if (field.value.trim()) analyzeCallListeningTranscript({ auto: true, labelled });
+        }, 0);
+    }
+}
+
+/*
+ * What the last read drafted into each feedback box.
+ *
+ * Reading a call merges its drafts into whatever is in the boxes, which is
+ * right for a second read of the same call and wrong for a new one: the new
+ * call's bullets stacked under the last call's. So a new call pasted over an
+ * old one clears the boxes first, silently when they hold nothing but the
+ * last drafts, and with a question when they hold something typed.
+ */
+const lastCallDrafts = { callListeningStrengths: '', callListeningImprovements: '' };
+
+function rememberCallDrafts() {
+    Object.keys(lastCallDrafts).forEach(id => {
+        lastCallDrafts[id] = (document.getElementById(id)?.value || '').trim();
+    });
+}
+
+function startFreshCallFeedback() {
+    const fields = Object.keys(lastCallDrafts)
+        .map(id => ({ id, field: document.getElementById(id) }))
+        .filter(item => item.field);
+    const typedIn = fields.some(({ id, field }) => field.value.trim() && field.value.trim() !== lastCallDrafts[id]);
+
+    if (typedIn && !confirm('New call pasted. Clear the feedback notes from the last call?\n\nCancel keeps them, and this call\'s drafts are added underneath.')) {
+        return;
+    }
+    fields.forEach(({ id, field }) => {
+        field.value = '';
+        lastCallDrafts[id] = '';
+    });
+}
+
+// A read in progress changes the associate itself, from the Verint header,
+// and that change must not start a second read of the same call.
+let callReadInProgress = false;
+
+/**
+ * Picking a different associate re-reads a call that has already been read,
+ * so the feedback is ordered by the right person's numbers without pressing
+ * anything.
+ */
+function rereadCallForSelectedAssociate() {
+    if (callReadInProgress) return;
+    const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
+    const summary = document.getElementById('callTranscriptAnalysisSummary');
+    if (!transcript || !summary || summary.style.display === 'none') return;
+    analyzeCallListeningTranscript({ auto: true, quiet: true });
 }
 
 /**
@@ -8553,7 +8698,7 @@ function showTranscriptPasteDiagnosis() {
             + '</p>'
             + '<p style="margin-top: var(--space-2);">Either way the call still reads. Without labels the '
             + 'two sides are worked out from what each turn says and from the shape of the conversation, '
-            + 'and Analyze Transcript will tell you which of the two it used.</p>';
+            + 'and Read The Call will tell you which of the two it used.</p>';
         return;
     }
 
@@ -8627,13 +8772,23 @@ function summarizeCallInCopilot() {
     copyToClipboard(prompt, { message: '📋 Call summary prompt copied. Paste it into Copilot.' });
 }
 
-function analyzeCallListeningTranscript() {
+/**
+ * Reads the call on screen: drafts, red flags, the explanation read, the
+ * recap and the folded panels. Runs on its own when a call is pasted, and
+ * from Read The Call after an edit.
+ *
+ * `options` is the click event when pressed, so only its own flags are read
+ * off it: `auto` for a read the paste started, `labelled` for how many lines
+ * the colour coding labelled, `quiet` to skip the toast.
+ */
+function analyzeCallListeningTranscript(options) {
+    const auto = options?.auto === true;
     const transcriptField = document.getElementById('callListeningTranscript');
     const summary = document.getElementById('callTranscriptAnalysisSummary');
     const transcript = (transcriptField?.value || '').trim();
 
     if (!transcript) {
-        showToast('⚠️ Paste a call transcript first.', 3000);
+        if (!auto) showToast('⚠️ Paste a call transcript first.', 3000);
         return;
     }
 
@@ -8643,37 +8798,70 @@ function analyzeCallListeningTranscript() {
         return;
     }
 
-    const associateName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
-    const analysis = analyzer.analyzeTranscript(transcript, { associateName });
-    if (!analysis.ok) {
-        showToast('⚠️ Nothing readable in that transcript.', 3000);
-        return;
+    callReadInProgress = true;
+    try {
+        // The header is applied before the read, not after, so the associate
+        // it names is the one the feedback is ordered for on the first pass.
+        const meta = analyzer.extractMetadata?.(transcript);
+        const applied = applyCallListeningTranscriptMetadata(meta);
+
+        const associateName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+        const analysis = analyzer.analyzeTranscript(transcript, { associateName });
+        if (!analysis.ok) {
+            showToast('⚠️ Nothing readable in that transcript.', 3000);
+            return;
+        }
+
+        const forName = associateName || analysis.meta?.advisorDisplayName;
+
+        // Ordered for this associate before the bullets are drafted, so the
+        // feedback leads with what moves the KPIs they are actually missing
+        // rather than with whatever is most serious in general.
+        prioritizeCallAnalysisForAssociate(analysis, forName);
+
+        mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
+        mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
+        rememberCallDrafts();
+
+        renderCallListeningReadPanels(transcript, forName, analysis);
+
+        if (summary) {
+            summary.textContent = buildCallListeningAnalysisSummary(analysis, forName);
+            summary.style.display = 'block';
+        }
+
+        if (options?.quiet) return;
+        showToast(buildCallReadToast(analysis, applied, options?.labelled || 0, associateName), 5000);
+    } finally {
+        callReadInProgress = false;
     }
+}
 
-    const applied = applyCallListeningTranscriptMetadata(analysis.meta);
-    const forName = associateName || analysis.meta?.advisorDisplayName;
+/**
+ * One line that says what the read found, so a paste answers "did it work"
+ * without scrolling: speakers, who and when, and whether anything is red.
+ */
+function buildCallReadToast(analysis, applied, labelled, associateName) {
+    const red = Boolean(analysis?.stats?.redFlag);
+    const warnings = (analysis?.redFlags?.flags || []).filter(item => item.level === 'warn').length;
+    const lost = analysis?.explanation?.lost?.length || 0;
 
-    // Ordered for this associate before the bullets are drafted, so the
-    // feedback leads with what moves the KPIs they are actually missing rather
-    // than with whatever is most serious in general.
-    prioritizeCallAnalysisForAssociate(analysis, forName);
+    let lead = '✅ Read the call.';
+    if (red) lead = '🚩 Read the call, and there is a red flag under the transcript.';
+    else if (warnings || lost) lead = '⚠️ Read the call, and there is something worth a look under the transcript.';
 
-    mergeCallListeningDraftText('callListeningStrengths', analyzer.buildStrengthsDraft(analysis));
-    mergeCallListeningDraftText('callListeningImprovements', analyzer.buildImprovementsDraft(analysis));
+    // What it did on its own, as a second sentence so it cannot be read as
+    // part of the flag.
+    const did = [];
+    if (labelled) did.push(`${labelled} lines labelled from the colours`);
+    applied.forEach(item => did.push(item));
+    const didSentence = did.length
+        ? ` ${did.length > 1 ? `${did.slice(0, -1).join(', ')} and ${did[did.length - 1]}` : did[0]}.`
+            .replace(/^ (.)/, (match, first) => ` ${first.toUpperCase()}`)
+        : '';
+    const needsName = associateName ? '' : ' Pick the associate so it is ordered by their numbers.';
 
-    renderCallListeningReadPanels(transcript, forName, analysis);
-
-    if (summary) {
-        summary.textContent = buildCallListeningAnalysisSummary(analysis, forName);
-        summary.style.display = 'block';
-    }
-
-    showToast(
-        applied.length
-            ? `✅ Draft feedback written. Filled in ${applied.join(' and ')} from the transcript.`
-            : '✅ Draft feedback written from the transcript. Edit it before you send.',
-        3500
-    );
+    return `${lead}${didSentence} Drafts are in Your Feedback.${needsName}`;
 }
 
 function clearCallListeningTranscript() {
@@ -8694,13 +8882,13 @@ function clearCallListeningTranscript() {
  * describing a call that was no longer there.
  */
 function resetCallListeningReadPanels() {
-    ['callTranscriptAnalysisSummary', 'callVerificationAlert', 'callSummaryPanel',
-        'callPasteDiagnosis', 'callQaPanel', 'callWordChoicePanel', 'callMetricCoachPanel'].forEach(id => {
+    ['callTranscriptAnalysisSummary', 'callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel',
+        'callSummaryPanel', 'callPasteDiagnosis', 'callQaPanel', 'callWordChoicePanel', 'callMetricCoachPanel'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    ['callVerificationAlert', 'callSummaryPanel', 'callQaResults', 'callWordChoiceResults',
-        'callMetricChips', 'callMetricBrief'].forEach(id => {
+    ['callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel', 'callSummaryPanel',
+        'callQaResults', 'callWordChoiceResults', 'callMetricChips', 'callMetricBrief'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = '';
     });
@@ -8712,6 +8900,7 @@ function resetCallListeningReadPanels() {
     callMetricCallMoments = [];
     callMetricLedgerCallName = '';
     callMetricSummary = null;
+    callExplanationRead = null;
     lastTranscriptPasteHtml = '';
     sawTranscriptPaste = false;
 }
@@ -9327,11 +9516,13 @@ function populateCallListeningEmployeeSelect(employeeSelect, employees, currentS
     });
 }
 
+// Only says something when there is something wrong. "Loaded 127 associates"
+// sat above the paste box on every visit and told nobody anything.
 function setCallListeningSectionStatus(status, employeeCount) {
     status.textContent = employeeCount
-        ? `Loaded ${employeeCount} associates. Save call notes to keep a permanent reference log.`
+        ? ''
         : 'No associates found yet. Upload data first, then log call listening notes.';
-    status.style.display = 'block';
+    status.style.display = employeeCount ? 'none' : 'block';
 }
 
 function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
@@ -9349,7 +9540,9 @@ function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
 function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
     bindElementOnce(employeeSelect, 'change', refreshCallListeningRecipient);
+    bindElementOnce(employeeSelect, 'change', rereadCallForSelectedAssociate);
     bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
+    bindElementOnce(document.getElementById('callExplanationPanel'), 'click', handleCallExplanationClick);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);

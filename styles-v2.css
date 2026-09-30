@@ -1139,6 +1139,56 @@ textarea:focus-visible {
     font-size: 0.9em;
 }
 
+/* Worth a look rather than a red flag: a promise, a blame line, a customer
+   who got lost. Yellow, so the red box keeps meaning one thing. */
+.panel-section .call-alert-warn {
+    border: 1px solid var(--yellow);
+    border-left-width: 4px;
+    background: var(--yellow-soft);
+}
+
+.panel-section .call-alert-title-warn {
+    color: var(--yellow-text);
+}
+
+.panel-section .call-flag-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.panel-section .call-flag-list li + li {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+}
+
+/* The explanation read: one block per moment the customer got lost. */
+.panel-section .call-explain-moment + .call-explain-moment {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+}
+
+.panel-section .call-explain-topic {
+    margin-top: var(--space-2);
+    font-weight: 650;
+}
+
+.panel-section .call-explain-heading {
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-1);
+}
+
+.panel-section .call-explain-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.panel-section .call-explain-list li + li {
+    margin-top: var(--space-1);
+}
+
 .panel-section .call-trend-title {
     font-weight: 650;
     font-size: 0.85em;

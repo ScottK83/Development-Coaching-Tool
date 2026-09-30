@@ -36,6 +36,7 @@
      * second opinion from a regex.
      */
     const CATEGORY_TOPICS = [
+        { match: /budget bill/i, topic: 'budget billing' },
         { match: /high bill/i, topic: 'a higher than expected bill' },
         { match: /payment options|payment arrangement/i, topic: 'payment options' },
         { match: /rate migration|service plans/i, topic: 'rate plans' },
@@ -55,6 +56,10 @@
         // reports it, so the tense has to be allowed for.
         { key: 'outage', topic: 'an outage', pattern: /no power|power (?:is |has been |been |went )?out\b|outage|lights (?:are |have been )?out\b|nothing is working/i },
         { key: 'doubleCharge', topic: 'being charged twice', pattern: /charged twice|double.?(?:charg|bill)|charged me two/i },
+        // Ahead of the high bill rule: "my budget billing amount went up" is a
+        // budget billing call, and it is the one explanation customers most
+        // often come away from still unsure of.
+        { key: 'budgetBilling', topic: 'budget billing', pattern: /\bbudget bill/i },
         { key: 'highBill', topic: 'a higher than expected bill', pattern: /bill (?:is|went|doubled|jumped)|high bill|bill went up|why is my bill|bill is (?:so )?high|too high/i },
         { key: 'payment', topic: 'paying the bill', pattern: /can'?t afford|cannot afford|past due|shut ?off|disconnect(?:ion)? notice|payment (?:arrangement|plan|extension)|behind on (?:my|the) bill|need (?:more )?time to pay/i },
         { key: 'dueDate', topic: 'the due date', pattern: /due date/i },
@@ -87,7 +92,12 @@
         { key: 'options', label: 'laid out the plan options', pattern: /(?:we have|there are) (?:two|three|four|\d+) [a-z ]*plans|plans available|the (?:first|second|third) plan/i },
         { key: 'recommended', label: 'made a recommendation', pattern: /i(?:'?d| would) recommend|my recommendation|you might want to go with/i },
         { key: 'credited', label: 'put a credit on the account', pattern: /i(?:'?ve| have) (?:credited|refunded)|credit(?:ed)? (?:that|it|the charge)|refund(?:ed)? (?:that|it)/i },
-        { key: 'arrangement', label: 'set up a payment arrangement', pattern: /payment (?:arrangement|plan|extension)|extend(?:ed)? (?:your|the) due date|budget billing/i },
+        // Budget billing is not an arrangement. It was in this pattern, so a
+        // call that only explained budget billing was recapped as setting up a
+        // payment arrangement, on exactly the calls where the customer is
+        // already unsure what budget billing is.
+        { key: 'arrangement', label: 'set up a payment arrangement', pattern: /payment (?:arrangement|plan|extension)|extend(?:ed)? (?:your|the) due date/i },
+        { key: 'budgetBilling', label: 'went over budget billing', pattern: /\bbudget bill/i },
         { key: 'setUpService', label: 'got the service set up', pattern: /service is (?:set|created|started)|got you set up|set up your service|start date/i },
         { key: 'changedPlan', label: 'changed the plan', pattern: /changed your plan|switched you to|applied .{0,25}plan/i },
         { key: 'submitted', label: 'submitted a request', pattern: /i(?:'?ve| have) submitted|put in a request|open(?:ed)? a case|case number|sent (?:it|that) (?:over|through)/i },

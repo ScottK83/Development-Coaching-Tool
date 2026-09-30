@@ -546,16 +546,26 @@ Box 2 - Future Improvement Areas:
 
                     <!-- Call Listening Sub-section -->
                     <div id="subSectionCallListening" class="panel-section" style="display: none;">
-                        <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Paste a call, let it draft your feedback, then write the email and send it. Everything the app reads off the call sits below the email, folded away until you want it.</p>
+                        <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Paste a call from Verint and it reads itself: who was talking, which associate, any red flags, where the customer got lost, and a first draft of your feedback. Then write the email and send it.</p>
 
+                        <!-- The paste box comes first because pasting is the
+                             whole job now. A paste reads the call on its own;
+                             the fields under the box fill themselves from the
+                             Verint header and are only there to check. -->
                         <div class="call-panel">
-                            <h3>🎧 Call Listening Setup</h3>
-                            <div id="callListeningStatus" class="call-note" style="display: none; margin-bottom: var(--space-4);"></div>
-                            <div class="call-grid-setup">
+                            <h3>🗒️ Paste The Call</h3>
+                            <p>In Verint, select the transcript, copy it, and paste it here. The colour coding tells it who was talking and the header fills in the associate and the date. Everything it writes is editable.</p>
+                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 180px;" placeholder="Paste the Verint transcript here (Ctrl+V). It reads itself as soon as it lands."></textarea>
+                            <div class="flex-row" style="margin-top: var(--space-3);">
+                                <button type="button" id="analyzeCallTranscriptBtn" class="btn-primary">🔍 Read The Call</button>
+                                <button type="button" id="clearCallTranscriptBtn">Clear</button>
+                            </div>
+                            <div id="callListeningStatus" class="call-note call-note-warn" style="display: none; margin-top: var(--space-3);"></div>
+                            <div class="call-grid-setup" style="margin-top: var(--space-4);">
                                 <div>
-                                    <label class="label-bold" for="callListeningEmployeeSelect">Select Associate</label>
+                                    <label class="label-bold" for="callListeningEmployeeSelect">Associate</label>
                                     <select id="callListeningEmployeeSelect">
-                                        <option value="">-- Choose an associate --</option>
+                                        <option value="">-- Filled from the paste, or choose --</option>
                                     </select>
                                 </div>
                                 <div>
@@ -571,16 +581,6 @@ Box 2 - Future Improvement Areas:
                                     <input type="text" id="callListeningReference" placeholder="Interaction ID / case #">
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="call-panel">
-                            <h3>🗒️ Call Transcript</h3>
-                            <p>Paste the transcript, then let it draft your feedback. Paste straight from Verint and the colour coding is read for you, so it knows who was talking. Everything it writes is editable.</p>
-                            <textarea id="callListeningTranscript" class="call-mono" style="min-height: 180px;" placeholder="Agent: Thank you for calling, my name is Jamie. How can I help?&#10;Customer: I've been charged twice and this is the third time I've called..."></textarea>
-                            <div class="flex-row" style="margin-top: var(--space-3);">
-                                <button type="button" id="analyzeCallTranscriptBtn" class="btn-primary">🔍 Analyze Transcript &amp; Draft Feedback</button>
-                                <button type="button" id="clearCallTranscriptBtn">Clear</button>
-                            </div>
                             <details class="call-fold" style="margin-top: var(--space-3);">
                                 <summary>Other things I can do with this transcript</summary>
                                 <div class="flex-row" style="margin-top: var(--space-3);">
@@ -594,11 +594,19 @@ Box 2 - Future Improvement Areas:
                                  went out. Not folded like the other reads: a
                                  red flag here cannot wait to be looked for. -->
                             <div id="callVerificationAlert" style="display: none; margin-top: var(--space-3);"></div>
+                            <!-- Everything else that cannot wait: a safety
+                                 hazard, a promise, a blame line, a supervisor
+                                 request left hanging. -->
+                            <div id="callRedFlagsAlert" style="display: none; margin-top: var(--space-3);"></div>
+                            <!-- Where the customer got lost, how it was
+                                 explained, and ways to say it that land. -->
+                            <div id="callExplanationPanel" style="display: none; margin-top: var(--space-3);"></div>
                             <div id="callSummaryPanel" style="display: none; margin-top: var(--space-4);"></div>
                         </div>
 
                         <div class="call-panel">
-                            <h3>📝 Call Feedback Input</h3>
+                            <h3>📝 Your Feedback</h3>
+                            <p>Drafted from the call, red flags first. Edit anything, add your own, then write the email.</p>
                             <div class="grid-2col">
                                 <div>
                                     <label class="label-bold" for="callListeningStrengths">What went well</label>
@@ -629,7 +637,6 @@ Box 2 - Future Improvement Areas:
                                 <button type="button" id="writeCallFeedbackEmailBtn" class="btn-primary">✍️ Write The Email</button>
                                 <button type="button" id="saveCallListeningBtn">💾 Save Call Log</button>
                                 <button type="button" id="copyCallListeningVerintBtn">📝 Copy Verint Note</button>
-                                <button type="button" id="exportCallListeningCsvBtn">📥 Export Call Logs (CSV)</button>
                             </div>
                         </div>
 
@@ -712,6 +719,9 @@ Box 2 - Future Improvement Areas:
                             <div id="callListeningHistorySummary" class="text-muted-sm" style="margin-bottom: var(--space-3);"></div>
                             <div id="callListeningTrends" style="display: none; margin-bottom: var(--space-4);"></div>
                             <ul id="callListeningHistoryList" class="call-history"></ul>
+                            <div class="flex-row" style="margin-top: var(--space-3);">
+                                <button type="button" id="exportCallListeningCsvBtn">📥 Export Call Logs (CSV)</button>
+                            </div>
                         </div>
 
                         <div class="call-panel">
@@ -1813,6 +1823,10 @@ Box 2 - Future Improvement Areas:
                 // Read by call-transcript, call-qa and call-summary at call
                 // time, so it only has to be loaded before anyone analyzes.
                 'modules/call-verification.module.js',
+                // Where the customer got lost, and the other red flags. Read
+                // by call-transcript at call time, like verification.
+                'modules/call-explanation.module.js',
+                'modules/call-red-flags.module.js',
                 'modules/call-qa.module.js',
                 'modules/call-word-choice.module.js',
                 'modules/call-summary.module.js',
