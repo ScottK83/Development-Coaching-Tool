@@ -277,19 +277,25 @@ suite('call feedback email: a point ending on a quote gets no extra stop', (t) =
     t.check('a plain point still gets its stop', /- Great ownership\./.test(api.buildCallFeedbackMessage(entry({ whatWentWell: '- Great ownership' }))));
 });
 
-suite('call feedback email: one click from the page to Outlook', (t) => {
+suite('call feedback email: Copilot writes it from the pasted summary', (t) => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 
-    t.check('the button is on the page', /id="emailCallToAssociateBtn" class="btn-primary"/.test(html));
+    // "Copilot write the summary, then paste the summary into the app, click
+    // the copilot generate an email button" (Scott, 2026-09-30).
+    t.check('the button is on the page', /id="callCopilotEmailBtn" class="btn-primary"/.test(html));
+    t.check('under the box the summary is pasted into',
+        html.indexOf('id="callListeningCopilotSummary"') < html.indexOf('id="callCopilotEmailBtn"'));
     t.check('it is bound',
-        /bindElementOnce\(document\.getElementById\('emailCallToAssociateBtn'\), 'click', emailCallToAssociate\)/.test(script));
+        /bindElementOnce\(document\.getElementById\('callCopilotEmailBtn'\), 'click', writeCallEmailInCopilot\)/.test(script));
 
-    const start = script.indexOf('function emailCallToAssociate(');
+    const start = script.indexOf('function writeCallEmailInCopilot(');
     const body = script.slice(start, script.indexOf('\nfunction ', start + 10));
-    t.check('it writes the email from the notes', /buildCallFeedbackMessage/.test(body));
-    t.check('with Verint\'s mishearings corrected', /correctMishearings/.test(body));
-    t.check('and opens it as an Outlook draft to the associate', /generateOutlookDraft/.test(body) && /callListeningRecipient/.test(body));
-    t.check('keeping a copy in the send box under More', /callListeningOutlookBody/.test(body));
-    t.check('and saying the address is missing when it is', /add the address there/.test(body));
+    t.check('it builds the email prompt', /buildEmailFromSummaryPrompt/.test(body));
+    t.check('hands it to Copilot', /copyPromptAndOpenCopilot/.test(body));
+    t.check('names the address to send it to when there is one', /Send it to \$\{to\}/.test(body));
+    t.check('and says when there was no summary to work from', /No summary pasted, so it works from your notes/.test(body));
+
+    // Copilot's finished email can still go out addressed from the app.
+    t.check('the send box under More takes Copilot\'s email', /placeholder="Paste Copilot's email here/.test(html));
 });

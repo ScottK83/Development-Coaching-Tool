@@ -7454,6 +7454,9 @@ function getCallListeningDraftFromForm() {
         transcript: getCallListeningTranscriptForStorage(),
         whatWentWell: (document.getElementById('callListeningStrengths')?.value || '').trim(),
         improvementAreas: (document.getElementById('callListeningImprovements')?.value || '').trim(),
+        // What Copilot wrote, pasted back. Copy For Verint and the email
+        // prompt both work from it when it is there.
+        copilotSummary: (document.getElementById('callListeningCopilotSummary')?.value || '').trim(),
         oscarUrl: (document.getElementById('callListeningOscarUrl')?.value || '').trim(),
         relevantInfo: (document.getElementById('callListeningRelevantInfo')?.value || '').trim(),
         managerNotes: (document.getElementById('callListeningManagerNotes')?.value || '').trim()
@@ -7484,6 +7487,7 @@ function isSameCallListeningDraftAsEntry(draft, existingEntry) {
         && (existingEntry.transcript || '') === draft.transcript
         && (existingEntry.whatWentWell || '') === draft.whatWentWell
         && (existingEntry.improvementAreas || '') === draft.improvementAreas
+        && (existingEntry.copilotSummary || '') === (draft.copilotSummary || '')
         && (existingEntry.oscarUrl || '') === draft.oscarUrl
         && (existingEntry.relevantInfo || '') === draft.relevantInfo
         && (existingEntry.managerNotes || '') === draft.managerNotes;
@@ -7549,6 +7553,10 @@ function upsertCallListeningEntryFromForm(showSavedToast = false) {
         window.DevCoachModules?.callCoachingBridge?.callFingerprint
     ) || null;
 
+    // Remembered so the next call pasted over this one can clear the boxes
+    // without asking: what is in them is safely in the history.
+    lastKeptCallDraft = draft;
+
     if (same && isSameCallListeningDraftAsEntry(draft, same)) {
         if (showSavedToast) showToast('✅ Call log already saved.', 2500);
         return same;
@@ -7611,20 +7619,36 @@ function buildCallListeningVerintSummary(entry) {
     if (!entry) return '';
     const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
     const moment = window.DevCoachModules?.callTranscript?.formatCallMoment?.(entry.listenedOn, entry.callTime);
-    const recap = window.DevCoachModules?.callSummary?.buildSummaryText?.(
-        buildCallSummary(entry.transcript, entry.employeeName, null, entry),
-        { voice: 'supervisor' }
-    ) || '';
     const flags = buildCallListeningRedFlagLines(entry);
     // Notes drafted before the mishearing fix still quote "at&t", so they are
     // corrected on the way out as well.
     const section = (title, text) => (text ? ['', title, correct(text)] : []);
-
-    return [
+    const header = [
         `Call coaching: ${entry.employeeName || ''}`,
         moment ? `Call Taken: ${moment}` : `Call Date: ${entry.listenedOn || ''}`,
         ...(entry.callReference ? [`Call Reference: ${entry.callReference}`] : []),
-        ...(flags.length ? ['', ...flags] : []),
+        ...(flags.length ? ['', ...flags] : [])
+    ];
+
+    // Copilot's summary, when Scott has pasted it back, is the version he read
+    // and agreed with. It already says what the call was and carries the good
+    // and the bad, so it goes in whole in place of the recap and the notes.
+    const copilotSummary = String(entry.copilotSummary || '').trim();
+    if (copilotSummary) {
+        return [
+            ...header,
+            '',
+            correct(copilotSummary),
+            ...section('Relevant info shared:', entry.relevantInfo)
+        ].join('\n');
+    }
+
+    const recap = window.DevCoachModules?.callSummary?.buildSummaryText?.(
+        buildCallSummary(entry.transcript, entry.employeeName, null, entry),
+        { voice: 'supervisor' }
+    ) || '';
+    return [
+        ...header,
         ...(recap ? ['', 'Call summary:', recap] : []),
         ...section('What went well:', entry.whatWentWell),
         ...section('What to work on:', entry.improvementAreas),
@@ -7673,6 +7697,7 @@ function loadCallListeningEntryIntoForm(entryId) {
     setValue('callListeningTranscript', entry.transcript);
     setValue('callListeningStrengths', entry.whatWentWell);
     setValue('callListeningImprovements', entry.improvementAreas);
+    setValue('callListeningCopilotSummary', entry.copilotSummary);
     setValue('callListeningOscarUrl', entry.oscarUrl);
     setValue('callListeningRelevantInfo', entry.relevantInfo);
     setValue('callListeningManagerNotes', entry.managerNotes);
@@ -8633,18 +8658,37 @@ function rememberCallDrafts() {
     });
 }
 
-function startFreshCallFeedback() {
-    const fields = Object.keys(lastCallDrafts)
-        .map(id => ({ id, field: document.getElementById(id) }))
-        .filter(item => item.field);
-    const typedIn = fields.some(({ id, field }) => field.value.trim() && field.value.trim() !== lastCallDrafts[id]);
+// The boxes that belong to one call, and the saved field each one is.
+const CALL_NOTE_FIELDS = {
+    callListeningStrengths: 'whatWentWell',
+    callListeningImprovements: 'improvementAreas',
+    callListeningCopilotSummary: 'copilotSummary'
+};
 
-    if (typedIn && !confirm('New call pasted. Clear the feedback notes from the last call?\n\nCancel keeps them, and this call\'s drafts are added underneath.')) {
+// What the last save kept, so a new call can clear boxes that are safely in
+// the history without asking. Copilot's pasted summary is never a draft, so
+// without this every new call after using it would stop to ask.
+let lastKeptCallDraft = null;
+
+function startFreshCallFeedback() {
+    const fields = Object.keys(CALL_NOTE_FIELDS)
+        .map(id => ({ id, key: CALL_NOTE_FIELDS[id], field: document.getElementById(id) }))
+        .filter(item => item.field);
+    // Safe to clear without asking: empty, exactly what the last read
+    // drafted, or exactly what was saved with the last call.
+    const typedIn = fields.some(({ id, key, field }) => {
+        const value = field.value.trim();
+        return value
+            && value !== (lastCallDrafts[id] || '')
+            && value !== String(lastKeptCallDraft?.[key] || '').trim();
+    });
+
+    if (typedIn && !confirm('New call pasted. Clear the notes and summary from the last call?\n\nCancel keeps them, and this call\'s drafts are added underneath.')) {
         return;
     }
     fields.forEach(({ id, field }) => {
         field.value = '';
-        lastCallDrafts[id] = '';
+        if (id in lastCallDrafts) lastCallDrafts[id] = '';
     });
 }
 
@@ -8964,54 +9008,34 @@ function writeCallSummaryInCopilot() {
 }
 
 /**
- * "Email The Associate". Writes the email from the two note boxes and opens
- * it as an Outlook draft addressed to the associate, in one click. The words
- * are the app's own, from the notes; Copilot's version is under More for a
- * message that wants a second voice.
+ * "Copilot: Write The Email". Scott's second Copilot step: Copilot's summary
+ * is pasted back into the box above this button, and the email prompt is
+ * built from it, copied, and Copilot opened. With no summary pasted, the good
+ * and bad notes stand in and the toast says so. The call is kept on the way
+ * out, like the other two.
  */
-function emailCallToAssociate() {
-    const draft = getCallListeningDraftFromForm();
-    if (!validateCallListeningDraft(draft)) return;
+function writeCallEmailInCopilot() {
+    const entry = buildUnsavedCallListeningEntry();
+    if (!entry) return;
 
     const listening = window.DevCoachModules?.callListening;
-    // Notes drafted before the mishearing fix still quote "at&t".
-    const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
-    const message = listening?.buildCallFeedbackMessage?.({
-        ...draft,
-        whatWentWell: correct(draft.whatWentWell),
-        improvementAreas: correct(draft.improvementAreas)
-    }, { getEmployeeNickname });
-    if (!message) {
-        showToast('⚠️ Add a note in what went well or what to work on first.', 3000);
-        return;
-    }
-
-    // Kept in the send box under More as well, to read back or reopen.
-    const body = document.getElementById('callListeningOutlookBody');
-    const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
-    if (body) {
-        body.value = message;
-        if (outlookBtn) updateCallListeningOutlookButtonState(body, outlookBtn);
-    }
-
-    const to = (document.getElementById('callListeningRecipient')?.value || '').trim();
-    const result = listening.generateOutlookDraft?.({
-        employeeName: draft.employeeName,
-        callDate: draft.listenedOn,
-        bodyText: message,
-        to,
-        getEmployeeNickname,
-        // One toast, below, that also says the call was saved.
-        showToast: () => {},
-        onError: (error) => console.error('Error opening Outlook draft from call listening:', error)
-    });
-    if (!result?.ok) {
-        showToast('⚠️ Could not open the Outlook draft. The email is under More, in Email the associate.', 4500);
+    const preferredName = getEmployeeNickname(entry.employeeName) || entry.employeeName.split(' ')[0] || entry.employeeName;
+    const prompt = listening?.buildEmailFromSummaryPrompt?.(entry, preferredName);
+    if (!prompt) {
+        showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
         return;
     }
 
     const saved = keepCallOnTheWayOut();
-    showToast(`📧 Email opened in Outlook${to ? ` for ${to}` : ', add the address there'}${saved ? ', and the call saved' : ''}.`, 4500);
+    const to = (document.getElementById('callListeningRecipient')?.value || '').trim();
+    const source = entry.copilotSummary ? '' : ' No summary pasted, so it works from your notes.';
+    const result = listening.copyPromptAndOpenCopilot?.({
+        prompt,
+        button: document.getElementById('callCopilotEmailBtn'),
+        openWindow: window.open,
+        message: `📋 Email prompt copied${saved ? ' and the call saved' : ''}. Paste it into Copilot.${to ? ` Send it to ${to}.` : ''}${source}`
+    });
+    if (!result?.ok) showToast('⚠️ Could not start the Copilot handoff. Try again.', 3500);
 }
 
 function clearCallListeningTranscript() {
@@ -9053,48 +9077,6 @@ function resetCallListeningReadPanels() {
     callExplanationRead = null;
     lastTranscriptPasteHtml = '';
     sawTranscriptPaste = false;
-}
-
-function buildCallListeningPrompt(entry) {
-    const preferredName = getEmployeeNickname(entry.employeeName) || entry.employeeName.split(' ')[0] || entry.employeeName;
-    const delegated = window.DevCoachModules?.callListening?.buildPrompt?.(entry, preferredName);
-    // The notes can still quote "at&t" when they were drafted before the
-    // mishearing fix, and Copilot quotes whatever it is given.
-    const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => value);
-    return correct(delegated || '');
-}
-
-function generateCallListeningPromptAndCopy() {
-    const entry = buildUnsavedCallListeningEntry();
-    if (!entry) return;
-
-    const promptArea = document.getElementById('callListeningPromptArea');
-    const button = document.getElementById('generateCallListeningPromptBtn');
-    const outlookSection = document.getElementById('callListeningOutlookSection');
-
-    if (!promptArea) return;
-    const prompt = buildCallListeningPrompt(entry);
-    if (!prompt) {
-        showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
-        return;
-    }
-    promptArea.value = prompt;
-
-    const delegatedResult = window.DevCoachModules?.callListening?.copyPromptAndOpenCopilot?.({
-        prompt,
-        button,
-        showToast,
-        alertFn: alert,
-        openWindow: window.open
-    });
-    if (delegatedResult?.ok) {
-        if (outlookSection) {
-            outlookSection.style.display = 'block';
-        }
-        return;
-    }
-
-    showToast('⚠️ Call Listening module could not open Copilot flow.', 3500);
 }
 
 /**
@@ -9377,6 +9359,7 @@ function findSavedCall(employeeName, entryId) {
 function buildSavedCallDetailHtml(employeeName, entry) {
     const analyzer = window.DevCoachModules?.callTranscript;
     const notes = [
+        ['Copilot summary', entry.copilotSummary],
         ['What went well', entry.whatWentWell],
         ['What to work on next time', entry.improvementAreas],
         ['Relevant info shared', entry.relevantInfo],
@@ -9690,14 +9673,14 @@ function updateCallListeningOutlookButtonState(outlookBody, outlookBtn) {
     outlookBtn.title = hasContent ? '' : 'Write the email from your notes, or paste one in, first';
 }
 
-function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn) {
+function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, historyList, outlookBody, outlookBtn) {
     bindElementOnce(employeeSelect, 'change', renderCallListeningHistoryForSelectedEmployee);
     bindElementOnce(employeeSelect, 'change', refreshCallListeningRecipient);
     bindElementOnce(employeeSelect, 'change', rereadCallForSelectedAssociate);
     bindElementOnce(document.getElementById('callListeningTranscript'), 'paste', handleTranscriptPaste);
     bindElementOnce(document.getElementById('callExplanationPanel'), 'click', handleCallExplanationClick);
     bindElementOnce(document.getElementById('callCopilotSummaryBtn'), 'click', writeCallSummaryInCopilot);
-    bindElementOnce(document.getElementById('emailCallToAssociateBtn'), 'click', emailCallToAssociate);
+    bindElementOnce(document.getElementById('callCopilotEmailBtn'), 'click', writeCallEmailInCopilot);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);
@@ -9718,7 +9701,6 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(saveBtn, 'click', () => upsertCallListeningEntryFromForm(true));
     bindElementOnce(copyVerintBtn, 'click', () => copyCallListeningVerintSummary());
     bindElementOnce(exportBtn, 'click', downloadCallListeningLogsCSV);
-    bindElementOnce(generatePromptBtn, 'click', generateCallListeningPromptAndCopy);
     bindElementOnce(outlookBody, 'input', () => updateCallListeningOutlookButtonState(outlookBody, outlookBtn));
     bindElementOnce(outlookBtn, 'click', generateCallListeningOutlookEmail);
     bindElementOnce(historyList, 'click', (event) => {
@@ -9737,12 +9719,11 @@ function initializeCallListeningSection() {
     const saveBtn = document.getElementById('saveCallListeningBtn');
     const copyVerintBtn = document.getElementById('copyCallListeningVerintBtn');
     const exportBtn = document.getElementById('exportCallListeningCsvBtn');
-    const generatePromptBtn = document.getElementById('generateCallListeningPromptBtn');
     const historyList = document.getElementById('callListeningHistoryList');
     const outlookBody = document.getElementById('callListeningOutlookBody');
     const outlookBtn = document.getElementById('generateCallListeningOutlookBtn');
 
-    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !generatePromptBtn || !historyList || !outlookBody || !outlookBtn) {
+    if (!employeeSelect || !status || !dateInput || !saveBtn || !copyVerintBtn || !exportBtn || !historyList || !outlookBody || !outlookBtn) {
         return;
     }
 
@@ -9754,7 +9735,7 @@ function initializeCallListeningSection() {
     const employees = getCallListeningEmployeeOptions();
     populateCallListeningEmployeeSelect(employeeSelect, employees, currentSelection);
     setCallListeningSectionStatus(status, employees.length);
-    bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, generatePromptBtn, historyList, outlookBody, outlookBtn);
+    bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn, exportBtn, historyList, outlookBody, outlookBtn);
     updateCallListeningOutlookButtonState(outlookBody, outlookBtn);
     refreshCallListeningRecipient();
 

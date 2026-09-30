@@ -76,18 +76,23 @@ suite('call listening layout: paste, good and bad, then Copilot and Verint', (t)
     const good = at('id="callListeningStrengths"');
     const bad = at('id="callListeningImprovements"');
     const copilot = at('id="callCopilotSummaryBtn"');
+    const pasted = at('id="callListeningCopilotSummary"');
     const verint = at('id="copyCallListeningVerintBtn"');
-    const email = at('id="emailCallToAssociateBtn"');
+    const email = at('id="callCopilotEmailBtn"');
     const more = at('<details class="call-fold call-more"');
 
-    t.check('everything was found', [transcript, flags, good, bad, copilot, verint, email, more].every((index) => index > -1));
+    t.check('everything was found', [transcript, flags, good, bad, copilot, pasted, verint, email, more].every((index) => index > -1));
     t.check('the paste box comes first', transcript < flags && transcript < good);
     t.check('the flags sit under the paste box, before the notes', flags < good);
     const grid = section.lastIndexOf('class="grid-2col"', good);
     t.check('good and bad sit side by side in one grid',
         grid > transcript && good < bad && !section.slice(grid, bad).includes('class="call-panel"'));
-    t.check('Copilot, Verint and the email come straight after the notes', bad < copilot && bad < verint && bad < email);
-    t.check('and everything else comes after them', copilot < more && verint < more && email < more);
+    // The order Scott works in: Copilot writes the summary, it is pasted back,
+    // and both ways out work from it.
+    t.check('the summary button comes straight after the notes', bad < copilot);
+    t.check('then the box Copilot\'s summary is pasted into', copilot < pasted);
+    t.check('then Verint and the email, which both use it', pasted < verint && pasted < email);
+    t.check('and everything else comes after them', verint < more && email < more);
 });
 
 suite('call listening layout: everything else is in one closed fold', (t) => {
@@ -101,11 +106,22 @@ suite('call listening layout: everything else is in one closed fold', (t) => {
     [
         'callTranscriptAnalysisSummary', 'callVerificationAlert', 'callRedFlagsAlert', 'callExplanationPanel',
         'callSummaryPanel', 'callQaPanel', 'callMetricCoachPanel', 'callWordChoicePanel',
-        'writeCallFeedbackEmailBtn', 'generateCallListeningPromptBtn', 'callListeningOutlookBody',
+        'writeCallFeedbackEmailBtn', 'callListeningOutlookBody',
         'generateCallListeningOutlookBtn', 'callListeningHistoryList', 'showAllSavedCallsBtn',
         'summarizeCallInCopilotBtn', 'checkTranscriptPasteBtn', 'callListeningReference',
         'analyzeCallTranscriptBtn', 'clearCallTranscriptBtn', 'saveCallListeningBtn'
     ].forEach((id) => t.check(`${id} is under More`, more.includes(`id="${id}"`)));
+});
+
+suite('call listening layout: one way for Copilot to write the email', (t) => {
+    const section = callListeningSection();
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+
+    t.check('the old notes-based email prompt button is gone', !section.includes('id="generateCallListeningPromptBtn"'));
+    t.check('and its box', !section.includes('id="callListeningPromptArea"'));
+    t.check('and nothing binds it', !/generateCallListeningPromptAndCopy/.test(script));
+    t.check('so the page does not wait for it before starting',
+        !/!generatePromptBtn/.test(script));
 });
 
 suite('call listening layout: three buttons at rest', (t) => {
@@ -115,7 +131,9 @@ suite('call listening layout: three buttons at rest', (t) => {
     // "Really still too many buttons" (2026-09-30), with five on the page.
     // Pasting reads the call and a new paste replaces the old one, so Read
     // Again and Clear went under More; the three that send a call somewhere
-    // save it, so Save went too.
+    // save it, so Save went too. The third is Copilot writing the email from
+    // the summary, which replaced the app writing it ("I want copilot to
+    // draft the email for me to send").
     const buttons = (visible.match(/<button\b/g) || []).length;
     const total = (section.match(/<button\b/g) || []).length;
     t.equal(`three buttons at rest (${buttons} of ${total})`, buttons, 3);
@@ -123,10 +141,10 @@ suite('call listening layout: three buttons at rest', (t) => {
     [
         'callListeningTranscript', 'callListeningEmployeeSelect', 'callListeningDate', 'callFlagStrip',
         'callListeningStrengths', 'callListeningImprovements',
-        'callCopilotSummaryBtn', 'copyCallListeningVerintBtn', 'emailCallToAssociateBtn'
+        'callCopilotSummaryBtn', 'callListeningCopilotSummary', 'copyCallListeningVerintBtn', 'callCopilotEmailBtn'
     ].forEach((id) => t.check(`${id} is on the page at rest`, visible.includes(`id="${id}"`)));
 
-    ['writeCallFeedbackEmailBtn', 'callListeningOutlookBody', 'generateCallListeningPromptBtn',
+    ['writeCallFeedbackEmailBtn', 'callListeningOutlookBody',
         'callVerificationAlert', 'callExplanationPanel', 'analyzeCallTranscriptBtn',
         'clearCallTranscriptBtn', 'saveCallListeningBtn'
     ].forEach((id) => t.check(`${id} is not`, !visible.includes(`id="${id}"`)));

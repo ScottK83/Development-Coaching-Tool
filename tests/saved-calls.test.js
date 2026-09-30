@@ -268,7 +268,7 @@ suite('saved calls: kept when it goes somewhere, once, and said out loud', (t) =
     [
         ['copyCallListeningVerintSummary', /and the call saved/],
         ['writeCallSummaryInCopilot', /and the call saved/],
-        ['emailCallToAssociate', /and the call saved/]
+        ['writeCallEmailInCopilot', /and the call saved/]
     ].forEach(([name, says]) => {
         const text = body(name);
         t.check(`${name} keeps the call`, /keepCallOnTheWayOut\(\)/.test(text));
@@ -279,15 +279,18 @@ suite('saved calls: kept when it goes somewhere, once, and said out loud', (t) =
     t.check('a call copied from the history is not saved again',
         /if \(!entry\) \{\s*entry = buildUnsavedCallListeningEntry\(\);\s*if \(!entry\) return;\s*saved = keepCallOnTheWayOut\(\);/.test(body('copyCallListeningVerintSummary')));
 
-    // The old Copilot email prompt under More still only reads the form.
-    t.check('the email prompt under More saves nothing',
-        !/keepCallOnTheWayOut|upsertCallListeningEntryFromForm/.test(body('generateCallListeningPromptAndCopy')));
-
     // Updated in place, never appended twice.
     const saver = body('upsertCallListeningEntryFromForm');
     t.check('a save looks for the same call first', /findSameCall/.test(saver));
     t.check('by the transcript fingerprint', /callFingerprint/.test(saver));
     t.check('and updates it in place', /Object\.assign\(entry, draft/.test(saver));
+    // A new call pasted over a saved one clears the boxes without asking,
+    // Copilot's pasted summary included, because they are in the history.
+    t.check('it remembers what it kept', /lastKeptCallDraft = draft;/.test(saver));
+    t.check('and a new call checks the boxes against it',
+        /function startFreshCallFeedback[\s\S]{0,900}lastKeptCallDraft\?\.\[key\]/.test(script));
+    t.check('Copilot\'s summary is one of those boxes',
+        /callListeningCopilotSummary: 'copilotSummary'/.test(script));
     t.check('appending only when it is a new call', /entry = createCallListeningEntry\(draft\);\s*appendCallListeningEntry/.test(saver));
 });
 

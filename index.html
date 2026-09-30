@@ -591,10 +591,21 @@ Box 2 - Future Improvement Areas:
                             </div>
                             <div class="flex-row" style="margin-top: var(--space-4);">
                                 <button type="button" id="callCopilotSummaryBtn" class="btn-primary">🤖 Copilot: Write The Summary</button>
-                                <button type="button" id="copyCallListeningVerintBtn" class="btn-primary">📋 Copy For Verint</button>
-                                <button type="button" id="emailCallToAssociateBtn" class="btn-primary">📧 Email The Associate</button>
                             </div>
-                            <p class="text-muted-sm" style="margin-top: var(--space-2);">Each one saves the call to history.</p>
+                        </div>
+
+                        <!-- Copilot's summary comes back here, and both ways
+                             out work from it: Verint gets it as written, and
+                             the email prompt turns it into a message to the
+                             associate. -->
+                        <div class="call-panel">
+                            <label class="label-bold" for="callListeningCopilotSummary">📝 Copilot's summary</label>
+                            <textarea id="callListeningCopilotSummary" style="min-height: 160px;" placeholder="Paste what Copilot wrote here. Copy For Verint and the email both use it."></textarea>
+                            <div class="flex-row" style="margin-top: var(--space-3);">
+                                <button type="button" id="copyCallListeningVerintBtn" class="btn-primary">📋 Copy For Verint</button>
+                                <button type="button" id="callCopilotEmailBtn" class="btn-primary">🤖 Copilot: Write The Email</button>
+                            </div>
+                            <p class="text-muted-sm" style="margin-top: var(--space-2);">All three buttons save the call to history.</p>
                         </div>
 
                         <details class="call-fold call-more">
@@ -666,7 +677,7 @@ Box 2 - Future Improvement Areas:
 
                             <div class="call-panel">
                                 <details class="call-fold">
-                                    <summary><strong>📧 Email the associate</strong> <span class="text-muted-sm">written from the same notes</span></summary>
+                                    <summary><strong>📧 Open the email in Outlook</strong> <span class="text-muted-sm">paste Copilot's email here and it opens addressed to the associate</span></summary>
                                     <div class="call-field" style="margin-top: var(--space-3);">
                                         <label class="label-bold" for="callListeningOscarUrl">Oscar / Knowledge Base URL</label>
                                         <input type="url" id="callListeningOscarUrl" placeholder="https://...">
@@ -681,17 +692,15 @@ Box 2 - Future Improvement Areas:
                                         <div class="text-muted-sm" style="margin-top: 4px;">Guidance for the wording. This one is not put in front of the associate.</div>
                                     </div>
                                     <div class="flex-row" style="margin-top: var(--space-4);">
-                                        <button type="button" id="writeCallFeedbackEmailBtn" class="btn-primary">✍️ Write The Email</button>
-                                        <button type="button" id="generateCallListeningPromptBtn">🤖 Copilot Writes The Email Instead</button>
+                                        <button type="button" id="writeCallFeedbackEmailBtn" class="btn-primary">✍️ Write The Email Here</button>
                                     </div>
-                                    <textarea id="callListeningPromptArea" class="call-mono" readonly style="height: 120px; margin-top: var(--space-3);" placeholder="The Copilot email prompt appears here."></textarea>
                                     <div id="callListeningOutlookSection" class="call-panel-action" style="margin-top: var(--space-4); padding: var(--space-4); border-radius: var(--radius-md);">
                                         <div class="call-field">
                                             <label class="label-bold" for="callListeningRecipient">To</label>
                                             <input type="email" id="callListeningRecipient" placeholder="Set an address pattern in Settings > Team Members, or type one here">
                                             <div id="callListeningRecipientNote" class="text-muted-sm" style="margin-top: 4px;"></div>
                                         </div>
-                                        <textarea id="callListeningOutlookBody" class="call-mono" style="height: 180px;" placeholder="Press Write The Email, or paste a message from Copilot in here."></textarea>
+                                        <textarea id="callListeningOutlookBody" class="call-mono" style="height: 180px;" placeholder="Paste Copilot's email here, or press Write The Email Here."></textarea>
                                         <div class="flex-row" style="margin-top: var(--space-3);">
                                             <button type="button" id="generateCallListeningOutlookBtn" class="btn-primary" style="opacity: 0.6;" disabled>📧 Generate Outlook Email</button>
                                         </div>

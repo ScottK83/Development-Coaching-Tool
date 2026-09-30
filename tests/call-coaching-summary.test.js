@@ -149,3 +149,59 @@ suite('coaching summary prompt: where the customer got lost, Copilot finds a bet
     t.check('asking for one plainer way to say it', /one plainer way to explain budget billing/.test(prompt));
     t.check('without inventing amounts or policy', /placeholder in square brackets/.test(prompt) && /do not state APS policy/.test(prompt));
 });
+
+suite('email prompt: Copilot turns the pasted summary into the email', (t) => {
+    const { callListening: L } = load(t);
+
+    const summary = [
+        'A 2 minute call about budget billing that ended with the customer still unsure.',
+        '',
+        'What went well:',
+        '- You verified the caller before anything on the account came up.',
+        '',
+        'What to work on:',
+        '- When the customer got lost on budget billing, try: "It spreads your year out so every month is about the same."'
+    ].join('\n');
+
+    const prompt = L.buildEmailFromSummaryPrompt({
+        employeeName: 'Alyssa Dimes',
+        listenedOn: '2026-09-29',
+        callTime: '10:14 AM',
+        transcript: 'Agent: thank you for calling at&t my name is alyssa',
+        copilotSummary: summary,
+        whatWentWell: '- a note that should not be used when there is a summary',
+        improvementAreas: ''
+    }, 'Alyssa');
+
+    t.check('it says the review is done and asks for wording', /already reviewed/.test(prompt) && /I need the wording/.test(prompt));
+    t.check('addressed to the associate by first name', /short email to Alyssa that I can send/.test(prompt));
+    t.check('built from the summary', /My coaching write-up:\n"""\nA 2 minute call about budget billing/.test(prompt));
+    t.check('not the notes, when there is a summary', !/a note that should not be used/.test(prompt));
+    t.check('the transcript does not go over again', !/my name is alyssa/.test(prompt));
+    t.check('it names the call', /Tuesday, September 29 at 10:14 AM/.test(prompt));
+    t.check('good first, then the work', /Lead with what went well/.test(prompt));
+    t.check('keeping any better wording from the summary', /better way to say something to a customer/.test(prompt));
+    t.check('nothing added', /Do not add findings of your own/.test(prompt));
+    t.check('just the body back', /Return only the email body/.test(prompt));
+    t.check('no em dashes asked for or used', /Do not use em dashes/.test(prompt) && !/[—–]/.test(prompt));
+});
+
+suite('email prompt: with no summary pasted, the notes stand in', (t) => {
+    const { callListening: L } = load(t);
+
+    const prompt = L.buildEmailFromSummaryPrompt({
+        employeeName: 'Alyssa Dimes',
+        listenedOn: '2026-09-29',
+        copilotSummary: '',
+        whatWentWell: '- Clean open. ("thank you for calling at&t my name is alyssa")',
+        improvementAreas: '- Tell the customer what happens next.'
+    }, 'Alyssa');
+
+    t.check('the good notes go over', /What went well:\n- Clean open/.test(prompt));
+    t.check('and the work', /What to work on:\n- Tell the customer what happens next/.test(prompt));
+    t.check('with Verint\'s "at&t" corrected on the way', /calling APS/.test(prompt) && !/at&t/i.test(prompt));
+    t.equal('nothing without an entry', L.buildEmailFromSummaryPrompt(null, 'Alyssa'), '');
+
+    const summaryWithMishearing = L.buildEmailFromSummaryPrompt({ copilotSummary: 'You greeted with "thank you for calling at&t".' }, 'Alyssa');
+    t.check('a pasted summary is corrected too', /calling APS/.test(summaryWithMishearing) && !/at&t/i.test(summaryWithMishearing));
+});

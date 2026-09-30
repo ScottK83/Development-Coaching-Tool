@@ -269,6 +269,57 @@ Requirements:
     }
 
     /**
+     * The prompt behind "Copilot: Write The Email".
+     *
+     * Scott's flow (2026-09-30): Copilot writes the coaching summary, he
+     * pastes it back into the app, and Copilot turns that summary into the
+     * email to the associate. The summary is the source because it is the
+     * version he has already read and agreed with, so the transcript does not
+     * go over a second time and nothing new can creep in.
+     *
+     * With no summary pasted, the good and bad notes stand in for it, so the
+     * button never dead ends.
+     *
+     * The associate is named, because an email has to say hello to somebody,
+     * and the prompt says the review is done and only wording is wanted, which
+     * is the framing that is not refused.
+     */
+    function buildEmailFromSummaryPrompt(entry, preferredName) {
+        if (!entry) return '';
+        const correct = window.DevCoachModules?.callTranscript?.correctMishearings || ((value) => String(value || ''));
+        const summary = correct(String(entry.copilotSummary || '').trim());
+        const name = String(preferredName || '').trim() || 'the associate';
+        const moment = describeCallMoment(entry);
+
+        const lines = [];
+        lines.push(`I supervise a call center for APS, an electric utility in Arizona. I have already reviewed a call ${name} took and written up my coaching. I am not asking you to assess ${name} or rate the call. I need the wording: turn my write-up into a short email to ${name} that I can send.`);
+        lines.push('');
+        if (moment) lines.push(`The call: ${moment}.`, '');
+
+        if (summary) {
+            lines.push('My coaching write-up:', '"""', summary, '"""', '');
+        } else {
+            lines.push('What went well:', correct(entry.whatWentWell) || '- None', '');
+            lines.push('What to work on:', correct(entry.improvementAreas) || '- None', '');
+        }
+
+        lines.push('Write the email.');
+        lines.push('');
+        lines.push('Requirements:');
+        lines.push(`- From me to ${name}, in my voice: warm, direct and supportive, the way a supervisor who works with them every day would write`);
+        lines.push(moment ? `- Say which call it is about in the opening line: ${moment}` : '- Say which call it is about in the opening line');
+        lines.push('- Lead with what went well, specifically, and why it mattered to the customer. Then what to work on, as one or two things to try next time');
+        lines.push('- Where my write-up gives a better way to say something to a customer, include it so they have the words');
+        lines.push('- Use only what is in my write-up. Do not add findings of your own, and do not rate or score the call');
+        lines.push('- Keep it under 170 words: a short opening, the points, and a one line close');
+        lines.push('- Plain text: no subject line, no bold, no headings. Do not use em dashes, or hyphens with spaces around them');
+        lines.push('- Our company is APS. If another company name appears, that is speech to text mishearing APS');
+        lines.push('- Return only the email body');
+
+        return lines.join('\n');
+    }
+
+    /**
      * The saved entry this draft is the same call as, if there is one.
      *
      * The page has no Save button any more: a call is kept when it goes
@@ -633,6 +684,7 @@ Requirements:
         describeCallMoment,
         buildPrompt,
         buildCoachingSummaryPrompt,
+        buildEmailFromSummaryPrompt,
         findSameCall,
         copyPromptAndOpenCopilot,
         buildOutlookSubject,
