@@ -19,6 +19,11 @@
     let loadedData = { days: {} };
     let busy = false;
 
+    // Who has been drawn this sitting. Each click draws the next prize and
+    // nobody already called comes up again. Clears when the month changes,
+    // on Start the draw over, or when the page reloads.
+    let drawn = [];
+
     function esc(text) {
         const fn = window.DevCoachModules?.sharedUtils?.escapeHtml;
         return typeof fn === 'function' ? fn(String(text ?? '')) : String(text ?? '');
@@ -684,32 +689,72 @@
         if (typeof copy === 'function') copy(text, { message: 'Post copied. Paste it straight into Teams.' });
     }
 
+    function resetDraw() {
+        drawn = [];
+        const host = document.getElementById('contestDrawResult');
+        if (host) { host.style.display = 'none'; host.innerHTML = ''; }
+        const button = document.getElementById('contestDrawBtn');
+        if (button) button.textContent = '🎲 Draw a winner';
+    }
+
+    /**
+     * Built to be shown on a shared screen: the name, big, and how many
+     * tickets they had. The numbers that let anyone check the draw sit folded
+     * under "How it was drawn" rather than on the screen.
+     */
     function draw() {
         const host = document.getElementById('contestDrawResult');
+        if (!host) return;
         const date = document.getElementById('contestDate')?.value;
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        const result = contest()?.drawWinner(currentMonthData());
-        if (!host) return;
+        const result = contest()?.drawWinner(currentMonthData(), undefined, { exclude: drawn });
+        host.style.display = 'block';
+
+        const startOver = '<div style="margin-top: 10px; text-align: center;">'
+            + '<button type="button" id="contestDrawReset" style="background: none; border: none; padding: 0; '
+            + 'color: var(--text-secondary); text-decoration: underline; cursor: pointer; font-size: 0.85em;">'
+            + 'Start the draw over</button></div>';
 
         if (!result) {
-            host.style.display = 'block';
-            host.textContent = 'There are no entries to draw from yet.';
+            if (drawn.length) {
+                host.innerHTML = '<p style="margin: 0; text-align: center;">Everybody with a ticket has been drawn.</p>' + startOver;
+                document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
+            } else {
+                // On the 1st the date opens on the new month, which has no
+                // tickets yet, and last month's draw is one date pick away.
+                const m = Number(monthKey.split('-')[1]);
+                const last = MONTH_NAMES[(m + 10) % 12];
+                host.textContent = `No tickets for ${monthLabelFor(monthKey)} yet. To draw ${last}, pick any ${last} date above.`;
+            }
             return;
         }
 
-        host.style.display = 'block';
-        // The drawn number and the pool are shown so the draw can be checked
-        // rather than taken on trust.
+        const earlier = drawn.slice();
+        drawn.push(result.associate);
+
         const n = (value) => Number(value).toLocaleString('en-US');
         const share = (100 * result.chancesHeld / result.chances).toFixed(1);
         const tickets = result.entriesHeld === 1 ? '1 ticket' : `${n(result.entriesHeld)} tickets`;
         const worth = result.chancesHeld === 1 ? '1 chance' : `${n(result.chancesHeld)} chances`;
-        host.innerHTML = `<strong style="font-size: 1.1em;">🎉 ${esc(result.associate)}</strong>
-            <div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.9em;">
-                Drew chance ${n(result.draw + 1)} of ${n(result.chances)}. They held ${tickets}, worth ${worth} (${share}% odds).<br>
-                Each person's chances are their tickets times their tickets, so more tickets count for more.<br>
-                The winning ticket was earned by ${esc(result.wonBy)}.
-            </div>`;
+
+        host.innerHTML = `<div style="text-align: center; padding: 8px 0;">
+                <div style="font-size: 2.4em; font-weight: 800; line-height: 1.2;">🎉 ${esc(result.associate)}</div>
+                <div style="margin-top: 6px; font-size: 1.1em; color: var(--text-secondary);">${tickets}</div>
+            </div>
+            ${earlier.length ? `<div style="text-align: center; font-size: 0.9em; color: var(--text-secondary);">Already drawn: ${earlier.map(esc).join(', ')}</div>` : ''}
+            <details style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
+                <summary style="cursor: pointer;">How it was drawn</summary>
+                <div style="margin-top: 6px;">
+                    Drew chance ${n(result.draw + 1)} of ${n(result.chances)}. They held ${tickets}, worth ${worth} (${share}% odds).
+                    Each person's chances are their tickets times their tickets, so more tickets count for more.
+                    ${earlier.length ? 'Anyone already drawn was left out of this one. ' : ''}The winning ticket was earned by ${esc(result.wonBy)}.
+                </div>
+            </details>
+            ${startOver}`;
+        document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
+
+        const button = document.getElementById('contestDrawBtn');
+        if (button) button.textContent = '🎲 Draw another';
     }
 
     // ============================================
@@ -877,6 +922,7 @@
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
 
         if (loadedMonth === monthKey) { renderDayGrid(); renderStandings(); return; }
+        resetDraw();
 
         if (status) status.textContent = 'Loading from cloud storage...';
         try {

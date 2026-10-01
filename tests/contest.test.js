@@ -209,6 +209,44 @@ suite('contest: more tickets count for more than their share of the pool', (t) =
     t.check('and names somebody holding a ticket', ['Alyssa Dimes', 'Chris Vale'].includes(live.associate));
 });
 
+suite('contest: nobody is drawn twice', (t) => {
+    const contest = load(t);
+
+    const data = month({
+        '2026-09-01': {
+            'Alyssa Dimes': { perfectSurveys: 9, adherence: 50 },
+            'Chris Vale': { perfectSurveys: 1, adherence: 50 }
+        }
+    });
+
+    // Her tickets leave with her, so the second prize can only go one way.
+    const second = contest.drawWinner(data, undefined, { exclude: ['Alyssa Dimes'] });
+    t.equal('the next draw skips whoever already won', second.associate, 'Chris Vale');
+    t.equal('and her tickets are out of the pool', second.chances, 1);
+
+    t.equal('once everybody is drawn there is nobody left',
+        contest.drawWinner(data, undefined, { exclude: ['Alyssa Dimes', 'Chris Vale'] }), null);
+});
+
+suite('contest: a week the month cuts off pays when the month ends', (t) => {
+    const contest = load(t);
+
+    // Sept 28 to 30 is a Monday to Wednesday. The rest of that week is
+    // October's, so it closes with September rather than on Sunday Oct 4,
+    // and a draw on the 1st counts it the same as a draw on the 5th.
+    const lastWeek = month({
+        '2026-09-28': { 'Chris Vale': { adherence: 99 } },
+        '2026-09-29': { 'Chris Vale': { adherence: 99 } },
+        '2026-09-30': { 'Chris Vale': { adherence: 99 } }
+    });
+    t.equal('still running on the last day of the month',
+        contest.buildLeaderboard(lastWeek, { asOf: '2026-09-30' })[0].weeklyAdherence, 0);
+    t.equal('paid on the 1st',
+        contest.buildLeaderboard(lastWeek, { asOf: '2026-10-01' })[0].weeklyAdherence, 1);
+    t.equal('the same as on the 5th',
+        contest.buildLeaderboard(lastWeek, { asOf: '2026-10-05' })[0].weeklyAdherence, 1);
+});
+
 suite('contest: the standings post names the reasons, not just the totals', (t) => {
     const contest = load(t);
 

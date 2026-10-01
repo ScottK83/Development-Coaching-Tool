@@ -80,6 +80,12 @@
         return at.toISOString().slice(0, 10);
     }
 
+    /** The last day of the month an ISO date falls in. */
+    function monthEndOf(isoDate) {
+        const [y, m] = String(isoDate).split('-').map(Number);
+        return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+    }
+
     /**
      * Every entry earned, from the days that were typed in.
      *
@@ -129,8 +135,9 @@
                 if (!Number.isFinite(adherence)) return;
                 const week = weekStartOf(date);
                 const month = monthOf(date);
-                (buckets[name] = buckets[name] || { weeks: {}, month: [] });
+                (buckets[name] = buckets[name] || { weeks: {}, lastDay: {}, month: [] });
                 (buckets[name].weeks[week] = buckets[name].weeks[week] || []).push(adherence);
+                if (!(buckets[name].lastDay[week] >= date)) buckets[name].lastDay[week] = date;
                 buckets[name].month.push(adherence);
             });
         });
@@ -145,10 +152,18 @@
             // Tuesday, so an unfinished period used to hand out its week bonus
             // and its month bonus on day one: one good day showed up as three
             // tickets. Nobody has held a week at target until the week is done.
+            //
+            // A week the month cuts off is done when the month is. Its other
+            // days belong to next month's contest, so waiting for its Sunday
+            // only meant a draw on the 1st left off a ticket a draw on the 5th
+            // would have paid (Sept 28 to 30, eight people, 2026-09-30).
             Object.keys(bucket.weeks).sort().forEach((week) => {
                 const values = bucket.weeks[week];
                 const average = mean(values);
-                if (weekEndOf(week) < asOf && average >= target) {
+                const sunday = weekEndOf(week);
+                const monthEnd = monthEndOf(bucket.lastDay[week]);
+                const closes = monthEnd < sunday ? monthEnd : sunday;
+                if (closes < asOf && average >= target) {
                     entries.push({
                         associate: name, reason: 'weekly-adherence', on: week,
                         detail: `${average.toFixed(1)}% across ${values.length} day${values.length === 1 ? '' : 's'}, week of ${week}`,
@@ -268,9 +283,13 @@
      *
      * Accepts a chance number so a draw can be replayed; without one it uses
      * crypto rather than Math.random, because this decides who gets a gift card.
+     *
+     * options.exclude names people already drawn, so the next prize goes to
+     * somebody new. Their tickets leave the pool with them.
      */
     function drawWinner(monthData, forcedDraw, options) {
-        const entries = computeEntries(monthData, options);
+        const out = new Set((options && options.exclude) || []);
+        const entries = computeEntries(monthData, options).filter((e) => !out.has(e.associate));
         if (!entries.length) return null;
 
         const held = {};
