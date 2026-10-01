@@ -3372,38 +3372,16 @@ function findRealYtdAnchor(yearNum) {
  * two-day upload of 50, and the blend was two days with the year as seasoning:
  * handle time 393s in the file came out 510s. Where the row has no real count
  * it is given the associate's run rate from the year's uploads over the weeks
- * the file covers, the same estimate the rest-of-year projection makes, read
- * through the same two functions so the two cannot drift apart.
+ * the file covers: futures.estimateYtdCalls, the one estimate every reader of
+ * a YTD file's calls shares, so the blend and the projection cannot drift.
  *
  * Returns { name: calls } for the rows it could estimate. A row left out keeps
  * the weight it had.
  */
-function estimateAnchorCalls(anchor, yearNum) {
-    const out = {};
-    const modules = window.DevCoachModules || {};
-    const isReal = modules.dataParsing?.hasRealCallCount;
-    const futures = modules.futures;
-    if (typeof isReal !== 'function' || !futures?.weeklyVolumeRates || !futures?.weeksCompletedThroughDate) {
-        return out;
-    }
-
-    const needing = (anchor?.entry?.employees || []).filter(emp => emp?.name && !isReal(emp));
-    if (!needing.length) return out;
-
-    const weeks = futures.weeksCompletedThroughDate(anchor.endDateText, anchor.endDate);
-    if (!(weeks > 0)) return out;
-
-    const yearKeys = Object.keys(weeklyData || {}).filter(key => {
-        const endText = weeklyData[key]?.metadata?.endDate || (key.includes('|') ? key.split('|')[1] : '');
-        return parseInt(String(endText).split('-')[0], 10) === yearNum;
-    });
-    const rates = futures.weeklyVolumeRates(yearKeys) || {};
-
-    needing.forEach(emp => {
-        const perWeek = rates[emp.name]?.callsPerWeek;
-        if (Number.isFinite(perWeek) && perWeek > 0) out[emp.name] = Math.round(perWeek * weeks);
-    });
-    return out;
+function estimateAnchorCalls(anchor) {
+    const estimate = window.DevCoachModules?.futures?.estimateYtdCalls;
+    if (typeof estimate !== 'function' || !anchor?.entry) return {};
+    return estimate(anchor.entry, { isYtd: true }) || {};
 }
 
 /**
@@ -3489,7 +3467,7 @@ function buildYtdAggregateForYear(year, uptoEndDateText) {
 
     // Only needed when something is being layered on: with no extension the
     // anchor's own weight never meets another period's.
-    const anchorCalls = (anchor && extensionPeriods.length) ? estimateAnchorCalls(anchor, yearNum) : {};
+    const anchorCalls = (anchor && extensionPeriods.length) ? estimateAnchorCalls(anchor) : {};
 
     // Helper to add an employee record into the aggregate.
     //

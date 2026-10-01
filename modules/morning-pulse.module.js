@@ -942,7 +942,7 @@
     function calcWeekDeltas(empName, baselineKey, latestKey) {
         const basePeriod = getPeriodData(baselineKey);
         const latestPeriod = getPeriodData(latestKey);
-        const baseEmp = basePeriod?.employees?.find(e => e.name === empName);
+        const baseEmp = withRealCalls(basePeriod).find(e => e.name === empName);
         const latestEmp = latestPeriod?.employees?.find(e => e.name === empName);
         if (!baseEmp || !latestEmp) return [];
 
@@ -1064,7 +1064,17 @@
         const key = latestYtdKey();
         if (!key) return null;
         const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-        return ytd[key]?.employees?.find(e => e.name === employeeName) || null;
+        return withRealCalls(ytd[key]).find(e => e.name === employeeName) || null;
+    }
+
+    // A year-to-date file's rows carry the survey count where calls go, and
+    // the call floors here read it as calls: 15 surveys for the year was a
+    // person too thin to pace or compare. futures.withYtdCalls hands back
+    // calls that mean calls; any other period comes back as it is.
+    function withRealCalls(period) {
+        const withCalls = window.DevCoachModules?.futures?.withYtdCalls;
+        if (period && typeof withCalls === 'function') return withCalls(period) || [];
+        return period?.employees || [];
     }
 
     // Fetch YTD-level metric analysis for a single employee, for cross-checking

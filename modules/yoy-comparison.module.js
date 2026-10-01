@@ -55,6 +55,18 @@
         return isNaN(n) ? null : n;
     }
 
+    // One measure off one row. A year-to-date export has no calls column and
+    // the parser fills it with the survey count, so "Total Calls Answered"
+    // compared 28 against 31 for people who took thousands. Not a count, so
+    // not shown.
+    function _value(row, metricKey) {
+        if (metricKey === 'totalCalls') {
+            var isReal = window.DevCoachModules?.dataParsing?.hasRealCallCount;
+            if (typeof isReal === 'function' && !isReal(row)) return null;
+        }
+        return _num(row && row[metricKey]);
+    }
+
     // Is there a team selection to filter by? (controls whether the checkbox
     // can do anything. If no team is selected, "my team only" would be empty.)
     function _teamFilterContext() {
@@ -210,8 +222,8 @@
             var prior = priorByName[cur.name];
             if (!prior) return; // only show reps present in BOTH years
 
-            var priorVal = _num(prior[metricKey]);
-            var curVal = _num(cur[metricKey]);
+            var priorVal = _value(prior, metricKey);
+            var curVal = _value(cur, metricKey);
             if (priorVal === null && curVal === null) return;
 
             var delta = (priorVal !== null && curVal !== null) ? (curVal - priorVal) : null;
@@ -537,7 +549,7 @@
 
             var cells = {};
             metrics.forEach(function (k) {
-                var pv = _num(prior[k]), cv = _num(cur[k]);
+                var pv = _value(prior, k), cv = _value(cur, k);
                 var delta = (pv !== null && cv !== null) ? (cv - pv) : null;
                 var pct = (delta !== null && pv !== null && pv !== 0) ? (delta / Math.abs(pv)) * 100 : null;
                 var improvement = (delta === null) ? null : (_isReverse(k) ? -delta : delta);

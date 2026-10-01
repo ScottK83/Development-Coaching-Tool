@@ -139,3 +139,136 @@ suite('ytd calls: two days after the YTD file do not outweigh the year', (t) => 
     const real = build(2026, '2026-09-29').entry.employees.find((e) => e.name === 'Robin Anchor');
     t.equal('a real count is its own weight', real.totalCalls, 4550);
 });
+
+/* ── Every floor and column that read a YTD file's calls ──
+ *
+ * Seventeen of 126 associates have fewer than 20 surveys for the year. On any
+ * year-to-date view the call floors read that as fewer than 20 calls: no
+ * shout-out, no highlight, no pace line, and a near-miss note saying they
+ * "only took 12 calls". */
+
+const fs = require('fs');
+const path = require('path');
+const { ROOT } = require('./harness');
+
+const YTD_KEY = '2026-01-01|2026-09-22';
+
+function ytdFile(rows) {
+    return { [YTD_KEY]: { metadata: { periodType: 'ytd', startDate: '2026-01-01', endDate: '2026-09-22' }, employees: rows } };
+}
+
+suite('ytd calls: a YTD file\'s rows come back with calls that mean calls', (t) => {
+    const weekly = weeks('Pat Few', 10, 130, 420);
+    const { futures } = load(t, weekly, ytdFile([
+        row('Pat Few', { totalCalls: 12, surveyTotal: 12 }),
+        row('Real Count', { totalCalls: 4800, surveyTotal: 30 }),
+        row('No Uploads', { totalCalls: 9, surveyTotal: 9 })
+    ]));
+    const period = global.ytdData[YTD_KEY];
+    const rows = futures.withYtdCalls(period);
+    const byName = Object.fromEntries(rows.map((r) => [r.name, r]));
+
+    t.equal('a filled count becomes the run rate over the weeks covered', byName['Pat Few'].totalCalls, 130 * 38);
+    t.equal('and says it is an estimate', byName['Pat Few'].callsEstimated, true);
+    t.equal('a real count is left as it is', byName['Real Count'].totalCalls, 4800);
+    t.check('and not marked', !byName['Real Count'].callsEstimated);
+    t.equal('nothing to estimate from is unknown, not zero', byName['No Uploads'].totalCalls, '');
+    t.equal('the stored row is untouched', period.employees[0].totalCalls, 12);
+
+    const weekPeriod = global.weeklyData['2026-01-05|2026-01-11'];
+    t.check('a week comes back as it is', futures.withYtdCalls(weekPeriod) === weekPeriod.employees);
+});
+
+suite('ytd calls: a YTD ranking does not read surveys as calls', (t) => {
+    t.pinClock('2026-10-05');
+    const names = Array.from({ length: 32 }, (_, i) => 'Agent ' + (i + 1));
+    const weekly = {};
+    names.forEach((n) => Object.assign(weekly, weeks(n, 10, 125, 420)));
+    // Merge the per-name weeks into shared weekly periods.
+    const merged = {};
+    Object.keys(weekly).forEach((k) => {
+        merged[k] = merged[k] || { metadata: weekly[k].metadata, employees: [] };
+    });
+    names.forEach((n) => {
+        const own = weeks(n, 10, 125, 420);
+        Object.keys(own).forEach((k) => merged[k].employees.push(own[k].employees[0]));
+    });
+    const ytd = ytdFile(names.map((n, i) => row(n, { totalCalls: 12 + i, surveyTotal: 12 + i, aht: 400 + i })));
+
+    load(t, merged, ytd);
+    t.loadModule('modules/on-off-tracker.module.js');
+    const M = global.window.DevCoachModules;
+    t.loadModule('modules/center-ranking.module.js');
+    t.loadModule('modules/period-compare.module.js');
+    const cel = t.loadModule('modules/celebrations.module.js').celebrations;
+    global.window.getMetricRatingScore = M.metricProfiles.getRatingScore;
+    global.window.getTeamMembersForWeek = () => [];
+
+    const res = M.centerRanking.buildRankingsForPeriod(YTD_KEY);
+    const agent = res.rankings.find((r) => r.name === 'Agent 1');
+    t.equal('the row carries the year\'s calls', agent.totalCalls, 125 * 38);
+    t.equal('marked as an estimate', agent.callsEstimated, true);
+    t.equal('so the celebration floor lets them through', cel.volumeVerdict(agent).ok, true);
+    t.check('nobody on the board reads as thin',
+        res.rankings.every((r) => cel.volumeVerdict(r).ok));
+});
+
+suite('ytd calls: a period with no calls column is unknown, not absent', (t) => {
+    t.pinClock('2026-10-05');
+    const names = Array.from({ length: 3 }, (_, i) => 'Agent ' + (i + 1));
+    const weekly = week('2026-09-21', '2026-09-27', names.map((n) => row(n, { totalCalls: '' })));
+    load(t, weekly);
+    t.loadModule('modules/on-off-tracker.module.js');
+    const M = global.window.DevCoachModules;
+    t.loadModule('modules/center-ranking.module.js');
+    const cel = t.loadModule('modules/celebrations.module.js').celebrations;
+    global.window.getMetricRatingScore = M.metricProfiles.getRatingScore;
+    global.window.getTeamMembersForWeek = () => [];
+
+    const res = M.centerRanking.buildRankingsForPeriod('2026-09-21|2026-09-27');
+    t.equal('a blank count stays blank', res.rankings[0].totalCalls, null);
+    t.equal('so nobody is marked absent', cel.volumeVerdict(res.rankings[0]).ok, true);
+});
+
+suite('ytd calls: the snapshot weighs by the estimate and does not show it', (t) => {
+    const weekly = weeks('Pat Few', 10, 130, 420);
+    load(t, weekly, ytdFile([row('Pat Few', { totalCalls: 12, surveyTotal: 12 })]));
+    global.window.DevCoachModules.storage = {
+        loadWeeklyData: () => global.weeklyData,
+        loadYtdData: () => global.ytdData,
+        loadDailyData: () => ({})
+    };
+    const snap = t.loadModule('modules/team-snapshot.module.js').teamSnapshot;
+    const rows = snap.getEmployeesForPeriod(YTD_KEY, 'ytd');
+    t.equal('the snapshot gets the year\'s calls', rows[0].totalCalls, 130 * 38);
+    t.equal('marked as an estimate', rows[0].callsEstimated, true);
+
+    const src = fs.readFileSync(path.join(ROOT, 'modules/team-snapshot.module.js'), 'utf8');
+    t.check('the Calls cell is left empty for an estimate',
+        /metricKey === 'totalCalls' && emp\.callsEstimated\) hasValue = false/.test(src));
+});
+
+suite('ytd calls: no screen prints the survey count as calls', (t) => {
+    const matchup = fs.readFileSync(path.join(ROOT, 'modules/matchup.module.js'), 'utf8');
+    t.check('the matchup Calls column leaves an estimate out',
+        /\(r\.callsEstimated \|\| r\.totalCalls == null\) \? '-' : String\(r\.totalCalls\)/.test(matchup));
+    t.check('and no longer prints a blank as 0', !/String\(r\.totalCalls \|\| 0\)/.test(matchup));
+
+    const yoy = fs.readFileSync(path.join(ROOT, 'modules/yoy-comparison.module.js'), 'utf8');
+    t.check('year over year checks the count is real before comparing it',
+        /metricKey === 'totalCalls'[\s\S]{0,200}hasRealCallCount/.test(yoy));
+    t.check('every year over year read goes through that check',
+        !/_num\((prior|cur)\[/.test(yoy));
+
+    const pulse = fs.readFileSync(path.join(ROOT, 'modules/morning-pulse.module.js'), 'utf8');
+    t.check('the pace line reads the YTD row with its calls corrected',
+        /return withRealCalls\(ytd\[key\]\)\.find/.test(pulse));
+    t.check('and so does the baseline floor', /const baseEmp = withRealCalls\(basePeriod\)\.find/.test(pulse));
+
+    const hub = fs.readFileSync(path.join(ROOT, 'modules/team-hub.module.js'), 'utf8');
+    t.check('highlights read the period through withYtdCalls', /withCalls\(resolved\.period\)/.test(hub));
+
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    t.check('a YTD upload\'s centre averages weigh by calls',
+        /periodType === 'ytd' && typeof withYtdCalls === 'function'[\s\S]{0,200}calculateCenterAveragesFromEmployees\(avgRows\)/.test(script));
+});

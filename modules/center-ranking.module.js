@@ -545,8 +545,32 @@
             // survey stands behind the figure and whether the rep-sat column
             // was in the export at all, so nothing downstream has to guess.
             associateOverallSurveys: Number(result.surveyCount) || 0,
-            totalCalls: parseInt(emp.totalCalls, 10) || 0
+            // A blank stays unknown. `|| 0` made it zero, and zero is what
+            // every floor downstream reads as "took no calls": an upload with
+            // no calls column would have marked the whole floor absent.
+            totalCalls: _callCount(emp),
+            // Estimated from the year's uploads, for a year-to-date file that
+            // has no calls column (futures.withYtdCalls). Floors and weights
+            // use it; a Calls column leaves it out rather than print a guess.
+            callsEstimated: !!emp.callsEstimated
         };
+    }
+
+    function _callCount(emp) {
+        var calls = parseInt(emp && emp.totalCalls, 10);
+        return Number.isInteger(calls) ? calls : null;
+    }
+
+    /* A year-to-date file's rows with calls that mean calls.
+     *
+     * The YTD export has no calls column, so its rows carry the survey count
+     * there, and every floor reading a YTD ranking took somebody with 15
+     * surveys for the year as somebody who took 15 calls. Any other period
+     * comes back as it was. */
+    function _withYtdCalls(period, rows, isYtdSource) {
+        var futures = window.DevCoachModules?.futures;
+        if (!isYtdSource || typeof futures?.withYtdCalls !== 'function') return rows;
+        return futures.withYtdCalls({ metadata: (period && period.metadata) || {}, employees: rows }, { isYtd: true });
     }
 
     /* Reliability is scored on the period you asked for, like every other metric.
@@ -670,7 +694,8 @@
         });
 
         var mergedEmployees = _withPeriodReliability(
-            Object.values(baseEmployees), currentYear, bestPeriod === bestYtd);
+            _withYtdCalls(bestPeriod, Object.values(baseEmployees), bestPeriod === bestYtd),
+            currentYear, bestPeriod === bestYtd);
 
         var rankings = _scoreAndRank(mergedEmployees, currentYear);
 
@@ -737,7 +762,8 @@
                     ? parseFloat(emp.reliabilityAccrued) : null,
                 surveyTotal: score.surveyTotal,
                 associateOverallSurveys: score.associateOverallSurveys,
-                totalCalls: score.totalCalls
+                totalCalls: score.totalCalls,
+                callsEstimated: score.callsEstimated
             });
         });
 
@@ -943,7 +969,8 @@
 
         var _isYtdSource = (meta.periodType || (yData[periodKey] ? 'ytd' : 'week')) === 'ytd';
         var rankings = _scoreAndRank(
-            _withPeriodReliability(period.employees, endYear, _isYtdSource), endYear);
+            _withPeriodReliability(_withYtdCalls(period, period.employees, _isYtdSource), endYear, _isYtdSource),
+            endYear);
         if (!rankings.length) return null;
 
         // Identify team members for this period

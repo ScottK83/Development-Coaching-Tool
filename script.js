@@ -3700,7 +3700,13 @@ function handleLoadPastedDataClick() {
 
         // Auto-calculate center averages when uploading 30+ employees
         if (employees.length >= 30) {
-            const autoAvg = calculateCenterAveragesFromEmployees(employees);
+            // A year-to-date file has no calls column, so its rows would weight
+            // the centre by survey count. The year's uploads stand in for it.
+            const withYtdCalls = window.DevCoachModules?.futures?.withYtdCalls;
+            const avgRows = periodType === 'ytd' && typeof withYtdCalls === 'function'
+                ? withYtdCalls({ metadata: { periodType: 'ytd', startDate, endDate }, employees })
+                : employees;
+            const autoAvg = calculateCenterAveragesFromEmployees(avgRows);
             if (autoAvg) {
                 setCallCenterAverageForPeriod(weekKey, autoAvg);
                 showToast('📊 Center averages auto-calculated from ' + employees.length + ' employees', 4000);

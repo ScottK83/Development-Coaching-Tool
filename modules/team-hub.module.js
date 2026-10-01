@@ -221,7 +221,14 @@
         const allowed = new Set(scoped || roster);
         const inScope = (name) => (allowed.size ? allowed.has(name) : true);
 
-        const employees = (resolved.period?.employees || []).filter(emp => inScope(String(emp?.name || '').trim()));
+        // A year-to-date file's rows carry the survey count where calls go, and
+        // the call floor below read 15 surveys as 15 calls and dropped the
+        // person. withYtdCalls hands back calls that mean calls.
+        const withCalls = window.DevCoachModules?.futures?.withYtdCalls;
+        const periodRows = typeof withCalls === 'function' && resolved.period
+            ? withCalls(resolved.period)
+            : (resolved.period?.employees || []);
+        const employees = periodRows.filter(emp => inScope(String(emp?.name || '').trim()));
         const previousByName = {};
         (resolved.previous?.employees || []).forEach(emp => {
             const name = String(emp?.name || '').trim();

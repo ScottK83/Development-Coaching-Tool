@@ -1213,7 +1213,9 @@
                         (r.ratingAverage != null ? r.ratingAverage.toFixed(2) : '-'),
                         mcCell,
                         '#' + r.rank + ' of ' + data.totalEmployees,
-                        String(r.totalCalls || 0),
+                        // A year-to-date file has no calls column. Its count
+                        // is estimated for weighting and is not a count to show.
+                        (r.callsEstimated || r.totalCalls == null) ? '-' : String(r.totalCalls),
                         String(r.surveyTotal || 0)
                     ];
                 })

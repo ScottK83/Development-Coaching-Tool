@@ -440,6 +440,79 @@
         return rates;
     }
 
+    /*
+     * The calls behind each row of a year-to-date file that has none of its own.
+     *
+     * The YTD export has no calls column and the parser fills it with the
+     * survey count, so a YTD row says 28 calls for somebody who took four
+     * thousand. Each row without a real count is given its run rate from the
+     * year's uploads over the weeks the file covers. One estimate for every
+     * reader: the projection below, the YTD blend, the rankings and every floor
+     * that asks whether somebody was here enough to judge.
+     *
+     * Returns { name: calls } for the rows it could estimate. A period that is
+     * not a year-to-date file returns nothing: weeks from January 1 is only
+     * the span of a file that starts there.
+     */
+    function estimateYtdCalls(period, options) {
+        var out = {};
+        var meta = (period && period.metadata) || {};
+        var isYtd = meta.periodType === 'ytd' || !!(options && options.isYtd);
+        if (!isYtd) return out;
+
+        var needing = ((period && period.employees) || []).filter(function (e) {
+            return e && e.name && !_hasRealCallCount(e);
+        });
+        if (!needing.length) return out;
+
+        var endText = String(meta.endDate || '');
+        var parts = _ymdParts(endText);
+        var weeks = parts ? weeksCompletedThroughDate(endText) : null;
+        if (!(weeks > 0)) return out;
+
+        var wData = _getWeeklyData();
+        var yearKeys = Object.keys(wData).filter(function (key) {
+            var end = _ymdParts(wData[key]?.metadata?.endDate || (key.indexOf('|') > -1 ? key.split('|')[1] : ''));
+            return !!end && end.year === parts.year;
+        });
+        var rates = weeklyVolumeRates(yearKeys);
+
+        needing.forEach(function (e) {
+            var perWeek = rates[e.name] && rates[e.name].callsPerWeek;
+            if (Number.isFinite(perWeek) && perWeek > 0) out[e.name] = Math.round(perWeek * weeks);
+        });
+        return out;
+    }
+
+    /*
+     * A year-to-date file's rows, with a call count that means calls.
+     *
+     * Every floor that asks "was this person here enough to judge" read the
+     * survey count as calls. Seventeen of 126 associates have fewer than 20
+     * surveys for the year, so on any year-to-date view they were treated as
+     * having taken fewer than 20 calls: no shout-out, no highlight, no pace
+     * line, and a near-miss note saying they "only took 12 calls".
+     *
+     * Rows without a real count carry the estimate, or a blank when there is
+     * nothing to estimate from (unknown, never zero), and callsEstimated so a
+     * screen with a Calls column leaves it out rather than print a guess as a
+     * count. Copies: the stored rows are the upload and are left alone. Any
+     * other period comes back as it is.
+     */
+    function withYtdCalls(period, options) {
+        var rows = (period && period.employees) || [];
+        var meta = (period && period.metadata) || {};
+        if (meta.periodType !== 'ytd' && !(options && options.isYtd)) return rows;
+        var estimates = estimateYtdCalls(period, options);
+        return rows.map(function (e) {
+            if (!e || !e.name || _hasRealCallCount(e)) return e;
+            var copy = Object.assign({}, e);
+            copy.totalCalls = Number.isInteger(estimates[e.name]) ? estimates[e.name] : '';
+            copy.callsEstimated = true;
+            return copy;
+        });
+    }
+
     /**
      * The weights for one employee and one metric: volume already banked, and
      * volume the rest of the year is expected to carry.
@@ -1308,6 +1381,8 @@
         calculateRequiredAverage: calculateRequiredAverage,
         isWithinReach: isWithinReach,
         bestPeriodValue: bestPeriodValue,
+        estimateYtdCalls: estimateYtdCalls,
+        withYtdCalls: withYtdCalls,
         // Exported so the table's order and KPI marking can be read back.
         renderFuturesTable: renderFuturesTable,
         calculateDailyTarget: calculateDailyTarget,

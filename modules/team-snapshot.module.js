@@ -203,6 +203,14 @@
             : getWeeklyData();
         var periodData = dataSource[periodKey];
         if (!periodData) return [];
+        // A year-to-date file has no calls column, so its rows carry the survey
+        // count where calls go: the Calls column printed 28 for somebody who
+        // took four thousand, and that number weighted the team averages and
+        // decided who "Exclude absent" left out.
+        var withCalls = window.DevCoachModules?.futures?.withYtdCalls;
+        if (source === 'ytd' && typeof withCalls === 'function') {
+            return withCalls(periodData, { isYtd: true });
+        }
         return periodData.employees || [];
     }
 
@@ -366,7 +374,9 @@
         if (excludeAbsent && excludeAbsent.checked) {
             employees = employees.filter(function(emp) {
                 var calls = parseInt(emp.totalCalls);
-                return !isNaN(calls) && calls > 0;
+                // A year-to-date row nothing could estimate is unknown, not absent.
+                if (isNaN(calls)) return !!emp.callsEstimated;
+                return calls > 0;
             });
         }
 
@@ -380,6 +390,9 @@
                 var value = emp[metricKey];
                 var numValue = parseFloat(value);
                 var hasValue = value !== undefined && value !== null && value !== '' && !isNaN(numValue);
+                // An estimated count weights and filters; it is not shown as
+                // a count. With every row estimated the column drops out.
+                if (metricKey === 'totalCalls' && emp.callsEstimated) hasValue = false;
 
                 var registry = getRegistry();
                 var target = registry[metricKey]?.target;
@@ -1264,6 +1277,8 @@
         populatePeriodDropdown: populatePeriodDropdown,
         // Exported so the periods it offers can be checked without a DOM.
         getAvailablePeriods: getAvailablePeriods,
+        // Exported so what a year-to-date period hands the table can be checked.
+        getEmployeesForPeriod: getEmployeesForPeriod,
         // Pure, and the one place a team figure is computed. Exported for the
         // same reason, the way celebrations exports meetsCelebrationTarget.
         computeTeamMetricValue: computeTeamMetricValue
