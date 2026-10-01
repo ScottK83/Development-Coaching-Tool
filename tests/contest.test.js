@@ -162,18 +162,51 @@ suite('contest: the draw is weighted by entries and can be checked', (t) => {
     const pool = contest.computeEntries(data).length;
     t.equal('ten entries in the pool', pool, 10);
 
-    // A fixed ticket makes the draw replayable, which is what lets anyone check
+    // A fixed chance makes the draw replayable, which is what lets anyone check
     // it rather than take it on trust.
     const first = contest.drawWinner(data, 0);
-    t.equal('ticket zero is a real winner', first.associate, 'Alyssa Dimes');
+    t.equal('chance zero is a real winner', first.associate, 'Alyssa Dimes');
     t.equal('and the pool size is reported', first.poolSize, 10);
-    t.equal('with the odds held', first.odds, '9 of 10');
+    t.equal('nine tickets are worth eighty one chances', first.chancesHeld, 81);
+    t.equal('out of eighty two in all', first.chances, 82);
+    t.equal('with the odds held', first.odds, '81 of 82');
 
-    const last = contest.drawWinner(data, 9);
-    t.equal('the last ticket belongs to the other entrant', last.associate, 'Chris Vale');
+    t.equal('her ninth ticket still covers chance eighty', contest.drawWinner(data, 80).associate, 'Alyssa Dimes');
+    t.equal('and it is her ninth ticket', contest.drawWinner(data, 80).ticket, 8);
+
+    const last = contest.drawWinner(data, 81);
+    t.equal('the last chance belongs to the other entrant', last.associate, 'Chris Vale');
     t.equal('holding one', last.entriesHeld, 1);
+    t.equal('which is one chance', last.chancesHeld, 1);
 
     t.equal('an empty contest has no winner', contest.drawWinner(month({}), 0), null);
+});
+
+suite('contest: more tickets count for more than their share of the pool', (t) => {
+    const contest = load(t);
+
+    const data = month({
+        '2026-09-01': {
+            'Alyssa Dimes': { perfectSurveys: 2, adherence: 50 },
+            'Chris Vale': { perfectSurveys: 1, adherence: 50 }
+        }
+    });
+
+    // Every chance, drawn once. Two tickets against one is four chances to
+    // one, not the two to one a ticket-per-chance draw would give.
+    const size = contest.drawWinner(data, 0).chances;
+    const tally = {};
+    for (let i = 0; i < size; i += 1) {
+        const name = contest.drawWinner(data, i).associate;
+        tally[name] = (tally[name] || 0) + 1;
+    }
+    t.equal('five chances in all', size, 5);
+    t.equal('two tickets win four of them', tally['Alyssa Dimes'], 4);
+    t.equal('one ticket still wins one', tally['Chris Vale'], 1);
+
+    const live = contest.drawWinner(data);
+    t.check('an unforced draw lands inside the pool', live.draw >= 0 && live.draw < size);
+    t.check('and names somebody holding a ticket', ['Alyssa Dimes', 'Chris Vale'].includes(live.associate));
 });
 
 suite('contest: the standings post names the reasons, not just the totals', (t) => {

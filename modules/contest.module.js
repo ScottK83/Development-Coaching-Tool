@@ -239,40 +239,67 @@
     // THE DRAW
     // ============================================
 
+    /** A whole number from 0 to n - 1, every one exactly as likely. */
+    function randomBelow(n) {
+        if (window.crypto?.getRandomValues) {
+            const buffer = new Uint32Array(1);
+            // Throw away the top sliver of the range that does not divide by n,
+            // or the low numbers would come up a hair more often than the rest.
+            const limit = Math.floor(0x100000000 / n) * n;
+            do { window.crypto.getRandomValues(buffer); } while (buffer[0] >= limit);
+            return buffer[0] % n;
+        }
+        return Math.floor(Math.random() * n);
+    }
+
     /**
-     * Picks a winner, weighted by entries.
+     * Picks a winner, weighted toward whoever holds the most tickets.
      *
-     * Returns the winning ticket number and the size of the pool alongside the
-     * name, so the result can be checked rather than taken on trust. A raffle
-     * nobody can audit is worth less than one they can.
+     * Every ticket is worth as many chances as its owner holds tickets, so a
+     * person's pull is their tickets squared: one ticket is one chance, five
+     * are twenty five, ten are a hundred. One chance per ticket was already
+     * proportional; this leans past that, so the people who earned the most
+     * are favoured more than their share of the pool (asked for 2026-09-30).
+     * Anybody with a ticket can still win.
      *
-     * Accepts a ticket number so a draw can be replayed; without one it uses
+     * Returns the drawn chance and the size of the pool alongside the name, so
+     * the result can be checked rather than taken on trust. A raffle nobody
+     * can audit is worth less than one they can.
+     *
+     * Accepts a chance number so a draw can be replayed; without one it uses
      * crypto rather than Math.random, because this decides who gets a gift card.
      */
-    function drawWinner(monthData, forcedTicket, options) {
+    function drawWinner(monthData, forcedDraw, options) {
         const entries = computeEntries(monthData, options);
         if (!entries.length) return null;
 
-        let ticket;
-        if (Number.isInteger(forcedTicket)) {
-            ticket = forcedTicket;
-        } else if (window.crypto?.getRandomValues) {
-            const buffer = new Uint32Array(1);
-            window.crypto.getRandomValues(buffer);
-            ticket = buffer[0] % entries.length;
-        } else {
-            ticket = Math.floor(Math.random() * entries.length);
+        const held = {};
+        entries.forEach((e) => { held[e.associate] = (held[e.associate] || 0) + 1; });
+        const chances = entries.reduce((sum, e) => sum + held[e.associate], 0);
+
+        const draw = Number.isInteger(forcedDraw) ? forcedDraw : randomBelow(chances);
+
+        // Walk the tickets in order, each covering as many chances as its owner
+        // holds, until one covers the drawn number.
+        let ticket = 0;
+        let covered = held[entries[0].associate];
+        while (draw >= covered && ticket < entries.length - 1) {
+            ticket += 1;
+            covered += held[entries[ticket].associate];
         }
 
         const winning = entries[ticket];
-        const held = entries.filter((e) => e.associate === winning.associate).length;
+        const mine = held[winning.associate];
 
         return {
             associate: winning.associate,
+            draw,
+            chances,
             ticket,
             poolSize: entries.length,
-            entriesHeld: held,
-            odds: `${held} of ${entries.length}`,
+            entriesHeld: mine,
+            chancesHeld: mine * mine,
+            odds: `${mine * mine} of ${chances}`,
             wonBy: winning.detail
         };
     }
@@ -1110,7 +1137,7 @@
             + 'color: ' + GFX.inkSoft + ';">One perfect survey, or one day at '
             + targetLabel + ', puts the first name on the board.</div>'
             + '</div>'
-            + gfxCta(targetLabel, 'One ticket is one pull. The first one can go in today.')
+            + gfxCta(targetLabel, 'Every ticket raises the odds. The first one can go in today.')
         );
     }
 
@@ -1199,7 +1226,7 @@
             gfxHeader(month, teamLabel, pool, earners, gfxDayLabel(through))
             + gfxLegend(totals, axisMax, totals.other > 0)
             + boardHtml
-            + gfxCta(targetLabel, 'The longest bar is not the winner. Every ticket is one pull.')
+            + gfxCta(targetLabel, 'The longest bar is not a lock. Every ticket stacks the odds.')
         );
     }
 

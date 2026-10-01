@@ -698,12 +698,17 @@
         }
 
         host.style.display = 'block';
-        // The ticket number and pool size are shown so the draw can be checked
+        // The drawn number and the pool are shown so the draw can be checked
         // rather than taken on trust.
+        const n = (value) => Number(value).toLocaleString('en-US');
+        const share = (100 * result.chancesHeld / result.chances).toFixed(1);
+        const tickets = result.entriesHeld === 1 ? '1 ticket' : `${n(result.entriesHeld)} tickets`;
+        const worth = result.chancesHeld === 1 ? '1 chance' : `${n(result.chancesHeld)} chances`;
         host.innerHTML = `<strong style="font-size: 1.1em;">🎉 ${esc(result.associate)}</strong>
             <div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.9em;">
-                Ticket ${result.ticket + 1} of ${result.poolSize}. They held ${esc(result.odds)}.<br>
-                That ticket was earned by ${esc(result.wonBy)}.
+                Drew chance ${n(result.draw + 1)} of ${n(result.chances)}. They held ${tickets}, worth ${worth} (${share}% odds).<br>
+                Each person's chances are their tickets times their tickets, so more tickets count for more.<br>
+                The winning ticket was earned by ${esc(result.wonBy)}.
             </div>`;
     }
 
