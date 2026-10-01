@@ -517,44 +517,95 @@
     // ============================================
 
     var audio = null;
+    var master = null;
     var soundOn = true;
 
+    // Made on the first click, which browsers require before a page may make
+    // a sound, and resumed every time in case the browser started it paused.
+    // Everything runs through a compressor so it can be loud without crackling.
     function audioContext() {
         if (!audio) {
             var Ctx = window.AudioContext || window.webkitAudioContext;
-            if (Ctx) audio = new Ctx();
+            if (!Ctx) return null;
+            audio = new Ctx();
+            var squash = audio.createDynamicsCompressor();
+            master = audio.createGain();
+            master.gain.value = 0.9;
+            master.connect(squash);
+            squash.connect(audio.destination);
         }
+        if (audio.state === 'suspended' && audio.resume) audio.resume();
         return audio;
     }
 
-    function tone(freq, length, volume, type, delay) {
+    function tone(freq, length, volume, type, delay, lowpass) {
         var a = soundOn && audioContext();
         if (!a) return;
-        var at = a.currentTime + (delay || 0);
+        var at = a.currentTime + (delay || 0) + 0.02;
         var osc = a.createOscillator();
         var gain = a.createGain();
         osc.type = type || 'square';
         osc.frequency.value = freq;
-        gain.gain.setValueAtTime(volume, at);
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(volume, at + 0.01);
         gain.gain.exponentialRampToValueAtTime(0.0001, at + length);
         osc.connect(gain);
-        gain.connect(a.destination);
+        var out = gain;
+        if (lowpass) {
+            var filter = a.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = lowpass;
+            gain.connect(filter);
+            out = filter;
+        }
+        out.connect(master);
         osc.start(at);
         osc.stop(at + length + 0.05);
     }
 
-    function tick() { tone(1250 + Math.random() * 250, 0.035, 0.035, 'square'); }
+    // A splash of filtered noise under the last chord, like a cymbal.
+    function cymbal(delay) {
+        var a = soundOn && audioContext();
+        if (!a) return;
+        var length = 1.4;
+        var buffer = a.createBuffer(1, Math.floor(a.sampleRate * length), a.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
+        var source = a.createBufferSource();
+        source.buffer = buffer;
+        var highpass = a.createBiquadFilter();
+        highpass.type = 'highpass';
+        highpass.frequency.value = 6000;
+        var gain = a.createGain();
+        var at = a.currentTime + (delay || 0) + 0.02;
+        gain.gain.setValueAtTime(0.4, at);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + length);
+        source.connect(highpass);
+        highpass.connect(gain);
+        gain.connect(master);
+        source.start(at);
+        source.stop(at + length);
+    }
+
+    function tick() { tone(1700 + Math.random() * 300, 0.045, 0.4, 'square', 0, 4500); }
 
     function fanfare() {
         var notes = [523.25, 659.25, 783.99, 1046.5];
-        notes.forEach(function (f, i) { tone(f, 0.22, 0.11, 'triangle', i * 0.1); });
-        notes.forEach(function (f) { tone(f, 1.2, 0.06, 'triangle', 0.45); });
+        notes.forEach(function (f, i) { tone(f, 0.26, 0.45, 'sawtooth', i * 0.11, 2800); });
+        notes.forEach(function (f) { tone(f, 1.5, 0.25, 'sawtooth', 0.46, 2400); });
+        cymbal(0.46);
     }
 
+    // Turning the sound on plays a ding, so it can be checked before the
+    // meeting without drawing anybody.
     soundBtn.addEventListener('click', function () {
         soundOn = !soundOn;
         soundBtn.textContent = soundOn ? '🔊' : '🔇';
         soundBtn.setAttribute('aria-label', soundOn ? 'Sound is on' : 'Sound is off');
+        if (soundOn) {
+            tone(1046.5, 0.5, 0.45, 'triangle');
+            tone(1568, 0.6, 0.3, 'triangle', 0.12);
+        }
     });
 
     // ============================================

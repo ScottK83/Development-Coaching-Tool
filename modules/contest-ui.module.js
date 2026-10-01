@@ -142,6 +142,7 @@
                     <button type="button" id="contestCopyBtn" class="btn-secondary" style="background: #00695c; color: white;">📣 Post to Teams</button>
                     <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
                     <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
+                    <a id="contestRaffleLink" href="raffle" target="_blank" rel="noopener" class="btn-secondary" style="background: #ad1457; color: white; text-decoration: none; display: inline-flex; align-items: center;">🎉 Open the raffle screen</a>
                 </div>
                 <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
                 <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
@@ -689,6 +690,17 @@
         if (typeof copy === 'function') copy(text, { message: 'Post copied. Paste it straight into Teams.' });
     }
 
+    /**
+     * The full-screen raffle for the month on screen. A month with no tickets
+     * yet (the 1st, before anything is pulled) opens without one, and the
+     * raffle page picks last month on its own during a month's first week.
+     */
+    function raffleHref() {
+        const monthKey = monthKeyFor(document.getElementById('contestDate')?.value);
+        const tickets = contest()?.computeEntries(currentMonthData()) || [];
+        return monthKey && tickets.length ? 'raffle?month=' + monthKey : 'raffle';
+    }
+
     function resetDraw() {
         drawn = [];
         const host = document.getElementById('contestDrawResult');
@@ -909,6 +921,7 @@
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
             document.getElementById('contestDrawBtn')?.addEventListener('click', draw);
+            document.getElementById('contestRaffleLink')?.addEventListener('click', (event) => { event.currentTarget.href = raffleHref(); });
             rendered = true;
         }
 

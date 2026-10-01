@@ -28,6 +28,22 @@ suite('raffle page: the winner comes from the contest module', (t) => {
     t.check('it has no draw of its own: crypto stays in the module', !/getRandomValues/.test(html));
 });
 
+suite('raffle page: the Contest panel links to it', (t) => {
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
+
+    t.check('there is a link to the raffle screen', /id="contestRaffleLink" href="raffle"/.test(ui));
+    t.check('it opens in its own tab', /id="contestRaffleLink"[^>]*target="_blank"/.test(ui));
+    t.check('and carries the month on screen when it has tickets', /'raffle\?month=' \+ monthKey/.test(ui));
+});
+
+suite('raffle page: the sound is resumed, not left paused', (t) => {
+    const html = page();
+
+    // A browser can start page audio paused, and a paused context plays
+    // nothing without saying why. That was the "no sound" on 2026-09-30.
+    t.check('it resumes a suspended context', /state === 'suspended'[^\n]*resume\(\)/.test(html));
+});
+
 suite('raffle page: it reads the saved month and writes nothing', (t) => {
     const html = page();
 
