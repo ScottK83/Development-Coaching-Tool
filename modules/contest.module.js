@@ -135,8 +135,9 @@
                 if (!Number.isFinite(adherence)) return;
                 const week = weekStartOf(date);
                 const month = monthOf(date);
-                (buckets[name] = buckets[name] || { weeks: {}, lastDay: {}, month: [] });
+                (buckets[name] = buckets[name] || { weeks: {}, firstDay: {}, lastDay: {}, month: [] });
                 (buckets[name].weeks[week] = buckets[name].weeks[week] || []).push(adherence);
+                if (!(buckets[name].firstDay[week] <= date)) buckets[name].firstDay[week] = date;
                 if (!(buckets[name].lastDay[week] >= date)) buckets[name].lastDay[week] = date;
                 buckets[name].month.push(adherence);
             });
@@ -164,8 +165,12 @@
                 const monthEnd = monthEndOf(bucket.lastDay[week]);
                 const closes = monthEnd < sunday ? monthEnd : sunday;
                 if (closes < asOf && average >= target) {
+                    // The week as this month saw it: the week of Aug 31 is the
+                    // week of Sept 1 in September's contest.
+                    const monthStart = bucket.firstDay[week].slice(0, 8) + '01';
                     entries.push({
                         associate: name, reason: 'weekly-adherence', on: week,
+                        from: week < monthStart ? monthStart : week,
                         detail: `${average.toFixed(1)}% across ${values.length} day${values.length === 1 ? '' : 's'}, week of ${week}`,
                         days: values.length
                     });
@@ -254,6 +259,29 @@
     // THE DRAW
     // ============================================
 
+    /**
+     * Which ticket won, in words for a room: "a perfect survey", "adherence on
+     * September 9". No percentages, since it goes on a shared screen.
+     *
+     * A survey gets no date. Surveys read off a week or month upload are filed
+     * on the last day that upload covers, not the day they came in, so a date
+     * on one could name a day the associate knows they had no survey.
+     */
+    function describeTicket(entry) {
+        if (!entry) return '';
+        const day = (iso) => {
+            const [, m, d] = String(iso).split('-').map(Number);
+            return GFX_MONTHS[m - 1] + ' ' + d;
+        };
+        if (entry.reason === 'perfect-survey') return 'a perfect survey';
+        if (entry.reason === 'daily-adherence') return 'adherence on ' + day(entry.on);
+        if (entry.reason === 'weekly-adherence') return 'adherence for the week of ' + day(entry.from || entry.on);
+        if (entry.reason === 'monthly-adherence') {
+            return 'adherence for all of ' + GFX_MONTHS[Number(String(entry.on).split('-')[1]) - 1];
+        }
+        return '';
+    }
+
     /** A whole number from 0 to n - 1, every one exactly as likely. */
     function randomBelow(n) {
         if (window.crypto?.getRandomValues) {
@@ -319,7 +347,9 @@
             entriesHeld: mine,
             chancesHeld: mine * mine,
             odds: `${mine * mine} of ${chances}`,
-            wonBy: winning.detail
+            reason: winning.reason,
+            wonBy: winning.detail,
+            wonWith: describeTicket(winning)
         };
     }
 
@@ -2212,6 +2242,7 @@
         buildLeaderboard,
         buildAdherenceSummary,
         drawWinner,
+        describeTicket,
         buildStandingsPost,
         buildCheckinPost,
         buildStandingsGraphicHtml,

@@ -212,6 +212,15 @@
         color: var(--ink-soft);
     }
 
+    .won-with {
+        min-height: 1.3em;
+        margin-top: 2px;
+        font-size: clamp(0.95rem, 1.7vw, 1.2rem);
+        font-weight: 700;
+        color: var(--ink-soft);
+    }
+    .won-with:not(:empty) { animation: rise 400ms ease-out 500ms both; }
+
     .stamp {
         position: absolute;
         right: clamp(18px, 4vw, 46px);
@@ -338,6 +347,7 @@
                     <div class="label" id="label">Who's it going to be?</div>
                     <div class="window" id="window"><div class="name" id="name">?</div></div>
                     <div class="count" id="count" aria-live="polite"></div>
+                    <div class="won-with" id="wonWith"></div>
                 </div>
             </div>
             <div class="stamp" aria-hidden="true">WINNER</div>
@@ -360,7 +370,7 @@
 
     var el = function (id) { return document.getElementById(id); };
     var title = el('title'), pool = el('pool'), label = el('label'), nameEl = el('name'),
-        windowEl = el('window'), count = el('count'), go = el('go'), wrap = el('ticketWrap'),
+        windowEl = el('window'), count = el('count'), wonWith = el('wonWith'), go = el('go'), wrap = el('ticketWrap'),
         winnersEl = el('winners'), soundBtn = el('sound');
 
     var monthData = null;
@@ -704,6 +714,7 @@
         wrap.classList.remove('won');
         label.textContent = 'Drawing...';
         count.textContent = '';
+        wonWith.textContent = '';
         nameEl.removeAttribute('title');
 
         var steps = reduced ? 8 : 36;
@@ -727,6 +738,10 @@
             label.textContent = 'And the winner is';
             setName(result.associate, false);
             count.textContent = '🎟️ ' + plural(result.entriesHeld, 'ticket', 'tickets');
+            if (result.wonWith) {
+                wonWith.textContent = (result.reason === 'perfect-survey' ? '⭐' : '⏰')
+                    + ' Winning ticket: ' + result.wonWith;
+            }
             // The check, for anyone who hovers: same numbers the Contest panel shows.
             nameEl.title = 'Drew chance ' + (result.draw + 1).toLocaleString('en-US') + ' of '
                 + result.chances.toLocaleString('en-US') + '. '

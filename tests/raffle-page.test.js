@@ -26,6 +26,7 @@ suite('raffle page: the winner comes from the contest module', (t) => {
     t.check('it draws with drawWinner', /contest\(\)\.drawWinner\(/.test(html));
     t.check('and skips anyone already drawn', /drawWinner\([^)]*exclude:\s*drawn/.test(html));
     t.check('it has no draw of its own: crypto stays in the module', !/getRandomValues/.test(html));
+    t.check('the winning ticket is worded by the module', /result\.wonWith/.test(html) && !/perfect survey'/.test(html));
 });
 
 suite('raffle page: the Contest panel links to it', (t) => {

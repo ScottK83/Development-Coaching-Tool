@@ -752,6 +752,7 @@
         host.innerHTML = `<div style="text-align: center; padding: 8px 0;">
                 <div style="font-size: 2.4em; font-weight: 800; line-height: 1.2;">🎉 ${esc(result.associate)}</div>
                 <div style="margin-top: 6px; font-size: 1.1em; color: var(--text-secondary);">${tickets}</div>
+                ${result.wonWith ? `<div style="margin-top: 4px; color: var(--text-secondary);">Winning ticket: ${esc(result.wonWith)}</div>` : ''}
             </div>
             ${earlier.length ? `<div style="text-align: center; font-size: 0.9em; color: var(--text-secondary);">Already drawn: ${earlier.map(esc).join(', ')}</div>` : ''}
             <details style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">

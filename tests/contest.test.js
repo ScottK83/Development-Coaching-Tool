@@ -228,6 +228,30 @@ suite('contest: nobody is drawn twice', (t) => {
         contest.drawWinner(data, undefined, { exclude: ['Alyssa Dimes', 'Chris Vale'] }), null);
 });
 
+suite('contest: the draw says which ticket won, in words for a room', (t) => {
+    const contest = load(t);
+
+    const data = month({
+        '2026-09-01': { 'Chris Vale': { perfectSurveys: 1, adherence: 99 } },
+        '2026-09-02': { 'Chris Vale': { adherence: 99 } }
+    });
+    const entries = contest.computeEntries(data, { asOf: '2026-10-01' });
+    const said = (reason) => contest.describeTicket(entries.find((e) => e.reason === reason));
+
+    // A survey from a week or month upload is filed on the upload's last day,
+    // so a date on it could be a day the associate had no survey.
+    t.equal('a survey ticket has no date', said('perfect-survey'), 'a perfect survey');
+    t.equal('a day on adherence names the day', said('daily-adherence'), 'adherence on September 1');
+    // Sept 1 is a Tuesday; the week's Monday is Aug 31, which is not September's.
+    t.equal('the first week reads from the 1st', said('weekly-adherence'), 'adherence for the week of September 1');
+    t.equal('the month names the month', said('monthly-adherence'), 'adherence for all of September');
+    t.check('no percentages on a shared screen', entries.every((e) => !/%/.test(contest.describeTicket(e))));
+
+    const won = contest.drawWinner(data, 0, { asOf: '2026-10-01' });
+    t.equal('the draw carries it', won.wonWith, contest.describeTicket(entries[0]));
+    t.equal('with the kind of ticket', won.reason, entries[0].reason);
+});
+
 suite('contest: a week the month cuts off pays when the month ends', (t) => {
     const contest = load(t);
 
