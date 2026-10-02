@@ -128,7 +128,7 @@ function openRaffle(monthData, search, draws) {
     };
     const location = { pathname: '/raffle', search: search || '' };
     const sandbox = {
-        document, location, URLSearchParams, Promise, Math, Date, String, Number, Array, Object, JSON, Error,
+        document, location, URLSearchParams, Promise, Math, Date, String, Number, Array, Object, JSON, Error, atob, btoa,
         innerWidth: 1200, innerHeight: 800, devicePixelRatio: 1,
         matchMedia: () => ({ matches: false }),
         addEventListener() {},
@@ -168,54 +168,62 @@ function openRaffle(monthData, search, draws) {
 
 const bowl = { days: { '2026-09-08': { 'Ann Zeta': { perfectSurveys: 3 }, 'Bo Yu': { perfectSurveys: 2 }, 'Cy Vale': { perfectSurveys: 1 } } } };
 
-suite('raffle page: out of the raffle strikes a winner off and draws again', async (t) => {
-    // Chances are tickets squared: Ann 9 (0-8), Bo 4, Cy 1. Draw 0 is Ann.
+// What the address remembers, unscrambled.
+function sittingIn(search) {
+    const packed = new URLSearchParams(search).get('sitting');
+    return packed ? JSON.parse(Buffer.from(packed, 'base64url').toString('utf8')) : null;
+}
+
+suite('raffle page: out of the raffle takes them off the screen and draws again', async (t) => {
+    // Chances are tickets squared: Ann 9 (0-8), Bo 4, Cy 1. Draw 0 is the
+    // first person still in the bowl.
     const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0, 0]);
     await r.settle();
 
     r.byId.go.click();
     r.flush();
-    t.equal('Ann is drawn first', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
-    t.check('her name has an x next to it', r.chips()[0].hasX);
+    r.byId.go.click();
+    r.flush();
+    t.equal('Ann then Bo are drawn', r.chips().map((c) => c.name).join(','), 'Ann Zeta,Bo Yu');
+    t.check('each name has an x next to it', r.chips().every((c) => c.hasX));
 
     const asked = r.takeOut(0, 'Out of the raffle');
     t.check('the x asks which way out', !!asked.menu && asked.menu.children.length === 2);
     r.flush();
-    const after = r.chips();
-    t.check('she is struck off, and loses the x', after[0].out && !after[0].hasX);
-    t.equal('a replacement is drawn, and it is not her', after[1] && after[1].name, 'Bo Yu');
-    t.check('the replacement keeps an x of its own', after[1].hasX && !after[1].out);
-    t.equal('the address remembers both, in order', r.location.search, '?month=2026-09&out=Ann+Zeta&won=Bo+Yu');
-
-    r.byId.go.click();
-    r.flush();
-    t.equal('the next prize skips both of them', r.chips()[2] && r.chips()[2].name, 'Cy Vale');
+    t.equal('she is gone from the screen, and the new winner goes on the end', r.chips().map((c) => c.name).join(','), 'Bo Yu,Cy Vale');
+    t.check('the address does not spell out her name', !/Ann/i.test(r.location.search));
+    t.equal('but it still knows she is out', JSON.stringify(sittingIn(r.location.search)),
+        JSON.stringify({ won: ['Bo Yu', 'Cy Vale'], out: ['Ann Zeta'] }));
+    t.equal('and she cannot come up again', r.byId.go.textContent, 'Everyone has been drawn');
+    t.check('nothing on the ticket says it was a redraw', !/again/i.test(r.byId.label.textContent));
 });
 
 suite('raffle page: out of this round puts their tickets back for the next prize', async (t) => {
-    const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0]);
+    const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0, 0]);
     await r.settle();
 
     r.byId.go.click();
     r.flush();
-    t.equal('Ann is drawn first', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
+    r.byId.go.click();
+    r.flush();
+    t.equal('Ann then Bo are drawn', r.chips().map((c) => c.name).join(','), 'Ann Zeta,Bo Yu');
 
-    // Watch every name that flashes past while this prize is drawn again.
+    // Watch every name that flashes past while the next prize is drawn.
     const shown = [];
     let current = r.byId.name.textContent;
     Object.defineProperty(r.byId.name, 'textContent', { get: () => current, set: (v) => { current = v; shown.push(v); } });
 
     r.takeOut(0, 'Out of this round');
     r.flush();
-    t.equal('Bo takes her spot, and her chip is gone', r.chips().map((c) => c.name).join(','), 'Bo Yu');
-    t.check('she does not even flash past on the redraw', shown.length > 1 && !shown.includes('Ann Zeta'));
-    t.equal('the address does not list her as out', r.location.search, '?month=2026-09&won=Bo+Yu');
-    // Ann's 3 and Cy's 1: Bo's 2 left with Bo.
-    t.equal('her tickets are back in the bowl', r.byId.pool.textContent, '4 tickets left in the bowl');
+    t.equal('she is gone from the screen, and the new winner goes on the end', r.chips().map((c) => c.name).join(','), 'Bo Yu,Cy Vale');
+    t.check('she does not even flash past on that draw', shown.length > 1 && !shown.includes('Ann Zeta'));
+    t.equal('the address does not hold her as out', JSON.stringify(sittingIn(r.location.search)),
+        JSON.stringify({ won: ['Bo Yu', 'Cy Vale'], out: [] }));
+    t.equal('her tickets are back in the bowl', r.byId.pool.textContent, '3 tickets left in the bowl');
 
     r.byId.go.click();
     r.flush();
-    t.equal('and she can win the next prize', r.chips().map((c) => c.name).join(','), 'Bo Yu,Ann Zeta');
+    t.equal('and she can win the next prize', r.chips().map((c) => c.name).join(','), 'Bo Yu,Cy Vale,Ann Zeta');
 });
 
 suite('raffle page: the x only shows with the mouse on the chip', (t) => {
@@ -223,21 +231,29 @@ suite('raffle page: the x only shows with the mouse on the chip', (t) => {
     t.check('it starts hidden', /\.winners \.skip \{[^}]*opacity: 0;/.test(html));
     t.check('and shows on hover', /\.winners li:hover \.skip/.test(html));
     t.check('or when it has keyboard focus', /\.winners \.skip:focus-visible/.test(html));
+    t.check('nothing is ever crossed out on screen', !/line-through/.test(html));
 });
 
-suite('raffle page: a link can start with people already drawn and struck off', async (t) => {
+suite('raffle page: a link or a refresh picks the sitting back up', async (t) => {
+    // The plain names a hand-made link uses still work.
     const r = openRaffle(bowl, '?month=2026-09&won=ann+zeta&out=Bo%20Yu&out=Nobody%20Here', [0]);
     await r.settle();
 
-    const restored = r.chips();
-    t.equal('the winner and the struck name are back on screen', restored.map((c) => c.name).join(','), 'Ann Zeta,Bo Yu');
-    t.check('the struck name is struck', restored[1].out && !restored[1].hasX);
-    t.check('a name with no tickets is passed over', !restored.some((c) => c.name === 'Nobody Here'));
+    t.equal('only the winner is back on screen', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
+    t.check('the names in the address are scrambled straight away', !/Ann|Bo|Nobody/i.test(r.location.search));
+    t.equal('a name with no tickets is passed over', JSON.stringify(sittingIn(r.location.search)),
+        JSON.stringify({ won: ['Ann Zeta'], out: ['Bo Yu'] }));
     t.equal('the button carries on the draw', r.byId.go.textContent, '🎲 Draw another');
 
     r.byId.go.click();
     r.flush();
-    t.equal('and neither of them can come up again', r.chips()[2] && r.chips()[2].name, 'Cy Vale');
+    t.equal('and nobody out can come up again', r.chips().map((c) => c.name).join(','), 'Ann Zeta,Cy Vale');
+
+    // Refresh: the scrambled address brings back exactly this.
+    const again = openRaffle(bowl, r.location.search, []);
+    await again.settle();
+    t.equal('a refresh shows the same winners in the same order', again.chips().map((c) => c.name).join(','), 'Ann Zeta,Cy Vale');
+    t.equal('and still keeps Bo out', again.byId.go.textContent, 'Everyone has been drawn');
 });
 
 suite('raffle page: Enter on an x is one strike-off, not a draw as well', (t) => {
@@ -255,6 +271,6 @@ suite('raffle page: the Contest panel draw has the same x', (t) => {
     t.check('out of this round puts them back and draws without them',
         /drawn = drawn\.filter\(\(name\) => name !== result\.associate\);\s*draw\(result\.associate\);/.test(ui));
     t.check('the draw leaves them out of that one prize', /exclude: drawn\.concat\(away \? \[away\] : \[\]\)/.test(ui));
-    t.check('struck names are crossed out in the list', /struck\.includes\(name\) \? `<s>/.test(ui));
+    t.check('anybody taken out is left off the list', /earlier\.filter\(\(name\) => !struck\.includes\(name\)\)/.test(ui) && !/<s>/.test(ui));
     t.check('Start the draw over clears them too', /drawn = \[\];\s*struck = \[\];/.test(ui));
 });

@@ -16,8 +16,9 @@
     It reads the sync settings the app keeps in this browser, so it works on
     the computer the Coaching Tool is used on. Nothing is written anywhere:
     who has been drawn, and who was taken out of the raffle with the x, rides
-    in the address (?won=...&out=...) so a refresh keeps the sitting. Out of
-    this round only puts their tickets back, so it leaves nothing to remember.
+    scrambled in the address (?sitting=...) so a refresh keeps the sitting.
+    Out of this round only puts their tickets back, so it leaves nothing to
+    remember. Nobody taken out is ever shown, so a screenshot shows winners.
 -->
 <style>
     :root {
@@ -356,13 +357,6 @@
     .winners .choice button:hover, .winners .choice button:focus-visible { background: rgba(255, 255, 255, 0.18); outline: none; }
     .winners .choice small { display: block; margin-top: 2px; font-weight: 400; font-size: 0.8rem; color: var(--text-soft); }
 
-    .winners li.skipped, .winners li.leaving {
-        color: var(--text-soft);
-        border-color: rgba(255, 255, 255, 0.15);
-        text-decoration: line-through;
-        opacity: 0.7;
-    }
-
     @keyframes rise {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: none; }
@@ -447,6 +441,8 @@
     var monthKey = '';
     // Out of this round only: left out of the one redraw, then back in the bowl.
     var sittingOut = '';
+    // Out of the raffle: still in drawn, never on screen, kept for the address.
+    var outOfRaffle = [];
     // The chip whose two choices are open, if any.
     var choosing = null;
 
@@ -776,9 +772,7 @@
     // THE DRAW
     // ============================================
 
-    // A replacement draw goes in the line right after the person it replaces,
-    // so the order of the prizes still reads top to bottom.
-    function draw(replacing) {
+    function draw() {
         if (spinning || !monthData || !contest()) return;
         closeChoice();
         var result = contest().drawWinner(monthData, undefined, { exclude: drawn.concat(sittingOut ? [sittingOut] : []) });
@@ -788,7 +782,7 @@
         go.disabled = true;
         document.body.classList.add('spinning');
         wrap.classList.remove('won');
-        label.textContent = replacing ? 'Drawing again...' : 'Drawing...';
+        label.textContent = 'Drawing...';
         count.textContent = '';
         wonWith.textContent = '';
         nameEl.removeAttribute('title');
@@ -829,9 +823,8 @@
             fanfare();
             celebrate();
 
-            addChip(result.associate, replacing);
-            // Out of this round: their chip goes, and their tickets go back in.
-            if (replacing && replacing.classList.contains('leaving')) winnersEl.removeChild(replacing);
+            addChip(result.associate);
+            // Out of this round is over once this prize lands: their tickets go back in.
             sittingOut = '';
             remember();
 
@@ -850,7 +843,9 @@
     // WINNERS SO FAR
     // ============================================
 
-    function addChip(name, after) {
+    // Only winners are ever on screen. Anybody taken out simply disappears, so
+    // a screenshot of the list shows who won and nothing else.
+    function addChip(name) {
         var chip = document.createElement('li');
         chip.setAttribute('data-name', name);
         var text = document.createElement('span');
@@ -864,19 +859,9 @@
         skip.addEventListener('click', function () { openChoice(chip); });
         chip.appendChild(text);
         chip.appendChild(skip);
-        if (after && after.parentNode === winnersEl) winnersEl.insertBefore(chip, after.nextSibling);
-        else winnersEl.appendChild(chip);
+        winnersEl.appendChild(chip);
         return chip;
     }
-
-    function crossOut(chip, how) {
-        chip.classList.add(how);
-        chip.firstChild.textContent = chip.getAttribute('data-name');
-        var skip = chip.querySelector('.skip');
-        if (skip) chip.removeChild(skip);
-    }
-
-    function markStruck(chip) { crossOut(chip, 'skipped'); }
 
     function clearTicketIf(name) {
         if (onTicket !== name) return;
@@ -889,42 +874,39 @@
         onTicket = '';
     }
 
-    // Out of the raffle: not here, or doesn't qualify. They stay out of the
-    // bowl for the rest of the sitting (they are still in drawn), and the next
-    // name takes their spot.
+    // Either way out: the chip goes, the address forgets them as a winner,
+    // and the next name drawn goes on the end of the list.
+    function takeOut(chip, name) {
+        winnersEl.removeChild(chip);
+        remember();
+        if (ticketsLeft() > 0) {
+            draw();
+            return;
+        }
+        sittingOut = '';
+        clearTicketIf(name);
+        showPool();
+        go.disabled = ticketsLeft() === 0;
+        go.textContent = winnersEl.children.length ? '🎲 Draw another' : '🎲 Draw a winner';
+    }
+
+    // Out of the raffle: not here, or doesn't qualify. They stay in drawn, so
+    // they stay out of the bowl for the rest of the sitting.
     function strikeOff(chip) {
         if (spinning) return;
         var name = chip.getAttribute('data-name');
-        markStruck(chip);
-        remember();
-        if (ticketsLeft() > 0) {
-            draw(chip);
-            return;
-        }
-        clearTicketIf(name);
-        showPool();
+        if (outOfRaffle.indexOf(name) === -1) outOfRaffle.push(name);
+        takeOut(chip, name);
     }
 
-    // Out of this round: the prize is drawn again without them, and once it
+    // Out of this round: the next prize is drawn without them, and once it
     // lands their tickets go back in the bowl for the prizes after it.
     function outThisRound(chip) {
         if (spinning) return;
         var name = chip.getAttribute('data-name');
         if (drawn.indexOf(name) > -1) drawn.splice(drawn.indexOf(name), 1);
         sittingOut = name;
-        crossOut(chip, 'leaving');
-        if (ticketsLeft() > 0) {
-            draw(chip);
-            return;
-        }
-        // Nobody else to draw this prize for: they just go back in the bowl.
-        sittingOut = '';
-        winnersEl.removeChild(chip);
-        clearTicketIf(name);
-        remember();
-        showPool();
-        go.disabled = ticketsLeft() === 0;
-        go.textContent = drawn.length ? '🎲 Draw another' : '🎲 Draw a winner';
+        takeOut(chip, name);
     }
 
     function closeChoice() {
@@ -962,17 +944,36 @@
         menu.firstChild.focus();
     }
 
-    // The sitting so far rides in the address, in the order it happened
-    // (?won=...&out=...), so a refresh in the middle of the meeting picks up
-    // where it left off, and a link can start a draw with people already out.
+    // ============================================
+    // THE SITTING, IN THE ADDRESS
+    // ============================================
+
+    // The winners in order, and who is out of the raffle, ride in the address
+    // so a refresh in the middle of the meeting picks up where it left off.
+    // They are scrambled (?sitting=...) because the address bar shows up in a
+    // screenshot and nobody should read who was taken out. Plain ?won= and
+    // ?out= names still work for a hand-made link, and get scrambled on load.
+    function packSitting(sitting) {
+        return window.btoa(unescape(encodeURIComponent(JSON.stringify(sitting))))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function unpackSitting(packed) {
+        try {
+            var text = decodeURIComponent(escape(window.atob(String(packed).replace(/-/g, '+').replace(/_/g, '/'))));
+            var sitting = JSON.parse(text);
+            return sitting && typeof sitting === 'object' ? sitting : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function remember() {
         if (!monthKey || !window.history || !window.history.replaceState) return;
+        var won = Array.prototype.map.call(winnersEl.children, function (chip) { return chip.getAttribute('data-name'); });
         var params = new URLSearchParams();
         params.set('month', monthKey);
-        Array.prototype.forEach.call(winnersEl.children, function (chip) {
-            if (chip.classList.contains('leaving')) return;
-            params.append(chip.classList.contains('skipped') ? 'out' : 'won', chip.getAttribute('data-name'));
-        });
+        if (won.length || outOfRaffle.length) params.set('sitting', packSitting({ won: won, out: outOfRaffle }));
         try {
             window.history.replaceState(null, '', window.location.pathname + '?' + params.toString());
         } catch (e) { /* the draw works the same without it */ }
@@ -985,13 +986,25 @@
         contest().buildLeaderboard(monthData).forEach(function (row) {
             inBowl[row.associate.toLowerCase()] = row.associate;
         });
-        new URLSearchParams(window.location.search).forEach(function (value, key) {
-            if (key !== 'won' && key !== 'out') return;
+        var params = new URLSearchParams(window.location.search);
+        var sitting = unpackSitting(params.get('sitting') || '') || {};
+        var won = params.getAll('won').concat(Array.isArray(sitting.won) ? sitting.won : []);
+        var out = params.getAll('out').concat(Array.isArray(sitting.out) ? sitting.out : []);
+        function known(value) {
             var name = inBowl[String(value).trim().toLowerCase()];
-            if (!name || drawn.indexOf(name) > -1) return;
+            return name && drawn.indexOf(name) === -1 ? name : '';
+        }
+        out.forEach(function (value) {
+            var name = known(value);
+            if (!name) return;
             drawn.push(name);
-            var chip = addChip(name);
-            if (key === 'out') markStruck(chip);
+            outOfRaffle.push(name);
+        });
+        won.forEach(function (value) {
+            var name = known(value);
+            if (!name) return;
+            drawn.push(name);
+            addChip(name);
         });
         remember();
     }
