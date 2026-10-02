@@ -149,10 +149,12 @@ suite('high five: names the period by its own shape', (t) => {
     t.equal('a month to date is a month', mtd.when, 'this month');
     t.equal('and it compares against last month', mtd.prior, 'last month');
 
-    t.equal('a finished month is too',
-        pulse.describeWeekRecency('k', of('month', '2026-07-31'), THURSDAY).when, 'this month');
+    // A month that is already over is named, because in August "this month"
+    // is August. See private-round-window.test.js.
+    t.equal('a finished month is named',
+        pulse.describeWeekRecency('k', of('month', '2026-07-31'), THURSDAY).when, 'in July');
     t.equal('a rebuilt month as well',
-        pulse.describeWeekRecency('k', of('month-agg', '2026-07-31'), THURSDAY).when, 'this month');
+        pulse.describeWeekRecency('k', of('month-agg', '2026-07-31'), THURSDAY).when, 'in July');
     t.equal('a quarter is a quarter',
         pulse.describeWeekRecency('k', of('quarter', '2026-06-30'), THURSDAY).when, 'this quarter');
     t.equal('year to date is the year',

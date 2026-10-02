@@ -73,21 +73,37 @@
         return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
+    /**
+     * The lit tab is remembered for the day it was picked, and no longer.
+     *
+     * It used to be remembered outright, so a Monday tab clicked once stayed lit
+     * all week and a Friday private round went out as a Monday Kickoff ("Fresh
+     * week ahead") with nobody having asked for one. Picking Tuesday's plan on a
+     * Wednesday after a holiday still survives a reload that day; the next
+     * morning opens on the day it actually is.
+     */
     function activeDayId() {
         const outreach = mods().dailyOutreach;
         if (!outreach) return 'monday';
-        const today = outreach.planForDate(new Date());
+        const now = new Date();
+        const today = outreach.planForDate(now);
         const fallback = outreach.WEEKDAY_IDS.indexOf(today.id) > -1 ? today.id : 'monday';
         try {
-            const saved = localStorage.getItem(DAY_KEY);
-            return outreach.WEEKDAY_IDS.indexOf(saved) > -1 ? saved : fallback;
+            const saved = JSON.parse(localStorage.getItem(DAY_KEY) || 'null');
+            const pickedToday = saved && saved.on === localIso(now);
+            return pickedToday && outreach.WEEKDAY_IDS.indexOf(saved.day) > -1 ? saved.day : fallback;
         } catch (e) {
+            // A bare day name is the old format, and it is from some other day.
             return fallback;
         }
     }
 
     function setActiveDay(dayId) {
-        try { localStorage.setItem(DAY_KEY, dayId); } catch (e) { /* not persisted */ }
+        try { localStorage.setItem(DAY_KEY, JSON.stringify({ day: dayId, on: localIso(new Date()) })); } catch (e) { /* not persisted */ }
+    }
+
+    function localIso(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
 
     // --- The stretch of time this whole page is measured over ---

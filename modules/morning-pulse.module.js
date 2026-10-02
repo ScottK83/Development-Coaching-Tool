@@ -43,21 +43,25 @@
         date => `Week of ${date} numbers landed on my desk.`,
         date => `Got the latest from the week of ${date} for you.`,
     ];
+    // `when` is describeWeekRecency's word for the stretch the numbers cover:
+    // this week, last week, in September, this year. It used to be "this week"
+    // in every line, so a Last month round said "Hold Time this week, -24s"
+    // over a September against August comparison.
     const JUMP_INTROS = [
-        (label, delta, range) => `Huge improvement in ${label} this week, ${delta}! (${range})`,
-        (label, delta, range) => `Big move in ${label} this week, ${delta}! (${range})`,
-        (label, delta, range) => `Love seeing ${label} move like that this week, ${delta}! (${range})`,
-        (label, delta, range) => `${label} really stood out this week, ${delta}! (${range})`,
-        (label, delta, range) => `You crushed it on ${label} this week, ${delta}! (${range})`,
-        (label, delta, range) => `That swing in ${label} caught my eye this week, ${delta}. (${range})`,
-        (label, delta, range) => `${label} moved in a serious way this week, ${delta}. (${range})`,
-        (label, delta, range) => `Not gonna lie, ${label} at ${delta} this week made me do a double take. (${range})`,
-        (label, delta, range) => `Okay, ${label}! That's a ${delta} swing this week. (${range})`,
-        (label, delta, range) => `Your ${label} is trending the right direction this week, ${delta}. (${range})`,
-        (label, delta, range) => `Seriously though, ${label} moving ${delta} this week is no joke. (${range})`,
-        (label, delta, range) => `Look at ${label} go this week, ${delta}! (${range})`,
-        (label, delta, range) => `${label} took a real shift this week, ${delta}. (${range})`,
-        (label, delta, range) => `Gotta call out your ${label} this week, ${delta}. (${range})`,
+        (label, delta, range, when) => `Huge improvement in ${label} ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `Big move in ${label} ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `Love seeing ${label} move like that ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `${label} really stood out ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `You crushed it on ${label} ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `That swing in ${label} caught my eye ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `${label} moved in a serious way ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Not gonna lie, ${label} at ${delta} ${when} made me do a double take. (${range})`,
+        (label, delta, range, when) => `Okay, ${label}! That's a ${delta} swing ${when}. (${range})`,
+        (label, delta, range, when) => `Your ${label} went the right direction ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Seriously though, ${label} moving ${delta} ${when} is no joke. (${range})`,
+        (label, delta, range, when) => `Look at ${label} go ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `${label} took a real shift ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Gotta call out your ${label} ${when}, ${delta}. (${range})`,
     ];
     const PLUS_SOLID = [
         (label, val) => `Plus you're solid on ${label} at ${val}.`,
@@ -84,7 +88,7 @@
         (l1, v1, l2, v2) => `Honestly, ${l1} at ${v1} and ${l2} at ${v2} speak for themselves.`,
         (l1, v1, l2, v2) => `Love seeing ${l1} (${v1}) and ${l2} (${v2}) both clicking.`,
         (l1, v1, l2, v2) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you've got a lot working for you.`,
-        (l1, v1, l2, v2) => `You nailed it on ${l1} (${v1}) and ${l2} (${v2}) this week.`,
+        (l1, v1, l2, v2) => `You nailed it on ${l1} (${v1}) and ${l2} (${v2}).`,
     ];
     const SURVEY_METRIC_KEYS = new Set(['fcr', 'overallExperience', 'overallExperienceTop3', 'cxRepOverall']);
 
@@ -145,15 +149,15 @@
     }
 
     const PERFECT_SURVEYS_SOLO = [
-        (surveys) => `${surveys} perfect this week. Can't do better than that.`,
+        (surveys) => `${surveys}, every one of them perfect. Can't do better than that.`,
         (surveys) => `${surveys}. Every single one a perfect score. That's special.`,
         (surveys) => `Flawless on all ${surveys}. Huge.`,
         (surveys) => `${surveys} and not one off the mark. Beautiful.`,
         (surveys) => `All ${surveys} perfect. That doesn't happen by accident.`,
     ];
     const PERFECT_SURVEYS_PLUS = [
-        (surveys, label, val) => `${surveys}. Every one perfect. And ${label} at ${val} on top of it? Unreal week.`,
-        (surveys, label, val) => `Flawless on ${surveys} plus ${label} at ${val}. That's a statement week.`,
+        (surveys, label, val) => `${surveys}. Every one perfect. And ${label} at ${val} on top of it? Unreal.`,
+        (surveys, label, val) => `Flawless on ${surveys} plus ${label} at ${val}. That makes a statement.`,
         (surveys, label, val) => `All ${surveys} perfect, and ${label} sitting at ${val}. Wow.`,
         (surveys, label, val) => `${surveys} without a single miss, and ${label} at ${val} to go with it. Love it.`,
         (surveys, label, val) => `${surveys} all perfect scores, and ${label} (${val}) right there with them.`,
@@ -179,39 +183,43 @@
         'Some weeks the numbers don\'t cooperate. Doesn\'t change how I see your effort.',
         'The grind doesn\'t always pay off immediately, but it will. Hang in there.',
         'Not every week is going to be a highlight reel, and that\'s okay.',
-        'I\'d rather have someone who keeps fighting through a tough week, and that\'s you.',
+        'I\'d rather have someone who keeps fighting through a tough stretch, and that\'s you.',
         'Rough stretch, but I\'ve seen what you can do. We\'ll get there.',
         'The effort is there. The results are going to follow.',
         'Listen, not every week lands perfectly. What matters is you keep showing up.',
         'I appreciate the consistency in your effort even when the numbers are stubborn.',
     ];
-    // --- Focus framing pools, keyed by how week vs YTD look together ---
+    // --- Focus framing pools, keyed by how the period vs YTD look together ---
     //
-    // "persistent" — both last week AND YTD are missing target (real trend)
-    // "ytd_only"    — YTD is behind target but last week was fine (reverse the slide)
-    // "week_only"   — last week dipped but YTD is solid (one-week blip)
+    // "persistent" — both the period AND YTD are missing target (real trend)
+    // "ytd_only"    — YTD is behind target but the period was fine (reverse the slide)
+    // "week_only"   — the period dipped but YTD is solid (a blip)
     // "fallback"    — no YTD context available at all
+    //
+    // `when` names the period the value is from (last week, in September,
+    // this year), from describeWeekRecency. Every line used to say "last week",
+    // so a month's number went out labelled as a week's.
     const FOCUS_PERSISTENT = [
-        (label, weekVal, ytdVal, target) => `One thing to zero in on: ${label}. Last week was ${weekVal} and YTD is sitting at ${ytdVal} (target ${target}). This one needs real attention.`,
-        (label, weekVal, ytdVal, target) => `Let's work on ${label} together. Last week at ${weekVal}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
-        (label, weekVal, ytdVal, target) => `The one I really want us to tackle: ${label}. ${weekVal} last week, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
-        (label, weekVal, ytdVal, target) => `${label} is the focus. Week landed at ${weekVal}, YTD at ${ytdVal}, target ${target}. It keeps missing and I want us to change that.`,
+        (label, val, ytdVal, target, when) => `One thing to zero in on: ${label}. You came in at ${val} ${when} and YTD is sitting at ${ytdVal} (target ${target}). This one needs real attention.`,
+        (label, val, ytdVal, target, when) => `Let's work on ${label} together. You landed at ${val} ${when}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
+        (label, val, ytdVal, target, when) => `The one I really want us to tackle: ${label}. ${val} ${when}, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
+        (label, val, ytdVal, target, when) => `${label} is the focus. You came in at ${val} ${when}, YTD at ${ytdVal}, target ${target}. It keeps missing and I want us to change that.`,
     ];
     const FOCUS_YTD_ONLY = [
-        (label, weekVal, ytdVal, target) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. Last week was better at ${weekVal}. Let's stack more weeks like that and pull the YTD back up.`,
-        (label, weekVal, ytdVal, target) => `Last week you had ${label} at ${weekVal}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so we need to keep that momentum going.`,
-        (label, weekVal, ytdVal, target) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but last week's ${weekVal} shows you can do it. Let's repeat.`,
+        (label, val, ytdVal, target, when) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. You were better ${when} at ${val}. Let's keep that going and pull the YTD back up.`,
+        (label, val, ytdVal, target, when) => `You had ${label} at ${val} ${when}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so we need to keep that momentum going.`,
+        (label, val, ytdVal, target, when) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but hitting ${val} ${when} shows you can do it. Let's repeat.`,
     ];
     const FOCUS_WEEK_DIP = [
-        (label, weekVal, ytdVal, target) => `Quick note on ${label}: last week dipped to ${weekVal} but your YTD is solid at ${ytdVal} (target ${target}). Not worried, just want to shake off the blip.`,
-        (label, weekVal, ytdVal, target) => `${label} had an off week at ${weekVal}, but your YTD at ${ytdVal} is still above target (${target}). Let's get back to normal this week.`,
-        (label, weekVal, ytdVal, target) => `Only watch-out: ${label} landed at ${weekVal} last week. YTD ${ytdVal} vs target ${target} says you're fine. Just don't let two in a row slip.`,
+        (label, val, ytdVal, target, when) => `Quick note on ${label}: it dipped to ${val} ${when} but your YTD is solid at ${ytdVal} (target ${target}). Not worried, just want to shake off the blip.`,
+        (label, val, ytdVal, target, when) => `${label} slipped to ${val} ${when}, but your YTD at ${ytdVal} is still above target (${target}). Let's get back to normal.`,
+        (label, val, ytdVal, target, when) => `Only watch-out: ${label} landed at ${val} ${when}. YTD ${ytdVal} vs target ${target} says you're fine. Just don't let it turn into a trend.`,
     ];
     const FOCUS_FALLBACK = [
-        (label, val, target) => `One thing to zero in on: ${label}. Last week at ${val}, target is ${target}.`,
-        (label, val, target) => `Let's work on getting ${label} closer to target (last week ${val} vs ${target}).`,
-        (label, val, target) => `Area to focus on: ${label} came in at ${val} last week, we want ${target}.`,
-        (label, val, target) => `If I had to pick one thing, it'd be ${label}. Last week ${val}, target is ${target}.`,
+        (label, val, target, when) => `One thing to zero in on: ${label}. You came in at ${val} ${when}, target is ${target}.`,
+        (label, val, target, when) => `Let's work on getting ${label} closer to target (${val} ${when} vs ${target}).`,
+        (label, val, target, when) => `Area to focus on: ${label} came in at ${val} ${when}, we want ${target}.`,
+        (label, val, target, when) => `If I had to pick one thing, it'd be ${label}. You landed at ${val} ${when}, target is ${target}.`,
     ];
     const CLOSERS = [
         'Keep it up! Let me know if you need anything.',
@@ -258,7 +266,7 @@
         (name) => `${name}! Fresh week ahead. Let's look at what's going well and set a target. 🎯`,
         (name) => `Top of the week ${name}! Here's your latest numbers and our focus for the days ahead.`,
         (name) => `Rise and shine ${name}! 🌅 Let me share your numbers and set us up for a strong week.`,
-        (name, day) => `${day}'s here ${name}! Quick peek at last week's results and what to aim for this week.`,
+        (name, day) => `${day}'s here ${name}! Quick peek at your results and what to aim for this week.`,
         (name) => `${name}, new week, new opportunity. Let's see what we're working with. 📈`,
         (name) => `Hey ${name}! Starting the week off by looking at your wins and setting a focus. Let's go!`,
     ];
@@ -273,7 +281,7 @@
         (name, day) => `Hey ${name}, ${day} catch up. Let's look at what has landed and where to push. ☕`,
         (name) => `${name}! Here's your latest snapshot and the one thing I want us on. 🎯`,
         (name) => `Morning ${name}! 🌅 Rounding up where your numbers sit and where we go next.`,
-        (name) => `Hey ${name}! Circling back on your results and our focus for the rest of the week.`,
+        (name) => `Hey ${name}! Circling back on your results and where I want us focused.`,
     ];
 
     const MK_TRANSITION = [
@@ -288,30 +296,35 @@
         'Alright, here\'s the play for this week.',
         'Here\'s the one thing I want us to be intentional about.',
     ];
-    // --- Monday kickoff focus pools, keyed by week vs YTD combo ---
+    // --- Kickoff focus pools, keyed by period vs YTD combo ---
+    //
+    // Two time words, because the focus line looks both ways. `when` is the
+    // period the number is from (last week, in September). `ahead` is the
+    // stretch the focus is for: this week, or next week when the tone is
+    // Friday's, which is the day the week in front of us is the next one.
     const MK_FOCUS_PERSISTENT = [
-        (label, weekVal, ytdVal, target) => `This week, let's zero in on ${label}. Last week was ${weekVal} and YTD is at ${ytdVal} vs target ${target}. It's been a pattern and I want us to break it.`,
-        (label, weekVal, ytdVal, target) => `The one to attack: ${label}. Week at ${weekVal}, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
-        (label, weekVal, ytdVal, target) => `Game plan: get ${label} moving. Last week ${weekVal}, YTD ${ytdVal}, we need ${target}. I'll help however you need.`,
-        (label, weekVal, ytdVal, target) => `This week's mission: ${label}. Last week ${weekVal}, YTD ${ytdVal} vs target ${target}. I think you can get there. Let's lock in.`,
-        (label, weekVal, ytdVal, target) => `My ask for you this week: be intentional about ${label}. ${weekVal} last week, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
+        (label, val, ytdVal, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You came in at ${val} ${when} and YTD is at ${ytdVal} vs target ${target}. It's been a pattern and I want us to break it.`,
+        (label, val, ytdVal, target, when) => `The one to attack: ${label}. ${val} ${when}, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
+        (label, val, ytdVal, target, when) => `Game plan: get ${label} moving. ${val} ${when}, ${ytdVal} YTD, we need ${target}. I'll help however you need.`,
+        (label, val, ytdVal, target, when, ahead) => `The mission ${ahead}: ${label}. You landed at ${val} ${when}, YTD ${ytdVal} vs target ${target}. I think you can get there. Let's lock in.`,
+        (label, val, ytdVal, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. ${val} ${when}, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
     ];
     const MK_FOCUS_YTD_ONLY = [
-        (label, weekVal, ytdVal, target) => `Love that last week's ${label} was ${weekVal}. Now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is pulling that number up.`,
-        (label, weekVal, ytdVal, target) => `Your focus: stack another week like last week's ${label} (${weekVal}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
-        (label, weekVal, ytdVal, target) => `${label} is the one to keep pushing. Last week at ${weekVal} was the right direction. YTD is at ${ytdVal}, target ${target}, so let's keep stringing good weeks together.`,
-        (label, weekVal, ytdVal, target) => `Here's the one to own: ${label}. Last week's ${weekVal} shows you can hit it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
+        (label, val, ytdVal, target, when) => `Love that ${label} came in at ${val} ${when}. Now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is pulling that number up.`,
+        (label, val, ytdVal, target, when) => `Your focus: repeat what you did on ${label} ${when} (${val}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
+        (label, val, ytdVal, target, when) => `${label} is the one to keep pushing. Hitting ${val} ${when} was the right direction. YTD is at ${ytdVal}, target ${target}, so let's keep stringing those together.`,
+        (label, val, ytdVal, target, when) => `Here's the one to own: ${label}. Hitting ${val} ${when} shows you can do it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
     ];
     const MK_FOCUS_WEEK_DIP = [
-        (label, weekVal, ytdVal, target) => `Only thing on my radar: ${label} dipped to ${weekVal} last week. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-week thing. Just don't let it become two.`,
-        (label, weekVal, ytdVal, target) => `Watch-out for this week: ${label}. Last week was ${weekVal}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
-        (label, weekVal, ytdVal, target) => `One thing to keep in mind: ${label} had an off week at ${weekVal}. YTD at ${ytdVal}, target ${target}. You're fine, just shake off the dip.`,
+        (label, val, ytdVal, target, when) => `Only thing on my radar: ${label} dipped to ${val} ${when}. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-off. Just don't let it turn into a trend.`,
+        (label, val, ytdVal, target, when, ahead) => `Watch-out for ${ahead}: ${label}. You landed at ${val} ${when}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
+        (label, val, ytdVal, target, when) => `One thing to keep in mind: ${label} slipped to ${val} ${when}. YTD at ${ytdVal}, target ${target}. You're fine, just shake off the dip.`,
     ];
     const MK_FOCUS_FALLBACK = [
-        (label, val, target) => `This week, let's zero in on ${label}. Last week was ${val}, target is ${target}.`,
-        (label, val, target) => `The one to attack: ${label}. Last week ${val} vs target ${target}. Let's close that gap.`,
-        (label, val, target) => `This week's mission: ${label}. Last week ${val}, target ${target}. I think you can get there.`,
-        (label, val, target) => `My ask for you this week: be intentional about ${label}. Last week ${val}, aiming for ${target}.`,
+        (label, val, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You came in at ${val} ${when}, target is ${target}.`,
+        (label, val, target, when) => `The one to attack: ${label}. ${val} ${when} vs target ${target}. Let's close that gap.`,
+        (label, val, target, when, ahead) => `The mission ${ahead}: ${label}. You landed at ${val} ${when}, target ${target}. I think you can get there.`,
+        (label, val, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. You came in at ${val} ${when}, aiming for ${target}.`,
     ];
     const MK_ALL_GOOD = [
         'You\'re hitting target across the board. Incredible work. Let\'s keep that going this week!',
@@ -1159,24 +1172,40 @@
     // Build the focal-text section of a Monday kickoff or weekly check-in
     // based on the chosen smart focal point. Picks the right randomized
     // template pool for the context.
-    function buildFocalText(focal, pools) {
+    // when: the period the value is from. ahead: the stretch the focus is for.
+    // Both default to the words every line used to hardcode.
+    function buildFocalText(focal, pools, when, ahead) {
         if (!focal) return '';
         const label = focal.label;
         const target = fmtTarget(focal);
-        const weekVal = fmtVal(focal);
+        const val = fmtVal(focal);
         const ytdVal = focal.ytdValue !== null && focal.ytdValue !== undefined
             ? fmtVal(focal.metricKey, focal.ytdValue)
             : null;
+        const said = when || 'last week';
+        const next = ahead || 'this week';
         if (focal.ytdContext === 'persistent' && ytdVal !== null) {
-            return pick(pools.persistent)(label, weekVal, ytdVal, target);
+            return pick(pools.persistent)(label, val, ytdVal, target, said, next);
         }
         if (focal.ytdContext === 'ytd_only' && ytdVal !== null) {
-            return pick(pools.ytdOnly)(label, weekVal, ytdVal, target);
+            return pick(pools.ytdOnly)(label, val, ytdVal, target, said, next);
         }
         if (focal.ytdContext === 'week_only' && ytdVal !== null) {
-            return pick(pools.weekDip)(label, weekVal, ytdVal, target);
+            return pick(pools.weekDip)(label, val, ytdVal, target, said, next);
         }
-        return pick(pools.fallback)(label, weekVal, target);
+        return pick(pools.fallback)(label, val, target, said, next);
+    }
+
+    /* A plain-string pool, pointed at the stretch the message is looking ahead
+     * to. On a Friday that is next week, so "here's the play for this week"
+     * becomes "for next week", and a line that wishes somebody a great week as
+     * the week ends is left out rather than reworded.
+     */
+    function lookingAhead(pool, ahead) {
+        if (!ahead || ahead === 'this week') return pool;
+        return pool
+            .filter(line => !/\bweek\b/i.test(line.replace(/\bthis week\b/gi, '')))
+            .map(line => line.replace(/\bthis week\b/g, ahead));
     }
 
     function getStatusBadge(allMetrics) {
@@ -1463,6 +1492,8 @@
         if (!analysis) return null;
 
         const allMetrics = speakableMetrics(emp, analysis);
+        // What the numbers are called: this week, last week, in September.
+        const recency = describeWeekRecency(latestKey, period, options?.now);
 
         // Week trajectory
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
@@ -1484,7 +1515,7 @@
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, describeWeekRecency(latestKey, period, options?.now)));
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency), recency.when);
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
                 praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
             }
@@ -1512,7 +1543,7 @@
                 }
             } catch (e) { /* no tips */ }
 
-            focusText = `\uD83C\uDFAF ${buildFocalText(focalPoint, { persistent: FOCUS_PERSISTENT, ytdOnly: FOCUS_YTD_ONLY, weekDip: FOCUS_WEEK_DIP, fallback: FOCUS_FALLBACK })}`;
+            focusText = `\uD83C\uDFAF ${buildFocalText(focalPoint, { persistent: FOCUS_PERSISTENT, ytdOnly: FOCUS_YTD_ONLY, weekDip: FOCUS_WEEK_DIP, fallback: FOCUS_FALLBACK }, recency.when)}`;
             if (tipText) {
                 const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
                 focusText += ` \uD83D\uDCA1 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
@@ -1559,12 +1590,27 @@
             'ytd': { when: 'this year', prior: 'last year' },
             'daily': { when: 'that day', prior: 'the day before' }
         };
-        const shape = NOT_A_WEEK[period?.metadata?.periodType];
-        if (shape) return shape;
-
         const endIso = period?.metadata?.endDate
             || (latestKey && latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey)
             || '';
+
+        // A whole month that is already over is named. On the second of
+        // October, "this month" is October, so a September round that said "87s
+        // last month to 63s this month" put both numbers a month late. A month
+        // still running keeps this month / last month below.
+        const periodType = period?.metadata?.periodType;
+        if (periodType === 'month' || periodType === 'month-agg') {
+            const ym = (String(endIso).match(/\d{4}-\d{2}/) || [])[0];
+            if (ym && ym < iso(today).slice(0, 7)) {
+                const month = parseInt(ym.slice(5, 7), 10) - 1;
+                const NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const name = m => NAMES[(m + 12) % 12];
+                return { when: `in ${name(month)}`, prior: `in ${name(month - 1)}` };
+            }
+        }
+
+        const shape = NOT_A_WEEK[periodType];
+        if (shape) return shape;
 
         // No end date to judge by means no claim worth making — the in-flight
         // wording is what the message has always used, so fall back to it.
@@ -1734,6 +1780,11 @@
 
         const allMetrics = speakableMetrics(emp, analysis);
         const weekDeltas = baselineKey ? calcWeekDeltas(employeeName, baselineKey, latestKey) : [];
+        // Two time words. recency.when is what the numbers are called (last
+        // week, in September), and ahead is the stretch the plan is for: this
+        // week, or next week when it is Friday's tone doing the asking.
+        const recency = describeWeekRecency(latestKey, period, options?.now);
+        const ahead = String(options?.ahead || '').trim() || 'this week';
 
         // If any survey metric came back as a detractor (0), suppress the rest
         // of the survey wins from the same sample — FCR=100 with OE=0 is still
@@ -1806,7 +1857,7 @@
                 praiseText = pick(PERFECT_SURVEYS_SOLO)(surveysText);
             }
         } else if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, describeWeekRecency(latestKey, period, options?.now)));
+            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency), recency.when);
             namedWins.add(biggestJump.metricKey);
             const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
             if (otherWins.length > 0) {
@@ -1835,8 +1886,8 @@
         // FOCUS section — set the weekly focal point
         let focusText = '';
         if (focalPoint) {
-            const focalPhrase = buildFocalText(focalPoint, { persistent: MK_FOCUS_PERSISTENT, ytdOnly: MK_FOCUS_YTD_ONLY, weekDip: MK_FOCUS_WEEK_DIP, fallback: MK_FOCUS_FALLBACK });
-            focusText = `\n\n${pick(MK_TRANSITION)}\n\n🎯 ${focalPhrase}`;
+            const focalPhrase = buildFocalText(focalPoint, { persistent: MK_FOCUS_PERSISTENT, ytdOnly: MK_FOCUS_YTD_ONLY, weekDip: MK_FOCUS_WEEK_DIP, fallback: MK_FOCUS_FALLBACK }, recency.when, ahead);
+            focusText = `\n\n${pick(lookingAhead(MK_TRANSITION, ahead))}\n\n🎯 ${focalPhrase}`;
 
             // Fetch a tip for the focal metric
             try {
@@ -1856,7 +1907,7 @@
             // Persist the focal point for midweek recall
             saveFocalPoint(employeeName, latestKey, focalPoint.metricKey, focalPoint.label, focalPoint.employeeValue, focalPoint.target);
         } else {
-            focusText = `\n\n${pick(MK_ALL_GOOD)}`;
+            focusText = `\n\n${pick(lookingAhead(MK_ALL_GOOD, ahead))}`;
         }
 
         // ytdMap is already built for the focal point; handing it over saves a
@@ -1876,7 +1927,7 @@
 
         let message = `${pick(openers)(firstName, dayWord)} ${praiseText}${focusText}`;
         if (yearBlock) message += `\n\n${yearBlock}`;
-        message += `\n\n${pick(MK_CLOSERS)}`;
+        message += `\n\n${pick(lookingAhead(MK_CLOSERS, ahead))}`;
         return message;
     }
 
@@ -3793,7 +3844,10 @@
                 || (plan.id === 'tuesday' && !dailyEntry?.mondayRow);
             base = await generateMondayKickoffMessage(employeeName, latestKey, baselineKey, {
                 dayWord: dayWordFor(plan),
-                startsTheWeek
+                startsTheWeek,
+                // Friday under a month or a year window lands here too, and on a
+                // Friday the week the plan is for is the next one.
+                ahead: plan.id === 'friday' ? 'next week' : 'this week'
             });
         }
 
@@ -3979,16 +4033,20 @@
             : `week ending ${escapeHtml(endDate)}`;
         // A window picked on My Team owns the period, so the header says what
         // that window compares rather than what the weekday would have covered.
+        // It used to open on today's real weekday as well, so a Monday tab
+        // pressed on a Friday read "Monday Kickoff" over "Friday", and nothing
+        // said which of the two the numbers came from. Numbers and tone are
+        // named separately now, because they come from separate controls.
         const coversLine = comparison
-            ? escapeHtml(comparison.headline || comparison.latestLabel || '')
-            : `covers ${escapeHtml(plan.coverageLabel)} • ${coversText}`;
+            ? `Numbers: ${escapeHtml(comparison.headline || comparison.latestLabel || '')} • Tone: ${escapeHtml(plan.label)}`
+            : `${escapeHtml(weekdayName)} • covers ${escapeHtml(plan.coverageLabel)} • ${coversText}`;
 
         overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:780px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
             `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
-                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">🚀 Run My Day. ${escapeHtml(plan.label)}</h2>` +
+                    `<h2 style="margin:0; color:#1a237e; font-size:1.3em;">${comparison ? '✉️ Private round' : `🚀 Run My Day. ${escapeHtml(plan.label)}`}</h2>` +
                     `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
-                        `${escapeHtml(weekdayName)} • ${coversLine}` +
+                        coversLine +
                     `</div>` +
                     `<div style="margin-top:4px; font-size:0.88em; color:#546e7a;">` +
                         `<span style="font-weight:600;">${pending.length} to send</span> • ` +
