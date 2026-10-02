@@ -32,10 +32,10 @@ suite('raffle page: the winner comes from the contest module', (t) => {
 suite('raffle page: prizes already announced are recorded in the contest module', (t) => {
     t.installFakeBrowser();
     const contest = t.loadModule('modules/contest.module.js').contest;
-    t.equal('September is Kristin then Angelina', contest.recordedWinners('2026-09').join(','), 'Kristin Villela,Angelina Fierro');
+    t.equal('September is Kristin, Angelina, then Sabrina', contest.recordedWinners('2026-09').join(','), 'Kristin Villela,Angelina Fierro,Sabrina Gage');
     t.equal('a month with none has none', contest.recordedWinners('2026-10').length, 0);
     contest.recordedWinners('2026-09').push('Somebody Else');
-    t.equal('and the record cannot be changed from outside', contest.recordedWinners('2026-09').length, 2);
+    t.equal('and the record cannot be changed from outside', contest.recordedWinners('2026-09').length, 3);
 });
 
 suite('raffle page: the Contest panel links to it', (t) => {
@@ -266,23 +266,25 @@ suite('raffle page: a link or a refresh picks the sitting back up', async (t) =>
     t.equal('and still keeps Bo out', again.byId.go.textContent, 'Everyone has been drawn');
 });
 
-suite('raffle page: September starts after the two prizes already announced', async (t) => {
+suite('raffle page: September starts after the three prizes already announced', async (t) => {
     const september = { days: { '2026-09-21': {
-        'Kristin Villela': { perfectSurveys: 3 }, 'Angelina Fierro': { perfectSurveys: 2 }, 'Ann Zeta': { perfectSurveys: 1 }
+        'Kristin Villela': { perfectSurveys: 3 }, 'Angelina Fierro': { perfectSurveys: 2 }, 'Sabrina Gage': { perfectSurveys: 4 },
+        'Ann Zeta': { perfectSurveys: 1 }
     } } };
     // A leftover link that names Angelina again must not list her twice.
     const r = openRaffle(september, '?month=2026-09&won=Angelina+Fierro', [0]);
     await r.settle();
 
-    t.equal('Kristin then Angelina are on screen from the start', r.chips().map((c) => c.name).join(','), 'Kristin Villela,Angelina Fierro');
+    t.equal('Kristin, Angelina and Sabrina are on screen from the start', r.chips().map((c) => c.name).join(','), 'Kristin Villela,Angelina Fierro,Sabrina Gage');
     t.check('with no x: those prizes are settled', r.chips().every((c) => !c.hasX));
     t.equal('the address needs nothing to remember them', r.location.search, '?month=2026-09');
     t.equal('the button carries on the draw', r.byId.go.textContent, '🎲 Draw another');
 
     r.byId.go.click();
     r.flush();
-    t.equal('the next prize goes to somebody else, on the end', r.chips().map((c) => c.name).join(','), 'Kristin Villela,Angelina Fierro,Ann Zeta');
-    t.check('and that one can still be taken out', r.chips()[2].hasX);
+    t.equal('the next prize goes to somebody else, on the end', r.chips().map((c) => c.name).join(','), 'Kristin Villela,Angelina Fierro,Sabrina Gage,Ann Zeta');
+    t.check('and that one can still be taken out', r.chips()[3].hasX);
+    t.equal('their tickets are out of the bowl', r.byId.pool.textContent, 'Every ticket has been drawn.');
 });
 
 suite('raffle page: Enter on an x is one strike-off, not a draw as well', (t) => {

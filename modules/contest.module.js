@@ -357,10 +357,11 @@
      * Prizes already drawn and announced, in prize order. Every draw for that
      * month starts after them, on any computer and with or without a link, and
      * nobody can take them back out. September's first two were posted to the
-     * group on 2026-10-02, before the rest of the prizes were drawn.
+     * group on 2026-10-02, before the rest of the prizes were drawn, and the
+     * third (Sabrina Gage) was added the same day after the screen was closed.
      */
     const RECORDED_WINNERS = Object.freeze({
-        '2026-09': Object.freeze(['Kristin Villela', 'Angelina Fierro'])
+        '2026-09': Object.freeze(['Kristin Villela', 'Angelina Fierro', 'Sabrina Gage'])
     });
 
     function recordedWinners(monthKey) {
