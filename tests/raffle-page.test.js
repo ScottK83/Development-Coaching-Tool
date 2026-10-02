@@ -82,6 +82,7 @@ function fakeElement(tag, id) {
             return child;
         },
         removeChild(child) { e.children.splice(e.children.indexOf(child), 1); child.parentNode = null; return child; },
+        contains(other) { for (let n = other; n; n = n.parentNode) if (n === e) return true; return false; },
         get firstChild() { return e.children[0] || null; },
         get nextSibling() {
             if (!e.parentNode) return null;
@@ -153,12 +154,21 @@ function openRaffle(monthData, search, draws) {
         out: chip.classList.contains('skipped'),
         hasX: !!chip.querySelector('.skip')
     }));
-    return { byId, settle, flush, chips, location };
+    // The x, then one of the two ways out it offers.
+    const takeOut = (index, choice) => {
+        const chip = byId.winners.children[index];
+        chip.querySelector('.skip').click();
+        const menu = chip.querySelector('.choice');
+        const button = menu && menu.children.find((b) => b.textContent === choice);
+        if (button) button.click();
+        return { menu, button };
+    };
+    return { byId, settle, flush, chips, location, takeOut };
 }
 
 const bowl = { days: { '2026-09-08': { 'Ann Zeta': { perfectSurveys: 3 }, 'Bo Yu': { perfectSurveys: 2 }, 'Cy Vale': { perfectSurveys: 1 } } } };
 
-suite('raffle page: the x strikes a winner off and draws again', async (t) => {
+suite('raffle page: out of the raffle strikes a winner off and draws again', async (t) => {
     // Chances are tickets squared: Ann 9 (0-8), Bo 4, Cy 1. Draw 0 is Ann.
     const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0, 0]);
     await r.settle();
@@ -168,7 +178,8 @@ suite('raffle page: the x strikes a winner off and draws again', async (t) => {
     t.equal('Ann is drawn first', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
     t.check('her name has an x next to it', r.chips()[0].hasX);
 
-    r.byId.winners.children[0].querySelector('.skip').click();
+    const asked = r.takeOut(0, 'Out of the raffle');
+    t.check('the x asks which way out', !!asked.menu && asked.menu.children.length === 2);
     r.flush();
     const after = r.chips();
     t.check('she is struck off, and loses the x', after[0].out && !after[0].hasX);
@@ -179,6 +190,39 @@ suite('raffle page: the x strikes a winner off and draws again', async (t) => {
     r.byId.go.click();
     r.flush();
     t.equal('the next prize skips both of them', r.chips()[2] && r.chips()[2].name, 'Cy Vale');
+});
+
+suite('raffle page: out of this round puts their tickets back for the next prize', async (t) => {
+    const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0]);
+    await r.settle();
+
+    r.byId.go.click();
+    r.flush();
+    t.equal('Ann is drawn first', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
+
+    // Watch every name that flashes past while this prize is drawn again.
+    const shown = [];
+    let current = r.byId.name.textContent;
+    Object.defineProperty(r.byId.name, 'textContent', { get: () => current, set: (v) => { current = v; shown.push(v); } });
+
+    r.takeOut(0, 'Out of this round');
+    r.flush();
+    t.equal('Bo takes her spot, and her chip is gone', r.chips().map((c) => c.name).join(','), 'Bo Yu');
+    t.check('she does not even flash past on the redraw', shown.length > 1 && !shown.includes('Ann Zeta'));
+    t.equal('the address does not list her as out', r.location.search, '?month=2026-09&won=Bo+Yu');
+    // Ann's 3 and Cy's 1: Bo's 2 left with Bo.
+    t.equal('her tickets are back in the bowl', r.byId.pool.textContent, '4 tickets left in the bowl');
+
+    r.byId.go.click();
+    r.flush();
+    t.equal('and she can win the next prize', r.chips().map((c) => c.name).join(','), 'Bo Yu,Ann Zeta');
+});
+
+suite('raffle page: the x only shows with the mouse on the chip', (t) => {
+    const html = page();
+    t.check('it starts hidden', /\.winners \.skip \{[^}]*opacity: 0;/.test(html));
+    t.check('and shows on hover', /\.winners li:hover \.skip/.test(html));
+    t.check('or when it has keyboard focus', /\.winners \.skip:focus-visible/.test(html));
 });
 
 suite('raffle page: a link can start with people already drawn and struck off', async (t) => {
@@ -205,7 +249,12 @@ suite('raffle page: the Contest panel draw has the same x', (t) => {
     const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
 
     t.check('there is an x next to the winner', /id="contestDrawStrike"/.test(ui));
-    t.check('it strikes them off and draws again', /struck\.push\(result\.associate\);\s*draw\(\);/.test(ui));
+    t.check('it only shows with the mouse on the name', /class="contest-draw-name"/.test(ui)
+        && /\.contest-draw-name:hover \.contest-draw-x/.test(fs.readFileSync(path.join(ROOT, 'styles-v2.css'), 'utf8')));
+    t.check('out of the raffle strikes them off and draws again', /struck\.push\(result\.associate\);\s*draw\(\);/.test(ui));
+    t.check('out of this round puts them back and draws without them',
+        /drawn = drawn\.filter\(\(name\) => name !== result\.associate\);\s*draw\(result\.associate\);/.test(ui));
+    t.check('the draw leaves them out of that one prize', /exclude: drawn\.concat\(away \? \[away\] : \[\]\)/.test(ui));
     t.check('struck names are crossed out in the list', /struck\.includes\(name\) \? `<s>/.test(ui));
     t.check('Start the draw over clears them too', /drawn = \[\];\s*struck = \[\];/.test(ui));
 });

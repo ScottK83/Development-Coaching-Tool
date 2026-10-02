@@ -2288,3 +2288,17 @@ turning "background: #f0f9ff" into
     color: var(--text-tertiary);
     margin: 8px 0 4px;
 }
+
+/* Contest draw: the x by the winner's name only shows with the mouse on it. */
+.contest-draw-name .contest-draw-x {
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+}
+.contest-draw-name:hover .contest-draw-x,
+.contest-draw-name .contest-draw-x:focus-visible,
+.contest-draw-name .contest-draw-x[aria-expanded="true"] {
+    opacity: 1;
+}
+@media (hover: none) {
+    .contest-draw-name .contest-draw-x { opacity: 1; }
+}

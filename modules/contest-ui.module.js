@@ -717,13 +717,17 @@
      * Built to be shown on a shared screen: the name, big, and how many
      * tickets they had. The numbers that let anyone check the draw sit folded
      * under "How it was drawn" rather than on the screen.
+     *
+     * sittingOut names somebody taken out of this round only: this prize is
+     * drawn without them, and their tickets are back in for the next one.
      */
-    function draw() {
+    function draw(sittingOut) {
         const host = document.getElementById('contestDrawResult');
         if (!host) return;
         const date = document.getElementById('contestDate')?.value;
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
-        const result = contest()?.drawWinner(currentMonthData(), undefined, { exclude: drawn });
+        const away = typeof sittingOut === 'string' && sittingOut ? sittingOut : '';
+        const result = contest()?.drawWinner(currentMonthData(), undefined, { exclude: drawn.concat(away ? [away] : []) });
         host.style.display = 'block';
 
         const startOver = '<div style="margin-top: 10px; text-align: center;">'
@@ -732,7 +736,10 @@
             + 'Start the draw over</button></div>';
 
         if (!result) {
-            if (drawn.length) {
+            if (away) {
+                host.innerHTML = `<p style="margin: 0; text-align: center;">Nobody else is left to draw, so ${esc(away)} goes back in the bowl.</p>` + startOver;
+                document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
+            } else if (drawn.length) {
                 host.innerHTML = '<p style="margin: 0; text-align: center;">Everybody with a ticket has been drawn.</p>' + startOver;
                 document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
             } else {
@@ -758,11 +765,16 @@
             .join(', ');
 
         host.innerHTML = `<div style="text-align: center; padding: 8px 0;">
-                <div style="font-size: 2.4em; font-weight: 800; line-height: 1.2;">🎉 ${esc(result.associate)}
-                    <button type="button" id="contestDrawStrike" title="Not here or doesn't qualify? Draw again"
-                        aria-label="${esc(result.associate)} is not here. Draw again"
+                <div class="contest-draw-name" style="font-size: 2.4em; font-weight: 800; line-height: 1.2;">🎉 ${esc(result.associate)}
+                    <button type="button" id="contestDrawStrike" class="contest-draw-x" title="Take ${esc(result.associate)} out"
+                        aria-label="Take ${esc(result.associate)} out" aria-expanded="false"
                         style="vertical-align: middle; width: 28px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 50%;
                         background: var(--bg-surface); color: var(--text-secondary); font-size: 16px; line-height: 1; cursor: pointer;">×</button>
+                </div>
+                <div id="contestDrawChoice" hidden style="margin-top: 8px;">
+                    <button type="button" id="contestDrawThisRound" class="btn-secondary" title="Tickets go back in the bowl for later">Out of this round</button>
+                    <button type="button" id="contestDrawOut" class="btn-secondary" title="Not here, or doesn't qualify">Out of the raffle</button>
+                    <div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">This round puts their tickets back for the next prize. The raffle takes them out for good.</div>
                 </div>
                 <div style="margin-top: 6px; font-size: 1.1em; color: var(--text-secondary);">${tickets}</div>
                 ${result.wonWith ? `<div style="margin-top: 4px; color: var(--text-secondary);">Winning ticket: ${esc(result.wonWith)}</div>` : ''}
@@ -773,15 +785,27 @@
                 <div style="margin-top: 6px;">
                     Drew chance ${n(result.draw + 1)} of ${n(result.chances)}. They held ${tickets}, worth ${worth} (${share}% odds).
                     Each person's chances are their tickets times their tickets, so more tickets count for more.
-                    ${earlier.length ? 'Anyone already drawn was left out of this one. ' : ''}The winning ticket was earned by ${esc(result.wonBy)}.
+                    ${earlier.length ? 'Anyone already drawn was left out of this one. ' : ''}${away ? `${esc(away)} sat this one out and is back in the bowl for the next. ` : ''}The winning ticket was earned by ${esc(result.wonBy)}.
                 </div>
             </details>
             ${startOver}`;
         document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
-        // Struck off: they stay out of the bowl, and the prize is drawn again.
-        document.getElementById('contestDrawStrike')?.addEventListener('click', () => {
+        // The x asks which way out, and either way the prize is drawn again.
+        document.getElementById('contestDrawStrike')?.addEventListener('click', (event) => {
+            const choice = document.getElementById('contestDrawChoice');
+            if (!choice) return;
+            choice.hidden = !choice.hidden;
+            event.currentTarget.setAttribute('aria-expanded', String(!choice.hidden));
+        });
+        // Out of the raffle: they stay in drawn, so they stay out of the bowl.
+        document.getElementById('contestDrawOut')?.addEventListener('click', () => {
             struck.push(result.associate);
             draw();
+        });
+        // Out of this round: their tickets go back in once this prize is drawn.
+        document.getElementById('contestDrawThisRound')?.addEventListener('click', () => {
+            drawn = drawn.filter((name) => name !== result.associate);
+            draw(result.associate);
         });
 
         const button = document.getElementById('contestDrawBtn');
@@ -939,7 +963,7 @@
             document.getElementById('contestTraceCopyBtn')?.addEventListener('click', copyTrace);
             document.getElementById('contestCopyBtn')?.addEventListener('click', copyStandings);
             document.getElementById('contestCopyGraphicBtn')?.addEventListener('click', copyGraphic);
-            document.getElementById('contestDrawBtn')?.addEventListener('click', draw);
+            document.getElementById('contestDrawBtn')?.addEventListener('click', () => draw());
             document.getElementById('contestRaffleLink')?.addEventListener('click', (event) => { event.currentTarget.href = raffleHref(); });
             rendered = true;
         }

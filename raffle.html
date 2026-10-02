@@ -15,8 +15,9 @@
 
     It reads the sync settings the app keeps in this browser, so it works on
     the computer the Coaching Tool is used on. Nothing is written anywhere:
-    who has been drawn, and who was struck off with the x, rides in the
-    address (?won=...&out=...) so a refresh keeps the sitting.
+    who has been drawn, and who was taken out of the raffle with the x, rides
+    in the address (?won=...&out=...) so a refresh keeps the sitting. Out of
+    this round only puts their tickets back, so it leaves nothing to remember.
 -->
 <style>
     :root {
@@ -288,10 +289,8 @@
     }
 
     .winners li {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px 8px 16px;
+        position: relative;
+        padding: 8px 16px;
         border-radius: 999px;
         background: var(--chip);
         border: 1px solid rgba(255, 201, 61, 0.35);
@@ -301,24 +300,63 @@
         animation: rise 400ms ease-out;
     }
 
-    /* Not here, or doesn't qualify: struck off, and the draw goes again. */
+    /* The x sits on the chip's corner and only shows with the mouse on the
+       chip, so the screen the room sees stays clean. */
     .winners .skip {
+        position: absolute;
+        top: -9px;
+        right: -9px;
         width: 24px;
         height: 24px;
         padding: 0;
         border: 0;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.12);
-        color: var(--text-soft);
-        font-size: 1rem;
+        background: var(--stamp);
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 700;
         line-height: 1;
         cursor: pointer;
+        opacity: 0;
+        transition: opacity 120ms ease-out;
     }
-    .winners .skip:hover, .winners .skip:focus-visible { background: var(--stamp); color: #fff; outline: none; }
-    body.spinning .winners .skip { opacity: 0.3; pointer-events: none; }
+    .winners li:hover .skip, .winners li.choosing .skip, .winners .skip:focus-visible { opacity: 1; outline: none; }
+    @media (hover: none) { .winners .skip { opacity: 1; } }
+    body.spinning .winners .skip { opacity: 0; pointer-events: none; }
 
-    .winners li.skipped {
-        padding-right: 16px;
+    /* The two ways out the x offers. */
+    .winners .choice {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px;
+        border-radius: 14px;
+        background: #1d1446;
+        border: 1px solid rgba(255, 201, 61, 0.35);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        white-space: nowrap;
+    }
+    .winners .choice button {
+        display: block;
+        padding: 9px 14px;
+        border: 0;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.95rem;
+        text-align: left;
+        cursor: pointer;
+    }
+    .winners .choice button:hover, .winners .choice button:focus-visible { background: rgba(255, 255, 255, 0.18); outline: none; }
+    .winners .choice small { display: block; margin-top: 2px; font-weight: 400; font-size: 0.8rem; color: var(--text-soft); }
+
+    .winners li.skipped, .winners li.leaving {
         color: var(--text-soft);
         border-color: rgba(255, 255, 255, 0.15);
         text-decoration: line-through;
@@ -407,6 +445,10 @@
     var spinning = false;
     var onTicket = '';
     var monthKey = '';
+    // Out of this round only: left out of the one redraw, then back in the bowl.
+    var sittingOut = '';
+    // The chip whose two choices are open, if any.
+    var choosing = null;
 
     // ============================================
     // MONTHS
@@ -482,7 +524,7 @@
 
     function board() {
         return contest().buildLeaderboard(monthData).filter(function (row) {
-            return drawn.indexOf(row.associate) === -1;
+            return drawn.indexOf(row.associate) === -1 && row.associate !== sittingOut;
         });
     }
 
@@ -738,7 +780,8 @@
     // so the order of the prizes still reads top to bottom.
     function draw(replacing) {
         if (spinning || !monthData || !contest()) return;
-        var result = contest().drawWinner(monthData, undefined, { exclude: drawn });
+        closeChoice();
+        var result = contest().drawWinner(monthData, undefined, { exclude: drawn.concat(sittingOut ? [sittingOut] : []) });
         if (!result) return;
 
         spinning = true;
@@ -787,6 +830,9 @@
             celebrate();
 
             addChip(result.associate, replacing);
+            // Out of this round: their chip goes, and their tickets go back in.
+            if (replacing && replacing.classList.contains('leaving')) winnersEl.removeChild(replacing);
+            sittingOut = '';
             remember();
 
             spinning = false;
@@ -813,9 +859,9 @@
         skip.type = 'button';
         skip.className = 'skip';
         skip.textContent = '×';
-        skip.title = 'Not here or doesn\'t qualify? Draw again';
-        skip.setAttribute('aria-label', name + ' is not here. Draw again');
-        skip.addEventListener('click', function () { strikeOff(chip); });
+        skip.title = 'Take ' + name + ' out';
+        skip.setAttribute('aria-label', 'Take ' + name + ' out');
+        skip.addEventListener('click', function () { openChoice(chip); });
         chip.appendChild(text);
         chip.appendChild(skip);
         if (after && after.parentNode === winnersEl) winnersEl.insertBefore(chip, after.nextSibling);
@@ -823,15 +869,29 @@
         return chip;
     }
 
-    function markStruck(chip) {
-        chip.classList.add('skipped');
+    function crossOut(chip, how) {
+        chip.classList.add(how);
         chip.firstChild.textContent = chip.getAttribute('data-name');
         var skip = chip.querySelector('.skip');
         if (skip) chip.removeChild(skip);
     }
 
-    // Not here, or doesn't qualify. They stay out of the bowl for the rest of
-    // the sitting (they are still in drawn), and the next name takes their spot.
+    function markStruck(chip) { crossOut(chip, 'skipped'); }
+
+    function clearTicketIf(name) {
+        if (onTicket !== name) return;
+        wrap.classList.remove('won');
+        label.textContent = 'Nobody left in the bowl';
+        setName('?', false);
+        count.textContent = '';
+        wonWith.textContent = '';
+        nameEl.removeAttribute('title');
+        onTicket = '';
+    }
+
+    // Out of the raffle: not here, or doesn't qualify. They stay out of the
+    // bowl for the rest of the sitting (they are still in drawn), and the next
+    // name takes their spot.
     function strikeOff(chip) {
         if (spinning) return;
         var name = chip.getAttribute('data-name');
@@ -841,16 +901,65 @@
             draw(chip);
             return;
         }
-        if (onTicket === name) {
-            wrap.classList.remove('won');
-            label.textContent = 'Nobody left in the bowl';
-            setName('?', false);
-            count.textContent = '';
-            wonWith.textContent = '';
-            nameEl.removeAttribute('title');
-            onTicket = '';
-        }
+        clearTicketIf(name);
         showPool();
+    }
+
+    // Out of this round: the prize is drawn again without them, and once it
+    // lands their tickets go back in the bowl for the prizes after it.
+    function outThisRound(chip) {
+        if (spinning) return;
+        var name = chip.getAttribute('data-name');
+        if (drawn.indexOf(name) > -1) drawn.splice(drawn.indexOf(name), 1);
+        sittingOut = name;
+        crossOut(chip, 'leaving');
+        if (ticketsLeft() > 0) {
+            draw(chip);
+            return;
+        }
+        // Nobody else to draw this prize for: they just go back in the bowl.
+        sittingOut = '';
+        winnersEl.removeChild(chip);
+        clearTicketIf(name);
+        remember();
+        showPool();
+        go.disabled = ticketsLeft() === 0;
+        go.textContent = drawn.length ? '🎲 Draw another' : '🎲 Draw a winner';
+    }
+
+    function closeChoice() {
+        if (!choosing) return;
+        var menu = choosing.querySelector('.choice');
+        if (menu) choosing.removeChild(menu);
+        choosing.classList.remove('choosing');
+        choosing = null;
+    }
+
+    function option(text, hint, act) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = text;
+        var small = document.createElement('small');
+        small.textContent = hint;
+        button.appendChild(small);
+        button.addEventListener('click', function () { closeChoice(); act(); });
+        return button;
+    }
+
+    // The x asks which way out. A second click on it closes the choice.
+    function openChoice(chip) {
+        if (spinning) return;
+        var wasOpen = choosing === chip;
+        closeChoice();
+        if (wasOpen) return;
+        var menu = document.createElement('div');
+        menu.className = 'choice';
+        menu.appendChild(option('Out of this round', 'Tickets go back in the bowl for later', function () { outThisRound(chip); }));
+        menu.appendChild(option('Out of the raffle', 'Not here, or doesn\'t qualify', function () { strikeOff(chip); }));
+        chip.appendChild(menu);
+        chip.classList.add('choosing');
+        choosing = chip;
+        menu.firstChild.focus();
     }
 
     // The sitting so far rides in the address, in the order it happened
@@ -861,6 +970,7 @@
         var params = new URLSearchParams();
         params.set('month', monthKey);
         Array.prototype.forEach.call(winnersEl.children, function (chip) {
+            if (chip.classList.contains('leaving')) return;
             params.append(chip.classList.contains('skipped') ? 'out' : 'won', chip.getAttribute('data-name'));
         });
         try {
@@ -888,8 +998,14 @@
 
     go.addEventListener('click', function () { draw(); });
 
+    // A click anywhere off the open choice closes it.
+    document.addEventListener('click', function (event) {
+        if (choosing && !choosing.contains(event.target)) closeChoice();
+    });
+
     // Space or Enter draws, so nobody has to aim a mouse while sharing a screen.
     document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') { closeChoice(); return; }
         if (event.key !== ' ' && event.key !== 'Enter') return;
         // Buttons handle their own keys, so Enter on an × is one strike-off, not two draws.
         if (event.target && event.target.closest && event.target.closest('button')) return;
