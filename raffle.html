@@ -14,7 +14,9 @@
     one place. This page only makes the moment fun.
 
     It reads the sync settings the app keeps in this browser, so it works on
-    the computer the Coaching Tool is used on. Nothing is written anywhere.
+    the computer the Coaching Tool is used on. Nothing is written anywhere:
+    who has been drawn, and who was struck off with the x, rides in the
+    address (?won=...&out=...) so a refresh keeps the sitting.
 -->
 <style>
     :root {
@@ -286,7 +288,10 @@
     }
 
     .winners li {
-        padding: 8px 16px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px 8px 16px;
         border-radius: 999px;
         background: var(--chip);
         border: 1px solid rgba(255, 201, 61, 0.35);
@@ -294,6 +299,30 @@
         font-weight: 700;
         font-size: clamp(0.9rem, 1.5vw, 1.05rem);
         animation: rise 400ms ease-out;
+    }
+
+    /* Not here, or doesn't qualify: struck off, and the draw goes again. */
+    .winners .skip {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--text-soft);
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .winners .skip:hover, .winners .skip:focus-visible { background: var(--stamp); color: #fff; outline: none; }
+    body.spinning .winners .skip { opacity: 0.3; pointer-events: none; }
+
+    .winners li.skipped {
+        padding-right: 16px;
+        color: var(--text-soft);
+        border-color: rgba(255, 255, 255, 0.15);
+        text-decoration: line-through;
+        opacity: 0.7;
     }
 
     @keyframes rise {
@@ -376,6 +405,8 @@
     var monthData = null;
     var drawn = [];
     var spinning = false;
+    var onTicket = '';
+    var monthKey = '';
 
     // ============================================
     // MONTHS
@@ -703,7 +734,9 @@
     // THE DRAW
     // ============================================
 
-    function draw() {
+    // A replacement draw goes in the line right after the person it replaces,
+    // so the order of the prizes still reads top to bottom.
+    function draw(replacing) {
         if (spinning || !monthData || !contest()) return;
         var result = contest().drawWinner(monthData, undefined, { exclude: drawn });
         if (!result) return;
@@ -712,7 +745,7 @@
         go.disabled = true;
         document.body.classList.add('spinning');
         wrap.classList.remove('won');
-        label.textContent = 'Drawing...';
+        label.textContent = replacing ? 'Drawing again...' : 'Drawing...';
         count.textContent = '';
         wonWith.textContent = '';
         nameEl.removeAttribute('title');
@@ -737,6 +770,7 @@
             document.body.classList.remove('spinning');
             label.textContent = 'And the winner is';
             setName(result.associate, false);
+            onTicket = result.associate;
             count.textContent = '🎟️ ' + plural(result.entriesHeld, 'ticket', 'tickets');
             if (result.wonWith) {
                 wonWith.textContent = (result.reason === 'perfect-survey' ? '⭐' : '⏰')
@@ -752,9 +786,8 @@
             fanfare();
             celebrate();
 
-            var chip = document.createElement('li');
-            chip.textContent = '🏆 ' + result.associate;
-            winnersEl.appendChild(chip);
+            addChip(result.associate, replacing);
+            remember();
 
             spinning = false;
             showPool();
@@ -767,13 +800,99 @@
         next();
     }
 
-    go.addEventListener('click', draw);
+    // ============================================
+    // WINNERS SO FAR
+    // ============================================
+
+    function addChip(name, after) {
+        var chip = document.createElement('li');
+        chip.setAttribute('data-name', name);
+        var text = document.createElement('span');
+        text.textContent = '🏆 ' + name;
+        var skip = document.createElement('button');
+        skip.type = 'button';
+        skip.className = 'skip';
+        skip.textContent = '×';
+        skip.title = 'Not here or doesn\'t qualify? Draw again';
+        skip.setAttribute('aria-label', name + ' is not here. Draw again');
+        skip.addEventListener('click', function () { strikeOff(chip); });
+        chip.appendChild(text);
+        chip.appendChild(skip);
+        if (after && after.parentNode === winnersEl) winnersEl.insertBefore(chip, after.nextSibling);
+        else winnersEl.appendChild(chip);
+        return chip;
+    }
+
+    function markStruck(chip) {
+        chip.classList.add('skipped');
+        chip.firstChild.textContent = chip.getAttribute('data-name');
+        var skip = chip.querySelector('.skip');
+        if (skip) chip.removeChild(skip);
+    }
+
+    // Not here, or doesn't qualify. They stay out of the bowl for the rest of
+    // the sitting (they are still in drawn), and the next name takes their spot.
+    function strikeOff(chip) {
+        if (spinning) return;
+        var name = chip.getAttribute('data-name');
+        markStruck(chip);
+        remember();
+        if (ticketsLeft() > 0) {
+            draw(chip);
+            return;
+        }
+        if (onTicket === name) {
+            wrap.classList.remove('won');
+            label.textContent = 'Nobody left in the bowl';
+            setName('?', false);
+            count.textContent = '';
+            wonWith.textContent = '';
+            nameEl.removeAttribute('title');
+            onTicket = '';
+        }
+        showPool();
+    }
+
+    // The sitting so far rides in the address, in the order it happened
+    // (?won=...&out=...), so a refresh in the middle of the meeting picks up
+    // where it left off, and a link can start a draw with people already out.
+    function remember() {
+        if (!monthKey || !window.history || !window.history.replaceState) return;
+        var params = new URLSearchParams();
+        params.set('month', monthKey);
+        Array.prototype.forEach.call(winnersEl.children, function (chip) {
+            params.append(chip.classList.contains('skipped') ? 'out' : 'won', chip.getAttribute('data-name'));
+        });
+        try {
+            window.history.replaceState(null, '', window.location.pathname + '?' + params.toString());
+        } catch (e) { /* the draw works the same without it */ }
+    }
+
+    // Names are matched to the bowl ignoring case. A name with no tickets
+    // this month is passed over rather than guessed at.
+    function restore() {
+        var inBowl = {};
+        contest().buildLeaderboard(monthData).forEach(function (row) {
+            inBowl[row.associate.toLowerCase()] = row.associate;
+        });
+        new URLSearchParams(window.location.search).forEach(function (value, key) {
+            if (key !== 'won' && key !== 'out') return;
+            var name = inBowl[String(value).trim().toLowerCase()];
+            if (!name || drawn.indexOf(name) > -1) return;
+            drawn.push(name);
+            var chip = addChip(name);
+            if (key === 'out') markStruck(chip);
+        });
+        remember();
+    }
+
+    go.addEventListener('click', function () { draw(); });
 
     // Space or Enter draws, so nobody has to aim a mouse while sharing a screen.
     document.addEventListener('keydown', function (event) {
         if (event.key !== ' ' && event.key !== 'Enter') return;
-        if (event.target === soundBtn) return;
-        if (event.target === go) return; // the button handles its own keys
+        // Buttons handle their own keys, so Enter on an × is one strike-off, not two draws.
+        if (event.target && event.target.closest && event.target.closest('button')) return;
         event.preventDefault();
         draw();
     });
@@ -802,11 +921,14 @@
         if (!contest()) { fail('The raffle could not load. Refresh the page to try again.'); return; }
         loadFirstWithTickets(monthsToTry()).then(function (found) {
             monthData = found.month;
+            monthKey = found.key;
             title.textContent = labelOf(found.key);
             document.title = labelOf(found.key) + ' Raffle';
+            restore();
             showPool();
             setName('?', false);
             go.disabled = ticketsLeft() === 0;
+            if (drawn.length) go.textContent = go.disabled ? 'Everyone has been drawn' : '🎲 Draw another';
             if (!go.disabled) go.focus();
         }).catch(function (error) {
             if (error && (error.status === 401 || error.status === 403)) {

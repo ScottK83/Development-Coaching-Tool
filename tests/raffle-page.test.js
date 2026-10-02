@@ -55,3 +55,157 @@ suite('raffle page: it reads the saved month and writes nothing', (t) => {
     t.check('nothing is written to the browser', !/setItem\(|sessionStorage|indexedDB/.test(html));
     t.check('nothing is saved to the computer', !/\.download\s*=|createObjectURL/.test(html));
 });
+
+// ---------- running the page ----------
+// Just enough of a browser to run raffle.html's script: elements that hold
+// children, a fetch that hands back one month, and timers flushed by hand.
+
+const vm = require('vm');
+
+function fakeElement(tag, id) {
+    const listeners = {};
+    const classes = new Set();
+    const attrs = {};
+    const e = {
+        tagName: tag, id, children: [], parentNode: null, style: {}, textContent: '', className: '',
+        disabled: false, clientWidth: 600, scrollWidth: 100, offsetWidth: 0,
+        classList: {
+            add: (c) => classes.add(c),
+            remove: (c) => classes.delete(c),
+            contains: (c) => classes.has(c)
+        },
+        appendChild(child) { child.parentNode = e; e.children.push(child); if (e.onAppend) e.onAppend(child); return child; },
+        insertBefore(child, ref) {
+            child.parentNode = e;
+            const at = ref ? e.children.indexOf(ref) : -1;
+            if (at < 0) e.children.push(child); else e.children.splice(at, 0, child);
+            return child;
+        },
+        removeChild(child) { e.children.splice(e.children.indexOf(child), 1); child.parentNode = null; return child; },
+        get firstChild() { return e.children[0] || null; },
+        get nextSibling() {
+            if (!e.parentNode) return null;
+            const list = e.parentNode.children;
+            return list[list.indexOf(e) + 1] || null;
+        },
+        setAttribute(k, v) { attrs[k] = String(v); },
+        getAttribute(k) { return k in attrs ? attrs[k] : null; },
+        removeAttribute(k) { delete attrs[k]; },
+        addEventListener(type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
+        fire(type, event) { (listeners[type] || []).forEach((fn) => fn(Object.assign({ target: e, preventDefault() {} }, event))); },
+        click() { e.fire('click'); },
+        focus() {},
+        closest(sel) {
+            for (let n = e; n; n = n.parentNode) if (sel === 'button' && n.tagName === 'button') return n;
+            return null;
+        },
+        querySelector(sel) {
+            const want = sel.replace(/^\./, '');
+            for (const child of e.children) {
+                if (child.className === want || child.classList.contains(want)) return child;
+                const deeper = child.querySelector(sel);
+                if (deeper) return deeper;
+            }
+            return null;
+        },
+        getContext: () => new Proxy({}, { get: () => () => {} })
+    };
+    return e;
+}
+
+function openRaffle(monthData, search, draws) {
+    const html = page();
+    const script = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
+    const byId = {};
+    const timers = [];
+    const document = {
+        body: fakeElement('body'),
+        head: fakeElement('head'),
+        getElementById: (id) => (byId[id] = byId[id] || fakeElement(id === 'go' || id === 'sound' ? 'button' : 'div', id)),
+        createElement: (tag) => fakeElement(tag),
+        addEventListener: (type, fn) => document.body.addEventListener(type, fn)
+    };
+    const location = { pathname: '/raffle', search: search || '' };
+    const sandbox = {
+        document, location, URLSearchParams, Promise, Math, Date, String, Number, Array, Object, JSON, Error,
+        innerWidth: 1200, innerHeight: 800, devicePixelRatio: 1,
+        matchMedia: () => ({ matches: false }),
+        addEventListener() {},
+        requestAnimationFrame() {},
+        setTimeout: (fn) => timers.push(fn),
+        localStorage: { getItem: () => null },
+        history: { replaceState(state, title, url) { location.search = url.slice(url.indexOf('?')); } },
+        crypto: { getRandomValues(buffer) { buffer[0] = draws.shift() || 0; return buffer; } },
+        fetch: () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, data: monthData }) })
+    };
+    sandbox.window = sandbox;
+    // The page loads the contest module with a script tag: run it in the same window.
+    document.head.onAppend = (tag) => {
+        vm.runInContext(fs.readFileSync(path.join(ROOT, 'modules/contest.module.js'), 'utf8'), sandbox);
+        tag.onload();
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(script, sandbox);
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+    const flush = () => { while (timers.length) timers.shift()(); };
+    const chips = () => byId.winners.children.map((chip) => ({
+        name: chip.getAttribute('data-name'),
+        out: chip.classList.contains('skipped'),
+        hasX: !!chip.querySelector('.skip')
+    }));
+    return { byId, settle, flush, chips, location };
+}
+
+const bowl = { days: { '2026-09-08': { 'Ann Zeta': { perfectSurveys: 3 }, 'Bo Yu': { perfectSurveys: 2 }, 'Cy Vale': { perfectSurveys: 1 } } } };
+
+suite('raffle page: the x strikes a winner off and draws again', async (t) => {
+    // Chances are tickets squared: Ann 9 (0-8), Bo 4, Cy 1. Draw 0 is Ann.
+    const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0, 0]);
+    await r.settle();
+
+    r.byId.go.click();
+    r.flush();
+    t.equal('Ann is drawn first', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
+    t.check('her name has an x next to it', r.chips()[0].hasX);
+
+    r.byId.winners.children[0].querySelector('.skip').click();
+    r.flush();
+    const after = r.chips();
+    t.check('she is struck off, and loses the x', after[0].out && !after[0].hasX);
+    t.equal('a replacement is drawn, and it is not her', after[1] && after[1].name, 'Bo Yu');
+    t.check('the replacement keeps an x of its own', after[1].hasX && !after[1].out);
+    t.equal('the address remembers both, in order', r.location.search, '?month=2026-09&out=Ann+Zeta&won=Bo+Yu');
+
+    r.byId.go.click();
+    r.flush();
+    t.equal('the next prize skips both of them', r.chips()[2] && r.chips()[2].name, 'Cy Vale');
+});
+
+suite('raffle page: a link can start with people already drawn and struck off', async (t) => {
+    const r = openRaffle(bowl, '?month=2026-09&won=ann+zeta&out=Bo%20Yu&out=Nobody%20Here', [0]);
+    await r.settle();
+
+    const restored = r.chips();
+    t.equal('the winner and the struck name are back on screen', restored.map((c) => c.name).join(','), 'Ann Zeta,Bo Yu');
+    t.check('the struck name is struck', restored[1].out && !restored[1].hasX);
+    t.check('a name with no tickets is passed over', !restored.some((c) => c.name === 'Nobody Here'));
+    t.equal('the button carries on the draw', r.byId.go.textContent, '🎲 Draw another');
+
+    r.byId.go.click();
+    r.flush();
+    t.equal('and neither of them can come up again', r.chips()[2] && r.chips()[2].name, 'Cy Vale');
+});
+
+suite('raffle page: Enter on an x is one strike-off, not a draw as well', (t) => {
+    const html = page();
+    t.check('keys pressed on any button are left to the button', /event\.target\.closest\('button'\)\) return;/.test(html));
+});
+
+suite('raffle page: the Contest panel draw has the same x', (t) => {
+    const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
+
+    t.check('there is an x next to the winner', /id="contestDrawStrike"/.test(ui));
+    t.check('it strikes them off and draws again', /struck\.push\(result\.associate\);\s*draw\(\);/.test(ui));
+    t.check('struck names are crossed out in the list', /struck\.includes\(name\) \? `<s>/.test(ui));
+    t.check('Start the draw over clears them too', /drawn = \[\];\s*struck = \[\];/.test(ui));
+});

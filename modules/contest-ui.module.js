@@ -21,8 +21,11 @@
 
     // Who has been drawn this sitting. Each click draws the next prize and
     // nobody already called comes up again. Clears when the month changes,
-    // on Start the draw over, or when the page reloads.
+    // on Start the draw over, or when the page reloads. Anyone struck off
+    // with the x (not here, or doesn't qualify) stays in drawn, so they stay
+    // out of the bowl, and is also listed in struck.
     let drawn = [];
+    let struck = [];
 
     function esc(text) {
         const fn = window.DevCoachModules?.sharedUtils?.escapeHtml;
@@ -703,6 +706,7 @@
 
     function resetDraw() {
         drawn = [];
+        struck = [];
         const host = document.getElementById('contestDrawResult');
         if (host) { host.style.display = 'none'; host.innerHTML = ''; }
         const button = document.getElementById('contestDrawBtn');
@@ -749,12 +753,21 @@
         const tickets = result.entriesHeld === 1 ? '1 ticket' : `${n(result.entriesHeld)} tickets`;
         const worth = result.chancesHeld === 1 ? '1 chance' : `${n(result.chancesHeld)} chances`;
 
+        const earlierList = earlier
+            .map((name) => (struck.includes(name) ? `<s>${esc(name)}</s>` : esc(name)))
+            .join(', ');
+
         host.innerHTML = `<div style="text-align: center; padding: 8px 0;">
-                <div style="font-size: 2.4em; font-weight: 800; line-height: 1.2;">🎉 ${esc(result.associate)}</div>
+                <div style="font-size: 2.4em; font-weight: 800; line-height: 1.2;">🎉 ${esc(result.associate)}
+                    <button type="button" id="contestDrawStrike" title="Not here or doesn't qualify? Draw again"
+                        aria-label="${esc(result.associate)} is not here. Draw again"
+                        style="vertical-align: middle; width: 28px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 50%;
+                        background: var(--bg-surface); color: var(--text-secondary); font-size: 16px; line-height: 1; cursor: pointer;">×</button>
+                </div>
                 <div style="margin-top: 6px; font-size: 1.1em; color: var(--text-secondary);">${tickets}</div>
                 ${result.wonWith ? `<div style="margin-top: 4px; color: var(--text-secondary);">Winning ticket: ${esc(result.wonWith)}</div>` : ''}
             </div>
-            ${earlier.length ? `<div style="text-align: center; font-size: 0.9em; color: var(--text-secondary);">Already drawn: ${earlier.map(esc).join(', ')}</div>` : ''}
+            ${earlier.length ? `<div style="text-align: center; font-size: 0.9em; color: var(--text-secondary);">Already drawn: ${earlierList}</div>` : ''}
             <details style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
                 <summary style="cursor: pointer;">How it was drawn</summary>
                 <div style="margin-top: 6px;">
@@ -765,6 +778,11 @@
             </details>
             ${startOver}`;
         document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
+        // Struck off: they stay out of the bowl, and the prize is drawn again.
+        document.getElementById('contestDrawStrike')?.addEventListener('click', () => {
+            struck.push(result.associate);
+            draw();
+        });
 
         const button = document.getElementById('contestDrawBtn');
         if (button) button.textContent = '🎲 Draw another';
