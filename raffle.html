@@ -844,12 +844,19 @@
     // ============================================
 
     // Only winners are ever on screen. Anybody taken out simply disappears, so
-    // a screenshot of the list shows who won and nothing else.
-    function addChip(name) {
+    // a screenshot of the list shows who won and nothing else. A recorded
+    // winner (already announced) gets no x: that prize is settled.
+    function addChip(name, recorded) {
         var chip = document.createElement('li');
         chip.setAttribute('data-name', name);
         var text = document.createElement('span');
         text.textContent = '🏆 ' + name;
+        if (recorded) {
+            chip.setAttribute('data-recorded', 'yes');
+            chip.appendChild(text);
+            winnersEl.appendChild(chip);
+            return chip;
+        }
         var skip = document.createElement('button');
         skip.type = 'button';
         skip.className = 'skip';
@@ -970,7 +977,10 @@
 
     function remember() {
         if (!monthKey || !window.history || !window.history.replaceState) return;
-        var won = Array.prototype.map.call(winnersEl.children, function (chip) { return chip.getAttribute('data-name'); });
+        // Recorded winners come from the contest module, so they need no remembering.
+        var won = Array.prototype.filter.call(winnersEl.children, function (chip) {
+            return !chip.getAttribute('data-recorded');
+        }).map(function (chip) { return chip.getAttribute('data-name'); });
         var params = new URLSearchParams();
         params.set('month', monthKey);
         if (won.length || outOfRaffle.length) params.set('sitting', packSitting({ won: won, out: outOfRaffle }));
@@ -994,6 +1004,12 @@
             var name = inBowl[String(value).trim().toLowerCase()];
             return name && drawn.indexOf(name) === -1 ? name : '';
         }
+        // Prizes already announced come first, in order, every time.
+        contest().recordedWinners(monthKey).forEach(function (name) {
+            if (drawn.indexOf(name) > -1) return;
+            drawn.push(name);
+            addChip(name, true);
+        });
         out.forEach(function (value) {
             var name = known(value);
             if (!name) return;

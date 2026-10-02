@@ -727,7 +727,9 @@
         const date = document.getElementById('contestDate')?.value;
         const monthKey = monthKeyFor(date) || new Date().toISOString().slice(0, 7);
         const away = typeof sittingOut === 'string' && sittingOut ? sittingOut : '';
-        const result = contest()?.drawWinner(currentMonthData(), undefined, { exclude: drawn.concat(away ? [away] : []) });
+        // Prizes already announced for this month stay won: the draw starts after them.
+        const recorded = contest()?.recordedWinners?.(monthKey) || [];
+        const result = contest()?.drawWinner(currentMonthData(), undefined, { exclude: drawn.concat(recorded, away ? [away] : []) });
         host.style.display = 'block';
 
         const startOver = '<div style="margin-top: 10px; text-align: center;">'
@@ -739,7 +741,7 @@
             if (away) {
                 host.innerHTML = `<p style="margin: 0; text-align: center;">Nobody else is left to draw, so ${esc(away)} goes back in the bowl.</p>` + startOver;
                 document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
-            } else if (drawn.length) {
+            } else if (drawn.length || recorded.length) {
                 host.innerHTML = '<p style="margin: 0; text-align: center;">Everybody with a ticket has been drawn.</p>' + startOver;
                 document.getElementById('contestDrawReset')?.addEventListener('click', resetDraw);
             } else {
@@ -762,7 +764,7 @@
 
         // Only winners are listed: anybody taken out is left off, so a
         // screenshot never shows who was not there.
-        const earlierWinners = earlier.filter((name) => !struck.includes(name));
+        const earlierWinners = recorded.concat(earlier.filter((name) => !struck.includes(name)));
         const earlierList = earlierWinners.map(esc).join(', ');
 
         host.innerHTML = `<div style="text-align: center; padding: 8px 0;">
@@ -786,7 +788,7 @@
                 <div style="margin-top: 6px;">
                     Drew chance ${n(result.draw + 1)} of ${n(result.chances)}. They held ${tickets}, worth ${worth} (${share}% odds).
                     Each person's chances are their tickets times their tickets, so more tickets count for more.
-                    ${earlier.length ? 'Anyone already drawn was left out of this one. ' : ''}${away ? 'One person sat this one out and is back in the bowl for the next. ' : ''}The winning ticket was earned by ${esc(result.wonBy)}.
+                    ${earlier.length || recorded.length ? 'Anyone already drawn was left out of this one. ' : ''}${away ? 'One person sat this one out and is back in the bowl for the next. ' : ''}The winning ticket was earned by ${esc(result.wonBy)}.
                 </div>
             </details>
             ${startOver}`;

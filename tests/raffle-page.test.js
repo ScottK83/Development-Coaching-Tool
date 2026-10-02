@@ -29,6 +29,15 @@ suite('raffle page: the winner comes from the contest module', (t) => {
     t.check('the winning ticket is worded by the module', /result\.wonWith/.test(html) && !/perfect survey'/.test(html));
 });
 
+suite('raffle page: prizes already announced are recorded in the contest module', (t) => {
+    t.installFakeBrowser();
+    const contest = t.loadModule('modules/contest.module.js').contest;
+    t.equal('September is Kristin then Angelina', contest.recordedWinners('2026-09').join(','), 'Kristin Villela,Angelina Fierro');
+    t.equal('a month with none has none', contest.recordedWinners('2026-10').length, 0);
+    contest.recordedWinners('2026-09').push('Somebody Else');
+    t.equal('and the record cannot be changed from outside', contest.recordedWinners('2026-09').length, 2);
+});
+
 suite('raffle page: the Contest panel links to it', (t) => {
     const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8');
 
@@ -166,7 +175,8 @@ function openRaffle(monthData, search, draws) {
     return { byId, settle, flush, chips, location, takeOut };
 }
 
-const bowl = { days: { '2026-09-08': { 'Ann Zeta': { perfectSurveys: 3 }, 'Bo Yu': { perfectSurveys: 2 }, 'Cy Vale': { perfectSurveys: 1 } } } };
+// August, because September has recorded winners of its own (see below).
+const bowl = { days: { '2026-08-11': { 'Ann Zeta': { perfectSurveys: 3 }, 'Bo Yu': { perfectSurveys: 2 }, 'Cy Vale': { perfectSurveys: 1 } } } };
 
 // What the address remembers, unscrambled.
 function sittingIn(search) {
@@ -177,7 +187,7 @@ function sittingIn(search) {
 suite('raffle page: out of the raffle takes them off the screen and draws again', async (t) => {
     // Chances are tickets squared: Ann 9 (0-8), Bo 4, Cy 1. Draw 0 is the
     // first person still in the bowl.
-    const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0, 0]);
+    const r = openRaffle(bowl, '?month=2026-08', [0, 0, 0, 0]);
     await r.settle();
 
     r.byId.go.click();
@@ -199,7 +209,7 @@ suite('raffle page: out of the raffle takes them off the screen and draws again'
 });
 
 suite('raffle page: out of this round puts their tickets back for the next prize', async (t) => {
-    const r = openRaffle(bowl, '?month=2026-09', [0, 0, 0, 0]);
+    const r = openRaffle(bowl, '?month=2026-08', [0, 0, 0, 0]);
     await r.settle();
 
     r.byId.go.click();
@@ -236,7 +246,7 @@ suite('raffle page: the x only shows with the mouse on the chip', (t) => {
 
 suite('raffle page: a link or a refresh picks the sitting back up', async (t) => {
     // The plain names a hand-made link uses still work.
-    const r = openRaffle(bowl, '?month=2026-09&won=ann+zeta&out=Bo%20Yu&out=Nobody%20Here', [0]);
+    const r = openRaffle(bowl, '?month=2026-08&won=ann+zeta&out=Bo%20Yu&out=Nobody%20Here', [0]);
     await r.settle();
 
     t.equal('only the winner is back on screen', r.chips().map((c) => c.name).join(','), 'Ann Zeta');
@@ -256,6 +266,25 @@ suite('raffle page: a link or a refresh picks the sitting back up', async (t) =>
     t.equal('and still keeps Bo out', again.byId.go.textContent, 'Everyone has been drawn');
 });
 
+suite('raffle page: September starts after the two prizes already announced', async (t) => {
+    const september = { days: { '2026-09-21': {
+        'Kristin Villela': { perfectSurveys: 3 }, 'Angelina Fierro': { perfectSurveys: 2 }, 'Ann Zeta': { perfectSurveys: 1 }
+    } } };
+    // A leftover link that names Angelina again must not list her twice.
+    const r = openRaffle(september, '?month=2026-09&won=Angelina+Fierro', [0]);
+    await r.settle();
+
+    t.equal('Kristin then Angelina are on screen from the start', r.chips().map((c) => c.name).join(','), 'Kristin Villela,Angelina Fierro');
+    t.check('with no x: those prizes are settled', r.chips().every((c) => !c.hasX));
+    t.equal('the address needs nothing to remember them', r.location.search, '?month=2026-09');
+    t.equal('the button carries on the draw', r.byId.go.textContent, '🎲 Draw another');
+
+    r.byId.go.click();
+    r.flush();
+    t.equal('the next prize goes to somebody else, on the end', r.chips().map((c) => c.name).join(','), 'Kristin Villela,Angelina Fierro,Ann Zeta');
+    t.check('and that one can still be taken out', r.chips()[2].hasX);
+});
+
 suite('raffle page: Enter on an x is one strike-off, not a draw as well', (t) => {
     const html = page();
     t.check('keys pressed on any button are left to the button', /event\.target\.closest\('button'\)\) return;/.test(html));
@@ -270,7 +299,9 @@ suite('raffle page: the Contest panel draw has the same x', (t) => {
     t.check('out of the raffle strikes them off and draws again', /struck\.push\(result\.associate\);\s*draw\(\);/.test(ui));
     t.check('out of this round puts them back and draws without them',
         /drawn = drawn\.filter\(\(name\) => name !== result\.associate\);\s*draw\(result\.associate\);/.test(ui));
-    t.check('the draw leaves them out of that one prize', /exclude: drawn\.concat\(away \? \[away\] : \[\]\)/.test(ui));
+    t.check('the draw leaves them out of that one prize', /exclude: drawn\.concat\(recorded, away \? \[away\] : \[\]\)/.test(ui));
+    t.check('and starts after the prizes already announced', /recordedWinners\?\.\(monthKey\)/.test(ui)
+        && /earlierWinners = recorded\.concat\(/.test(ui));
     t.check('anybody taken out is left off the list', /earlier\.filter\(\(name\) => !struck\.includes\(name\)\)/.test(ui) && !/<s>/.test(ui));
     t.check('Start the draw over clears them too', /drawn = \[\];\s*struck = \[\];/.test(ui));
 });
