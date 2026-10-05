@@ -297,6 +297,18 @@ overallSentiment,If they thank you, take it, don't wave it off with 'just doing 
 overallSentiment,Talk about the bill like it's their money, because it is
 overallSentiment,If they mention a hard week, one line of acknowledgment then help
 overallSentiment,End with what happens next, certainty is what people actually want
+overallSentiment,Never say 'Calm down'. It escalates every time. Say 'I'm going to help you'
+overallSentiment,Replace 'You're wrong' with 'Let me clarify what happened here'
+overallSentiment,Don't say 'You didn't'. Say 'It looks like this step was missed'
+overallSentiment,Replace 'You should have' with 'Going forward here's what will work'
+overallSentiment,Avoid 'actually' as a correction. It puts them on defensive
+overallSentiment,Stop using 'just'. 'just click there' minimizes what customer is experiencing
+overallSentiment,Never say 'no one else has complained'. Invalidates their experience
+overallSentiment,Never say 'you signed up for that', explain what they signed up for
+overallSentiment,Don't say 'everyone's bill went up', talk about theirs
+overallSentiment,Don't say 'it's only', nothing is only to the person paying it
+overallSentiment,Skip 'obviously' and 'clearly', both tell them they should have known
+overallSentiment,Avoid 'that's just how the billing works', give them the actual reason
 positiveWord,'No problem at all' counts as a positive phrase. Use it when they thank you or apologize for asking
 positiveWord,Say 'I'd be happy to help you with that' as soon as they tell you why they called
 positiveWord,Use 'absolutely' instead of 'yes'. It's more enthusiastic
@@ -341,47 +353,47 @@ positiveWord,If they're moving or closing the account, end with 'I wish you all 
 positiveWord,On a close, 'Thank you for being an APS customer' is worth the extra second
 positiveWord,'Glad to help' and 'Happy to assist' are easy to say at the close and both count
 negativeWord,Replace 'unfortunately' with 'what I can do is...' to focus on solutions
-negativeWord,Never say 'I don't know', say 'Great question let me find that answer for you'
-negativeWord,Avoid 'but'. Use 'and' or 'however' to sound less contradictory
-negativeWord,Don't say 'That's not my department'. Say 'Let me connect you with the right team'
-negativeWord,Replace 'You'll have to' with 'The next step is', sounds less harsh
-negativeWord,Avoid 'policy won't allow', say 'Here's what I can offer instead'
-negativeWord,Don't say 'That's impossible'. Say 'Let me see what options we have'
-negativeWord,Replace 'You're wrong' with 'Let me clarify what happened here'
+negativeWord,Instead of 'I'm not sure', say 'Great question, let me find that answer for you'
+negativeWord,'Yes, but' cancels the yes. Say 'Yes, and here's how it works'
+negativeWord,Don't say 'That's not my problem'. Say 'Let me get you to the right team'
+negativeWord,Replace 'You need to go to the website' with 'Let me walk you through it right now'
+negativeWord,Avoid 'our policy doesn't allow that', say 'Here's what I can offer instead'
+negativeWord,Don't say 'There's no way to do that'. Say 'Let me see what options we have'
+negativeWord,Replace 'Don't do that' with 'Here's what works best'
 negativeWord,Avoid 'There's nothing I can do', always offer SOMETHING even if small
-negativeWord,Don't say 'You didn't'. Say 'It looks like this step was missed'
-negativeWord,Never say 'Calm down'. It escalates every time. Say 'I'm going to help you'
-negativeWord,Stop using 'just'. 'just click there' minimizes what customer is experiencing
-negativeWord,Avoid 'actually' as a correction. It puts them on defensive
-negativeWord,Don't say 'I hear you but', the 'but' erases the 'I hear you'
-negativeWord,Replace 'You should have' with 'Going forward here's what will work'
-negativeWord,Avoid 'to be fair'. It signals you're about to argue
+negativeWord,Don't say 'I can't find it'. Say 'Let me look another way'
+negativeWord,'I'm sorry you feel that way' sounds like blame. Say 'I'm sorry this happened, let me help'
+negativeWord,'I'm trying to help you' sounds defensive. 'I'm here to help' says the same thing and counts in your favor
+negativeWord,Instead of 'We don't have that', say what you do have: 'Here's what we can do'
+negativeWord,Don't say 'I understand, but'. The 'but' erases the 'I understand'
+negativeWord,Drop 'sorry, but'. Say sorry and stop, then say what you can do
+negativeWord,Instead of 'I can't tell you that', say 'Here's what I can share'
 negativeWord,Don't say 'our policy states', say 'here's what we can do', same info less cold
-negativeWord,Never say 'no one else has complained'. Invalidates their experience
-negativeWord,Avoid 'I'll try', say 'I will', commitment builds trust
+negativeWord,Swap 'I can't see that' for 'Here's what I'm seeing'
+negativeWord,'I'm unable to help with that' ends the conversation. Say 'Let me find out who can'
 negativeWord,Avoid 'there are no notes on this'. Say what you can see and what you're doing next
-negativeWord,Avoid 'as I already said'. Repeating info isn't customer's fault
-negativeWord,Don't say 'I can't' without immediately saying 'here's what I CAN do'
-negativeWord,Replace 'you misunderstood' with 'let me say that more clearly'
-negativeWord,Stop using filler sounds like 'umm' and 'uhh'. A silent pause is better
-negativeWord,Drop 'should' and say what will happen
-negativeWord,Don't say 'the system won't let me', say what you can do
-negativeWord,Avoid 'that's just how the billing works', give them the actual reason
-negativeWord,Never say 'you signed up for that', explain what they signed up for
-negativeWord,Don't say 'everyone's bill went up', talk about theirs
-negativeWord,Avoid 'you were supposed to', it's a scold
-negativeWord,Don't say 'I don't see anything wrong', say what you do see
+negativeWord,Avoid 'like I said' and 'as I said before'. Repeating info isn't the customer's fault
+negativeWord,Instead of 'I can't do that', start with 'Here's what I CAN do'
+negativeWord,Replace 'We can't provide that' with 'Here's what I can get you'
+negativeWord,Instead of 'I don't see any notes', say what you do see: 'Here's what's on the account'
+negativeWord,Instead of 'There was an error', say 'Here's what happened and here's the fix'
+negativeWord,Instead of 'I can't give you a credit', say 'Here's what I can do for you'
+negativeWord,'We can't' sounds final. Lead with what we can do instead
+negativeWord,'I'm not sure' makes them doubt everything after it. Say 'Let me check on that for you'
+negativeWord,Don't send them off with 'You need to go online for that'. Walk them through it while you have them
+negativeWord,Skip 'don't do that' when they explain what they tried. Say 'Next time, this way is quicker'
+negativeWord,Don't say 'I can't see anything wrong', say what you do see
 negativeWord,Drop 'like I said'
-negativeWord,Avoid 'hopefully', either it will or you don't know yet
-negativeWord,Don't say 'that is a lot' about someone's bill, they know
-negativeWord,Avoid 'system error', say what happened and what you're doing about it
-negativeWord,Don't say 'you'll have to call back', make the next step yours wherever you can
-negativeWord,Drop 'at this time', it adds nothing
-negativeWord,Never say 'I'm not able to' without a 'here's what I can' right behind it
-negativeWord,Don't say 'it's only', nothing is only to the person paying it
-negativeWord,Avoid 'we never', it starts an argument you can't win
-negativeWord,Don't say 'that's your responsibility' unless you've already offered help
-negativeWord,Skip 'obviously' and 'clearly', both tell them they should have known
+negativeWord,Drop 'I'm just trying to help'. It sounds like you're defending yourself
+negativeWord,Never say 'sorry you feel that way'. Name what they're upset about instead
+negativeWord,Don't blame 'an error' and stop there. Say what happened and what you're doing about it
+negativeWord,'There's nothing we can do' is never the whole answer. Name one thing you can do
+negativeWord,'We don't have a record of that' sounds like a dead end. Say 'I'm not finding it yet, let me check one more place'
+negativeWord,Never say 'I'm unable to help' without a 'here's what I can do' right behind it
+negativeWord,'There's no way to change that' ends the call. Say 'Here's what we can change'
+negativeWord,'I understand, but' tells them you're about to disagree. Try 'I understand, and here's what I can do'
+negativeWord,'I'm sorry, but' takes the apology back. Leave the 'but' off
+negativeWord,Skip 'yes, but'. If the answer is yes, stop at yes
 managingEmotions,Take a 3-second breath before responding to frustrated customers
 managingEmotions,Validate by naming the specific issue back to them. 'That double charge would frustrate me too' beats generic 'I understand your frustration'
 managingEmotions,Lower your voice slightly when the customer raises theirs. It brings the temperature down
@@ -425,6 +437,10 @@ managingEmotions,If a shift breaks you a little, tell your supe before it ends, 
 managingEmotions,You can't fix someone's money, you can be the calm part of their day
 managingEmotions,If the same call type gets you every time, say that out loud to someone
 managingEmotions,Panic and anger sound alike on the phone, treat the panic first
+managingEmotions,Say 'concern' instead of 'complaint'. 'Complaint' flags the call as emotional even when you're the one saying it
+managingEmotions,Show empathy with 'I'm so sorry that happened'. 'I can't believe that happened' and 'that's horrible' flag the call as emotional, even from you
+managingEmotions,Own a mistake with 'That's on us, let me fix it'. 'That was our fault' flags the call as emotional
+managingEmotions,Never say 'It's not my fault', even to agree with them. It flags the call as emotional and sounds like blame
 reliability,Review your Verint time entries to make sure you're marked correctly, coding errors can inflate your hours
 reliability,Pre-schedule any planned time off in advance so it doesn't count against reliability
 reliability,If time off is listed as Same Day use PTOST, you're given 40 hours of PTOST so use them

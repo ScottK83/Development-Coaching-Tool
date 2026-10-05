@@ -82,7 +82,7 @@ suite('call word choice: scoring a call', (t) => {
     const positives = scan.positiveA.map(hit => hit.phrase);
     t.check('picks up "of course" on the agent side', positives.includes('of course'));
     t.check('picks up "taken care" on the agent side', positives.includes('taken ... care'));
-    t.check('picks up "what I can do" on the agent side', positives.includes('what I can do'));
+    t.check('picks up "what I can do" on the agent side', positives.includes('what i can do'));
     // Natural speech against a NEAR query, which the flattened list missed.
     t.check('picks up "How can I help you today?" as how NEAR help', positives.includes('how ... help'));
 

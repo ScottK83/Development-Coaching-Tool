@@ -21,7 +21,7 @@
             A: [
                 'have NEAR wonderful', 'my pleasure', '"thank you" NEAR being', 'questions or concerns',
                 'what NEAR can', '"thank you" NEAR part', 'do NEAR "for you"', '"I can" NEAR help',
-                "don't NEAR worry", 'what I can do', 'can NEAR definitely', 'what we can do',
+                "don't NEAR worry", 'what i can do', 'can NEAR definitely', 'what we can do',
                 'how NEAR help', 'absolutely', 'anything else', 'taken NEAR care', 'work NEAR you',
                 '"anything else" NEAR you', '"anything else" NEAR help', 'you got it', 'happy to',
                 'of course', 'no problem', 'happy NEAR help', 'take NEAR time', 'enjoy', 'certainly',
@@ -35,56 +35,58 @@
                 '[END:100] really appreciate', '[END:100] very NEAR helpful', "[END:100] you've NEAR been"
             ]
         },
+        // Verint's export (10/05), operators kept. NOTIN matters most here:
+        // "we NEAR can't NOTIN \"what we can't\"" flags "we can't do that"
+        // and leaves "here's what we can't change, and here's what we can".
         negative: {
             A: [
-                'not sure', 'an error', "we can't", 'no way', 'yes but', 'unfortunately', "I can't give",
-                'trying help', 'sorry but', 'I understand but', "we don't have", 'not my problem', 'any notes',
-                "can't provide", "I can't do", "I can't see", 'you need to go', 'no notes', "I can't find",
-                'sorry feel', 'our policy', 'nothing do', "I can't tell", "don't do that", 'unable help',
-                'like I said'
+                '"like i" NEAR said', `we don't have NOTIN "we don't have to"`, 'no NEAR way',
+                `we NEAR can't NOTIN "what we can't"`, 'yes NEAR but', `"i can't" NEAR do NOTIN "what i can't do"`,
+                'nothing NEAR do NOTIN "nothing do"', '"I understand" NEAR but', "don't do that", 'sorry but',
+                'you need to go NOTIN "need to go over"', 'no notes', `"i can't" NEAR give`, 'unfortunately',
+                `"i can't" NEAR see`, 'not sure', 'an error', 'unable NEAR help', 'trying NEAR help', 'any notes',
+                `"i can't" NEAR find`, 'our policy', `"i can't" NEAR tell`, "can't NEAR provide",
+                'not my problem', 'sorry NEAR feel'
             ],
             C: [
-                'you understand', "i don't care", 'not helping', 'not helping', "you don't care", 'let finish',
-                'not listening'
+                'you NEAR understand', "i don't care", "you don't care", 'not NEAR listening', 'let NEAR finish',
+                'not NEAR helping', 'not helping'
             ]
         },
+        // Verint tags a phrase C for the customer only and A for the associate
+        // only; a phrase with no tag counts from EITHER side (Scott, 10/05).
+        // Most of this list is untagged, so "complaint", "that's horrible" or
+        // "I can't believe that happened" from the associate flags the call
+        // too. E holds those. The list used to be stored as customer-only.
         emotions: {
+            A: [],
             C: [
-                'frustrated',
-                'your company',
-                'frustrating',
-                'ridiculous',
-                'really upset',
-                'you people',
-                'what NEAR hell',
-                'fuck you',
-                'not my fault',
-                'horrible',
-                'wasting NEAR "my time"',
-                'this NEAR "B\'S"',
-                'screwed',
-                "you don't care",
-                'our fault',
-                'stupid',
-                'complaint',
-                'totally unacceptable',
-                "can't NEAR believe",
-                'very unhappy',
-                'your fault NOTIN "not your fault"',
-                'not NEAR "good enough"',
-                'cannot NEAR believe',
-                'not happy',
-                'seriously',
-                'pissed off',
-                'unacceptable',
-                'fucking',
-                'kill myself',
-                'Monopoly',
-                'bull shit',
-                "i'm NEAR angry"
+                'your company', 'frustrated', 'not happy', 'frustrating', 'seriously',
+                'your fault NOTIN "not your fault"', 'unacceptable', "you don't care", 'really upset',
+                'this NEAR "B S"', 'kill myself'
+            ],
+            E: [
+                'ridiculous', 'screwed', "can't NEAR believe", 'fucking', 'you people', 'complaint', 'bullshit',
+                "i can't believe", 'stupid', 'not my fault', 'what NEAR hell', 'horrible', 'our fault',
+                'pissed off', 'fuck you', 'cannot NEAR believe', 'totally unacceptable', 'very unhappy',
+                'not NEAR "good enough"', 'wasting NEAR "my time"', 'Monopoly', "i'm NEAR angry",
+                'threatening', 'stupidity'
             ]
         }
     };
+
+    // The emotions list as it shipped before 10/05, all of it filed as
+    // customer-only and with "bull shit" as two words, which never matched.
+    // A stored list that is exactly this one was never edited, so it is
+    // replaced outright rather than patched phrase by phrase.
+    const LEGACY_SHIPPED_EMOTIONS = [
+        'frustrated', 'your company', 'frustrating', 'ridiculous', 'really upset', 'you people',
+        'what NEAR hell', 'fuck you', 'not my fault', 'horrible', 'wasting NEAR "my time"', `this NEAR "B'S"`,
+        'screwed', "you don't care", 'our fault', 'stupid', 'complaint', 'totally unacceptable',
+        "can't NEAR believe", 'very unhappy', 'your fault NOTIN "not your fault"', 'not NEAR "good enough"',
+        'cannot NEAR believe', 'not happy', 'seriously', 'pissed off', 'unacceptable', 'fucking',
+        'kill myself', 'Monopoly', 'bull shit', "i'm NEAR angry"
+    ];
 
     /**
      * The words of a Verint query with the operators taken off, lower case and
@@ -169,33 +171,95 @@
      * defaults never came back), and a phrase stored in the old flattened
      * spelling ("how help") is swapped for the Verint query it came from
      * ("how NEAR help"). A phrase the supervisor added is left exactly as is.
+     *
+     * A bucket that is the shipped list in an older spelling, nothing added
+     * and nothing taken away, is replaced whole: that is how the duplicate
+     * "not helping" becomes Verint's pair of "not NEAR helping" and "not
+     * helping", and how the old customer-only emotions list is split into
+     * customer-only and either-side.
      */
-    function upgradePhraseDatabase(stored) {
-        const fresh = () => JSON.parse(JSON.stringify(DEFAULT_SENTIMENT_PHRASE_DATABASE));
-        if (!stored || typeof stored !== 'object') return { db: fresh(), changed: true };
+    const PHRASE_BUCKETS = [
+        ['positive', 'A'], ['positive', 'C'], ['negative', 'A'], ['negative', 'C'],
+        ['emotions', 'A'], ['emotions', 'C'], ['emotions', 'E']
+    ];
 
-        const buckets = [['positive', 'A'], ['positive', 'C'], ['negative', 'A'], ['negative', 'C'], ['emotions', 'C']];
-        const total = buckets.reduce((sum, [kind, side]) => {
+    function upgradePhraseDatabase(stored) {
+        const clone = (value) => JSON.parse(JSON.stringify(value));
+        const shippedDb = DEFAULT_SENTIMENT_PHRASE_DATABASE;
+        if (!stored || typeof stored !== 'object') return { db: clone(shippedDb), changed: true };
+
+        const total = PHRASE_BUCKETS.reduce((sum, [kind, side]) => {
             const list = stored[kind]?.[side];
             return sum + (Array.isArray(list) ? list.length : 0);
         }, 0);
-        if (total === 0) return { db: fresh(), changed: true };
+        if (total === 0) return { db: clone(shippedDb), changed: true };
+
+        const hasSyntax = (phrase) => /\bNEAR\b|\bNOTIN\b|\[(?:END|START):\d+\]/.test(String(phrase || ''));
+        const wordSet = (list) => new Set(list.map(phrasePlainWords));
+        const sameWords = (a, b) => {
+            const left = wordSet(a);
+            const right = wordSet(b);
+            return left.size === right.size && [...left].every(words => right.has(words));
+        };
 
         let changed = false;
-        const db = JSON.parse(JSON.stringify(stored));
-        buckets.forEach(([kind, side]) => {
+        const db = clone(stored);
+
+        // Emotions were one customer-only list until Verint's tags were read.
+        db.emotions = db.emotions && typeof db.emotions === 'object' ? db.emotions : {};
+        if (!Array.isArray(db.emotions.E)) {
+            const before = Array.isArray(db.emotions.C) ? db.emotions.C : [];
+            if (sameWords(before, LEGACY_SHIPPED_EMOTIONS)) {
+                db.emotions = clone(shippedDb.emotions);
+            } else {
+                // Edited before the split: each phrase goes where Verint files it.
+                const eitherSide = wordSet(shippedDb.emotions.E);
+                db.emotions.E = before.filter(phrase => eitherSide.has(phrasePlainWords(phrase)));
+                db.emotions.C = before.filter(phrase => !eitherSide.has(phrasePlainWords(phrase)));
+            }
+            changed = true;
+        }
+        if (!Array.isArray(db.emotions.A)) {
+            db.emotions.A = [];
+            changed = true;
+        }
+
+        PHRASE_BUCKETS.forEach(([kind, side]) => {
             const list = db[kind]?.[side];
-            const shipped = DEFAULT_SENTIMENT_PHRASE_DATABASE[kind]?.[side] || [];
-            if (!Array.isArray(list) || !shipped.length) return;
-            const byWords = new Map(shipped.map(phrase => [phrasePlainWords(phrase), phrase]));
-            db[kind][side] = list.map(phrase => {
-                const plain = String(phrase || '');
-                // Already carries Verint syntax, so it is a query, not a flattening.
-                if (/\bNEAR\b|\bNOTIN\b|\[(?:END|START):\d+\]/.test(plain)) return phrase;
-                const query = byWords.get(phrasePlainWords(plain));
-                if (!query || query === phrase) return phrase;
+            const shipped = shippedDb[kind]?.[side] || [];
+            if (!Array.isArray(list) || !list.length || !shipped.length) return;
+
+            const identical = list.length === shipped.length && list.every((phrase, i) => phrase === shipped[i]);
+            if (identical) return;
+            if (sameWords(list, shipped)) {
+                db[kind][side] = shipped.slice();
                 changed = true;
-                return query;
+                return;
+            }
+
+            const byWords = new Map();
+            shipped.forEach(phrase => {
+                const words = phrasePlainWords(phrase);
+                if (!byWords.has(words)) byWords.set(words, []);
+                byWords.get(words).push(phrase);
+            });
+            const taken = new Set();
+            db[kind][side] = list.map(phrase => {
+                // Already carries Verint syntax, so it is a query, not a flattening.
+                if (hasSyntax(phrase)) {
+                    taken.add(phrase);
+                    return phrase;
+                }
+                const options = byWords.get(phrasePlainWords(phrase)) || [];
+                if (options.includes(phrase) && !taken.has(phrase)) {
+                    taken.add(phrase);
+                    return phrase;
+                }
+                const next = options.find(option => !taken.has(option));
+                if (!next || next === phrase) return phrase;
+                taken.add(next);
+                changed = true;
+                return next;
             });
         });
         return { db, changed };
@@ -215,7 +279,8 @@
      * pasted into an A box can be moved to the C list.
      */
     function parsePhraseLine(line) {
-        let text = String(line || '').trim();
+        // Rows copied out of the Verint spreadsheet bring the count column.
+        let text = String(line || '').trim().replace(/(?:\t|,)\s*\d+\s*$/, '').trim();
         if (!/[a-z0-9]/i.test(text)) return null;
 
         text = text.replace(/^[+\-#]+\s*/, '').trim();
@@ -265,11 +330,17 @@
         const lines = String(textValue || '').split('\n');
         // A pasted Verint export arrives inside an email, with the subject,
         // the signature and the legal footer around it. When any line has the
-        // Verint shape, only those lines are phrases.
-        const verintShape = /^[+\-#]?\s*\(\s*(?:\[(?:END|START):\d+\]\s*)?[AC]:/i;
-        const exported = lines.some(line => verintShape.test(line.trim()));
+        // Verint shape, only those lines are phrases. The shape is a "+(...)"
+        // line, tagged or not, or a bare "A:" / "C:" line: Verint writes a few
+        // without the wrapper (A:"not sure", C:seriously).
+        // Only the wrapped shape says "this is an export"; a hand-typed list
+        // can carry "A: of course" next to untagged lines.
+        const wrappedShape = /^[+\-#]\s*\(.*\)$|^\(\s*(?:\[(?:END|START):\d+\]\s*)?[AC]:.*\)$/i;
+        const bareTagged = /^(?:\[(?:END|START):\d+\]\s*)?[AC]:\s*\S/i;
+        const shapeOf = (line) => String(line || '').trim().replace(/(?:\t|,)\s*\d+\s*$/, '').trim();
+        const exported = lines.some(line => wrappedShape.test(shapeOf(line)));
         return lines
-            .filter(line => !exported || verintShape.test(line.trim()))
+            .filter(line => !exported || wrappedShape.test(shapeOf(line)) || bareTagged.test(shapeOf(line)))
             .map(parsePhraseLine)
             .filter(Boolean);
     }
@@ -348,12 +419,29 @@
 
         sentimentPhraseDatabase.positive = sentimentPhraseDatabase.positive || { A: [], C: [] };
         sentimentPhraseDatabase.negative = sentimentPhraseDatabase.negative || { A: [], C: [] };
-        sentimentPhraseDatabase.emotions = sentimentPhraseDatabase.emotions || { C: [] };
+        sentimentPhraseDatabase.emotions = sentimentPhraseDatabase.emotions || { A: [], C: [], E: [] };
         sentimentPhraseDatabase.positive.A = Array.isArray(sentimentPhraseDatabase.positive.A) ? sentimentPhraseDatabase.positive.A : [];
         sentimentPhraseDatabase.positive.C = Array.isArray(sentimentPhraseDatabase.positive.C) ? sentimentPhraseDatabase.positive.C : [];
         sentimentPhraseDatabase.negative.A = Array.isArray(sentimentPhraseDatabase.negative.A) ? sentimentPhraseDatabase.negative.A : [];
         sentimentPhraseDatabase.negative.C = Array.isArray(sentimentPhraseDatabase.negative.C) ? sentimentPhraseDatabase.negative.C : [];
+        sentimentPhraseDatabase.emotions.A = Array.isArray(sentimentPhraseDatabase.emotions.A) ? sentimentPhraseDatabase.emotions.A : [];
         sentimentPhraseDatabase.emotions.C = Array.isArray(sentimentPhraseDatabase.emotions.C) ? sentimentPhraseDatabase.emotions.C : [];
+        sentimentPhraseDatabase.emotions.E = Array.isArray(sentimentPhraseDatabase.emotions.E) ? sentimentPhraseDatabase.emotions.E : [];
+    }
+
+    function countPhrases(db) {
+        return PHRASE_BUCKETS.reduce((sum, [kind, side]) => sum + (db?.[kind]?.[side]?.length || 0), 0);
+    }
+
+    // The emotions box holds all three sides, so each line says whose it is,
+    // the way Verint writes it: "C:" customer only, "A:" associate only, no
+    // tag for either.
+    function emotionsBoxText(emotions) {
+        return [
+            ...(emotions?.C || []).map(phrase => `C: ${phrase}`),
+            ...(emotions?.A || []).map(phrase => `A: ${phrase}`),
+            ...(emotions?.E || [])
+        ].join('\n');
     }
 
     /**
@@ -366,12 +454,7 @@
      */
     function getPhraseDatabase() {
         const live = typeof sentimentPhraseDatabase !== 'undefined' ? sentimentPhraseDatabase : null;
-        const hasLists = live && typeof live === 'object' && (
-            (live.positive?.A?.length || 0)
-            + (live.negative?.A?.length || 0)
-            + (live.emotions?.C?.length || 0)
-        ) > 0;
-
+        const hasLists = live && typeof live === 'object' && countPhrases(live) > 0;
         return hasLists ? live : JSON.parse(JSON.stringify(DEFAULT_SENTIMENT_PHRASE_DATABASE));
     }
 
@@ -394,14 +477,9 @@
         positiveC.value = (sentimentPhraseDatabase.positive?.C || []).join('\n');
         negativeA.value = (sentimentPhraseDatabase.negative?.A || []).join('\n');
         negativeC.value = (sentimentPhraseDatabase.negative?.C || []).join('\n');
-        emotionsC.value = (sentimentPhraseDatabase.emotions?.C || []).join('\n');
+        emotionsC.value = emotionsBoxText(sentimentPhraseDatabase.emotions);
 
-        const totalCount =
-            (sentimentPhraseDatabase.positive?.A?.length || 0) +
-            (sentimentPhraseDatabase.positive?.C?.length || 0) +
-            (sentimentPhraseDatabase.negative?.A?.length || 0) +
-            (sentimentPhraseDatabase.negative?.C?.length || 0) +
-            (sentimentPhraseDatabase.emotions?.C?.length || 0);
+        const totalCount = countPhrases(sentimentPhraseDatabase);
 
         if (status) {
             status.textContent = `Saved phrase database: ${totalCount} phrases total.`;
@@ -436,12 +514,13 @@
             return { A: Array.from(out.A), C: Array.from(out.C) };
         };
 
+        const emotions = { A: new Set(), C: new Set(), E: new Set() };
+        parsePhraseLines(emotionsC.value).forEach(item => emotions[item.speaker || 'E'].add(item.phrase));
+
         sentimentPhraseDatabase = {
             positive: sides(positiveA, positiveC),
             negative: sides(negativeA, negativeC),
-            emotions: {
-                C: normalizePhraseList(emotionsC.value)
-            },
+            emotions: { A: Array.from(emotions.A), C: Array.from(emotions.C), E: Array.from(emotions.E) },
             updatedAt: new Date().toISOString()
         };
 
@@ -881,7 +960,11 @@
         const candidates = [
             { label: 'Positive Language', report: reports.positive, goal: goals.POSITIVE_GOAL, isNegative: false },
             { label: 'Avoiding Negative Words', report: reports.negative, goal: goals.NEGATIVE_GOAL, isNegative: true },
-            { label: 'Managing Emotions', report: reports.emotions, goal: goals.EMOTIONS_GOAL, isNegative: false }
+            // Negative in the sense that matters here: an emotions phrase is a
+            // flag on the call, never something "already landing" or "worth
+            // trying". It was listed as positive, which offered "Monopoly"
+            // and "threatening" as phrases to try.
+            { label: 'Managing Emotions', report: reports.emotions, goal: goals.EMOTIONS_GOAL, isNegative: true }
         ].filter(function (c) { return Number.isFinite(Number(c.report && c.report.percentage)); });
 
         if (!candidates.length) return null;
@@ -902,8 +985,8 @@
      * The phrases behind a focus, and what each list MEANS.
      *
      * The polarity flips between reports and getting it backwards is not a
-     * cosmetic slip. On Positive Language and Managing Emotions a phrase used
-     * on 28 calls is a habit worth keeping. On Avoiding Negative Words the same
+     * cosmetic slip. On Positive Language a phrase used on 28 calls is a habit
+     * worth keeping. On Avoiding Negative Words and Managing Emotions the same
      * shape is "unfortunately, 28 times" -- a habit to break. Calling that
      * "already landing" would congratulate somebody for the exact thing the
      * metric is docking them for.
@@ -1369,6 +1452,16 @@
                 speaker: direct[1].toUpperCase(),
                 phrase: direct[2].trim().replace(/^"|"$/g, '')
             };
+        }
+
+        // No tag means either side said it: +(ridiculous), +("you people").
+        // Most of the Managing Emotions report is written this way. Read as
+        // 'E', so nothing quotes it back to the associate as her own words,
+        // where it used to land as hers by default or drop out entirely.
+        // Tagged lines were taken by the shapes above, so this one never is.
+        const untagged = compact.match(/^[+\-#]\s*\((.+)\)$/);
+        if (untagged) {
+            return { speaker: 'E', phrase: untagged[1].trim().replace(/^"|"$/g, '') };
         }
 
         return null;

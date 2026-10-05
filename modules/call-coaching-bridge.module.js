@@ -89,6 +89,10 @@
         negativePhrase: ['negativeWord', 'overallSentiment', 'cxRepOverall'],
         positiveUnused: ['positiveWord', 'overallSentiment'],
         emotionUnanswered: ['managingEmotions', 'cxRepOverall', 'overallSentiment'],
+        // An emotions phrase from the associate's own mouth. Most of Verint's
+        // emotions list counts from either side, so "I can't believe that
+        // happened" flags the call however kindly it was meant.
+        emotionPhrase: ['managingEmotions', 'overallSentiment'],
         // From the QA form. Same treatment as everything else: they rank by
         // which KPI the associate is actually missing.
         qaDisclosures: ['cxRepOverall', 'fcr'],
@@ -580,9 +584,17 @@
 
             if (!scan) return;
 
+            // Quoted as spoken ("we really can't"), carried as the query so
+            // the tip search can match it the way Verint does.
             scan.negativeA.forEach(hit => {
-                bump('negativePhrase', 'phrase', `Says "${hit.phrase}", which is on the scored negative list.`, {
-                    date, quote: hit.quote, at: hit.at, phrase: hit.phrase, weight: 6
+                bump('negativePhrase', 'phrase', `Says "${hit.said || hit.phrase}", which is on the scored negative list.`, {
+                    date, quote: hit.quote, at: hit.at, phrase: hit.raw || hit.phrase, weight: 6
+                });
+            });
+
+            (scan.emotionsA || []).forEach(hit => {
+                bump('emotionPhrase', 'phrase', `Says "${hit.said || hit.phrase}", which flags the call as emotional, even coming from you.`, {
+                    date, quote: hit.quote, at: hit.at, phrase: hit.raw || hit.phrase, weight: 6
                 });
             });
 
@@ -851,7 +863,7 @@
             // matched the way Verint matches it, against the tip's words.
             if (finding.phrase) {
                 const compiled = window.DevCoachModules?.callWordChoice?.compilePhrase?.(finding.phrase);
-                if (compiled && (compiled.near || compiled.endWithin !== null)) queries.push(compiled);
+                if (compiled && (compiled.near || compiled.excluded || compiled.endWithin !== null)) queries.push(compiled);
                 else strong.add(finding.phrase.toLowerCase());
             }
         });
@@ -1142,7 +1154,7 @@ Requirements:
         },
         {
             key: 'wording',
-            keys: ['negativePhrase', 'deflection', 'positiveUnused'],
+            keys: ['negativePhrase', 'deflection', 'positiveUnused', 'emotionPhrase'],
             phrase: 'wording that closes a door rather than opening one'
         },
         {

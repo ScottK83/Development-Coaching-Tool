@@ -223,3 +223,27 @@ suite('sentiment summary: a missing file produces nothing rather than half a sum
     t.equal('no reports at all', s.buildSentimentSummaryText({}, helpers(s)).summary, '');
     t.equal('and the prompt agrees', s.buildSentimentCopilotPrompt({ positive: one }, {}), '');
 });
+
+suite('sentiment summary: an emotions focus never offers a phrase to try', (t) => {
+    const s = load(t);
+    // An emotions phrase is a flag on the call. The focus used to treat the
+    // list like the positive one, so "ridiculous" could be "already landing"
+    // and "threatening" offered as worth trying.
+    const built = s.buildSentimentSummaryText({
+        positive: report(99, [{ phrase: 'happy to help', value: 41, speaker: 'A' }]),
+        negative: report(99, [{ phrase: 'unfortunately', value: 1, speaker: 'A' }]),
+        emotions: report(60, [
+            { phrase: 'ridiculous', value: 20, speaker: 'E' },
+            { phrase: 'threatening', value: 0, speaker: 'E' },
+            { phrase: 'monopoly', value: 0 }
+        ])
+    }, helpers(s));
+    const focusBlock = built.summary.split('WHAT TO WORK ON')[1].split('═══')[0];
+
+    t.check('the focus is managing emotions', focusBlock.indexOf('Managing Emotions. It is the widest gap') > -1);
+    t.check('nothing is "already landing"', focusBlock.indexOf('Already landing') === -1);
+    t.check('nothing is offered as worth trying', focusBlock.indexOf('worth trying') === -1);
+    // Untagged in Verint means either side said it, so it is not quoted
+    // back to the associate as her own words.
+    t.check('an either-side phrase is not quoted back as hers', focusBlock.indexOf('"ridiculous"') === -1);
+});

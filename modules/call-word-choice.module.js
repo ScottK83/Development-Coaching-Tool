@@ -138,34 +138,67 @@
             .replace(/\s+/g, ' ')
             .trim();
 
+        // Where in the tokens it matched, first token to last, so the words
+        // actually spoken can be quoted rather than the query.
+        function locate(tokens) {
+            if (exclusions.some(exclusion => tokenIndexes(tokens, exclusion).length)) return null;
+
+            const positions = terms.map(term => tokenIndexes(tokens, term));
+            if (positions.some(list => !list.length)) return null;
+
+            // Every term is present; they also have to be close together.
+            for (const first of positions[0]) {
+                const chain = [first];
+                for (let index = 1; index < terms.length; index++) {
+                    const previous = chain[index - 1];
+                    const next = positions[index].find(at => Math.abs(at - previous) <= NEAR_WINDOW);
+                    if (next === undefined) break;
+                    chain.push(next);
+                }
+                if (chain.length === terms.length) {
+                    const ends = chain.map((at, index) => at + terms[index].length - 1);
+                    return { start: Math.min(...chain), end: Math.max(...ends) };
+                }
+            }
+            return null;
+        }
+
         return {
             raw: original,
             display,
             near: terms.length > 1,
             excluded: exclusions.length > 0,
             endWithin,
+            locate,
             test(tokens, where = {}) {
                 if (endWithin !== null && typeof where.secondsFromEnd === 'number' && where.secondsFromEnd > endWithin) {
                     return false;
                 }
-                if (exclusions.some(exclusion => tokenIndexes(tokens, exclusion).length)) return false;
-
-                const positions = terms.map(term => tokenIndexes(tokens, term));
-                if (positions.some(list => !list.length)) return false;
-                if (positions.length === 1) return true;
-
-                // Every term is present; they also have to be close together.
-                return positions.slice(1).every((list, offset) => list.some(later =>
-                    positions[offset].some(earlier => Math.abs(later - earlier) <= NEAR_WINDOW)
-                ));
+                return locate(tokens) !== null;
             }
         };
     }
 
-    // Deduplicated because the shipped lists already carry one repeat
-    // ("not helping" appears twice in negative.C) and a hand-edited list can
-    // pick up more. Two identical matchers would report the same phrase twice
-    // and count the hit twice with it.
+    /**
+     * The words a match covered, cut from the original line with its own
+     * capitals and apostrophes: "we really can't", not "we ... can't".
+     * Tokens here are the same runs of letters and digits normalize() keeps,
+     * so a token index maps straight back to a place in the text.
+     */
+    function spokenSpan(text, span) {
+        if (!span) return '';
+        const runs = [...String(text || '').matchAll(/[a-z0-9]+/gi)];
+        const first = runs[span.start];
+        const last = runs[span.end];
+        if (!first || !last) return '';
+        return String(text).slice(first.index, last.index + last[0].length);
+    }
+
+    // Deduplicated because a hand-edited list can pick up a repeat (the old
+    // shipped list had "not helping" twice). Two identical matchers would
+    // report the same phrase twice and count the hit twice with it. Verint's
+    // own pair, "not NEAR helping" and "not helping", is two queries and stays
+    // two.
     function compileList(phrases) {
         const seen = new Set();
         return (Array.isArray(phrases) ? phrases : [])
@@ -258,6 +291,7 @@
         compiled.forEach(phrase => {
             let count = 0;
             let quote = '';
+            let said = '';
             let at = null;
 
             pool.forEach(turn => {
@@ -269,11 +303,14 @@
                 count += 1;
                 if (!quote) {
                     quote = clipQuote(turn.text);
+                    said = spokenSpan(turn.text, phrase.locate(tokens));
                     at = typeof turn.at === 'number' ? turn.at : null;
                 }
             });
 
-            if (count) hits.push({ phrase: phrase.display, raw: phrase.raw, count, quote, at });
+            // `said` is the words as spoken ("we really can't"), for anything
+            // that quotes the associate; `phrase` is the query's display form.
+            if (count) hits.push({ phrase: phrase.display, raw: phrase.raw, said: said || phrase.display, count, quote, at });
         });
 
         return hits.sort((a, b) => b.count - a.count || a.phrase.localeCompare(b.phrase));
@@ -284,11 +321,16 @@
      *
      * The metric is not "did the customer get emotional", which the associate
      * does not control. It is whether the associate acknowledged it. So each
-     * customer cue from `emotions.C` is paired with the next few agent turns
-     * and checked for the empathy language callTranscript already recognises.
+     * customer cue (the customer-only list plus the either-side one) is paired
+     * with the next few agent turns and checked for the empathy language
+     * callTranscript already recognises.
      *
      * An unanswered cue is the coachable event, and it comes with the line the
      * customer said and the time they said it.
+     *
+     * The associate's own use of an either-side phrase is scanned separately,
+     * as `emotionsA`: "I can't believe that happened" or "that was our fault"
+     * flags the call as emotional however kindly it was meant.
      */
     function scanEmotions(turns, compiled) {
         const empathy = window.DevCoachModules?.callTranscript?.strengthPattern?.('empathy');
@@ -408,7 +450,14 @@
         const positiveC = scanSide(parsed.turns, compileList(db.positive?.C), 'C');
         const negativeA = scanSide(parsed.turns, compileList(db.negative?.A), 'A');
         const negativeC = scanSide(parsed.turns, compileList(db.negative?.C), 'C');
-        const emotions = scanEmotions(parsed.turns, compileList(db.emotions?.C));
+        // C is the customer only, A the associate only, E either side.
+        const eitherSide = db.emotions?.E || [];
+        const emotions = scanEmotions(parsed.turns, compileList([...(db.emotions?.C || []), ...eitherSide]));
+        // The associate's own words go into coaching, so profanity is masked
+        // on the way out, the same guard the sentiment summary uses.
+        const censor = window.DevCoachModules?.sentiment?.censorCurseWords || (value => value);
+        const emotionsA = scanSide(parsed.turns, compileList([...(db.emotions?.A || []), ...eitherSide]), 'A')
+            .map(hit => Object.assign(hit, { said: censor(hit.said), quote: censor(hit.quote), phrase: censor(hit.phrase) }));
 
         const missingRuleKeys = (options.analysis?.allImprovements || []).map(item => item.key);
         const unusedPositives = findUnusedPositives(
@@ -428,6 +477,7 @@
             negativeA,
             negativeC,
             emotions,
+            emotionsA,
             unusedPositives,
             totals: {
                 positiveAvailable: (db.positive?.A || []).length,
@@ -436,7 +486,8 @@
                 negativeDistinct: negativeA.length,
                 negativeCount,
                 emotionCues: emotions.cues.length,
-                emotionCuesUnanswered: emotions.unanswered.length
+                emotionCuesUnanswered: emotions.unanswered.length,
+                emotionWordsFromAssociate: emotionsA.reduce((sum, hit) => sum + hit.count, 0)
             }
         };
     }
@@ -471,6 +522,9 @@
 
         if (scan.negativeA.length) {
             sections.push(`Scored negative phrases the associate used (${scan.totals.negativeCount} total):\n${scan.negativeA.map(hitLine).join('\n')}`);
+        }
+        if (scan.emotionsA?.length) {
+            sections.push(`Emotion phrases the associate said, which flag the call from either side (${scan.totals.emotionWordsFromAssociate} total):\n${scan.emotionsA.map(hitLine).join('\n')}`);
         }
         if (scan.positiveA.length) {
             sections.push(`Scored positive phrases the associate used (${scan.totals.positiveCount} total):\n${scan.positiveA.map(hitLine).join('\n')}`);
@@ -526,6 +580,7 @@
 
         const groups = [
             group(`Scored negative phrases used (${scan.totals.negativeCount})`, scan.negativeA.map(hitRow), 'warn'),
+            group(`Emotion phrases the associate said (${scan.totals.emotionWordsFromAssociate || 0})`, (scan.emotionsA || []).map(hitRow), 'warn'),
             group(
                 `Customer emotion cues not acknowledged (${scan.totals.emotionCuesUnanswered} of ${scan.totals.emotionCues})`,
                 scan.emotions.unanswered.map(cue => `<li><span class="call-qa-detail">${safe(withTime(cue.quote, cue.at))}</span></li>`),

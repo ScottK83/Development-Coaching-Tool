@@ -769,7 +769,7 @@ suite('coaching bridge: every mapped finding can find a tip', (t) => {
     // problem is that nothing was told how to search it. `verification` sat
     // like that. The two synthetic keys are exempt: they carry the phrase
     // itself, which is a stronger keyword than any list.
-    const carriesItsOwnPhrase = ['negativePhrase', 'positiveUnused'];
+    const carriesItsOwnPhrase = ['negativePhrase', 'positiveUnused', 'emotionPhrase'];
     const unsearchable = Object.keys(bridge.EVIDENCE_MAP)
         .filter(key => !carriesItsOwnPhrase.includes(key))
         .filter(key => !(bridge.FINDING_KEYWORDS[key] || []).length);
