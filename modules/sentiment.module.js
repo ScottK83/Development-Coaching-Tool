@@ -8,20 +8,31 @@
     const SENTIMENT_DEBUG = false;
     const debugLog = SENTIMENT_DEBUG ? console.log.bind(console) : () => {};
 
+    // The positive list is Verint's query text as Scott exported it (10/05),
+    // in Verint's order, with the operators kept. It used to be stored with
+    // NEAR flattened out, so "how NEAR help" became the literal phrase "how
+    // help", which nobody says: "How can I help you?" never scored, and an
+    // associate who said "Have a wonderful day" could be told she never said
+    // "have wonderful". NEAR means both terms within a few words of each
+    // other; [END:100] means the phrase only counts in the last 100 seconds
+    // of the call.
     const DEFAULT_SENTIMENT_PHRASE_DATABASE = {
         positive: {
             A: [
-                'have wonderful', 'anything else', 'I can help', 'anything else help', 'happy to', 'anything else you',
-                'of course', 'happy help', 'absolutely', 'what can', 'how help', 'do for you', 'taken care',
-                'what I can do', 'anything else do', 'work you', 'enjoy', 'what we can do', 'you got it',
-                'take time', 'no problem', 'can definitely', 'here help', "let's get", 'perfectly',
-                "don't worry", 'glad to', 'take care for you', "let's make sure", 'wish best',
-                'answered questions', 'lovely', 'being customer', 'you bet', 'thank you part', 'took care',
-                'happy assist', 'my pleasure', 'a pleasure', 'appreciate business', 'congratulations', 'certainly',
-                'thank you being', 'questions or concerns'
+                'have NEAR wonderful', 'my pleasure', '"thank you" NEAR being', 'questions or concerns',
+                'what NEAR can', '"thank you" NEAR part', 'do NEAR "for you"', '"I can" NEAR help',
+                "don't NEAR worry", 'what I can do', 'can NEAR definitely', 'what we can do',
+                'how NEAR help', 'absolutely', 'anything else', 'taken NEAR care', 'work NEAR you',
+                '"anything else" NEAR you', '"anything else" NEAR help', 'you got it', 'happy to',
+                'of course', 'no problem', 'happy NEAR help', 'take NEAR time', 'enjoy', 'certainly',
+                'here NEAR help', '"take care" NEAR "for you"', 'took NEAR care', 'happy NEAR assist',
+                'glad to', 'perfectly', '"anything else" NEAR do', "let's make sure",
+                'answered NEAR questions', "let's get", 'a pleasure', 'congratulations',
+                'wish NEAR best', '[END:100] lovely', 'being NEAR customer', 'you bet',
+                'appreciate NEAR business'
             ],
             C: [
-                'really appreciate', "you've been", 'very helpful'
+                '[END:100] really appreciate', '[END:100] very NEAR helpful', "[END:100] you've NEAR been"
             ]
         },
         negative: {
@@ -75,45 +86,197 @@
         }
     };
 
+    /**
+     * The words of a Verint query with the operators taken off, lower case and
+     * punctuation flattened: "\"thank you\" NEAR being" and the old flattened
+     * "thank you being" both read "thank you being". That shared form is what
+     * ties a stored phrase to its example and to its upgraded spelling.
+     */
+    function phrasePlainWords(raw) {
+        return normalizePhraseForMatch(String(raw || '')
+            .replace(/\[(?:END|START):\d+\]/gi, ' ')
+            .replace(/\bNOTIN\b\s*(?:"[^"]*"|'[^']*'|\S+)/gi, ' ')
+            .replace(/\bNEAR\b/g, ' '));
+    }
+
+    /**
+     * Something natural to say for each scored positive phrase.
+     *
+     * A query is not a sentence: "have NEAR wonderful" is what Verint listens
+     * for, "Have a wonderful day" is what the associate says. Coaching quotes
+     * the sentence. These are not a second lexicon, nothing is scored off
+     * them; each one is an example of its own query, and the tests run every
+     * example through the matcher to prove it would score.
+     */
+    const POSITIVE_PHRASE_EXAMPLES = {
+        'have wonderful': 'Have a wonderful day',
+        'my pleasure': 'My pleasure',
+        'thank you being': 'Thank you for being so patient',
+        'questions or concerns': 'Do you have any other questions or concerns?',
+        'what can': 'What can I help you with today?',
+        'thank you part': 'Thank you for being a part of APS',
+        'do for you': 'What else can I do for you?',
+        'i can help': 'I can help you with that',
+        'don t worry': "Don't worry, I'll walk you through it",
+        'what i can do': 'Let me see what I can do',
+        'can definitely': 'I can definitely do that for you',
+        'what we can do': "Here's what we can do",
+        'how help': 'How can I help you today?',
+        'absolutely': 'Absolutely',
+        'anything else': 'Is there anything else?',
+        'taken care': "That's all taken care of",
+        'work you': 'I can work with you on that',
+        'anything else you': 'Is there anything else you need today?',
+        'anything else help': 'Is there anything else I can help you with?',
+        'you got it': 'You got it',
+        'happy to': "I'm happy to look into that",
+        'of course': 'Of course',
+        'no problem': 'No problem at all',
+        'happy help': "I'd be happy to help with that",
+        'take time': 'Take your time',
+        'enjoy': 'Enjoy the rest of your day',
+        'certainly': 'Certainly',
+        'here help': "I'm here to help",
+        'take care for you': "I'll take care of that for you",
+        'took care': 'I took care of that for you',
+        'happy assist': 'Happy to assist',
+        'glad to': 'Glad to help',
+        'perfectly': 'That works perfectly',
+        'anything else do': 'Is there anything else I can do?',
+        'let s make sure': "Let's make sure everything is set",
+        'answered questions': 'Have I answered your questions?',
+        'let s get': "Let's get that set up for you",
+        'a pleasure': 'It was a pleasure helping you',
+        'congratulations': 'Congratulations on the new home',
+        'wish best': 'I wish you all the best',
+        'lovely': 'Have a lovely day',
+        'being customer': 'Thank you for being an APS customer',
+        'you bet': 'You bet',
+        'appreciate business': 'We appreciate your business'
+    };
+
+    function examplePhraseFor(raw) {
+        return POSITIVE_PHRASE_EXAMPLES[phrasePlainWords(raw)] || '';
+    }
+
+    /**
+     * Brings a stored phrase list up to the shipped one, without touching
+     * anything the supervisor chose.
+     *
+     * Two repairs, both only ever to a list that never had a real edit in it:
+     * a list with no phrases at all is given the shipped lists (the stored copy
+     * had been saved as empty buckets, so Settings showed nothing and the
+     * defaults never came back), and a phrase stored in the old flattened
+     * spelling ("how help") is swapped for the Verint query it came from
+     * ("how NEAR help"). A phrase the supervisor added is left exactly as is.
+     */
+    function upgradePhraseDatabase(stored) {
+        const fresh = () => JSON.parse(JSON.stringify(DEFAULT_SENTIMENT_PHRASE_DATABASE));
+        if (!stored || typeof stored !== 'object') return { db: fresh(), changed: true };
+
+        const buckets = [['positive', 'A'], ['positive', 'C'], ['negative', 'A'], ['negative', 'C'], ['emotions', 'C']];
+        const total = buckets.reduce((sum, [kind, side]) => {
+            const list = stored[kind]?.[side];
+            return sum + (Array.isArray(list) ? list.length : 0);
+        }, 0);
+        if (total === 0) return { db: fresh(), changed: true };
+
+        let changed = false;
+        const db = JSON.parse(JSON.stringify(stored));
+        buckets.forEach(([kind, side]) => {
+            const list = db[kind]?.[side];
+            const shipped = DEFAULT_SENTIMENT_PHRASE_DATABASE[kind]?.[side] || [];
+            if (!Array.isArray(list) || !shipped.length) return;
+            const byWords = new Map(shipped.map(phrase => [phrasePlainWords(phrase), phrase]));
+            db[kind][side] = list.map(phrase => {
+                const plain = String(phrase || '');
+                // Already carries Verint syntax, so it is a query, not a flattening.
+                if (/\bNEAR\b|\bNOTIN\b|\[(?:END|START):\d+\]/.test(plain)) return phrase;
+                const query = byWords.get(phrasePlainWords(plain));
+                if (!query || query === phrase) return phrase;
+                changed = true;
+                return query;
+            });
+        });
+        return { db, changed };
+    }
+
+    /**
+     * One line of a phrase box, in any of the shapes it arrives in:
+     *
+     *   have NEAR wonderful                  typed by hand
+     *   A: happy to                          tagged by speaker
+     *   +(A:"have" NEAR "wonderful")         pasted straight from Verint
+     *   +([END:100]C:"very" NEAR "helpful")  Verint, with a position rule
+     *
+     * NEAR and the position rule are kept, because they are the query: drop
+     * them and "have NEAR wonderful" becomes "have wonderful", which nobody
+     * says. Returns the speaker the line was tagged with, if any, so a C line
+     * pasted into an A box can be moved to the C list.
+     */
+    function parsePhraseLine(line) {
+        let text = String(line || '').trim();
+        if (!/[a-z0-9]/i.test(text)) return null;
+
+        text = text.replace(/^[+\-#]+\s*/, '').trim();
+        const wrapped = text.match(/^\((.*)\)$/);
+        if (wrapped) text = wrapped[1].trim();
+
+        let position = '';
+        let speaker = null;
+        const takePosition = () => {
+            const match = text.match(/^\[(END|START):(\d+)\]\s*/i);
+            if (!match) return;
+            position = `[${match[1].toUpperCase()}:${match[2]}] `;
+            text = text.slice(match[0].length);
+        };
+        takePosition();
+        const tag = text.match(/^([AC]):\s*/i);
+        if (tag) {
+            speaker = tag[1].toUpperCase();
+            text = text.slice(tag[0].length);
+        }
+        takePosition();
+
+        // An exclusion keeps its quotes; it is matched as written.
+        let exclusion = '';
+        const notin = text.match(/\s+NOTIN\s+(.+)$/i);
+        if (notin) {
+            exclusion = ` NOTIN ${notin[1].trim()}`;
+            text = text.slice(0, notin.index);
+        }
+
+        const terms = text
+            .split(/\s+NEAR\s+/i)
+            .map(term => term.trim().replace(/^["']+|["']+$/g, '').trim())
+            .filter(Boolean);
+        if (!terms.length || !terms.some(term => /[a-z0-9]/i.test(term))) return null;
+
+        // A lone phrase needs no quotes. Between NEARs, a term of more than
+        // one word is quoted so it reads as one term.
+        const query = terms.length === 1
+            ? terms[0]
+            : terms.map(term => (/\s/.test(term) ? `"${term}"` : term)).join(' NEAR ');
+
+        return { speaker, phrase: `${position}${query}${exclusion}` };
+    }
+
+    function parsePhraseLines(textValue) {
+        const lines = String(textValue || '').split('\n');
+        // A pasted Verint export arrives inside an email, with the subject,
+        // the signature and the legal footer around it. When any line has the
+        // Verint shape, only those lines are phrases.
+        const verintShape = /^[+\-#]?\s*\(\s*(?:\[(?:END|START):\d+\]\s*)?[AC]:/i;
+        const exported = lines.some(line => verintShape.test(line.trim()));
+        return lines
+            .filter(line => !exported || verintShape.test(line.trim()))
+            .map(parsePhraseLine)
+            .filter(Boolean);
+    }
+
     function normalizePhraseList(textValue) {
         if (!textValue) return [];
-        const unique = new Set();
-
-        const parseManualPhraseLine = (line) => {
-            if (!line) return '';
-            let cleaned = String(line).trim();
-
-            if (!/[a-z0-9]/i.test(cleaned)) {
-                return '';
-            }
-
-            const taggedInParens = cleaned.match(/^[+\-#]?\s*\(([AC]):\s*(.+)\)$/i);
-            if (taggedInParens) {
-                cleaned = taggedInParens[2].trim();
-            } else {
-                const taggedDirect = cleaned.match(/^[+\-#]?\s*([AC]):\s*(.+)$/i);
-                if (taggedDirect) {
-                    cleaned = taggedDirect[2].trim();
-                } else {
-                    cleaned = cleaned.replace(/^[+\-#]+\s*/, '').trim();
-                }
-            }
-
-            cleaned = cleaned.replace(/^"|"$/g, '').trim();
-
-            if (!/[a-z0-9]/i.test(cleaned)) {
-                return '';
-            }
-
-            return cleaned;
-        };
-
-        textValue
-            .split('\n')
-            .map(parseManualPhraseLine)
-            .filter(Boolean)
-            .forEach(item => unique.add(item));
-        return Array.from(unique);
+        return Array.from(new Set(parsePhraseLines(textValue).map(item => item.phrase)));
     }
 
     function normalizePhraseForMatch(value) {
@@ -174,8 +337,11 @@
     }
 
     function ensureSentimentPhraseDatabaseDefaults() {
-        if (!sentimentPhraseDatabase || typeof sentimentPhraseDatabase !== 'object') {
-            sentimentPhraseDatabase = JSON.parse(JSON.stringify(DEFAULT_SENTIMENT_PHRASE_DATABASE));
+        // Writes only when the upgrade changed something, so a list that is
+        // already current never dirties the store at boot.
+        const upgraded = upgradePhraseDatabase(sentimentPhraseDatabase);
+        if (upgraded.changed) {
+            sentimentPhraseDatabase = upgraded.db;
             saveSentimentPhraseDatabase();
             return;
         }
@@ -260,15 +426,19 @@
             return;
         }
 
+        // A pasted Verint export carries its own A and C tags, and a whole
+        // export usually lands in one box. Each line goes to the side it is
+        // tagged with; an untagged line stays in the box it was typed in.
+        const sides = (boxA, boxC) => {
+            const out = { A: new Set(), C: new Set() };
+            parsePhraseLines(boxA.value).forEach(item => out[item.speaker || 'A'].add(item.phrase));
+            parsePhraseLines(boxC.value).forEach(item => out[item.speaker || 'C'].add(item.phrase));
+            return { A: Array.from(out.A), C: Array.from(out.C) };
+        };
+
         sentimentPhraseDatabase = {
-            positive: {
-                A: normalizePhraseList(positiveA.value),
-                C: normalizePhraseList(positiveC.value)
-            },
-            negative: {
-                A: normalizePhraseList(negativeA.value),
-                C: normalizePhraseList(negativeC.value)
-            },
+            positive: sides(positiveA, positiveC),
+            negative: sides(negativeA, negativeC),
             emotions: {
                 C: normalizePhraseList(emotionsC.value)
             },
@@ -327,13 +497,44 @@
                 negativeC: (snapshotData.negative?.phrases || []).filter(p => p.speaker === 'C').map(p => ({ phrase: p.phrase, value: p.value, speaker: 'C' })),
                 emotions: (snapshotData.emotions?.phrases || []).map(p => ({ phrase: p.phrase, value: p.value, speaker: p.speaker || 'C' }))
             },
-            suggestions: snapshotData.suggestions || {
-                negativeAlternatives: ['solution-focused language', 'collaborative phrasing', 'positive ownership'],
-                positiveAdditions: ['I appreciate', 'happy to help', 'glad to assist']
-            }
+            // Left empty rather than padded: the focus builder fills it from
+            // the scored list. The padding it used to carry ("collaborative
+            // phrasing", "I appreciate") was not on the list and scored nothing.
+            suggestions: snapshotData.suggestions || {}
         };
 
         return formatted;
+    }
+
+    // In place of a negative phrase, the scored phrases that say what CAN be
+    // done, which is exactly what "we can't", "unable help" and "our policy"
+    // leave out.
+    const NEGATIVE_SWAP_WORDS = ['what i can do', 'what we can do', 'can definitely'];
+
+    function quotedExamples(phrases, count) {
+        const seen = new Set();
+        return (phrases || [])
+            .map(phrase => examplePhraseFor(phrase) || formatKeywordPhraseForDisplay(phrase))
+            .filter(text => text && !seen.has(text) && seen.add(text))
+            .slice(0, count)
+            .map(text => `"${text}"`)
+            .join(', ');
+    }
+
+    function positiveAdditionsFor(snapshot) {
+        const stored = snapshot?.suggestions?.positiveAdditions;
+        if (Array.isArray(stored) && stored.length) return stored;
+        const used = new Set((snapshot?.topPhrases?.positiveA || []).map(item => phrasePlainWords(item.phrase)));
+        return (getPhraseDatabase().positive?.A || []).filter(phrase => !used.has(phrasePlainWords(phrase)));
+    }
+
+    function negativeSwapsFor(snapshot) {
+        const stored = snapshot?.suggestions?.negativeAlternatives;
+        if (Array.isArray(stored) && stored.length) return stored;
+        const list = getPhraseDatabase().positive?.A || [];
+        return NEGATIVE_SWAP_WORDS
+            .map(words => list.find(phrase => phrasePlainWords(phrase) === words))
+            .filter(Boolean);
     }
 
     function buildSentimentFocusAreasForPrompt(snapshot, weeklyMetrics = null) {
@@ -378,7 +579,7 @@
             const topNeg = (snapshot.topPhrases?.negativeA || []).slice(0, 3)
                 .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
                 .join(', ') || 'none listed';
-            const replacements = (snapshot.suggestions?.negativeAlternatives || []).slice(0, 3).join(', ') || 'solution-focused alternatives';
+            const replacements = quotedExamples(negativeSwapsFor(snapshot), 3) || 'what you CAN do';
             focusLines.push(
                 `Focus Area - Avoiding Negative Words: ${negScore}% (Using Negative Words: ${usingNegative}%). Target: ${negativeTarget}% (Using Negative Words: ${usingNegativeTarget}%). ` +
                 `Most used phrases: ${topNeg}. Try saying this instead: ${replacements}.`
@@ -389,7 +590,7 @@
             const topPos = (snapshot.topPhrases?.positiveA || []).slice(0, 3)
                 .map(item => `"${formatKeywordPhraseForDisplay(item.phrase)}" (${item.value})`)
                 .join(', ') || 'none listed';
-            const additions = (snapshot.suggestions?.positiveAdditions || []).slice(0, 3).join(', ') || 'positive ownership phrases';
+            const additions = quotedExamples(positiveAdditionsFor(snapshot), 3) || '"My pleasure", "Absolutely"';
             focusLines.push(
                 `Focus Area - Using Positive Words: ${posScore}% (Target: ${positiveTarget}%). ` +
                 `Most used phrases: ${topPos}. Add these phrases to every call: ${additions}.`
@@ -1142,6 +1343,18 @@
     function extractSentimentSpeakerAndPhrase(rawPhrase) {
         if (!rawPhrase) return null;
         const compact = String(rawPhrase).trim();
+        // Verint puts a position rule ahead of the speaker on some lines:
+        // +([END:100]C:"very" NEAR "helpful"). The shapes below never matched
+        // those, so the customer's thanks at the close fell out of every
+        // report, and in a CSV export it was credited to the associate.
+        const positioned = compact.match(/[+\-#]?\s*\(\s*\[(?:END|START):\d+\]\s*([AC]):\s*(.+)\)$/i);
+        if (positioned) {
+            return {
+                speaker: positioned[1].toUpperCase(),
+                phrase: positioned[2].trim().replace(/^"|"$/g, '')
+            };
+        }
+
         const tagged = compact.match(/[+\-#]?\s*\(([AC]):\s*(.+)\)$/i);
         if (tagged) {
             return {
@@ -1840,6 +2053,11 @@
         parseDateForComparison,
         ensureSentimentPhraseDatabaseDefaults,
         getPhraseDatabase,
+        phrasePlainWords,
+        examplePhraseFor,
+        upgradePhraseDatabase,
+        parsePhraseLine,
+        parsePhraseLines,
         renderSentimentDatabasePanel,
         saveSentimentPhraseDatabaseFromForm,
         syncSentimentSnapshotDateInputsFromReports,

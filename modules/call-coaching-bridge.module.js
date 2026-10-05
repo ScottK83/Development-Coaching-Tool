@@ -587,7 +587,7 @@
             });
 
             scan.unusedPositives.forEach(item => {
-                bump('positiveUnused', 'unused', `Never says "${item.phrase}"${item.zone ? `, which would have fit ${item.zone}` : ''}.`, {
+                bump('positiveUnused', 'unused', `Never says "${item.example || item.phrase}"${item.zone ? `, which would have fit ${item.zone}` : ''}.`, {
                     date, phrase: item.phrase, weight: 4
                 });
             });
@@ -838,6 +838,7 @@
         // nouns the length rule gets wrong.
         const strong = new Set();
         const weak = new Set();
+        const queries = [];
         (evidence || []).forEach(finding => {
             (FINDING_KEYWORDS[finding.key] || []).forEach(word => {
                 const specific = word.length >= 5 || word.includes(' ') || SPECIFIC_SHORT_WORDS.has(word);
@@ -846,12 +847,20 @@
             });
             // For a phrase finding the phrase itself is the strongest possible
             // keyword: the tips are written as swaps and literally contain it.
-            if (finding.phrase) strong.add(finding.phrase.toLowerCase());
+            // A Verint query ("happy NEAR help") is not literal text, so it is
+            // matched the way Verint matches it, against the tip's words.
+            if (finding.phrase) {
+                const compiled = window.DevCoachModules?.callWordChoice?.compilePhrase?.(finding.phrase);
+                if (compiled && (compiled.near || compiled.endWithin !== null)) queries.push(compiled);
+                else strong.add(finding.phrase.toLowerCase());
+            }
         });
 
         const scored = pool.map(tip => {
             const lower = String(tip).toLowerCase();
-            const strongHits = [...strong].filter(word => matchesStem(lower, word)).length;
+            const words = lower.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+            const strongHits = [...strong].filter(word => matchesStem(lower, word)).length
+                + queries.filter(query => query.test(words)).length;
             const weakHits = [...weak].filter(word => matchesStem(lower, word)).length;
             const id = suggestionId(tip);
             const record = effectiveness[id];

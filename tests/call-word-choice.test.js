@@ -81,13 +81,15 @@ suite('call word choice: scoring a call', (t) => {
 
     const positives = scan.positiveA.map(hit => hit.phrase);
     t.check('picks up "of course" on the agent side', positives.includes('of course'));
-    t.check('picks up "taken care" on the agent side', positives.includes('taken care'));
+    t.check('picks up "taken care" on the agent side', positives.includes('taken ... care'));
     t.check('picks up "what I can do" on the agent side', positives.includes('what I can do'));
+    // Natural speech against a NEAR query, which the flattened list missed.
+    t.check('picks up "How can I help you today?" as how NEAR help', positives.includes('how ... help'));
 
     // The customer's praise belongs to the customer, and must not be counted
     // as something the associate said.
-    t.check('customer praise lands on the customer side', scan.positiveC.some(hit => hit.phrase === 'very helpful'));
-    t.check('customer praise is not credited to the agent', !positives.includes('very helpful'));
+    t.check('customer praise lands on the customer side', scan.positiveC.some(hit => hit.phrase === 'very ... helpful'));
+    t.check('customer praise is not credited to the agent', !positives.includes('very ... helpful'));
 
     t.check('every negative hit carries the line that triggered it', scan.negativeA.every(hit => hit.quote.length > 0));
 
@@ -240,4 +242,203 @@ suite('call word choice: a close she made is not a close she missed', (t) => {
         scan.unusedPositives.filter(item => /anything else/i.test(item.phrase)).map(item => item.phrase).join(', ') || '(none)', '(none)');
     t.check('nothing is suggested for the close she already made',
         !scan.unusedPositives.some(item => item.zone === 'closing the call'));
+});
+
+suite('call word choice: the positive list is Verint\'s queries, operators kept', (t) => {
+    const { sentiment, callWordChoice } = load(t);
+    const db = sentiment.getPhraseDatabase();
+    const compiled = db.positive.A.map(phrase => callWordChoice.compilePhrase(phrase));
+    const scores = (text) => compiled.filter(phrase => phrase.test(tokens(text))).map(phrase => phrase.raw);
+
+    // Stored flattened, "how NEAR help" was the literal "how help" and the
+    // most common sentence on any call never scored.
+    t.check('"How can I help you today?" scores', scores('How can I help you today?').includes('how NEAR help'));
+    t.check('"Have a wonderful day" scores', scores('Have a wonderful day').includes('have NEAR wonderful'));
+    t.check('"I\'d be happy to help" scores as happy NEAR help', scores("I'd be happy to help").includes('happy NEAR help'));
+    t.check('"Thank you for being a part of APS" scores', scores('Thank you for being a part of APS').includes('"thank you" NEAR part'));
+    t.check('"I\'ll take care of that for you" scores', scores("I'll take care of that for you").includes('"take care" NEAR "for you"'));
+    t.check('nothing scores off unrelated speech', scores('The meter was read on the fourth.').length === 0);
+
+    t.equal('44 associate phrases, as exported', db.positive.A.length, 44);
+    t.equal('3 customer phrases, as exported', db.positive.C.length, 3);
+    t.check('the customer phrases carry the closing rule', db.positive.C.every(phrase => /^\[END:100\]/.test(phrase)));
+    t.check('"lovely" carries the closing rule', db.positive.A.includes('[END:100] lovely'));
+});
+
+suite('call word choice: [END:100] only counts in the last 100 seconds', (t) => {
+    const { callWordChoice } = load(t);
+
+    const lovely = callWordChoice.compilePhrase('[END:100] lovely');
+    t.equal('the rule is read', lovely.endWithin, 100);
+    t.equal('and kept out of the display', lovely.display, 'lovely');
+    t.check('counts inside the window', lovely.test(tokens('Have a lovely day'), { secondsFromEnd: 20 }));
+    t.check('not outside it', !lovely.test(tokens('What a lovely morning'), { secondsFromEnd: 300 }));
+    t.check('applied only when there is a time to measure', lovely.test(tokens('Have a lovely day')));
+
+    const CALL = [
+        '0:05', 'Agent: Thank you for calling APS, my name is Jamie.',
+        '0:20', 'Customer: Lovely weather today, I need to move my service.',
+        '2:10', 'Agent: That is set for the 20th.',
+        '6:00', 'Customer: You have been very helpful, I really appreciate it.',
+        '6:05', 'Agent: Have a lovely day.'
+    ].join('\n');
+    const scan = callWordChoice.scanTranscript(CALL, { associateName: 'Jamie' });
+    t.check('the associate\'s closing "lovely" scores', scan.positiveA.some(hit => hit.raw === '[END:100] lovely'));
+    t.check('the customer\'s thanks at the close scores', scan.positiveC.some(hit => /really appreciate/.test(hit.raw)));
+
+    const EARLY = [
+        '0:05', 'Agent: Thank you for calling APS, my name is Jamie. Lovely to talk to you.',
+        '0:20', 'Customer: I need to move my service.',
+        '2:10', 'Agent: That is set for the 20th.',
+        '6:00', 'Customer: Okay.',
+        '6:05', 'Agent: Bye now.'
+    ].join('\n');
+    const early = callWordChoice.scanTranscript(EARLY, { associateName: 'Jamie' });
+    t.check('"lovely" six minutes from the end does not score', !early.positiveA.some(hit => hit.raw === '[END:100] lovely'));
+});
+
+suite('call word choice: every positive phrase has a sentence that scores', (t) => {
+    const { sentiment, callWordChoice } = load(t);
+    const db = sentiment.getPhraseDatabase();
+
+    const missing = db.positive.A.filter(phrase => !sentiment.examplePhraseFor(phrase));
+    t.equal(`every associate phrase has an example (${missing.join(', ') || 'all do'})`, missing.length, 0);
+
+    // The example is what gets quoted to the associate, so it has to be
+    // something that would actually score, or the coaching is wrong.
+    const failing = db.positive.A.filter(phrase => {
+        const example = sentiment.examplePhraseFor(phrase);
+        return example && !callWordChoice.compilePhrase(phrase).test(tokens(example));
+    });
+    t.equal(`every example scores for its own phrase (${failing.join(', ') || 'all do'})`, failing.length, 0);
+
+    t.check('no example carries an em dash', !db.positive.A.some(phrase => /[—–]/.test(sentiment.examplePhraseFor(phrase))));
+
+    // The old flattened spelling finds the same example, so a list stored
+    // before the fix still quotes a sentence.
+    t.equal('the flattened spelling finds the same example', sentiment.examplePhraseFor('how help'), sentiment.examplePhraseFor('how NEAR help'));
+});
+
+suite('call word choice: suggestions quote a sentence, not a query', (t) => {
+    const { callTranscript, callWordChoice } = load(t);
+
+    const NO_CLOSE = [
+        'Agent: Thank you for calling, my name is Jamie.',
+        'Customer: I need to change my due date.',
+        'Agent: That is updated for the 20th.',
+        'Customer: Great, thanks.'
+    ].join('\n');
+    const analysis = callTranscript.analyzeTranscript(NO_CLOSE, { associateName: 'Jamie' });
+    const scan = callWordChoice.scanTranscript(NO_CLOSE, { associateName: 'Jamie', analysis });
+
+    t.check('there are suggestions', scan.unusedPositives.length > 0);
+    t.check('none of them shows Verint syntax', !scan.unusedPositives.some(item => /NEAR|\.\.\.|\[END/.test(item.example)));
+    const text = callWordChoice.buildWordChoiceText(scan);
+    t.check('the text quotes the sentence', scan.unusedPositives.every(item => text.includes(`"${item.example}"`)));
+
+    // Said in natural words, the scored phrase is credited and not suggested back.
+    const WONDERFUL = [
+        'Agent: Thank you for calling, my name is Jamie, how can I help?',
+        'Customer: I need to change my due date.',
+        'Agent: That is updated for the 20th. Is there anything else I can help you with?',
+        'Customer: No, that is it.',
+        'Agent: Have a wonderful day.'
+    ].join('\n');
+    const said = callWordChoice.scanTranscript(WONDERFUL, { associateName: 'Jamie' });
+    t.check('"Have a wonderful day" is credited', said.positiveA.some(hit => hit.raw === 'have NEAR wonderful'));
+    t.check('and never suggested back to her', !said.unusedPositives.some(item => item.phrase === 'have NEAR wonderful'));
+});
+
+suite('call word choice: every Positive Word tip uses a phrase that scores', (t) => {
+    const fs = require('fs');
+    const path = require('path');
+    const { ROOT } = require('./harness');
+    const { sentiment, callWordChoice } = load(t);
+    const compiled = sentiment.getPhraseDatabase().positive.A.map(phrase => callWordChoice.compilePhrase(phrase));
+
+    const tips = fs.readFileSync(path.join(ROOT, 'tips.csv'), 'utf8')
+        .split(/\r?\n/)
+        .filter(line => line.startsWith('positiveWord,'))
+        .map(line => line.slice('positiveWord,'.length));
+
+    t.check('there are Positive Word tips', tips.length >= 40);
+    // A tip for this metric that names no scored phrase cannot move it.
+    // "Replace 'problem' with 'situation'" was one: neither word is on the list.
+    const unscored = tips.filter(tip => !compiled.some(phrase => phrase.test(tokens(tip))));
+    t.equal(`every tip names a scored phrase (${unscored.join(' | ') || 'all do'})`, unscored.length, 0);
+});
+
+suite('call word choice: a stored list is brought up to date, not overwritten', (t) => {
+    const { sentiment } = load(t);
+
+    const empty = sentiment.upgradePhraseDatabase({ positive: { A: [], C: [] }, negative: { A: [], C: [] }, emotions: { C: [] } });
+    t.check('an all-empty list gets the shipped lists', empty.changed && empty.db.positive.A.length === 44);
+
+    const old = sentiment.upgradePhraseDatabase({
+        positive: { A: ['how help', 'absolutely', 'my own phrase'], C: ['very helpful'] },
+        negative: { A: ['unfortunately'], C: [] },
+        emotions: { C: ['frustrated'] }
+    });
+    t.check('the upgrade reports a change', old.changed);
+    t.equal('a flattened phrase becomes its query', old.db.positive.A[0], 'how NEAR help');
+    t.equal('a phrase that was already right is kept', old.db.positive.A[1], 'absolutely');
+    t.equal('a phrase the supervisor added is kept as is', old.db.positive.A[2], 'my own phrase');
+    t.equal('the customer side is upgraded too', old.db.positive.C[0], '[END:100] very NEAR helpful');
+    t.equal('nothing is added that was not there', old.db.positive.A.length, 3);
+
+    const current = sentiment.upgradePhraseDatabase(empty.db);
+    t.check('a current list is left alone, so boot never rewrites it', current.changed === false);
+});
+
+suite('call word choice: a Verint export pastes straight into Settings', (t) => {
+    const { sentiment } = load(t);
+
+    const EMAIL = [
+        'Positive Words',
+        'Knight, Scott<Scott.Knight@aps.com>',
+        'Name',
+        '+(A:"have" NEAR "wonderful")',
+        '+(A:"my pleasure")',
+        '+([END:100]C:"very" NEAR "helpful")',
+        '+(A:"take care" NEAR "for you")',
+        '+([END:100]A:lovely)',
+        '+(A:don\'t NEAR worry)',
+        'This message is for the designated recipient only and may contain confidential information.'
+    ].join('\n');
+
+    const parsed = sentiment.parsePhraseLines(EMAIL);
+    t.equal('only the Verint lines are read', parsed.length, 6);
+    t.equal('NEAR is kept', parsed[0].phrase, 'have NEAR wonderful');
+    t.equal('a plain phrase loses its quotes', parsed[1].phrase, 'my pleasure');
+    t.equal('the closing rule and the speaker are both read', `${parsed[2].speaker} ${parsed[2].phrase}`, 'C [END:100] very NEAR helpful');
+    t.equal('a multi-word term stays quoted', parsed[3].phrase, '"take care" NEAR "for you"');
+    t.equal('the rule on an associate line', `${parsed[4].speaker} ${parsed[4].phrase}`, 'A [END:100] lovely');
+    t.equal('an apostrophe survives', parsed[5].phrase, "don't NEAR worry");
+
+    // Hand-typed lists still work the way they always did.
+    t.equal('hand-typed phrases still parse', sentiment.normalizePhraseList('happy to\nA: of course\n').join('|'), 'happy to|of course');
+
+    // The Verint report upload carries the same lines.
+    const report = sentiment.extractSentimentSpeakerAndPhrase('+([END:100]C:"really appreciate")');
+    t.check('the report parser reads a line with a closing rule', report && report.speaker === 'C' && report.phrase === 'really appreciate');
+});
+
+suite('call word choice: the sentiment focus box suggests real phrases', (t) => {
+    const { sentiment } = load(t);
+    // A script.js global in the app; the builder falls back to its own
+    // targets when the registry has none.
+    global.METRICS_REGISTRY = global.METRICS_REGISTRY || {};
+
+    const snapshot = {
+        timeframeStart: '2026-09-01',
+        timeframeEnd: '2026-09-30',
+        topPhrases: { positiveA: [{ phrase: 'have" NEAR "wonderful', value: 12 }], negativeA: [{ phrase: 'unfortunately', value: 9 }], emotions: [] },
+        suggestions: {}
+    };
+    const text = sentiment.buildSentimentFocusAreasForPrompt(snapshot, { positiveWord: 70, negativeWord: 70, managingEmotions: 99 });
+
+    t.check('no filler in place of phrases', !/positive ownership phrases|solution-focused|collaborative phrasing/.test(text));
+    t.check('positive additions are quoted sentences from the list', /Add these phrases to every call: "/.test(text));
+    t.check('a phrase she already uses is not suggested again', !/Have a wonderful day/.test(text.split('Add these phrases')[1] || ''));
+    t.check('negative swaps say what she CAN do', /Try saying this instead: "Let me see what I can do"/.test(text));
 });

@@ -301,49 +301,49 @@ overallSentiment,If they thank you, take it, don't wave it off with 'just doing 
 overallSentiment,Talk about the bill like it's their money, because it is
 overallSentiment,If they mention a hard week, one line of acknowledgment then help
 overallSentiment,End with what happens next, certainty is what people actually want
-positiveWord,Replace 'problem' with 'situation'. It sounds less negative
-positiveWord,Say 'I'd be happy to help you with that' instead of 'I can help you'
+positiveWord,'No problem at all' counts as a positive phrase. Use it when they thank you or apologize for asking
+positiveWord,Say 'I'd be happy to help you with that' as soon as they tell you why they called
 positiveWord,Use 'absolutely' instead of 'yes'. It's more enthusiastic
-positiveWord,Say 'Let me find that information' not 'I don't have that information'
-positiveWord,Replace 'You need to' with 'The next step is'. Sounds less demanding
-positiveWord,Say 'I can' instead of 'I can't', focus on what you CAN do
-positiveWord,Say 'Let me get that handled for you' instead of 'Let me fix that problem'
-positiveWord,Replace 'Your account shows' with 'I see here that'. Sounds more collaborative
-positiveWord,Say 'moving forward' instead of 'from now on'. Sounds more optimistic
-positiveWord,Say 'You're welcome. Glad I could help' at the close
-positiveWord,Use 'right away' instead of 'as soon as possible'
-positiveWord,Say 'We will' instead of 'We'll try', it sounds like a promise instead of a maybe
-positiveWord,Use 'here's what I found' instead of 'it says here', you're the expert not the screen
-positiveWord,Say 'I'll take care of this' instead of 'I can put in a request'
-positiveWord,Replace 'no worries' with 'completely understandable'. More sincere
-positiveWord,Use 'I hear you' instead of 'I understand'. Feels less scripted
-positiveWord,Say 'I've got you', warm confident language, when appropriate
-positiveWord,Replace 'I will escalate' with 'I'll loop in my manager to get this resolved'
-positiveWord,Use 'great' sparingly. Repeated 'great' sounds fake. Vary with 'got it' and 'perfect'
-positiveWord,Avoid 'obviously'. Customers don't like feeling talked down to
-positiveWord,Say 'I noticed' instead of 'the system shows'. Personal observation feels engaged
-positiveWord,Use 'let's', it makes customer a partner not a recipient
-positiveWord,Say 'here's the plan', gives the call structure and momentum
+positiveWord,Say 'Let me see what I can do' instead of 'I don't have that information'
+positiveWord,Replace 'You need to' with 'I can work with you on that'. It sounds less demanding
+positiveWord,Say 'Here's what we can do' instead of 'I can't'. Lead with what you CAN do
+positiveWord,Say 'Let's get that fixed for you' instead of 'Let me fix that problem'
+positiveWord,After you explain the bill, ask 'Have I answered your questions?' It catches confusion before they hang up
+positiveWord,'Let's make sure everything is set before we hang up' gives the call a clear finish
+positiveWord,Say 'My pleasure' instead of 'You're welcome' at the close
+positiveWord,'You got it' beats 'okay' when they ask for something simple
+positiveWord,When you can do it, say 'I can definitely do that for you' instead of 'I'll try'
+positiveWord,'I'm here to help you sort this out' tells them you're on their side before you get into the account
+positiveWord,Say 'I'll take care of this for you' instead of 'I can put in a request'
+positiveWord,When they sound anxious about the bill, say 'Don't worry, I'll walk you through it'
+positiveWord,When they're hunting for an account number, say 'Take your time' instead of waiting in silence
+positiveWord,Say 'I can help with that' before you start asking questions, so they know they're in the right place
+positiveWord,Once it's done, say 'I took care of that for you' so they know it's finished
+positiveWord,Repeated 'great' sounds fake. Mix in 'perfectly', 'certainly' and 'you bet'
+positiveWord,Avoid 'obviously'. Customers don't like feeling talked down to. 'Of course' is the warmer way to agree
+positiveWord,Ask 'What can I help you with today?' rather than 'What's going on?'
+positiveWord,Use 'let's', it makes the customer a partner: 'Let's get this sorted out together'
+positiveWord,Open with 'How can I help you today?' and let them talk
 positiveWord,Use 'of course' instead of 'sure'. Sounds more professional and warm
 positiveWord,Start your greeting with positive words. Reps scoring 100 on positive words open with 'Thank you for being a part of APS, my name is [your name], how may I help you today?' then once the customer shares why they called respond with 'Absolutely I can definitely help with that'
-positiveWord,'I can take care of that' beats 'that can be done'
-positiveWord,'Here's what I'm seeing' is better than 'the account says'
-positiveWord,'Let me get that set up for you' beats 'you'll need to set that up'
-positiveWord,When there's good news, call it good news
-positiveWord,'That's a fair question' works when they push back on an amount
-positiveWord,Use 'we can' for anything you can start during the call
-positiveWord,'Already done' beats 'I have gone ahead and processed that'
-positiveWord,'You're all set' is worth saying out loud at the end
+positiveWord,'I can take care of that for you' beats 'that can be done'
+positiveWord,End with 'Enjoy the rest of your day'. The close is one of the easiest places to add positive words
+positiveWord,'Let's get that set up for you' beats 'you'll need to set that up'
+positiveWord,When there's good news, call it good news. A new home or a paid-off balance earns a 'Congratulations'
+positiveWord,Before you close, ask 'Do you have any other questions or concerns?'
+positiveWord,'Let me see what we can do' works for anything you can start during the call
+positiveWord,'That's all taken care of' beats 'I have gone ahead and processed that'
+positiveWord,'You're all set, have a wonderful day' is worth saying out loud at the end. 'Have a lovely day' works too
 positiveWord,'Happy to look' beats 'let me check'
 positiveWord,'My pleasure' and 'you bet' both land warm, and they keep every close from sounding the same
-positiveWord,'Here's what that means for your next bill' turns a number into a plan
-positiveWord,Use 'for you' often, it makes the action personal
-positiveWord,'I've got the details right here' sounds prepared
-positiveWord,'Thanks for catching that' if they spot something you missed
-positiveWord,'Let's take a look together' invites them in
-positiveWord,'That's set for the 20th' beats 'that should be fine'
-positiveWord,'You'll see' rather than 'you should see'
-positiveWord,Open the call sounding glad to be there, that carries further than the words do
+positiveWord,Don't skip 'Is there anything else I can help you with?' even on a quick call
+positiveWord,Put 'for you' on the end of what you do: 'I can do that for you right now'
+positiveWord,'We appreciate your business' is a good close when they've been a customer a long time
+positiveWord,If they've waited or repeated themselves, 'Thank you for being so patient' lands better than 'sorry for the wait'
+positiveWord,'Let's take a look together' invites them in, and 'Let's make sure we get this right' keeps them with you
+positiveWord,If they're moving or closing the account, end with 'I wish you all the best'
+positiveWord,On a close, 'Thank you for being an APS customer' is worth the extra second
+positiveWord,'Glad to help' and 'Happy to assist' are easy to say at the close and both count
 negativeWord,Replace 'unfortunately' with 'what I can do is...' to focus on solutions
 negativeWord,Never say 'I don't know', say 'Great question let me find that answer for you'
 negativeWord,Avoid 'but'. Use 'and' or 'however' to sound less contradictory

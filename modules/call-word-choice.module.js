@@ -100,13 +100,25 @@
      * That is stricter than Verint and so under-reports rather than over-reports,
      * which is the right direction. `your fault NOTIN "not your fault"` firing on
      * "that is not your fault" would coach an associate for reassuring somebody.
+     *
+     * A leading [END:100] is Verint's position rule: the phrase only counts in
+     * the last 100 seconds of the call. "Lovely" in the closing is a scored
+     * phrase; "lovely" about the weather two minutes in is not. It is applied
+     * when the transcript has timestamps to measure from, and left out when it
+     * has none, since there is then no way to place the line.
      */
     function compilePhrase(raw) {
         const original = String(raw || '').trim();
         if (!original) return null;
 
+        let endWithin = null;
+        const withoutPosition = original.replace(/^\s*\[END:(\d+)\]\s*/i, (match, seconds) => {
+            endWithin = Number(seconds);
+            return '';
+        });
+
         const exclusions = [];
-        let working = original.replace(/\bNOTIN\b\s*(?:"([^"]*)"|'([^']*)'|(\S+))/gi, (match, dq, sq, bare) => {
+        let working = withoutPosition.replace(/\bNOTIN\b\s*(?:"([^"]*)"|'([^']*)'|(\S+))/gi, (match, dq, sq, bare) => {
             const value = normalize(dq || sq || bare);
             if (value) exclusions.push(value.split(' '));
             return ' ';
@@ -120,7 +132,7 @@
 
         if (!terms.length) return null;
 
-        const display = original
+        const display = withoutPosition
             .replace(/\bNOTIN\b\s*(?:"[^"]*"|'[^']*'|\S+)/gi, '')
             .replace(/\bNEAR\b/gi, '...')
             .replace(/\s+/g, ' ')
@@ -131,7 +143,11 @@
             display,
             near: terms.length > 1,
             excluded: exclusions.length > 0,
-            test(tokens) {
+            endWithin,
+            test(tokens, where = {}) {
+                if (endWithin !== null && typeof where.secondsFromEnd === 'number' && where.secondsFromEnd > endWithin) {
+                    return false;
+                }
                 if (exclusions.some(exclusion => tokenIndexes(tokens, exclusion).length)) return false;
 
                 const positions = terms.map(term => tokenIndexes(tokens, term));
@@ -180,32 +196,50 @@
      * Each zone names the behaviour rule callTranscript already scores, so an
      * unused phrase can be ranked by whether the call actually missed that
      * moment. A phrase not listed here is general purpose and ranks last.
+     *
+     * Zones match on the phrase's plain words, so "\"thank you\" NEAR part"
+     * and the old flattened "thank you part" land in the same zone.
      */
     const PHRASE_ZONES = [
         {
             key: 'courtesyClose',
             label: 'closing the call',
-            match: /anything else|questions or concerns|answered questions/i
+            match: /anything else|questions or concerns|answered questions/
         },
         {
             key: 'greeting',
             label: 'the opening',
-            match: /thank you part|thank you being|being customer/i
+            match: /thank you part|thank you being|being customer/
         },
         {
             key: 'ownership',
             label: 'taking ownership',
-            match: /taken care|took care|take care for you|what i can do|what we can do|let's get|let's make sure|here help|work you|do for you/i
+            match: /taken care|took care|take care for you|what i can do|what we can do|let s get|let s make sure|here help|work you|do for you/
         },
         {
             key: 'empathy',
             label: 'reassuring the customer',
-            match: /don't worry|take time/i
+            match: /don t worry|take time/
         }
     ];
 
+    function plainWords(raw) {
+        return normalize(String(raw || '')
+            .replace(/\[(?:END|START):\d+\]/gi, ' ')
+            .replace(/\bNOTIN\b\s*(?:"[^"]*"|'[^']*'|\S+)/gi, ' ')
+            .replace(/\bNEAR\b/g, ' '));
+    }
+
     function zoneFor(phrase) {
-        return PHRASE_ZONES.find(zone => zone.match.test(phrase)) || null;
+        const words = plainWords(phrase);
+        return PHRASE_ZONES.find(zone => zone.match.test(words)) || null;
+    }
+
+    // What to quote when suggesting a phrase: the sentence an associate would
+    // say, not the query Verint listens for.
+    function exampleFor(phrase) {
+        const example = window.DevCoachModules?.sentiment?.examplePhraseFor?.(phrase);
+        return example || compilePhrase(phrase)?.display || String(phrase || '');
     }
 
     /* ── Scanning ── */
@@ -215,6 +249,11 @@
             ? turns.filter(turn => turn.role === 'customer')
             : turns.filter(turn => turn.role !== 'customer');
 
+        // The call's end, for [END:n] phrases, is the last timestamp on either
+        // side: the close is measured against the whole call.
+        const times = turns.map(turn => turn.at).filter(at => typeof at === 'number');
+        const callEnd = times.length ? Math.max(...times) : null;
+
         const hits = [];
         compiled.forEach(phrase => {
             let count = 0;
@@ -223,7 +262,10 @@
 
             pool.forEach(turn => {
                 const tokens = normalize(turn.text).split(' ').filter(Boolean);
-                if (!phrase.test(tokens)) return;
+                const where = callEnd !== null && typeof turn.at === 'number'
+                    ? { secondsFromEnd: callEnd - turn.at }
+                    : {};
+                if (!phrase.test(tokens, where)) return;
                 count += 1;
                 if (!quote) {
                     quote = clipQuote(turn.text);
@@ -297,7 +339,7 @@
     function findUnusedPositives(positiveList, usedRaw, missingRuleKeys) {
         const used = new Set(usedRaw);
         const missing = new Set(missingRuleKeys || []);
-        const usedPadded = [...used].map(phrase => ` ${normalize(phrase)} `);
+        const usedPadded = [...used].map(phrase => ` ${plainWords(phrase)} `);
         // A moment she already filled with a scored phrase is not a moment
         // she missed. Saying "anything else" and being told she never says
         // "anything else help" was a false statement in a message to her.
@@ -306,7 +348,7 @@
         return (Array.isArray(positiveList) ? positiveList : [])
             .filter(phrase => !used.has(phrase))
             .filter(phrase => {
-                const padded = ` ${normalize(phrase)} `;
+                const padded = ` ${plainWords(phrase)} `;
                 return !usedPadded.some(other => padded.includes(other) || other.includes(padded));
             })
             .filter(phrase => !coveredZones.has(zoneFor(phrase)?.key))
@@ -314,6 +356,7 @@
                 const zone = zoneFor(phrase);
                 return {
                     phrase,
+                    example: exampleFor(phrase),
                     zone: zone ? zone.label : '',
                     // A phrase whose moment the call actually missed is the one
                     // worth naming; one with no zone at all is generic advice.
@@ -327,9 +370,9 @@
             // padding, so once a phrase is kept, anything containing it or
             // contained by it is dropped.
             .reduce((kept, item) => {
-                const padded = ` ${normalize(item.phrase)} `;
+                const padded = ` ${plainWords(item.phrase)} `;
                 const overlaps = kept.some(existing => {
-                    const other = ` ${normalize(existing.phrase)} `;
+                    const other = ` ${plainWords(existing.phrase)} `;
                     return padded.includes(other) || other.includes(padded);
                 });
                 if (!overlaps) kept.push(item);
@@ -434,7 +477,7 @@
         }
         if (scan.unusedPositives.length) {
             const rows = scan.unusedPositives
-                .map(item => `- ${item.phrase}${item.zone ? ` (fits ${item.zone})` : ''}`)
+                .map(item => `- "${item.example}"${item.zone ? ` (fits ${item.zone})` : ''}`)
                 .join('\n');
             sections.push(`Scored positive phrases that had a place on this call and were not used:\n${rows}`);
         }
@@ -490,7 +533,7 @@
             ),
             group(
                 'Scored positive phrases with a place here, not used',
-                scan.unusedPositives.map(item => `<li><strong>${safe(item.phrase)}</strong>${item.zone ? ` <span class="call-qa-detail">fits ${safe(item.zone)}</span>` : ''}</li>`),
+                scan.unusedPositives.map(item => `<li><strong>"${safe(item.example)}"</strong>${item.zone ? ` <span class="call-qa-detail">fits ${safe(item.zone)}</span>` : ''}</li>`),
                 'warn'
             ),
             group(`Scored positive phrases used (${scan.totals.positiveCount})`, scan.positiveA.map(hitRow), 'good'),
@@ -511,6 +554,8 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.callWordChoice = {
         compilePhrase,
+        plainWords,
+        exampleFor,
         getPhraseDatabase,
         scanTranscript,
         buildWordChoiceText,
