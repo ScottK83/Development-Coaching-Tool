@@ -468,8 +468,10 @@ suite('quarter review: a mid-year starter is not praised off an annual allowance
     const split = qr.splitForBoxes(ctx);
     t.check('attendance is not praised',
         !split.strengths.some((m) => m.metricKey === 'reliability'));
-    t.check('but the hours are still raised',
-        split.focus.some((m) => m.metricKey === 'reliability'));
+    // Nor is it raised as a focus. Scott, 2026-10-05: areas of focus do not
+    // reference reliability, whatever the hours.
+    t.check('and the hours are not made a focus either',
+        !split.focus.some((m) => m.metricKey === 'reliability'));
 
     const sentence = qr.reliabilitySentence(rel, ctx);
     t.check('the sentence says which quarter the hours are from', /15 hrs in Q3/.test(sentence));
@@ -477,7 +479,7 @@ suite('quarter review: a mid-year starter is not praised off an annual allowance
     t.check('it does not call it the year to date', !/for the year to date/.test(sentence));
 
     const notes = qr.buildNotes(ctx);
-    t.check('the hours reach the document', /15 hrs in Q3/.test(notes.box2));
+    t.check('the hours stay out of the focus box', !/15 hrs/.test(notes.box2) && !/allowance/.test(notes.box2));
     t.check('with no progress expectation against an allowance never applied',
         !/steady progress toward goal/.test(notes.box2));
 
@@ -602,8 +604,11 @@ suite('quarter review: being over the allowance is said directly', (t) => {
     t.check('the overage is stated', /5 hrs over the allowance/.test(sentence));
     t.check('with the time left in the year', /one quarter to go/.test(sentence));
 
+    // Said directly where the hours are stated, and kept out of the focus
+    // box, which does not reference reliability (Scott, 2026-10-05).
     const notes = qr.buildNotes(ctx);
-    t.check('and it is a focus area', /over the allowance/.test(notes.box2));
+    t.check('it is not a focus area', !/allowance/.test(notes.box2) && !/attendance/i.test(notes.box2));
+    t.check('nor a strength', !/allowance/.test(notes.box1));
 });
 
 /* ── House rules ── */

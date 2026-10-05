@@ -303,7 +303,106 @@
         var notes = qr.buildNotes(ctx, { notes: note });
         return _talkingBar(ctx)
             + (state.showTalking ? _talkingPanel(qr.buildTalkingPoints(ctx, { notes: note })) : '')
-            + _progressionTable(ctx) + _notesPanel(ctx, notes, note);
+            + _progressionTable(ctx) + _placingsPanel(ctx) + _notesPanel(ctx, notes, note);
+    }
+
+    /* ── Where they placed ──
+     *
+     * Scott's ask for the Q3 meetings: each quarter's placing in the five
+     * KPIs against the call center, beside the goal, to see the climb and pick
+     * a focus for the last quarter. For him, not the file: nothing here feeds
+     * the document, the talking points or the Copilot prompt, and none of the
+     * copy buttons pick it up.
+     */
+    function _placingsPanel(ctx) {
+        var cr = _mod('centerRanking');
+        if (!cr || typeof cr.buildQuarterPlacings !== 'function') return '';
+        var model = cr.buildQuarterPlacings(ctx.name, ctx.year, ctx.quarters);
+        if (!model || !model.rows.some(function (r) { return r.cells.some(function (c) { return c.rank !== null; }); })) {
+            return '';
+        }
+        var ordinal = typeof cr.ordinal === 'function' ? cr.ordinal : function (n) { return String(n); };
+
+        var head = ctx.quarters.map(function (q) {
+            return '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">' + _escape(q.name) + '</th>';
+        }).join('');
+
+        var body = model.rows.map(function (row) {
+            var isFocus = model.focus && model.focus.registry === row.registry;
+            var cells = row.cells.map(function (c) { return _placingCell(c, ordinal); }).join('');
+            return '<tr style="border-bottom:1px solid var(--border);' + (isFocus ? 'background:rgba(216,67,21,0.08);' : '') + '">'
+                + '<td style="padding:8px;font-weight:600;">' + _escape(row.label)
+                + (isFocus ? ' <span style="font-size:0.75em;font-weight:700;color:#d84315;">FOCUS</span>' : '') + '</td>'
+                + cells
+                + '<td style="padding:8px;text-align:center;color:var(--text-secondary);">' + _escape(_placingGoal(row)) + '</td>'
+                + '<td style="padding:8px;text-align:center;">' + _placingMove(row.climbed) + '</td></tr>';
+        }).join('');
+
+        return '<div style="padding:16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
+            + '<h4 style="margin:0 0 4px;color:var(--text-primary);">Where ' + _escape(ctx.firstName) + ' placed in the call center</h4>'
+            + '<p style="margin:0 0 12px;font-size:0.85em;color:var(--text-tertiary);">'
+            + 'For you, not the file. Each placing is inside that one KPI, against everyone measured that quarter, and 1st is best. '
+            + 'Reliability is placed on hours missed for the year so far. Movement is counted over the people measured in both quarters, so a smaller field does not read as a climb.</p>'
+            + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.9em;">'
+            + '<thead><tr style="background:var(--bg-surface-raised);">'
+            + '<th style="padding:10px 8px;text-align:left;border-bottom:2px solid var(--border);">KPI</th>'
+            + head
+            + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Goal</th>'
+            + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Across the year</th>'
+            + '</tr></thead><tbody>' + body + '</tbody></table></div>'
+            + _placingFocus(model.focus, ctx, ordinal)
+            + '</div>';
+    }
+
+    function _placingCell(c, ordinal) {
+        if (c.rank === null) {
+            return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);">-</td>';
+        }
+        var colour = c.meets === true ? '#16a34a' : c.meets === false ? '#c2410c' : 'var(--text-primary)';
+        var step = '';
+        if (c.climbed !== null && c.climbed !== 0) {
+            step = ' <span style="font-size:0.78em;font-weight:600;color:' + (c.climbed > 0 ? '#16a34a' : '#c2410c') + ';"'
+                + ' title="Places ' + (c.climbed > 0 ? 'gained' : 'lost') + ' since the quarter before, among the people measured in both">'
+                + (c.climbed > 0 ? '▲' : '▼') + Math.abs(c.climbed) + '</span>';
+        }
+        return '<td style="padding:8px;text-align:center;font-variant-numeric:tabular-nums;"'
+            + (c.thin ? ' title="Too few surveys to join the field, so this is where the figure would sit"' : '') + '>'
+            + '<div><strong style="font-size:1.05em;">' + _escape(ordinal(c.rank)) + '</strong>'
+            + ' <span style="font-size:0.8em;color:var(--text-tertiary);">of ' + _escape(c.total) + '</span>' + step + '</div>'
+            + '<div style="font-size:0.85em;font-weight:600;color:' + colour + ';">' + _escape(c.display)
+            + (c.substituted ? ' <span title="Rep sat was blank or zero this quarter, so this is Overall Experience" style="color:#e65100;">OE</span>' : '')
+            + (c.thin ? ' <span style="font-weight:400;color:var(--text-tertiary);">(few surveys)</span>' : '')
+            + '</div></td>';
+    }
+
+    function _placingGoal(row) {
+        var t = row.target;
+        if (!t || !Number.isFinite(t.value)) return '-';
+        var goal = _display(row.registry, t.value);
+        if (row.registry === 'reliability') return goal + ' for the year';
+        return goal + (t.type === 'max' ? ' or lower' : ' or better');
+    }
+
+    function _placingMove(climbed) {
+        if (climbed === null || climbed === undefined) return '<span style="color:var(--text-tertiary);">-</span>';
+        if (climbed === 0) return '<span style="color:var(--text-secondary);">held</span>';
+        var up = climbed > 0;
+        var n = Math.abs(climbed);
+        return '<span style="color:' + (up ? '#16a34a' : '#c2410c') + ';font-weight:600;">'
+            + (up ? '▲ up ' : '▼ down ') + n + (n === 1 ? ' place' : ' places') + '</span>';
+    }
+
+    function _placingFocus(focus, ctx, ordinal) {
+        if (!focus) return '';
+        var next = ctx.quarter < 4 ? 'Q' + (ctx.quarter + 1) : 'next year';
+        var where = ordinal(focus.rank) + ' of ' + focus.total;
+        var why = focus.belowGoal
+            ? 'Below goal in ' + ctx.current.name + ', and the lowest placing of the KPIs below goal (' + where + ').'
+            : 'Handle time, adherence, sentiment and rep sat are all at goal in ' + ctx.current.name + '. This is the lowest placing of those (' + where + '), so it has the most room to climb.';
+        return '<div style="margin-top:12px;padding:10px 12px;border-left:4px solid #d84315;background:var(--bg-surface-raised);border-radius:4px;">'
+            + '<div style="font-weight:700;color:var(--text-primary);">Suggested focus for ' + _escape(next) + ': ' + _escape(focus.label) + '</div>'
+            + '<div style="font-size:0.9em;color:var(--text-secondary);margin-top:2px;">' + _escape(why) + '</div>'
+            + '</div>';
     }
 
     /* ── Talking points ──

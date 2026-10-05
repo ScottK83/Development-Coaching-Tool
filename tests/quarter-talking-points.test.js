@@ -159,7 +159,9 @@ suite('check-ins: in January the check-in due is last year\'s Q4', (t) => {
 
 /* ── What goes in the focus box ── */
 
-suite('check-ins: hours over the allowance lead the focus box', (t) => {
+/* Hours over the allowance led this box from 9/30. Scott reversed it on the
+ * morning of the Q3 meetings: areas of focus do not reference reliability. */
+suite('check-ins: areas of focus never reference reliability', (t) => {
     t.pinClock('2026-10-05');
     // Two rates below goal and falling, which used to take both places.
     const store = year('Sam Over',
@@ -169,12 +171,17 @@ suite('check-ins: hours over the allowance lead the focus box', (t) => {
     const { qr, ctx } = ctxFor(t, store, 'Sam Over');
     const split = qr.splitForBoxes(ctx);
 
-    t.equal('missed hours are raised first', split.focus[0].metricKey, 'reliability');
+    t.check('33 hours over is not in the focus split', !split.focus.some((m) => m.metricKey === 'reliability'));
+    t.equal('the rates take both places', split.focus.length, 2);
     const notes = qr.buildNotes(ctx);
-    t.check('the box says how far over', /over the allowance/.test(notes.box2));
-    t.check('and opens the conversation on attendance', /Attendance is the first conversation/.test(notes.box2));
-    t.check('without calling it progress toward a goal', !/steady progress toward goal/.test(notes.box2));
-    t.check('the second item still gets its expectation', /expectation is visible movement/.test(notes.box2));
+    t.check('the box says nothing about hours', !/hrs|hours|allowance|reliab|attendance/i.test(notes.box2));
+    t.check('nor does the strengths box', !/allowance/.test(notes.box1));
+    t.check('the lead rate still gets its expectation', /expectation is visible movement/.test(notes.box2));
+
+    // Copilot is not handed the hours to put back in.
+    const prompt = qr.buildPrompt(ctx);
+    t.check('the prompt carries no hours fact', !/- Reliability:/.test(prompt));
+    t.check('and asks for them to stay out', /Keep reliability, attendance and hours missed out of Areas of Focus/.test(prompt));
 });
 
 suite('check-ins: a move inside the noise band is not a slide', (t) => {
@@ -247,18 +254,18 @@ suite('talking points: the sheet carries every quarter and the same split', (t) 
     t.check('and one about next quarter', asks.some((q) => /work on in Q4/.test(q)));
 });
 
-suite('talking points: hours over the allowance are the first thing to work on', (t) => {
+suite('talking points: hours over the allowance are not something to work on', (t) => {
     t.pinClock('2026-10-05');
     const store = year('Sam Over', { reliability: 20 }, { reliability: 10 }, { reliability: 87 });
     const { qr, ctx } = ctxFor(t, store, 'Sam Over');
     const tp = qr.buildTalkingPoints(ctx);
-    const first = section(tp, 'focus').items[0];
+    const focus = section(tp, 'focus');
 
-    t.equal('reliability leads', first.metricKey, 'reliability');
-    t.equal('shown as the running total', first.numbers, '20 hrs through Q1, 30 hrs through Q2, 117 hrs through Q3');
-    t.check('with how far over', /99 hrs over the allowance, with one quarter still to go/.test(first.said));
-    t.check('it is not also a win', !(section(tp, 'wins') || { items: [] }).items.some((i) => i.metricKey === 'reliability'));
-    t.check('and attendance is asked about', section(tp, 'ask').lines.some((q) => /attendance/.test(q)));
+    t.check('reliability is not in what to work on',
+        !(focus.items || []).some((i) => i.metricKey === 'reliability'));
+    t.check('it is not a win', !(section(tp, 'wins') || { items: [] }).items.some((i) => i.metricKey === 'reliability'));
+    t.check('attendance is not asked about', !section(tp, 'ask').lines.some((q) => /attendance/.test(q)));
+    t.check('and the sheet does not mention the hours', !/117 hrs|allowance/.test(tp.text));
 });
 
 suite('talking points: hours near the allowance are not opened on as a win', (t) => {
@@ -269,10 +276,10 @@ suite('talking points: hours near the allowance are not opened on as a win', (t)
 
     t.check('16.5 of 18 is not in the wins',
         !(section(tp, 'wins') || { items: [] }).items.some((i) => i.metricKey === 'reliability'));
+    // Nor raised as one to watch: that is a focus by another name.
     const watch = section(tp, 'watch');
-    const rel = watch && watch.items.find((i) => i.metricKey === 'reliability');
-    t.check('it is one to keep an eye on', !!rel);
-    t.check('with the hours left', /1.5 hrs left in the allowance/.test(rel.said));
+    t.check('it is not one to keep an eye on either',
+        !(watch && watch.items.some((i) => i.metricKey === 'reliability')));
 
     const { qr: qr2, ctx: ctx2 } = ctxFor(t, year('Well Inside', { reliability: 3 }, { reliability: 3 }, { reliability: 3 }), 'Well Inside');
     const tp2 = qr2.buildTalkingPoints(ctx2);
@@ -300,7 +307,7 @@ suite('talking points: a clean quarter still has something to say', (t) => {
     const tp = qr.buildTalkingPoints(ctx);
 
     const focus = section(tp, 'focus');
-    t.check('the focus says everything is at goal', /Every tracked metric is at goal/.test(focus.lines[0]));
+    t.check('the focus says everything is at goal', /Every performance metric is at goal/.test(focus.lines[0]));
     t.check('and the ask is to hold it', /hold it/.test(focus.lines[0]));
     t.check('there are still questions', section(tp, 'ask').lines.length >= 2);
 });

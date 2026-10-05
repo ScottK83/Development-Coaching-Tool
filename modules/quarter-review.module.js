@@ -551,29 +551,17 @@
             }
         });
 
-        // Missed hours sit in whichever box the year's total puts them.
+        // Missed hours inside the allowance are a strength. Over it, or on a
+        // partial year with no verdict, they go in neither box, because areas
+        // of focus do not reference reliability (Scott, on 2026-10-05). Hours
+        // over the allowance used to lead the focus box; that is reversed, and
+        // the focus box is the rates alone.
         var rel = ctx.reliability;
-        // meetsTarget is null on a partial year, where the annual allowance
-        // says nothing useful. Neither box claims a verdict then; the sentence
-        // is still available to a caller that wants to state the hours.
-        if (rel.hasValue && rel.target) {
-            if (rel.meetsTarget === true) {
-                strengths.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'met', reliability: rel });
-            } else if (rel.meetsTarget === false) {
-                focus.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'missed', reliability: rel });
-            } else if (rel.partialYear && rel.yearToDate > 0) {
-                // No verdict, but hours worth raising. Withholding the verdict
-                // must not mean withholding the hours: fifteen of them in one
-                // quarter is the single most useful thing on the page about a
-                // new starter, and leaving it out entirely was worse than the
-                // wrong verdict it replaced. Ranked last, so a real miss is
-                // still raised ahead of it.
-                focus.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'partial-year', reliability: rel });
-            }
+        if (rel.hasValue && rel.target && rel.meetsTarget === true) {
+            strengths.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'met', reliability: rel });
         }
 
-        var focusRank = { 'missed-and-falling': 0, 'missed': 1, 'missed-but-rising': 2, 'partial-year': 3 };
-        var overAllowance = function (m) { return m.metricKey === RELIABILITY && m.why === 'missed'; };
+        var focusRank = { 'missed-and-falling': 0, 'missed': 1, 'missed-but-rising': 2 };
         // A reading from an earlier quarter, because the check-in quarter had
         // too few surveys to quote. It is still true, but a Q3 check-in that
         // leads on a Q2 number is talking about the wrong quarter.
@@ -586,20 +574,10 @@
             return anyCurrent && m.metricKey !== RELIABILITY && !!m.latestQuarter && m.latestQuarter !== currentName;
         };
         focus.sort(function (a, b) {
-            // Hours over the annual allowance come first, whatever else is
-            // behind. A rate can recover in a quarter; missed hours only ever
-            // go up. Ranked alongside the rates they were pushed out of a two
-            // item box by any rate that happened to be falling, so an associate
-            // a hundred hours over had a document that never mentioned it.
-            if (overAllowance(a) !== overAllowance(b)) return overAllowance(a) ? -1 : 1;
             if (stale(a) !== stale(b)) return stale(a) ? 1 : -1;
             var ra = focusRank[a.why] === undefined ? 1 : focusRank[a.why];
             var rb = focusRank[b.why] === undefined ? 1 : focusRank[b.why];
             if (ra !== rb) return ra - rb;
-            // Reliability outranks a rate when both are behind: missed hours
-            // are the one of these with a hard ceiling on them.
-            if (a.metricKey === RELIABILITY) return -1;
-            if (b.metricKey === RELIABILITY) return 1;
             // Then by how badly it missed. Returning 0 here left the order to
             // the metric registry, so a metric missing by a tenth of a point
             // was raised ahead of one missing by forty, purely because handle
@@ -1097,7 +1075,7 @@
             // the conversation worth having now, and "everything is at goal"
             // would bury it.
             var slide = split.watch[0];
-            box2Parts.push('Every tracked metric is at goal for ' + ctx.quarterLabel + '.');
+            box2Parts.push('Every performance metric is at goal for ' + ctx.quarterLabel + '.');
             box2Parts.push(metricSentence(slide, ctx, 'lead'));
             box2Parts.push('It is still at goal, so this is one to watch rather than fix, and the aim is to stop the slide '
                 + _overRemainingPhrase(ctx) + '.');
@@ -1107,7 +1085,7 @@
             // quarter was getting a byte identical focus box, and a file note
             // that could have been written about anybody reads as one that was.
             var best = _strongest(split.strengths);
-            var opening = 'Every tracked metric is at goal for ' + ctx.quarterLabel;
+            var opening = 'Every performance metric is at goal for ' + ctx.quarterLabel;
             if (best) {
                 opening += ', ' + best.label.toLowerCase() + ' the furthest clear of it at '
                     + _display(best.metricKey, best.latestValue);
@@ -1146,30 +1124,10 @@
         var name = ctx.firstName;
         var lead = focus[0];
         var over = _overRemainingPhrase(ctx);
-        if (lead.metricKey === RELIABILITY && lead.why === 'missed') {
-            // "Steady progress toward goal" is not a thing missed hours can
-            // do: the total only rises. The conversation is about the hours.
-            var line = 'Attendance is the first conversation. ' + name
-                + ' and I will talk through the time missed and what is behind it.';
-            var second = focus[1];
-            if (second && second.metricKey !== RELIABILITY) {
-                line += ' On ' + second.label.toLowerCase()
-                    + ', the expectation is visible movement ' + over + '.';
-            }
-            return line;
-        }
         if (lead.why === 'missed-and-falling') {
             return 'This is the one to move first. ' + name
                 + ' and I will work it in our one to ones, and the expectation is visible movement '
                 + over + '.';
-        }
-        if (lead.why === 'partial-year') {
-            var rel = lead.reliability;
-            var since = rel && rel.firstQuarterWithData ? rel.firstQuarterWithData.name : 'they started';
-            return 'The allowance is set for a full year and ' + name
-                + ' has been on the team since ' + since
-                + ', so the figure above is the hours themselves rather than a reading against it. '
-                + 'We will talk through the time missed and what sits behind it.';
         }
         if (lead.why === 'missed-but-rising') {
             return name + ' is already moving this the right way, and the expectation is that it reaches goal '
@@ -1199,7 +1157,8 @@
      * generator wants the same block: a year-end review that says how the year
      * MOVED is a better record than one that quotes a single closing figure.
      */
-    function factLines(ctx) {
+    function factLines(ctx, options) {
+        var opts = options || {};
         var out = [];
         ctx.metrics.forEach(function (m) {
             var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
@@ -1218,7 +1177,7 @@
         });
 
         var rel = ctx.reliability;
-        if (rel.hasValue) {
+        if (rel.hasValue && opts.reliability !== false) {
             var relLine = '- ' + _label(RELIABILITY) + ': ' + _display(RELIABILITY, rel.yearToDate)
                 + ' missed for the year';
             if (rel.target) relLine += ' (allowance ' + _display(RELIABILITY, rel.target.value) + ' for the year)';
@@ -1279,9 +1238,10 @@
             && rel.yearToDate <= rel.target.value * Math.min(ctx.quarter, 4) / 4 + 0.05;
         if (hoursOnPace) winItems.push(_reliabilityItem(rel, ctx));
 
-        var focusItems = split.focus.slice(0, 2).map(function (m) {
-            return m.metricKey === RELIABILITY ? _reliabilityItem(rel, ctx) : _talkItem(m, ctx);
-        });
+        // Rates only. Hours are never something to work on in these sheets
+        // (Scott, 2026-10-05), so a total over the allowance, or close to it,
+        // is not raised here at all; on pace it is still a win above.
+        var focusItems = split.focus.slice(0, 2).map(function (m) { return _talkItem(m, ctx); });
 
         var sections = [];
         if (winItems.length) {
@@ -1292,18 +1252,15 @@
         } else {
             sections.push({
                 id: 'focus', heading: 'What to work on in ' + next,
-                lines: ['Every tracked metric is at goal for ' + ctx.quarterLabel + '. The ask for '
+                lines: ['Every performance metric is at goal for ' + ctx.quarterLabel + '. The ask for '
                     + next + ' is to hold it.']
             });
         }
-        var moreFocus = split.focus.slice(2).map(function (m) {
-            return m.metricKey === RELIABILITY ? _reliabilityLine(rel) : _briefLine(m, ctx);
-        }).filter(Boolean);
+        var moreFocus = split.focus.slice(2).map(function (m) { return _briefLine(m, ctx); }).filter(Boolean);
         if (moreFocus.length) {
             sections.push({ id: 'moreFocus', heading: 'Also below goal, if there is time', lines: moreFocus });
         }
         var watchItems = split.watch.map(function (m) { return _talkItem(m, ctx); });
-        if (hoursInside && !hoursOnPace) watchItems.push(_reliabilityItem(rel, ctx));
         if (watchItems.length) {
             sections.push({ id: 'watch', heading: 'Keep an eye on', items: watchItems });
         }
@@ -1315,7 +1272,7 @@
         var together = _togetherLine(ctx);
         if (together) sections.push({ id: 'together', heading: 'Worked on together this year', lines: [together] });
 
-        sections.push({ id: 'ask', heading: 'Questions to ask', lines: _questions(wins, split, rel, next) });
+        sections.push({ id: 'ask', heading: 'Questions to ask', lines: _questions(wins, split, next) });
 
         if (opts.notes && String(opts.notes).trim()) {
             sections.push({ id: 'notes', heading: 'My notes', lines: [String(opts.notes).trim()] });
@@ -1450,12 +1407,6 @@
         };
     }
 
-    function _reliabilityLine(rel) {
-        if (!rel || !rel.hasValue) return '';
-        return _label(RELIABILITY) + ': ' + _display(RELIABILITY, rel.yearToDate) + ' missed this year'
-            + (rel.target ? ', allowance ' + _display(RELIABILITY, rel.target.value) : '') + '.';
-    }
-
     // "Transfers: 7.0% in Q3, 1 point over goal."
     function _briefLine(m, ctx) {
         if (!Number.isFinite(m.latestValue)) return '';
@@ -1484,14 +1435,12 @@
         return _cap(parts.join(' and ')) + (named.length ? ', on ' + named.join(', ') : '') + '.';
     }
 
-    function _questions(wins, split, rel, next) {
+    function _questions(wins, split, next) {
         var out = [];
         if (wins.length) out.push('What has been working for you on ' + wins[0].label.toLowerCase() + '?');
-        var firstRate = split.focus.filter(function (m) { return m.metricKey !== RELIABILITY; })[0];
+        var firstRate = split.focus[0];
         if (firstRate) out.push('What gets in the way on ' + firstRate.label.toLowerCase() + '?');
         else if (split.watch.length) out.push('What has changed on ' + split.watch[0].label.toLowerCase() + ' lately?');
-        var hoursRaised = split.focus.some(function (m) { return m.metricKey === RELIABILITY; });
-        if (hoursRaised && rel.yearToDate > 0) out.push('Is there anything I can help with on attendance?');
         out.push('What do you want to work on in ' + next + ', and what do you need from me?');
         return out;
     }
@@ -1533,7 +1482,11 @@
             + 'This is a ' + ctx.quarterLabel + ' check in, so the year is still running.');
         out.push('');
         out.push('Here is how each measure has moved across the quarters this year:');
-        factLines(ctx).forEach(function (line) { out.push(line); });
+        // Hours go to Copilot only when they are being recognised. Over the
+        // allowance they are in neither box, and handed over as a fact they
+        // came back as an area of focus, which Scott does not want there.
+        var hoursRecognised = split.strengths.some(function (m) { return m.metricKey === RELIABILITY; });
+        factLines(ctx, { reliability: hoursRecognised }).forEach(function (line) { out.push(line); });
 
         var support = supportSentence(ctx);
         if (support) {
@@ -1581,6 +1534,7 @@
         out.push('- Use the % symbol rather than the word percent');
         out.push('- Do not use dashes of any kind. Use commas and full stops');
         out.push('- Do not grade the overall performance or use any rating words');
+        out.push('- Keep reliability, attendance and hours missed out of Areas of Focus');
         out.push('- About 4 to 7 sentences per box');
         out.push('- Return exactly this format and nothing else:');
         out.push('Progress & Strengths:');

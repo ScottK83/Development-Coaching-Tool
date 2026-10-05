@@ -2662,6 +2662,177 @@
         };
     }
 
+    /* ── Quarter placings ──
+
+       Where somebody placed in each of the five KPIs, quarter by quarter, for
+       the Quarterly tab. A supervisor's view and never part of the check-in
+       document: Scott asked for it to see the climb across the year and pick a
+       focus for the last quarter, not to file it.
+
+       Placed by the same per-metric helper as the year card, so a placing here
+       means what it means there: inside one metric, against everybody the
+       centre measured that quarter, with a survey reading under the floor
+       placed against the field without joining it. The rows are the quarter
+       aggregates the document itself reads, so the figures beside each placing
+       are the document's figures.
+
+       Reliability is the year's running total at each quarter's close, never a
+       quarter's own hours, for the reason the year card gives. The year to
+       date file's figure replaces the summed one, for everybody, at the newest
+       quarter here when the file closes that quarter: ends inside it, or within
+       a week of its last day, which is how a file pulled on October 1 stands
+       for Q3. A file that does not close the quarter leaves the sums alone, so
+       a Q2 look-back in October is not handed hours from the summer. */
+    var YTD_CLOSES_QUARTER_DAYS = 7;
+
+    function buildQuarterPlacings(name, year, quarters) {
+        var list = (quarters || []).filter(Boolean);
+        var withData = list.filter(function (q) { return !q.empty && q.employeeList && q.employeeList.length; });
+        if (!name || !withData.length) return null;
+
+        var qt = window.DevCoachModules && window.DevCoachModules.quarterTrend;
+        var anchor = _ytdReliabilityAnchor(year);
+        var newest = withData[withData.length - 1];
+        var anchorQuarter = null;
+        if (anchor && String(newest.startDate) <= anchor.through) {
+            var p = String(newest.endDate).split('-').map(Number);
+            var grace = new Date(p[0], p[1] - 1, p[2] + YTD_CLOSES_QUARTER_DAYS);
+            var graceText = grace.getFullYear() + '-' + String(grace.getMonth() + 1).padStart(2, '0')
+                + '-' + String(grace.getDate()).padStart(2, '0');
+            if (anchor.through <= graceText) anchorQuarter = newest.quarter;
+        }
+
+        var running = {};
+        var byQuarter = {};
+        withData.forEach(function (q) {
+            var rows = q.employeeList.map(function (row) {
+                var hours = parseFloat(row.reliabilityAccrued);
+                var acc = running[row.name] || { total: 0, any: false };
+                if (Number.isFinite(hours)) { acc.total += hours; acc.any = true; }
+                if (q.quarter === anchorQuarter && Number.isFinite(anchor.byName[row.name])) {
+                    acc.total = anchor.byName[row.name];
+                    acc.any = true;
+                }
+                running[row.name] = acc;
+                // To the tenth, as the check-in document rounds it. At two
+                // places 1.65 printed as 1.6 here beside a document saying 1.7,
+                // and two people reading the same split into two placings.
+                return Object.assign({}, row, {
+                    reliability: acc.any ? Math.round(acc.total * 10) / 10 : null
+                });
+            });
+            var ranked = _scoreAndRank(rows, year);
+            if (!ranked.length) return;
+            var holders = ranked.map(function (r) { return { name: r.name, holder: r }; });
+
+            // The same person under a different spelling between uploads is
+            // still one person, the way the document finds them.
+            var row = qt && typeof qt.findEmployee === 'function' ? qt.findEmployee(q, name) : q.employees[name];
+            var key = row ? row.name : name;
+            var mine = null;
+            ranked.forEach(function (r) { if (r.name === key) mine = r; });
+
+            byQuarter[q.quarter] = { mine: mine, key: key, holders: holders, ranks: _metricRanksFor(holders) };
+        });
+
+        /* Places gained between two quarters, counted over the people measured
+           in BOTH, the way the rankings trajectory counts its arrows. The raw
+           difference reads a smaller field as a climb: last of 126 then last
+           of 122 came out "up 3". Positive is a climb; null when either
+           placing is missing or under the survey floor. */
+        function sharedClimb(metric, qa, qb) {
+            var a = byQuarter[qa], b = byQuarter[qb];
+            if (!a || !b) return null;
+            var ra = a.ranks[metric.label] || {}, rb = b.ranks[metric.label] || {};
+            if (!ra[a.key] || !rb[b.key] || ra[a.key].thin || rb[b.key].thin) return null;
+            var inA = function (n) { return ra[n] && !ra[n].thin; };
+            var inB = function (n) { return rb[n] && !rb[n].thin; };
+            var before = _metricRankMap(a.holders.filter(function (h) {
+                return h.name === a.key || (inA(h.name) && inB(h.name));
+            }), metric)[a.key];
+            var after = _metricRankMap(b.holders.filter(function (h) {
+                return h.name === b.key || (inA(h.name) && inB(h.name));
+            }), metric)[b.key];
+            return before && after ? before.rank - after.rank : null;
+        }
+
+        var registry = window.METRICS_REGISTRY || {};
+        var rows = TRAJECTORY_METRIC_ROWS.map(function (metric) {
+            var target = _targetFor(metric.registry, year);
+            var previousQuarter = null;
+            var cells = list.map(function (q) {
+                var at = byQuarter[q.quarter];
+                var value = at && at.mine ? _trajectoryMetricValue(at.mine, metric) : null;
+                var has = !(value === null || value === undefined || isNaN(value));
+                var placing = has && at.ranks[metric.label] ? at.ranks[metric.label][at.key] : null;
+                var cell = {
+                    quarter: q.quarter,
+                    name: q.name,
+                    value: has ? Number(value) : null,
+                    display: has ? _formatMetricDisplay(metric.registry, value) : '',
+                    meets: has ? _meetsTarget(metric.registry, value, year) : null,
+                    rank: placing ? placing.rank : null,
+                    total: placing ? placing.total : null,
+                    thin: !!(placing && placing.thin),
+                    // The scorer reads Overall Experience when rep sat is blank
+                    // or zero. Said on the cell, as the rankings table says it.
+                    substituted: has && metric.scoreKey === 'associateOverall'
+                        && at.mine.associateOverallSource === 'overallExperience',
+                    climbed: null
+                };
+                if (cell.rank !== null && !cell.thin) {
+                    if (previousQuarter !== null) cell.climbed = sharedClimb(metric, previousQuarter, q.quarter);
+                    previousQuarter = q.quarter;
+                }
+                return cell;
+            });
+
+            var placed = cells.filter(function (c) { return c.rank !== null && !c.thin; });
+            return {
+                label: (registry[metric.registry] && registry[metric.registry].label) || metric.label,
+                registry: metric.registry,
+                target: target,
+                cells: cells,
+                // From the first solid placing to the last. Positive is a climb.
+                climbed: placed.length >= 2
+                    ? sharedClimb(metric, placed[0].quarter, placed[placed.length - 1].quarter) : null,
+                latest: cells.length ? cells[cells.length - 1] : null
+            };
+        });
+
+        return { name: name, year: year, rows: rows, focus: _quarterFocus(rows) };
+    }
+
+    /* The KPI to work on next quarter, read off the newest quarter's placings.
+
+       Below goal first, and of those the one placed lowest against the field,
+       by share of the field so a 98th of 126 and a 98th of 120 compare fairly.
+       With all of them at goal, the lowest placing is still the one with the
+       most room to climb. A survey placing under the floor is not a reading to
+       build a quarter's focus on, so it is passed over.
+
+       Never reliability. Scott, 2026-10-05: areas of focus do not reference
+       it. Its placing stays in the table; it is just not offered as the focus. */
+    function _quarterFocus(rows) {
+        var pool = rows.filter(function (r) {
+            return r.registry !== 'reliability'
+                && r.latest && r.latest.rank !== null && !r.latest.thin && r.latest.total > 0;
+        });
+        if (!pool.length) return null;
+        var below = pool.filter(function (r) { return r.latest.meets === false; });
+        var from = below.length ? below : pool;
+        var pick = from.slice().sort(function (a, b) {
+            return (b.latest.rank / b.latest.total) - (a.latest.rank / a.latest.total);
+        })[0];
+        return {
+            registry: pick.registry,
+            label: pick.label,
+            rank: pick.latest.rank,
+            total: pick.latest.total,
+            belowGoal: below.length > 0
+        };
+    }
+
     function buildYearImageModel(name) {
         var series = _timelineFor(name);
         if (!series || !series.length) return null;
@@ -3967,6 +4138,8 @@
         // What goes into the year picture. The canvas itself can only be
         // eyeballed; this is the part that can be asserted.
         buildYearImageModel: buildYearImageModel,
+        // The Quarterly tab's placings panel, supervisor only.
+        buildQuarterPlacings: buildQuarterPlacings,
         rankWithinMetric: _metricRankMap,
         longDate: _longDate,
         movementAmount: _movementAmount,
