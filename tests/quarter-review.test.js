@@ -514,6 +514,74 @@ suite('quarter review: the year-to-date upload outranks a sum of quarters', (t) 
     const sentence = qr.reliabilitySentence(ctx.reliability, ctx);
     t.check('the year figure is stated', /21 hrs for the year to date/.test(sentence));
     t.check('and no sequence contradicts it', !/through Q2/.test(sentence));
+    // The Copilot prompt and the year end block carry the same line, and
+    // Copilot is told to keep every number exactly.
+    t.check('nor in the facts handed to Copilot', !/through Q/.test(qr.factLines(ctx).join(' ')));
+});
+
+/* Within half an hour the quarters count as agreeing with the year to date
+ * file, and printed both. On the Q3 check-ins that was "16.5 hrs for the year
+ * to date. That was 0.2 hrs through Q1, 0.9 hrs through Q2, and 16.8 hrs
+ * through Q3": two different totals for the year, one sentence apart. */
+suite('quarter review: the running line lands on the year figure', (t) => {
+    t.pinClock('2026-10-05');
+    const qr = load(t, Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Near Limit', { reliability: 0.2 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Near Limit', { reliability: 0.7 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Near Limit', { reliability: 15.9 })])
+    ));
+    global.window.ytdData = {
+        '2026-01-01|2026-10-01': {
+            metadata: { periodType: 'ytd', startDate: '2026-01-01', endDate: '2026-10-01' },
+            employees: [person('Near Limit', { reliability: 16.47 })]
+        }
+    };
+    global.ytdData = global.window.ytdData;
+
+    const ctx = qr.buildContext('Near Limit', 2026);
+    const rel = ctx.reliability;
+    t.equal('the quarters add to 16.8', rel.summedFromQuarters, 16.8);
+    t.equal('the year is the file', rel.yearToDate, 16.5);
+    t.equal('and Q3 closes on it', rel.checkpoints[2].runningTotal, 16.5);
+    t.equal('the earlier quarters are untouched', rel.checkpoints[1].runningTotal, 0.9);
+
+    const sentence = qr.reliabilitySentence(rel, ctx);
+    t.check('the climb is still shown', /0.9 hrs through Q2/.test(sentence));
+    t.check('ending on the year figure', /16.5 hrs through Q3/.test(sentence));
+    t.check('with no second total', !/16.8/.test(sentence));
+
+    const tp = qr.buildTalkingPoints(ctx);
+    t.check('the meeting sheet shows the same climb', /0.9 hrs through Q2, 16.5 hrs through Q3/.test(tp.text));
+
+    // Read without a check-in quarter, as the year end prompt does, October
+    // brings an empty Q4 with it. Nothing was uploaded for it, so it has no
+    // running total to state.
+    t.equal('the empty Q4 is there', rel.checkpoints.length, 4);
+    t.equal('and states no total', rel.checkpoints[3].runningTotal, null);
+    const facts = qr.factLines(ctx).join(' ');
+    t.check('the prompt ends the climb on Q3', /16.5 hrs through Q3/.test(facts) && !/through Q4/.test(facts));
+});
+
+suite('quarter review: a close that would run backwards is not drawn', (t) => {
+    t.pinClock('2026-10-05');
+    const qr = load(t, Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Recoded', { reliability: 4 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Recoded', { reliability: 6 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Recoded', { reliability: 0.3 })])
+    ));
+    // Hours re-coded off an earlier quarter: the file is under the Q2 total.
+    global.window.ytdData = {
+        '2026-01-01|2026-09-30': {
+            metadata: { periodType: 'ytd', startDate: '2026-01-01', endDate: '2026-09-30' },
+            employees: [person('Recoded', { reliability: 9.9 })]
+        }
+    };
+    global.ytdData = global.window.ytdData;
+
+    const ctx = qr.buildContext('Recoded', 2026);
+    const sentence = qr.reliabilitySentence(ctx.reliability, ctx);
+    t.check('the year figure is stated', /9.9 hrs for the year to date/.test(sentence));
+    t.check('and no line falls from 10 to 9.9', !/through Q2/.test(sentence));
 });
 
 suite('quarter review: being over the allowance is said directly', (t) => {
@@ -790,4 +858,89 @@ suite('quarter review: the prompt carries the quarters and the draft', (t) => {
     t.check('the numbers are pinned against drift', /Do not round differently/.test(prompt));
     t.check('third person is required', /third person/.test(prompt));
     t.check('and the output shape is fixed', /Progress & Strengths:/.test(prompt));
+});
+
+/* ── Claims the numbers beside them have to bear out ──
+ *
+ * Found reading every Q3 check-in on the morning of the meetings. Each of
+ * these was a sentence in a record that the figures in the same sentence
+ * showed to be untrue.
+ */
+
+function threeQuarters(name, q1, q2, q3) {
+    return Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person(name, q1)]),
+        period('quarter', '2026-04-01', '2026-06-30', [person(name, q2)]),
+        period('quarter', '2026-07-01', '2026-09-30', [person(name, q3)])
+    );
+}
+
+function sentenceFor(t, store, name, metricKey, depth) {
+    const { qr, ctx } = ctxFor(t, store, name);
+    const m = ctx.metrics.find((x) => x.metricKey === metricKey);
+    return { qr, ctx, m, text: qr.metricSentence(m, ctx, depth) };
+}
+
+suite('quarter review: a quarter that held is not a quarter that slipped', (t) => {
+    t.pinClock('2026-10-05');
+    const store = threeQuarters('Held Then Fell', { cxRepOverall: 100 }, { cxRepOverall: 100 }, { cxRepOverall: 66.7 });
+    const { qr, ctx, m, text } = sentenceFor(t, store, 'Held Then Fell', 'cxRepOverall', 'lead');
+
+    t.check('not claimed every quarter', !/each quarter/.test(text));
+    t.check('said as a slip over the year', /slipped this year/.test(text));
+    const item = qr.buildTalkingPoints(ctx).text;
+    t.check('nor on the meeting sheet', !/Slipped each quarter/.test(item) && /Slipped this year/.test(item));
+    t.check('a genuine run still claims every quarter',
+        /in each quarter/.test(sentenceFor(t, threeQuarters('Real Run',
+            { cxRepOverall: 100 }, { cxRepOverall: 90 }, { cxRepOverall: 70 }), 'Real Run', 'cxRepOverall', 'lead').text));
+    t.check('the metric is still found', !!m);
+});
+
+suite('quarter review: "finished close to where it started" only when it did', (t) => {
+    t.pinClock('2026-10-05');
+    // 4.4%, 6.4%, 6.1% ended 1.7 points worse, most of the way up the swing.
+    const drifted = sentenceFor(t, threeQuarters('Drifted', { transfers: 4.4, transfersCount: 22 }, { transfers: 6.4, transfersCount: 32 }, { transfers: 6.1, transfersCount: 30.5 }),
+        'Drifted', 'transfers', 'lead').text;
+    t.check('a move that stuck is not called a return', !/finished close/.test(drifted));
+    t.check('it is quantified instead', /That is 1.7 points off where Drifted started the year/.test(drifted));
+
+    // 81.8%, 54.5%, 83.3% genuinely came back, and crossed the goal doing it.
+    const back = sentenceFor(t, threeQuarters('Came Back', { cxRepOverall: 81.8 }, { cxRepOverall: 54.5 }, { cxRepOverall: 83.3 }),
+        'Came Back', 'cxRepOverall', 'lead').text;
+    t.check('a real return keeps the swing note', /finished close to where the year started, after a dip to 54.5% in Q2/.test(back));
+    t.check('the dip is not credited with the recovery', !/which moved it inside/.test(back));
+    t.check('the crossing is said plainly', /Q3 is the first quarter inside the 82% goal/.test(back));
+});
+
+suite('quarter review: a run one quarter long is not "since"', (t) => {
+    t.pinClock('2026-10-05');
+    const text = sentenceFor(t, threeQuarters('Just Made It', { fcr: 57.1 }, { fcr: 70 }, { fcr: 75 }),
+        'Just Made It', 'fcr', 'support').text;
+    t.check('not "inside since Q3"', !/since Q3/.test(text));
+    t.check('the first quarter inside', /Q3 is the first quarter inside the 73% goal/.test(text));
+});
+
+suite('quarter review: a net move inside the noise band is not progress', (t) => {
+    t.pinClock('2026-10-05');
+    const text = sentenceFor(t, threeQuarters('Wandered', { overallSentiment: 91.8 }, { overallSentiment: 93.6 }, { overallSentiment: 92.3 }),
+        'Wandered', 'overallSentiment', 'lead').text;
+    t.check('every reading is shown', /91.8% in Q1, 93.6% in Q2, and 92.3% in Q3/.test(text));
+    t.check('half a point is not called better', !/better than where/.test(text));
+    t.check('the standing is still said', /every quarter of it inside the 88% goal/.test(text));
+});
+
+suite('quarter review: a steady metric is not given one reading for the year', (t) => {
+    t.pinClock('2026-10-05');
+    const text = sentenceFor(t, threeQuarters('Steady', { scheduleAdherence: 95.2 }, { scheduleAdherence: 95.0 }, { scheduleAdherence: 95.7 }),
+        'Steady', 'scheduleAdherence', 'brief').text;
+    t.check('not "held at 95.7% across the year"', !/held at/.test(text));
+    t.check('the figure is the newest quarter, said as such', /held steady across the year, 95.7% in Q3/.test(text));
+});
+
+suite('quarter review: a gap is in points, not a percentage', (t) => {
+    t.pinClock('2026-10-05');
+    const { qr, ctx } = ctxFor(t, threeQuarters('Short', { cxRepOverall: 90 }, { cxRepOverall: 85 }, { cxRepOverall: 66.7 }), 'Short');
+    const lines = qr.factLines(ctx).join('\n');
+    t.check('rep sat is 15.3 points off', /Rep Satisfaction:.*15.3 points off goal/.test(lines));
+    t.check('not 15.3% off', !/15.3% off goal/.test(lines));
 });

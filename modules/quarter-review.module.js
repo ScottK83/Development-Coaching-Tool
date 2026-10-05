@@ -331,6 +331,28 @@
         var reconciles = !Number.isFinite(fromYtd)
             || (Number.isFinite(summed) && Math.abs(summed - total) <= 0.5);
 
+        // Inside that margin the quarters still land a few tenths away from
+        // the file: a day of October in the year to date upload, or hours
+        // re-coded after a quarter went up. Left alone the record said "16.5
+        // hrs for the year to date" and then "16.8 hrs through Q3" in the
+        // next sentence. The file is the record, so the check-in quarter's
+        // running total takes its figure. If that would put the total below
+        // the quarter before, nothing honest can be drawn and the line goes.
+        //
+        // The newest quarter WITH data, not simply the newest quarter. From
+        // October 1 a year read without a check-in quarter ends on an empty
+        // Q4, and the year end prompt was told "16.8 hrs through Q3, 16.8 hrs
+        // through Q4" with nothing uploaded for Q4 at all. A quarter with no
+        // upload has no running total to state.
+        var lastIdx = -1;
+        checkpoints.forEach(function (c, i) { if (c.hasValue) lastIdx = i; });
+        for (var j = lastIdx + 1; j < checkpoints.length; j++) checkpoints[j].runningTotal = null;
+        if (reconciles && Number.isFinite(fromYtd) && lastIdx >= 0) {
+            var before = lastIdx > 0 ? checkpoints[lastIdx - 1].runningTotal : null;
+            if (before !== null && total < before) reconciles = false;
+            else checkpoints[lastIdx].runningTotal = total;
+        }
+
         // The allowance is for a whole year, so it only means what it says
         // about somebody who was here for one.
         //
@@ -510,7 +532,8 @@
                 // is not the one writing it up in January.
                 if (declining) {
                     var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
-                    if (points.length >= 2 && _pathShape(m, points).kind === 'falling') {
+                    var kind = points.length >= 2 ? _pathShape(m, points).kind : null;
+                    if (kind === 'falling' || kind === 'fell') {
                         watch.push(Object.assign({}, m, { why: 'met-but-falling' }));
                     }
                 }
@@ -674,7 +697,16 @@
         var mm = (window.DevCoachModules || {}).metricMovement;
         var band = _stableBand(m.metricKey);
         var steps = [];
+        var held = false;
         for (var i = 1; i < points.length; i++) {
+            // Two quarters that read the same on the page did not move. 100%,
+            // 100%, 66.7% was written up as "slipped in each quarter", with
+            // the numbers beside it showing Q2 did not.
+            if (_display(m.metricKey, points[i].value) === _display(m.metricKey, points[i - 1].value)) {
+                steps.push(0);
+                held = true;
+                continue;
+            }
             var better = mm && typeof mm.performanceDelta === 'function'
                 ? mm.performanceDelta(m.metricKey, points[i].value, points[i - 1].value)
                 : points[i].value - points[i - 1].value;
@@ -685,10 +717,12 @@
         var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
         if (spread <= band) return { kind: 'steady', steps: steps, spread: spread };
 
+        // "Each quarter" only when every quarter moved. One that held makes
+        // it a rise or a fall over the year, still one way, not every step.
         var improvedAny = steps.some(function (s) { return s > 0; });
         var worsenedAny = steps.some(function (s) { return s < 0; });
-        if (improvedAny && !worsenedAny) return { kind: 'climbing', steps: steps, spread: spread };
-        if (worsenedAny && !improvedAny) return { kind: 'falling', steps: steps, spread: spread };
+        if (improvedAny && !worsenedAny) return { kind: held ? 'rose' : 'climbing', steps: steps, spread: spread };
+        if (worsenedAny && !improvedAny) return { kind: held ? 'fell' : 'falling', steps: steps, spread: spread };
 
         // It reversed. The quarter worth naming is the one furthest the wrong
         // way, and it is only worth naming when it is not an endpoint: an
@@ -700,12 +734,18 @@
                 : points[j].value - points[worstIdx].value;
             if (Number.isFinite(cmp) && cmp < 0) worstIdx = j;
         }
+        // "Finished close to where the year started" is only true when it did.
+        // Close is the noise band, or a quarter of the swing when the swing is
+        // large: 82, 55, 83 came back, but 4.4%, 6.4%, 6.1% transfers did not,
+        // and the record said it had.
+        var net = Math.abs(values[values.length - 1] - values[0]);
         return {
             kind: 'swung',
             steps: steps,
             spread: spread,
             worst: points[worstIdx],
-            worstIsInterior: worstIdx > 0 && worstIdx < points.length - 1
+            worstIsInterior: worstIdx > 0 && worstIdx < points.length - 1,
+            endsClose: net <= Math.max(band, spread / 4)
         };
     }
 
@@ -750,6 +790,8 @@
         if (path.kind === 'steady') movementWord = 'held steady';
         else if (path.kind === 'climbing') movementWord = m.isReverse ? 'came down in each quarter this year' : 'improved in each quarter this year';
         else if (path.kind === 'falling') movementWord = m.isReverse ? 'climbed in each quarter this year' : 'slipped in each quarter this year';
+        else if (path.kind === 'rose') movementWord = m.isReverse ? 'came down this year' : 'improved this year';
+        else if (path.kind === 'fell') movementWord = m.isReverse ? 'climbed this year' : 'slipped this year';
         else movementWord = 'moved around this year';
 
         if (style === 'brief') {
@@ -757,10 +799,14 @@
             // that did not move gets said as a metric that did not move.
             if (path.kind === 'steady') {
                 // "Both inside the goal" needs two readings to refer to. A
-                // metric that held gets the singular tail instead.
-                lines.push(_cap(label) + ' held at '
-                    + _display(m.metricKey, points[points.length - 1].value)
-                    + ' across the year' + _goalTail(story, m, 'steady') + '.');
+                // metric that held gets the singular tail instead. The figure
+                // is the newest quarter's, said as such: "held at 95.7% across
+                // the year" about 95.2%, 95.0%, 95.7% claims two readings that
+                // were not taken.
+                var newest = points[points.length - 1];
+                lines.push(_cap(label) + ' held steady across the year, '
+                    + _display(m.metricKey, newest.value) + ' in ' + newest.name
+                    + _goalTail(story, m, 'steady') + '.');
             } else {
                 lines.push(_cap(label) + ' went from '
                     + _display(m.metricKey, points[0].value) + ' in ' + points[0].name
@@ -785,12 +831,16 @@
         // A path that reversed gets its outlier named rather than a net change
         // that hides it. Two seconds between January and September is not the
         // story when one quarter was fifty seconds off.
-        if (path.kind === 'swung' && path.worstIsInterior) {
-            lines.push(_cap(_swingNote(m, path, ctx)) + _goalTail(story, m, 'lead') + '.');
+        // The support tail, not the lead one: "after a dip to 54.5% in Q2,
+        // which moved it inside the goal" credits the dip with the recovery.
+        if (path.kind === 'swung' && path.worstIsInterior && path.endsClose) {
+            lines.push(_cap(_swingNote(m, path, ctx)) + _goalTail(story, m, 'support') + '.');
         // "Held steady" and "that is 3 points better than where they started"
         // contradict each other inside one paragraph. A move small enough to
-        // call steady is a move too small to then quantify as progress.
-        } else if (path.kind !== 'steady' && moved && moved.size > 0) {
+        // call steady is a move too small to then quantify as progress, and
+        // that holds for the net of a path that wandered: 91.8%, 93.6%, 92.3%
+        // is not "0.5 points better than where they started".
+        } else if (path.kind !== 'steady' && moved && moved.size > _stableBand(m.metricKey)) {
             lines.push('That is ' + _movementAmount(m.metricKey, moved.size)
                 + (moved.improved === true ? ' better than' : ' off')
                 + ' where ' + ctx.firstName + ' started the year'
@@ -842,6 +892,11 @@
                 return ', and it is still ' + off + side + goal + ' goal';
             case 'crossed-up':
                 if (style === 'brief') return ', clearing the ' + goal + ' goal in ' + story.at.name;
+                // "Has been inside since Q3" when Q3 is the newest quarter
+                // claims a run that is one reading long.
+                if (style === 'support' && story.at === last) {
+                    return ', and ' + lastName + ' is the first quarter inside the ' + goal + ' goal';
+                }
                 if (style === 'support') return ', and it has been inside the ' + goal + ' goal since ' + story.at.name;
                 return ', which moved it inside the ' + goal + ' goal in ' + story.at.name;
             case 'crossed-down':
@@ -1156,7 +1211,9 @@
                     + (m.target.type === 'min' ? ' or better)' : ' or lower)');
             }
             if (m.meetsTarget === true) line += ', at goal';
-            else if (m.meetsTarget === false && m.gap) line += ', ' + _display(m.metricKey, m.gap.size) + ' off goal';
+            // A gap is a movement, so points rather than a % sign: "15.3% off
+            // goal" reads as fifteen percent of the goal.
+            else if (m.meetsTarget === false && m.gap) line += ', ' + _movementAmount(m.metricKey, m.gap.size) + ' off goal';
             out.push(line);
         });
 
@@ -1166,7 +1223,10 @@
                 + ' missed for the year';
             if (rel.target) relLine += ' (allowance ' + _display(RELIABILITY, rel.target.value) + ' for the year)';
             var pts = rel.checkpoints.filter(function (c) { return c.runningTotal !== null; });
-            if (pts.length >= 2) {
+            // Same rule as the file note. Without it the prompt said "22.9
+            // hrs missed for the year" and then "running at 17.9 hrs through
+            // Q3", and Copilot was told to keep every number exactly.
+            if (rel.checkpointsReconcile && pts.length >= 2) {
                 relLine += ', running at ' + pts.map(function (c) {
                     return _display(RELIABILITY, c.runningTotal) + ' through ' + c.name;
                 }).join(', ');
@@ -1285,7 +1345,9 @@
             said.push(kind === 'steady' ? 'Held steady.'
                 : kind === 'climbing' ? 'Better each quarter.'
                     : kind === 'falling' ? 'Slipped each quarter.'
-                        : 'Up and down this year.');
+                        : kind === 'rose' ? 'Better this year.'
+                            : kind === 'fell' ? 'Slipped this year.'
+                                : 'Up and down this year.');
         }
         said.push(_standingPhrase(m));
         said.push(_thinCurrentPhrase(m, ctx));
