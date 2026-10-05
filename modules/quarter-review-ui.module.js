@@ -327,9 +327,25 @@
             return '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">' + _escape(q.name) + '</th>';
         }).join('');
 
+        // The whole year beside the quarters. Each quarter column is that
+        // quarter alone; Scott needed the year as well, so it gets its own
+        // column, read off the year to date upload and dated by it.
+        var hasYear = model.rows.some(function (r) { return r.year && r.year.rank !== null; });
+        var YEAR_STYLE = 'border-left:2px solid var(--border);background:var(--bg-surface-raised);';
+        var through = _shortDate(model.yearThrough);
+        var yearHead = hasYear
+            ? '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);' + YEAR_STYLE + '">Year to date'
+                + (through ? '<div style="font-weight:400;font-size:0.75em;color:var(--text-tertiary);">through ' + _escape(through) + '</div>' : '')
+                + '</th>'
+            : '';
+        var firstName = ctx.quarters.length ? ctx.quarters[0].name : '';
+        var lastName = ctx.quarters.length ? ctx.quarters[ctx.quarters.length - 1].name : '';
+
         var body = model.rows.map(function (row) {
             var isFocus = model.focus && model.focus.registry === row.registry;
-            var cells = row.cells.map(function (c) { return _placingCell(c, ordinal); }).join('');
+            var cells = row.cells.map(function (c) { return _placingCell(c, ordinal); }).join('')
+                + (hasYear ? (row.year ? _placingCell(row.year, ordinal, YEAR_STYLE)
+                    : '<td style="padding:8px;text-align:center;color:var(--text-tertiary);' + YEAR_STYLE + '">-</td>') : '');
             return '<tr style="border-bottom:1px solid var(--border);' + (isFocus ? 'background:rgba(216,67,21,0.08);' : '') + '">'
                 + '<td style="padding:8px;font-weight:600;">' + _escape(row.label)
                 + (isFocus ? ' <span style="font-size:0.75em;font-weight:700;color:#d84315;">FOCUS</span>' : '') + '</td>'
@@ -341,22 +357,36 @@
         return '<div style="padding:16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
             + '<h4 style="margin:0 0 4px;color:var(--text-primary);">Where ' + _escape(ctx.firstName) + ' placed in the call center</h4>'
             + '<p style="margin:0 0 12px;font-size:0.85em;color:var(--text-tertiary);">'
-            + 'For you, not the file. Each placing is inside that one KPI, against everyone measured that quarter, and 1st is best. '
-            + 'Reliability is placed on hours missed for the year so far. Movement is counted over the people measured in both quarters, so a smaller field does not read as a climb.</p>'
+            + 'For you, not the file. Each placing is inside that one KPI, against everyone measured, and 1st is best. '
+            + 'Each quarter column is that quarter on its own'
+            + (hasYear ? ', and Year to date is the whole year so far, from the year to date upload' : '')
+            + '. Reliability is always hours missed for the year so far. '
+            + 'Movement is counted over the people measured in both quarters, so a smaller field does not read as a climb.</p>'
             + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.9em;">'
             + '<thead><tr style="background:var(--bg-surface-raised);">'
             + '<th style="padding:10px 8px;text-align:left;border-bottom:2px solid var(--border);">KPI</th>'
-            + head
+            + head + yearHead
             + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Goal</th>'
-            + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Across the year</th>'
+            + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Moved'
+            + (firstName && lastName && firstName !== lastName
+                ? '<div style="font-weight:400;font-size:0.75em;color:var(--text-tertiary);">' + _escape(firstName) + ' to ' + _escape(lastName) + '</div>'
+                : '')
+            + '</th>'
             + '</tr></thead><tbody>' + body + '</tbody></table></div>'
             + _placingFocus(model.focus, ctx, ordinal)
             + '</div>';
     }
 
-    function _placingCell(c, ordinal) {
+    // "2026-10-01" as "10/01", for the year column's heading.
+    function _shortDate(dateText) {
+        var parts = String(dateText || '').split('-');
+        return parts.length === 3 ? parts[1] + '/' + parts[2] : '';
+    }
+
+    function _placingCell(c, ordinal, extraStyle) {
+        var extra = extraStyle || '';
         if (c.rank === null) {
-            return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);">-</td>';
+            return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);' + extra + '">-</td>';
         }
         var colour = c.meets === true ? '#16a34a' : c.meets === false ? '#c2410c' : 'var(--text-primary)';
         var step = '';
@@ -365,7 +395,7 @@
                 + ' title="Places ' + (c.climbed > 0 ? 'gained' : 'lost') + ' since the quarter before, among the people measured in both">'
                 + (c.climbed > 0 ? '▲' : '▼') + Math.abs(c.climbed) + '</span>';
         }
-        return '<td style="padding:8px;text-align:center;font-variant-numeric:tabular-nums;"'
+        return '<td style="padding:8px;text-align:center;font-variant-numeric:tabular-nums;' + extra + '"'
             + (c.thin ? ' title="Too few surveys to join the field, so this is where the figure would sit"' : '') + '>'
             + '<div><strong style="font-size:1.05em;">' + _escape(ordinal(c.rank)) + '</strong>'
             + ' <span style="font-size:0.8em;color:var(--text-tertiary);">of ' + _escape(c.total) + '</span>' + step + '</div>'

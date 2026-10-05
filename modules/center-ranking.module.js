@@ -2756,30 +2756,65 @@
             return before && after ? before.rank - after.rank : null;
         }
 
+        /* The year so far, as a column of its own beside the quarters. Each
+           quarter column is that quarter alone (reliability apart), so Scott
+           asked for the whole year too. Read off the newest year to date
+           upload and placed the way the year card's YTD column is: the upload
+           is the year's own arithmetic, and quarters averaged into a year
+           would be a different number. */
+        var ytd = null;
+        var ytdKey = _latestYtdKeyForYear(year);
+        var ytdData = ytdKey ? buildRankingsForPeriod(ytdKey) : null;
+        if (ytdData && ytdData.rankings && ytdData.rankings.length) {
+            var ytdMine = null;
+            ytdData.rankings.forEach(function (r) { if (r.name === name) ytdMine = r; });
+            if (!ytdMine && qt && typeof qt.employeeKey === 'function') {
+                var wanted = qt.employeeKey(name);
+                ytdData.rankings.forEach(function (r) {
+                    if (!ytdMine && qt.employeeKey(r.name) === wanted) ytdMine = r;
+                });
+            }
+            if (ytdMine) {
+                var ytdMeta = (_getYtdData()[ytdKey] || {}).metadata || {};
+                ytd = {
+                    mine: ytdMine,
+                    key: ytdMine.name,
+                    ranks: _metricRanksFor(ytdData.rankings.map(function (r) { return { name: r.name, holder: r }; })),
+                    through: ytdMeta.endDate || (String(ytdKey).indexOf('|') > -1 ? String(ytdKey).split('|')[1] : '')
+                };
+            }
+        }
+
+        function placingCell(mine, ranks, key, metric) {
+            var value = mine ? _trajectoryMetricValue(mine, metric) : null;
+            var has = !(value === null || value === undefined || isNaN(value));
+            // Hours to the tenth, as the document rounds them, so a 1.65 from
+            // the year to date file reads 1.7 here as it does there.
+            if (has && metric.registry === 'reliability') value = Math.round(Number(value) * 10) / 10;
+            var placing = has && ranks && ranks[metric.label] ? ranks[metric.label][key] : null;
+            return {
+                value: has ? Number(value) : null,
+                display: has ? _formatMetricDisplay(metric.registry, value) : '',
+                meets: has ? _meetsTarget(metric.registry, value, year) : null,
+                rank: placing ? placing.rank : null,
+                total: placing ? placing.total : null,
+                thin: !!(placing && placing.thin),
+                // The scorer reads Overall Experience when rep sat is blank
+                // or zero. Said on the cell, as the rankings table says it.
+                substituted: has && metric.scoreKey === 'associateOverall'
+                    && mine.associateOverallSource === 'overallExperience',
+                climbed: null
+            };
+        }
+
         var registry = window.METRICS_REGISTRY || {};
         var rows = TRAJECTORY_METRIC_ROWS.map(function (metric) {
             var target = _targetFor(metric.registry, year);
             var previousQuarter = null;
             var cells = list.map(function (q) {
                 var at = byQuarter[q.quarter];
-                var value = at && at.mine ? _trajectoryMetricValue(at.mine, metric) : null;
-                var has = !(value === null || value === undefined || isNaN(value));
-                var placing = has && at.ranks[metric.label] ? at.ranks[metric.label][at.key] : null;
-                var cell = {
-                    quarter: q.quarter,
-                    name: q.name,
-                    value: has ? Number(value) : null,
-                    display: has ? _formatMetricDisplay(metric.registry, value) : '',
-                    meets: has ? _meetsTarget(metric.registry, value, year) : null,
-                    rank: placing ? placing.rank : null,
-                    total: placing ? placing.total : null,
-                    thin: !!(placing && placing.thin),
-                    // The scorer reads Overall Experience when rep sat is blank
-                    // or zero. Said on the cell, as the rankings table says it.
-                    substituted: has && metric.scoreKey === 'associateOverall'
-                        && at.mine.associateOverallSource === 'overallExperience',
-                    climbed: null
-                };
+                var cell = Object.assign({ quarter: q.quarter, name: q.name },
+                    placingCell(at ? at.mine : null, at ? at.ranks : null, at ? at.key : null, metric));
                 if (cell.rank !== null && !cell.thin) {
                     if (previousQuarter !== null) cell.climbed = sharedClimb(metric, previousQuarter, q.quarter);
                     previousQuarter = q.quarter;
@@ -2796,11 +2831,15 @@
                 // From the first solid placing to the last. Positive is a climb.
                 climbed: placed.length >= 2
                     ? sharedClimb(metric, placed[0].quarter, placed[placed.length - 1].quarter) : null,
-                latest: cells.length ? cells[cells.length - 1] : null
+                latest: cells.length ? cells[cells.length - 1] : null,
+                year: ytd ? placingCell(ytd.mine, ytd.ranks, ytd.key, metric) : null
             };
         });
 
-        return { name: name, year: year, rows: rows, focus: _quarterFocus(rows) };
+        return {
+            name: name, year: year, rows: rows, focus: _quarterFocus(rows),
+            yearThrough: ytd ? ytd.through : null
+        };
     }
 
     /* The KPI to work on next quarter, read off the newest quarter's placings.

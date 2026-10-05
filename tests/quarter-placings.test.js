@@ -232,3 +232,46 @@ suite('quarter placings: the panel is for the supervisor, not the file', (t) => 
     t.check('no placing reaches the document, sheet or prompt', !/\b\d+(st|nd|rd|th) of \d+/.test(filed));
     t.check('and no dashes in the panel copy', !/[‒–—―]/.test(html));
 });
+
+/* "Does Q3 include for the whole year too? Need the whole year too." Each
+ * quarter column is that quarter alone, so the year so far is its own column,
+ * read off the year to date upload as the year card reads it. */
+suite('quarter placings: the whole year sits beside the quarters', (t) => {
+    t.pinClock('2026-10-05');
+    const weekly = store({
+        1: [person('Jordan Reyes', { aht: 480 }), person('A', { aht: 400 }), person('B', { aht: 450 })],
+        2: [person('Jordan Reyes', { aht: 440 }), person('A', { aht: 400 }), person('B', { aht: 450 })],
+        3: [person('Jordan Reyes', { aht: 405 }), person('A', { aht: 400 }), person('B', { aht: 450 })]
+    });
+    // The upload's own year figures, which are not an average of the quarters.
+    const ytd = period('ytd', '2026-01-01', '2026-10-01', [
+        person('Jordan Reyes', { aht: 441, surveyTotal: 30, reliability: 2 }),
+        person('A', { aht: 400, surveyTotal: 30, reliability: 0 }),
+        person('B', { aht: 452, surveyTotal: 30, reliability: 1 })
+    ]);
+    const { model, ui } = placings(t, weekly, 'Jordan Reyes', ytd);
+    const aht = row(model, 'aht');
+
+    t.equal('Q3 alone is second', aht.cells[2].rank, 2);
+    t.check('the year has its own placing', !!aht.year);
+    t.equal('read off the upload', aht.year.display, '441s');
+    t.equal('second of three for the year', aht.year.rank, 2);
+    t.equal('judged against the goal', aht.year.meets, false);
+    t.equal('and dated by the upload', model.yearThrough, '2026-10-01');
+
+    global.document._els.q1ReviewContent = { innerHTML: '' };
+    ui.state.employee = 'Jordan Reyes';
+    ui.render();
+    const html = global.document._els.q1ReviewContent.innerHTML;
+    t.check('the panel has a Year to date column', /Year to date/.test(html));
+    t.check('saying how far it runs', /through 10\/01/.test(html));
+    t.check('and says the quarter columns are quarters alone', /Each quarter column is that quarter on its own/.test(html));
+});
+
+suite('quarter placings: no year to date upload, no year column', (t) => {
+    t.pinClock('2026-10-05');
+    const weekly = store({ 3: [person('Jordan Reyes'), person('A')] });
+    const { model } = placings(t, weekly, 'Jordan Reyes');
+    t.equal('nothing is made up for the year', row(model, 'aht').year, null);
+    t.equal('and no date is claimed', model.yearThrough, null);
+});
