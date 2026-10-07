@@ -373,7 +373,22 @@
             && withData.length > 0
             && withData.length < checkpoints.length;
 
+        // The day the year figure runs through: the year to date file's end
+        // when it supplied the number, otherwise the end of the newest quarter
+        // that had hours. The recap email quotes the hours as of this date,
+        // because the newest file can reach past the quarter being discussed.
+        var through = null;
+        if (Number.isFinite(fromYtd)) {
+            var pc = (window.DevCoachModules || {}).periodCompare;
+            through = pc && typeof pc.latestYtdThrough === 'function'
+                ? pc.latestYtdThrough(parseInt(year, 10)) : null;
+        } else if (lastIdx >= 0) {
+            var lastQ = quarters[lastIdx];
+            through = (lastQ && (lastQ.spanEnd || lastQ.endDate)) || null;
+        }
+
         return {
+            through: through,
             target: target,
             checkpoints: checkpoints,
             checkpointsReconcile: reconciles,
@@ -1549,6 +1564,12 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.quarterReview = {
         REVIEW_METRICS: REVIEW_METRICS,
+        // The recap email reads these rather than keeping its own copies, so
+        // the four KPIs it sends and the noise band it judges a move by are
+        // the ones this document uses.
+        CORE_METRICS: CORE_METRICS.slice(),
+        stableBand: _stableBand,
+        movementAmount: _movementAmount,
         MIN_SURVEYS_FOR_TREND: MIN_SURVEYS_FOR_TREND,
         buildContext: buildContext,
         splitForBoxes: splitForBoxes,

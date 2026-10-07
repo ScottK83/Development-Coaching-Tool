@@ -58,7 +58,7 @@
         'employeeSupervisors', 'associateReinstated', 'executiveSummaryNotes', 'userCustomTips', 'coachingTips',
         'customMetrics', 'modifiedServerTips', 'deletedServerTips', 'metricCoachingTips',
         'yoyBaseline2025', 'complianceLog', 'weeklyFocalPoints', 'celebrationsHistory',
-        'oneOnOneMeetings', 'midYearMeta', 'quarterReviewNotes',
+        'oneOnOneMeetings', 'midYearMeta', 'quarterReviewNotes', 'quarterRecapEmails',
         'associateEmailPattern', 'employeeEmails',
         'callTranscripts', 'syncTestMarker'
     ];

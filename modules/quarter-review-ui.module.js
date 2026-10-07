@@ -23,6 +23,7 @@
     function _mod(name) { return (window.DevCoachModules || {})[name] || null; }
     function _qt() { return _mod('quarterTrend'); }
     function _qr() { return _mod('quarterReview'); }
+    function _qrc() { return _mod('quarterRecap'); }
 
     function _escape(str) {
         var utils = _mod('sharedUtils');
@@ -50,8 +51,8 @@
         return null;
     }
 
-    function _toast(message) {
-        if (typeof window.showToast === 'function') window.showToast(message, 2600);
+    function _toast(message, duration) {
+        if (typeof window.showToast === 'function') window.showToast(message, duration || 2600);
     }
 
     /* ── View state ──
@@ -67,8 +68,25 @@
         notes: {},
         // Stays open from one associate to the next, so a morning of back to
         // back check-ins is one click, not one per person.
-        showTalking: false
+        showTalking: false,
+        // The recap email panel, open or not. Same reasoning: once it is open
+        // it stays open while Scott works down the list.
+        showRecap: false,
+        // A picture copy that failed, kept until the next attempt so the note
+        // about it stays on screen rather than in a toast Outlook covers.
+        recapFailure: null,
+        // A copy in flight, so a second click cannot open a second draft.
+        recapBusy: false
     };
+
+    // A refused save is almost always a store the other machine changed since
+    // this page loaded, which a reload fixes. Saying "storage is unavailable"
+    // sent Scott looking for the wrong problem.
+    var NOT_SAVED = 'Not saved. Reload the page, then mark it again.';
+
+    // The recap picture on screen, so Copy copies the picture being looked
+    // at rather than quietly drawing a second one.
+    var _recapCanvas = null;
 
     var MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -177,6 +195,7 @@
 
         var body = _coveragePanel()
             + _pickerPanel(names)
+            + _recapRosterPanel()
             + (state.employee ? _associatePanel() : _prompt());
 
         host.innerHTML = _shell(body);
@@ -303,7 +322,231 @@
         var notes = qr.buildNotes(ctx, { notes: note });
         return _talkingBar(ctx)
             + (state.showTalking ? _talkingPanel(qr.buildTalkingPoints(ctx, { notes: note })) : '')
+            + (state.showRecap ? _recapPanel(ctx) : '')
             + _progressionTable(ctx) + _placingsPanel(ctx) + _notesPanel(ctx, notes, note);
+    }
+
+    /* ── The recap email ──
+     *
+     * Scott's ask for after the Q3 meetings: a short email to the associate
+     * with where each KPI sat in Q1, Q2 and Q3, the hours missed against the
+     * allowance, and a picture of the four KPIs. The words and the picture
+     * come from quarter-recap, off the same facts as the document below, so
+     * the email cannot say something the meeting did not.
+     *
+     * One button does the work: the picture goes on the clipboard and the
+     * draft opens addressed, so the only thing left is Ctrl+V and Send. Then
+     * Mark as sent, because the app cannot see Outlook. If the picture did
+     * not copy, the draft does NOT open: Ctrl+V would paste whatever was
+     * copied last, which in a run of recaps is the previous associate's card.
+     */
+    function _recapPanel(ctx) {
+        var qrc = _qrc();
+        var frame = '<div id="quarterRecapPanel" style="padding:16px 18px;background:var(--bg-surface);border-radius:8px;border:2px solid #1565c0;">';
+        if (!qrc) {
+            return frame + '<p style="margin:0;color:var(--text-secondary);">The recap email module did not load. Reload the page, and if it persists the app needs a look.</p></div>';
+        }
+        var status = qrc.statusFor(ctx.name, ctx.year, ctx.quarter);
+        var mail = qrc.buildRecapEmail(ctx, { includeHours: status.includeHours });
+        if (!mail) {
+            return frame + '<p style="margin:0;color:var(--text-secondary);">There are no KPI readings for '
+                + _escape(ctx.firstName) + ' in ' + _escape(ctx.year) + ' yet, so there is nothing to recap.</p></div>';
+        }
+        var notes = qrc.buildRecapNotes(mail.model, { includeHours: status.includeHours });
+        var done = status.state === 'sent' || status.state === 'skipped';
+        var key = qrc.recapKey(ctx.name, ctx.year, ctx.quarter);
+        var failure = state.recapFailure && state.recapFailure.key === key ? state.recapFailure : null;
+
+        var addressRow = function (label, value) {
+            return '<div><strong style="color:var(--text-primary);">' + _escape(label) + ':</strong> ' + value + '</div>';
+        };
+        var to = mail.to
+            ? _escape(mail.to)
+            : '<span style="color:#c2410c;">no address found, type it in the draft</span>';
+
+        // The hours switch, only when there are hours the email could carry.
+        var hours = mail.model.hours;
+        var hoursSwitch = (hours && !hours.partialYear)
+            ? '<label style="display:inline-flex;align-items:center;gap:7px;margin:10px 0 0;font-size:0.9em;color:var(--text-primary);cursor:pointer;">'
+                + '<input type="checkbox" id="quarterRecapIncludeHours"' + (status.includeHours ? ' checked' : '') + '>'
+                + 'Include the hours line (reliability)</label>'
+            : '';
+
+        // What comes next, biggest first. Before the email has opened that is
+        // opening it; once it has, it is marking it sent; once it is marked,
+        // it is the next person still to do.
+        var next = done ? _nextRecapName(ctx.name) : '';
+        var primary;
+        if (done) {
+            primary = (next ? _button('quarterRecapNext', 'Next not sent: ' + next, '#1565c0', { 'data-name': next }) : '')
+                + _button('quarterRecapUndoSent', 'Undo', '#64748b');
+        } else if (status.state === 'drafted') {
+            primary = _button('quarterRecapMarkSent', '✓ Mark as sent', '#16a34a')
+                + _button('quarterRecapOpen', '✉️ Copy picture and open email again', '#64748b');
+        } else {
+            primary = _button('quarterRecapOpen', '✉️ Copy picture and open email', '#1565c0')
+                + _button('quarterRecapMarkSent', '✓ Mark as sent', '#64748b');
+        }
+
+        return frame
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'
+            + '<h4 style="margin:0;color:var(--text-primary);font-size:1.1em;">' + _escape(ctx.current.name)
+            + ' recap email for ' + _escape(ctx.firstName) + '</h4>'
+            + _recapStatusHtml(status, qrc)
+            + '</div>'
+            + '<div style="display:grid;gap:2px;margin-bottom:10px;font-size:0.88em;color:var(--text-secondary);">'
+            + addressRow('To', to)
+            + (mail.cc ? addressRow('CC', _escape(mail.cc)) : '')
+            + addressRow('Subject', _escape(mail.subject))
+            + '</div>'
+            + (failure ? _recapFailureHtml(failure, ctx) : '')
+            + (notes.length ? _recapNotesHtml(notes) : '')
+            + '<div id="quarterRecapImage" style="margin:4px 0 12px;"></div>'
+            + '<div id="quarterRecapBody" style="padding:11px 13px;background:var(--bg-surface-raised);border:1px solid var(--border);'
+            + 'border-radius:6px;font-size:0.92em;line-height:1.55;color:var(--text-primary);white-space:pre-wrap;">'
+            + _escape(mail.body) + '</div>'
+            + hoursSwitch
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center;">'
+            + primary
+            + '</div>'
+            + '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:0.88em;color:var(--text-secondary);">More</summary>'
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">'
+            + _button('quarterRecapCopyImage', 'Copy picture', '#0f766e')
+            + _button('quarterRecapCopyText', 'Copy email text', '#0f766e')
+            + (done ? '' : _button('quarterRecapSkip', 'Not sending this one', '#64748b'))
+            + '</div></details>'
+            + '<p style="margin:10px 0 0;font-size:0.82em;color:var(--text-tertiary);">'
+            + 'The picture is copied as the email opens. Click in the email where it should go, press Ctrl+V, '
+            + 'and check it says ' + _escape(ctx.firstName) + ' before you send. Then mark it sent here, so the list above keeps count.</p>'
+            + '</div>';
+    }
+
+    // Said in the panel, where it stays, rather than in a toast that Outlook
+    // has already covered. The browser's own words are in it, because there
+    // is no console to read them in.
+    function _recapFailureHtml(failure, ctx) {
+        return '<div id="quarterRecapFailure" style="margin:0 0 12px;padding:10px 12px;border:2px solid #c2410c;border-radius:6px;'
+            + 'background:var(--bg-surface-raised);color:var(--text-primary);font-size:0.92em;line-height:1.5;">'
+            + '<strong style="color:#c2410c;">The picture did not copy, so the email has not been opened.</strong> '
+            + 'Right-click the picture below, choose Copy image, then press Open email. '
+            + 'Whatever was on the clipboard before is still there, so check the picture says '
+            + _escape(ctx.firstName) + ' after pasting.'
+            + (failure.reason ? '<div style="margin-top:4px;font-size:0.88em;color:var(--text-secondary);">The browser said: '
+                + _escape(failure.reason) + '</div>' : '')
+            + '<div style="margin-top:8px;">' + _button('quarterRecapOpenOnly', 'Open email', '#1565c0') + '</div>'
+            + '</div>';
+    }
+
+    // For Scott only. Nothing here reaches the email or the picture.
+    function _recapNotesHtml(notes) {
+        return '<div id="quarterRecapNotes" style="margin:0 0 12px;padding:10px 12px;border-left:4px solid #d97706;'
+            + 'background:var(--bg-surface-raised);border-radius:4px;font-size:0.9em;color:var(--text-primary);">'
+            + '<div style="font-weight:700;margin-bottom:4px;">Before you send (only you see this)</div>'
+            + '<ul style="margin:0;padding-left:18px;">' + notes.map(function (n) {
+                return '<li style="padding:2px 0;">' + _escape(n) + '</li>';
+            }).join('') + '</ul></div>';
+    }
+
+    function _recapStatusHtml(status, qrc) {
+        var when = status.at ? qrc.shortDate(status.at) : '';
+        if (status.state === 'sent') {
+            return '<span id="quarterRecapStatus" style="color:#16a34a;font-weight:700;">✓ Recap sent' + (when ? ' ' + _escape(when) : '') + '</span>';
+        }
+        if (status.state === 'skipped') {
+            return '<span id="quarterRecapStatus" style="color:var(--text-secondary);font-weight:700;">Not sending a recap</span>';
+        }
+        if (status.state === 'drafted') {
+            return '<span id="quarterRecapStatus" style="color:#d97706;font-weight:700;">Recap draft opened'
+                + (when ? ' ' + _escape(when) : '') + ', not marked sent</span>';
+        }
+        return '<span id="quarterRecapStatus" style="color:var(--text-tertiary);">Recap not sent yet</span>';
+    }
+
+    /* Who is due a recap, for the quarter being prepared.
+     *
+     * Everyone with numbers in that quarter, inside the team filter, so it is
+     * the same people the picker offers. Somebody set aside as away (no
+     * numbers in 30 days) is not due a check-in and leaves the list, unless
+     * their recap already has history, which is never hidden.
+     */
+    function _recapRosterNames() {
+        var q = (state.quarters || []).filter(function (x) { return x.quarter === state.quarter; })[0];
+        if (!q || q.empty) return [];
+        var names = Object.keys(q.employees || {});
+        var tf = _mod('teamFilter');
+        if (tf && tf.getTeamSelectionContext && tf.isAssociateIncludedByTeamFilter) {
+            var ctx = tf.getTeamSelectionContext();
+            names = names.filter(function (n) { return tf.isAssociateIncludedByTeamFilter(n, ctx); });
+        }
+        return names.sort();
+    }
+
+    function _recapRosterRows() {
+        var qrc = _qrc();
+        if (!qrc || !state.quarter) return [];
+        var names = _recapRosterNames();
+        if (!names.length) return [];
+        var activity = _mod('associateActivity');
+        return qrc.rosterStatus(names, state.year, state.quarter).rows.filter(function (r) {
+            if (r.state !== 'none') return true;
+            return !(activity && typeof activity.isInactive === 'function' && activity.isInactive(r.name));
+        });
+    }
+
+    // The next name down the list, after this one and wrapping round, whose
+    // recap has neither gone nor been set aside.
+    function _nextRecapName(current) {
+        var rows = _recapRosterRows();
+        var at = -1;
+        rows.forEach(function (r, i) { if (r.name === current) at = i; });
+        for (var step = 1; step <= rows.length; step++) {
+            var r = rows[(at + step + rows.length) % rows.length];
+            if (r && r.name !== current && (r.state === 'none' || r.state === 'drafted')) return r.name;
+        }
+        return '';
+    }
+
+    function _recapRosterPanel() {
+        var qrc = _qrc();
+        var rows = _recapRosterRows();
+        if (!qrc || !rows.length) return '';
+        var count = function (s) { return rows.filter(function (r) { return r.state === s; }).length; };
+        var sent = count('sent'), drafted = count('drafted'), skipped = count('skipped');
+
+        var chips = rows.map(function (r) {
+            var when = r.at ? qrc.shortDate(r.at) : '';
+            var tone = r.state === 'sent' ? '#16a34a' : r.state === 'drafted' ? '#d97706'
+                : r.state === 'skipped' ? 'var(--text-tertiary)' : 'var(--border)';
+            var icon = r.state === 'sent' ? '✓' : r.state === 'drafted' ? '✉' : r.state === 'skipped' ? '⊘' : '○';
+            var title = r.state === 'sent' ? 'Recap sent ' + when
+                : r.state === 'drafted' ? 'Draft opened ' + when + ', not marked sent'
+                    : r.state === 'skipped' ? 'Not sending a recap' : 'Recap not sent yet';
+            var active = r.name === state.employee;
+            return '<button type="button" class="quarter-recap-chip" data-name="' + _escape(r.name) + '"'
+                + ' title="' + _escape(title) + '"'
+                + ' style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;cursor:pointer;'
+                + 'font-size:0.85em;border:1px solid ' + tone + ';color:var(--text-primary);'
+                + 'background:' + (active ? 'var(--bg-surface-raised)' : 'var(--bg-surface)') + ';'
+                + (active ? 'font-weight:700;' : '') + (r.state === 'skipped' ? 'opacity:0.7;' : '') + '">'
+                + '<span style="font-weight:700;color:' + (r.state === 'none' ? 'var(--text-tertiary)' : tone) + ';">' + icon + '</span>'
+                + _escape(r.name)
+                + (r.state === 'sent' && when
+                    ? ' <span style="font-size:0.88em;color:var(--text-tertiary);">' + _escape(when) + '</span>' : '')
+                + '</button>';
+        }).join('');
+
+        // Counted against the people actually being sent one, so the list can
+        // reach done when somebody is deliberately not getting a recap.
+        var due = rows.length - skipped;
+        return '<div id="quarterRecapRoster" style="padding:12px 16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
+            + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">'
+            + '<h4 style="margin:0;color:var(--text-primary);">Q' + _escape(state.quarter) + ' recap emails</h4>'
+            + '<span style="font-size:0.9em;color:var(--text-secondary);">' + sent + ' of ' + due + ' sent'
+            + (drafted ? ', ' + drafted + ' opened and not marked sent' : '')
+            + (skipped ? ', ' + skipped + ' not sending' : '') + '</span>'
+            + '</div>'
+            + '<div style="display:flex;flex-wrap:wrap;gap:6px;max-height:156px;overflow-y:auto;">' + chips + '</div>'
+            + '</div>';
     }
 
     /* ── Where they placed ──
@@ -450,6 +693,20 @@
             + (state.showTalking ? '' : '<span style="font-size:0.88em;color:var(--text-tertiary);">'
                 + _escape(ctx.quarterLabel) + ' for ' + _escape(ctx.firstName)
                 + ': what is working, what to work on, and questions to ask.</span>')
+            + _recapToggle(ctx)
+            + '</div>';
+    }
+
+    // After the meeting: the recap email, with where it stands beside it.
+    function _recapToggle(ctx) {
+        var qrc = _qrc();
+        if (!qrc) return '';
+        var label = state.showRecap ? 'Hide recap email' : '✉️ ' + ctx.current.name + ' recap email';
+        return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto;">'
+            + (state.showRecap ? '' : _recapStatusHtml(qrc.statusFor(ctx.name, ctx.year, ctx.quarter), qrc))
+            + '<button type="button" id="quarterReviewRecapToggle" aria-expanded="' + (state.showRecap ? 'true' : 'false') + '"'
+            + ' style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;'
+            + 'font-weight:700;font-size:0.98em;">' + _escape(label) + '</button>'
             + '</div>';
     }
 
@@ -680,8 +937,11 @@
             + 'white-space:pre-wrap;">' + _escape(text) + '</div></div>';
     }
 
-    function _button(id, label, colour) {
-        return '<button type="button" id="' + id + '" style="background:' + colour + ';color:#fff;border:none;'
+    function _button(id, label, colour, attrs) {
+        var extra = Object.keys(attrs || {}).map(function (k) {
+            return ' ' + k + '="' + _escape(attrs[k]) + '"';
+        }).join('');
+        return '<button type="button" id="' + id + '"' + extra + ' style="background:' + colour + ';color:#fff;border:none;'
             + 'border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:600;font-size:0.87em;">'
             + _escape(label) + '</button>';
     }
@@ -715,6 +975,28 @@
                 });
             }
         );
+        // A name on the recap list opens that associate with the recap
+        // showing, which is the whole reason to click it.
+        Array.prototype.forEach.call(
+            document.querySelectorAll('.quarter-recap-chip'),
+            function (btn) {
+                btn.addEventListener('click', function () {
+                    _openRecapFor(btn.dataset.name || '');
+                });
+            }
+        );
+    }
+
+    function _openRecapFor(name) {
+        if (!name) return;
+        state.employee = name;
+        state.showRecap = true;
+        state.recapFailure = null;
+        render();
+        var panel = document.getElementById('quarterRecapPanel');
+        if (panel && typeof panel.scrollIntoView === 'function') {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     function _bindAssociateControls() {
@@ -737,6 +1019,103 @@
         _on('quarterReviewTalkToggle', 'click', function () {
             state.showTalking = !state.showTalking;
             render();
+        });
+
+        _on('quarterReviewRecapToggle', 'click', function () {
+            state.showRecap = !state.showRecap;
+            render();
+        });
+        _mountRecapImage();
+        _on('quarterRecapOpen', 'click', function (e) {
+            if (state.recapBusy) return;
+            var qrc = _qrc();
+            var built = _currentRecap();
+            if (!qrc || !built) return;
+            // The picture goes on the clipboard first, while this click still
+            // counts as the user's. Once the mail client has focus the browser
+            // refuses the write, so opening the draft first loses the picture.
+            // The copy is drawn at true size for Outlook, which places a
+            // pasted picture at its pixel width.
+            var card = qrc.drawRecapCard(built.mail.model, { scale: 1 }) || _recapCanvas;
+            var copying = qrc.copyCardImage(card);
+            // One draft per click. Chrome only lets a page launch the mail
+            // client once per click anyway, and a second click while the
+            // first copy is running would log a draft that never opened.
+            state.recapBusy = true;
+            var btn = e && e.currentTarget;
+            if (btn) btn.disabled = true;
+            copying.then(function (result) {
+                state.recapBusy = false;
+                if (btn) btn.disabled = false;
+                if (!result || result.state !== 'copied') {
+                    // Never open the draft on a failed copy: Ctrl+V would
+                    // paste the last picture copied, another associate's.
+                    state.recapFailure = { key: qrc.recapKey(built.ctx.name, built.ctx.year, built.ctx.quarter),
+                        reason: result ? result.reason : '' };
+                    render();
+                    return;
+                }
+                _openRecapDraft(built, 'Picture copied. In the email, click where it should go and press Ctrl+V.');
+            });
+        });
+        // After copying the picture by hand, from the failure note.
+        _on('quarterRecapOpenOnly', 'click', function () {
+            var built = _currentRecap();
+            if (!built) return;
+            _openRecapDraft(built, 'Email opened. Paste the picture you copied with Ctrl+V.');
+        });
+        _on('quarterRecapCopyImage', 'click', function () {
+            var qrc = _qrc();
+            var built = _currentRecap();
+            if (!qrc || !built) return;
+            var card = qrc.drawRecapCard(built.mail.model, { scale: 1 }) || _recapCanvas;
+            qrc.copyCardImage(card).then(function (result) {
+                _toast(result && result.state === 'copied'
+                    ? 'Picture copied. Paste it into the email with Ctrl+V.'
+                    : 'Could not copy the picture. Right-click it and choose Copy image.', 5000);
+            });
+        });
+        _on('quarterRecapCopyText', 'click', function () {
+            var built = _currentRecap();
+            if (built) _copy(built.mail.body, 'Email text copied.');
+        });
+        _on('quarterRecapIncludeHours', 'change', function (e) {
+            var qrc = _qrc();
+            var built = _currentRecap();
+            if (!qrc || !built) return;
+            var saved = qrc.setIncludeHours(built.ctx.name, built.ctx.year, built.ctx.quarter, !!e.target.checked);
+            if (!saved) _toast(NOT_SAVED, 5000);
+            render();
+        });
+        _on('quarterRecapMarkSent', 'click', function () {
+            var qrc = _qrc();
+            var built = _currentRecap();
+            if (!qrc || !built) return;
+            var saved = qrc.markSent(built.ctx.name, built.ctx.year, built.ctx.quarter,
+                { to: built.mail.to, subject: built.mail.subject });
+            _toast(saved ? 'Marked sent.' : NOT_SAVED, saved ? 2600 : 5000);
+            render();
+        });
+        _on('quarterRecapSkip', 'click', function () {
+            var qrc = _qrc();
+            var built = _currentRecap();
+            if (!qrc || !built) return;
+            var saved = qrc.markSkipped(built.ctx.name, built.ctx.year, built.ctx.quarter);
+            _toast(saved ? 'Marked as not sending. It no longer counts against the list.' : NOT_SAVED, 5000);
+            render();
+        });
+        _on('quarterRecapUndoSent', 'click', function () {
+            var qrc = _qrc();
+            var built = _currentRecap();
+            if (!qrc || !built) return;
+            var saved = qrc.undoSent(built.ctx.name, built.ctx.year, built.ctx.quarter);
+            _toast(saved ? 'Taken back.' : NOT_SAVED, saved ? 2600 : 5000);
+            render();
+        });
+        _on('quarterRecapNext', 'click', function (e) {
+            var name = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.name : '';
+            if (!name) return;
+            _openRecapFor(name);
         });
         _on('quarterReviewTalkCopy', 'click', function () {
             var built = _currentDocument();
@@ -787,6 +1166,73 @@
         // The note is the last section of the talking points too.
         var talk = document.getElementById('quarterReviewTalkBody');
         if (talk) talk.innerHTML = _talkingSections(built.talking);
+    }
+
+    /* The recap for whoever is picked, built at click time like the document
+     * below, so nothing captured at render can go stale. */
+    function _currentRecap() {
+        var qr = _qr();
+        var qrc = _qrc();
+        if (!qr || !qrc || !state.employee) return null;
+        var ctx = qr.buildContext(state.employee, state.year, {
+            quarters: state.quarters,
+            throughQuarter: state.quarter
+        });
+        if (!ctx) return null;
+        var status = qrc.statusFor(ctx.name, ctx.year, ctx.quarter);
+        var mail = qrc.buildRecapEmail(ctx, { includeHours: status.includeHours });
+        return mail ? { ctx: ctx, mail: mail } : null;
+    }
+
+    // The draft opens, and the log says a draft opened. Not that it was sent:
+    // that is Scott's click, once it has gone.
+    function _openRecapDraft(built, message) {
+        var qrc = _qrc();
+        state.recapFailure = null;
+        _openMailto(built.mail.href);
+        if (qrc) {
+            qrc.recordDrafted(built.ctx.name, built.ctx.year, built.ctx.quarter,
+                { to: built.mail.to, subject: built.mail.subject, hours: built.mail.includedHours });
+        }
+        _toast(message, 6000);
+        render();
+    }
+
+    function _mountRecapImage() {
+        _recapCanvas = null;
+        var holder = document.getElementById('quarterRecapImage');
+        if (!holder) return;
+        var built = _currentRecap();
+        var card = null;
+        try {
+            // Sharp on this screen. The copy that goes into the email is
+            // drawn again at true size when it is copied.
+            var density = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+            card = built ? _qrc().drawRecapCard(built.mail.model, { scale: density }) : null;
+        } catch (err) {
+            card = null;
+        }
+        if (!card) {
+            if (holder.style) holder.style.display = 'none';
+            return;
+        }
+        card.style.maxWidth = '100%';
+        card.style.height = 'auto';
+        card.style.display = 'block';
+        card.style.borderRadius = '8px';
+        card.style.border = '1px solid var(--border)';
+        holder.appendChild(card);
+        _recapCanvas = card;
+    }
+
+    // The draft opens in whatever handles mail on this machine, Outlook at
+    // work. Same anchor click every other draft in the app uses.
+    function _openMailto(href) {
+        var link = document.createElement('a');
+        link.href = href;
+        document.body.appendChild(link);
+        if (typeof link.click === 'function') link.click();
+        document.body.removeChild(link);
     }
 
     function _currentDocument() {

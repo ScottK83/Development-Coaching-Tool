@@ -115,4 +115,11 @@ suite('image export: hand-drawn canvases stay light on their own', (t) => {
 
     t.check('and neither does the trend email image',
         !/isDark|data-theme/.test(read('modules/metric-trends.module.js')));
+
+    // The quarterly recap card goes into an associate's inbox the same way.
+    const recap = read('modules/quarter-recap.module.js');
+    const drawAt = recap.indexOf('function drawRecapCard');
+    t.check('the recap card drawing code was found', drawAt > -1);
+    t.check('and it never asks what theme is on, or reads a CSS colour',
+        !/isDark|data-theme|var\(--|getComputedStyle/.test(recap));
 });

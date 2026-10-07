@@ -420,7 +420,10 @@
        With no file old enough there is nothing honest to say, so the answer is
        empty and scoreEmployee treats reliability as unmeasured. Guessing is worse:
        0 is a perfect score. */
-    function _latestYtdReliability(year, opts) {
+    // The newest year-to-date file of the year, and the day it runs through.
+    // One lookup for both, so the hours and the date they are quoted as of can
+    // never come from two different files.
+    function _latestYtdFile(year, opts) {
         var yData = _ytdData();
         var asOf = opts && opts.asOfMonth ? String(opts.asOfMonth) : null;
         var best = null, bestEnd = '';
@@ -432,6 +435,18 @@
             if (asOf && String(end).slice(0, 7) > asOf) return;
             if (!best || String(end).localeCompare(bestEnd) > 0) { best = yData[k]; bestEnd = String(end); }
         });
+        return best ? { entry: best, endDate: bestEnd } : null;
+    }
+
+    // "2026-10-05", or null when the year has no year-to-date upload.
+    function _latestYtdThrough(year, opts) {
+        var file = _latestYtdFile(year, opts);
+        return file ? file.endDate : null;
+    }
+
+    function _latestYtdReliability(year, opts) {
+        var file = _latestYtdFile(year, opts);
+        var best = file ? file.entry : null;
         if (!best) return {};
 
         var out = {};
@@ -1363,6 +1378,7 @@
         // cumulative-not-slice rule to stored periods that buildMonthAggregate
         // applies to rebuilt months, and both must read it from one place.
         latestYtdReliability: _latestYtdReliability,
+        latestYtdThrough: _latestYtdThrough,
         isMonthInProgress: _isMonthInProgress,
         compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,

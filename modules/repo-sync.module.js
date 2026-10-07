@@ -207,6 +207,8 @@
         // The first two are hand-typed and cannot be regenerated from anything.
         STORAGE_PREFIX + 'oneOnOneMeetings',
         STORAGE_PREFIX + 'midYearMeta',
+        // Marked by hand after each email goes out. Nothing can rebuild it.
+        STORAGE_PREFIX + 'quarterRecapEmails',
         STORAGE_PREFIX + 'celebrationsHistory',
         STORAGE_PREFIX + 'weeklyFocalPoints',
         STORAGE_PREFIX + 'tipUsageHistory',

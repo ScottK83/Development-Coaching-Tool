@@ -99,6 +99,12 @@
         // recomputable from any upload, so it belongs on the server with the
         // 1:1 and mid-year notes rather than in one browser.
         { name: 'quarterReviewNotes', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        // Which quarterly recap emails were drafted and sent, keyed by name,
+        // year and quarter. A log of events rather than a flag, so two machines
+        // marking different associates merge instead of one losing the other,
+        // and an Undo is an event too rather than a deletion the merge would
+        // bring back.
+        { name: 'quarterRecapEmails', tier: 'data', backend: 'idb', merge: 'unionByEntryHash' },
 
         // --- This machine only. Never leaves it. ---
         // callListeningSyncConfig holds the shared secret. Syncing it would put
