@@ -234,7 +234,7 @@
             // and Scott is told in the panel.
             var seriesNow = (m.series.points || []).filter(function (p) { return p.quarter === current.quarter; })[0];
             var thinNow = (!nowPoint && seriesNow && seriesNow.hasValue)
-                ? { surveys: seriesNow.surveyCount || 0 } : null;
+                ? { surveys: seriesNow.surveyCount || 0, display: _display(m.metricKey, seriesNow.value) } : null;
 
             return {
                 metricKey: m.metricKey,
@@ -266,6 +266,7 @@
             year: ctx.year,
             quarter: current.quarter,
             quarterName: current.name,
+            quarterEnd: current.endDate || null,
             columns: columns,
             quartersShown: quartersShown,
             kpis: kpis,
@@ -279,32 +280,65 @@
         };
     }
 
+    // A value as it is printed (92.84 is 92.8), so a stated move is always
+    // the gap between two numbers the reader can see. quarter-review's
+    // definition, so the email and the file note measure alike.
+    function _printed(metricKey, value) {
+        var qr = _mod('quarterReview');
+        if (qr && typeof qr.printedValue === 'function') return qr.printedValue(metricKey, value);
+        var shown = parseFloat(String(_display(metricKey, Math.abs(value))).replace(/[^0-9.]/g, ''));
+        return Number.isFinite(shown) ? (value < 0 ? -shown : shown) : value;
+    }
+
     /* A move worth saying in words, or null.
      *
-     * Only when the newest quarter is clearly better than the first one shown
-     * AND the newest step did not go back the wrong way by more than noise.
-     * Handle time of 618s, 510s, 589s is better than January and worse than
-     * the quarter before, and "down 29 seconds" would tell that associate their
-     * Q3 improved. The check-in document calls that path "moved around".
+     * Only when the newest quarter is clearly better than the first one shown,
+     * and the path got there without going back on itself:
+     *   - the newest step did not slip back by more than noise. Handle time of
+     *     618s, 510s, 589s is better than January and worse than the quarter
+     *     before, and "down 29 seconds" would tell that associate Q3 improved;
+     *   - it did not swing out and finish close to where it started. Rep
+     *     satisfaction of 81.8%, 54.5%, 83.3% is "up 1.5 points" by its ends,
+     *     and the check-in document says it finished close to where the year
+     *     started, after a dip. That is the story, so nothing is claimed;
+     *   - it did not drop below goal in the check-in quarter. Adherence of
+     *     91.5%, 93.3%, 92.9% is "up 1.4 points" in the quarter it lost the goal.
+     *
+     * Everything is measured on the printed numbers, so "down 30 seconds"
+     * sits beside 451s and 421s and never says 31.
      */
     function _improvement(metricKey, shown, isReverse) {
         if (!shown || shown.length < 2) return null;
-        var first = shown[0];
-        var last = shown[shown.length - 1];
-        var prev = shown[shown.length - 2];
+        var values = shown.map(function (p) { return _printed(metricKey, p.value); });
+        var first = values[0];
+        var last = values[values.length - 1];
+        var prev = values[values.length - 2];
         var band = _stableBand(metricKey);
+        var gap = function (a, b) { return Math.abs(_printed(metricKey, a - b)); };
 
-        var overall = _betterBy(metricKey, last.value, first.value, isReverse);
-        if (!(overall > 0) || Math.abs(last.value - first.value) <= band) return null;
-        var step = _betterBy(metricKey, last.value, prev.value, isReverse);
-        if (step < 0 && Math.abs(last.value - prev.value) > band) return null;
+        var overall = _betterBy(metricKey, last, first, isReverse);
+        if (!(overall > 0) || gap(last, first) <= band) return null;
+        if (_betterBy(metricKey, last, prev, isReverse) < 0 && gap(last, prev) > band) return null;
 
-        var size = Math.abs(last.value - first.value);
-        var way = last.value < first.value ? 'down ' : 'up ';
+        var better = false, worse = false;
+        for (var i = 1; i < values.length; i++) {
+            var step = _betterBy(metricKey, values[i], values[i - 1], isReverse);
+            if (step > 0) better = true;
+            if (step < 0) worse = true;
+        }
+        var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
+        if (better && worse && gap(last, first) <= Math.max(band, spread / 4)) return null;
+
+        var lastPoint = shown[shown.length - 1];
+        var prevPoint = shown[shown.length - 2];
+        if (prevPoint.meets === true && lastPoint.meets === false) return null;
+
+        var size = gap(last, first);
+        var way = last < first ? 'down ' : 'up ';
         return {
             words: way + _movementAmount(metricKey, size),
             short: way + _shortAmount(metricKey, size),
-            since: first.name
+            since: shown[0].name
         };
     }
 
@@ -333,8 +367,33 @@
             partialYear: !!rel.partialYear,
             missingQuarters: missing,
             fromYtd: !!rel.fromYtdUpload,
-            summed: Number.isFinite(rel.summedFromQuarters) ? rel.summedFromQuarters : null
+            summed: Number.isFinite(rel.summedFromQuarters) ? rel.summedFromQuarters : null,
+            history: _hoursHistory(ctx)
         };
+    }
+
+    function _hoursHistory(ctx) {
+        var pc = _mod('periodCompare');
+        if (!pc || typeof pc.ytdReliabilityHistory !== 'function') return [];
+        try { return pc.ytdReliabilityHistory(ctx.name, parseInt(ctx.year, 10)) || []; } catch (e) { return []; }
+    }
+
+    /* Whether the hours line goes in.
+     *
+     * Scott's own tick or untick always wins. Without one, the line is in,
+     * except when the total is more than twice the allowance: a figure that
+     * far out is often leave that has not been coded yet, sometimes protected
+     * leave, and a written attendance total copied to his lead is the wrong
+     * place to find that out. The panel says why it is off, and one tick puts
+     * it back.
+     */
+    function _farOver(h) {
+        return !!(h && h.allowance !== null && h.total > h.allowance * 2);
+    }
+
+    function includeHoursFor(explicit, model) {
+        if (explicit === true || explicit === false) return explicit;
+        return !_farOver(model && model.hours);
     }
 
     /* ── The email ── */
@@ -370,7 +429,7 @@
             return 'Most of these are at goal in ' + model.quarterName + '. Keep it going 💪';
         }
         if (met > 0) {
-            return 'Some of these are already at goal, and '
+            return (met === 1 ? 'One of these is already at goal, and ' : 'Some of these are already at goal, and ')
                 + (last ? 'next year is a fresh start for the rest.' : nextQ + ' is a full quarter to bring the rest along.');
         }
         return last
@@ -383,7 +442,7 @@
         var h = model.hours;
         if (!h || h.partialYear) return '';
         var through = h.through ? _monthDay(h.through) : '';
-        return 'Reliability: ' + (h.zero ? 'no hours' : h.display) + ' missed in ' + model.year
+        return 'Reliability: ' + (h.zero ? '0 hrs' : h.display) + ' missed in ' + model.year
             + (through ? ' through ' + through : '')
             + (h.allowance !== null ? ' (allowance ' + h.allowanceDisplay + ')' : '') + '.';
     }
@@ -420,8 +479,8 @@
      * a wall of words (center-ranking found that out twice). Nothing forward
      * looking follows the hours line, so it cannot read as the thing to fix.
      *
-     * options.includeHours: false leaves the hours line out, for an
-     * associate whose figure Scott wants checked first.
+     * options.includeHours: Scott's switch, true or false, or null when he
+     * has not touched it (see includeHoursFor for what that means).
      */
     function buildRecapEmail(ctx, options) {
         var opts = options || {};
@@ -440,7 +499,7 @@
             lines.push('');
             lines.push(count);
         }
-        var hours = opts.includeHours === false ? '' : _hoursLine(model);
+        var hours = includeHoursFor(opts.includeHours, model) ? _hoursLine(model) : '';
         if (hours) {
             lines.push('');
             lines.push(hours);
@@ -465,32 +524,54 @@
 
     /* What Scott should know before this one goes, said in the panel and
      * never in the email or the picture. Each is something the email quietly
-     * left out or a number worth a second look. */
+     * left out or a number worth a second look.
+     *
+     * options.includeHours: Scott's switch as statusFor reports it (true,
+     * false or null), the same value the email was built with.
+     */
     function buildRecapNotes(model, options) {
         if (!model) return [];
         var opts = options || {};
         var notes = [];
         var first = model.firstName;
         var h = model.hours;
+        var hoursIn = includeHoursFor(opts.includeHours, model);
         if (h && h.partialYear) {
             notes.push('Hours are left out of ' + first + '\'s email. There is no year to date figure, and '
                 + _listNames(h.missingQuarters) + (h.missingQuarters.length === 1 ? ' has' : ' have')
                 + ' no hours uploaded, so the total could be short. Add them by hand if you have the number.');
-        } else if (h && opts.includeHours !== false) {
-            if (h.allowance !== null && h.total > h.allowance * 2) {
-                notes.push(h.display + ' is more than twice the ' + h.allowanceDisplay
-                    + ' allowance. If any of it is protected leave, untick Include the hours line.');
+        } else if (h && !hoursIn && opts.includeHours !== false && _farOver(h)) {
+            notes.push('Hours are left out of ' + first + '\'s email: ' + h.display + ' is more than twice the '
+                + h.allowanceDisplay + ' allowance. Tick Include the hours line once you have checked none of it is protected leave.');
+        } else if (h && hoursIn) {
+            // Hours only ever add up, so a total lower than an earlier file's
+            // means some were re-coded after that file was pulled.
+            var hist = (h.history || []).slice(-2);
+            if (h.fromYtd && hist.length === 2 && hist[1].hours < hist[0].hours - 0.5) {
+                notes.push(first + '\'s hours went down from ' + _round(RELIABILITY, hist[0].hours) + ' in the '
+                    + _monthDay(hist[0].endDate) + ' year to date file to ' + _round(RELIABILITY, hist[1].hours) + ' in the '
+                    + _monthDay(hist[1].endDate) + ' one, so some were re-coded. Check the figure before sending.');
             }
             if (h.fromYtd && h.summed !== null && Math.abs(h.summed - h.total) > 0.5) {
-                notes.push('The year to date file says ' + h.display + ', and the quarters add up to '
-                    + _round(RELIABILITY, h.summed) + '. The email uses the year to date figure.');
+                // A file reaching past the quarter carries the days after it.
+                // Said as the two facts, so it is not read as one of them
+                // being wrong.
+                if (h.total > h.summed && h.through && model.quarterEnd && h.through > model.quarterEnd) {
+                    notes.push('The year to date file runs through ' + _monthDay(h.through) + ', past the end of '
+                        + model.quarterName + '. It says ' + h.display + ', and the quarters add up to '
+                        + _round(RELIABILITY, h.summed) + '. The email uses the year to date figure.');
+                } else {
+                    notes.push('The year to date file says ' + h.display + ', and the quarters add up to '
+                        + _round(RELIABILITY, h.summed) + '. The email uses the year to date figure.');
+                }
             }
         }
         model.kpis.forEach(function (k) {
             if (!k.thinNow) return;
             var n = k.thinNow.surveys;
             notes.push(k.label + ' has no ' + model.quarterName + ' number in the email: '
-                + (n === 1 ? 'one survey' : n + ' surveys') + ' in ' + model.quarterName + ', too few to quote.');
+                + (n === 1 ? 'one survey' : n + ' surveys') + ' in ' + model.quarterName
+                + (k.thinNow.display ? ' (' + k.thinNow.display + ')' : '') + ', too few to quote.');
         });
         // Why the picture has no year to date column, when it has none.
         if (model.ytdStatus === 'none') {
@@ -851,7 +932,8 @@
             return a.e.at < b.e.at ? -1 : a.e.at > b.e.at ? 1 : a.i - b.i;
         }).map(function (x) { return x.e; });
 
-        var outcome = null, drafted = null, includeHours = true;
+        // null until Scott touches the hours switch: includeHoursFor decides.
+        var outcome = null, drafted = null, includeHours = null;
         events.forEach(function (e) {
             if (e.event === 'sent' || e.event === 'skipped') outcome = e;
             else if (e.event === 'unsent') outcome = null;
@@ -893,6 +975,7 @@
         buildRecapModel: buildRecapModel,
         buildRecapEmail: buildRecapEmail,
         buildRecapNotes: buildRecapNotes,
+        includeHoursFor: includeHoursFor,
         layoutRecapCard: layoutRecapCard,
         drawRecapCard: drawRecapCard,
         copyCardImage: copyCardImage,

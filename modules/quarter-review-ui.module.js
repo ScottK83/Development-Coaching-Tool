@@ -349,13 +349,27 @@
         var status = qrc.statusFor(ctx.name, ctx.year, ctx.quarter);
         var mail = qrc.buildRecapEmail(ctx, { includeHours: status.includeHours });
         if (!mail) {
-            return frame + '<p style="margin:0;color:var(--text-secondary);">There are no KPI readings for '
-                + _escape(ctx.firstName) + ' in ' + _escape(ctx.year) + ' yet, so there is nothing to recap.</p></div>';
+            // Still on the list, so it still has to be possible to clear them
+            // from it and move on, or the count never finishes.
+            var settled = status.state === 'sent' || status.state === 'skipped';
+            var onward = _nextRecapName(ctx.name);
+            return frame
+                + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
+                + '<p style="margin:0;color:var(--text-secondary);">There are no KPI readings for '
+                + _escape(ctx.firstName) + ' in ' + _escape(ctx.year) + ' yet, so there is nothing to recap.</p>'
+                + _recapStatusHtml(status, qrc) + '</div>'
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">'
+                + (settled ? _button('quarterRecapUndoSent', 'Undo', '#64748b')
+                    : _button('quarterRecapSkip', 'Not sending this one', '#64748b'))
+                + (onward ? _button('quarterRecapNext', 'Next not sent: ' + onward, '#1565c0', { 'data-name': onward }) : '')
+                + '</div></div>';
         }
         var notes = qrc.buildRecapNotes(mail.model, { includeHours: status.includeHours });
         var done = status.state === 'sent' || status.state === 'skipped';
         var key = qrc.recapKey(ctx.name, ctx.year, ctx.quarter);
-        var failure = state.recapFailure && state.recapFailure.key === key ? state.recapFailure : null;
+        // Gone once the recap is marked: the note offers to open a draft,
+        // and a sent recap does not need another one.
+        var failure = !done && state.recapFailure && state.recapFailure.key === key ? state.recapFailure : null;
 
         var addressRow = function (label, value) {
             return '<div><strong style="color:var(--text-primary);">' + _escape(label) + ':</strong> ' + value + '</div>';
@@ -368,7 +382,7 @@
         var hours = mail.model.hours;
         var hoursSwitch = (hours && !hours.partialYear)
             ? '<label style="display:inline-flex;align-items:center;gap:7px;margin:10px 0 0;font-size:0.9em;color:var(--text-primary);cursor:pointer;">'
-                + '<input type="checkbox" id="quarterRecapIncludeHours"' + (status.includeHours ? ' checked' : '') + '>'
+                + '<input type="checkbox" id="quarterRecapIncludeHours"' + (mail.includedHours ? ' checked' : '') + '>'
                 + 'Include the hours line (reliability)</label>'
             : '';
 
@@ -1087,28 +1101,33 @@
             if (!saved) _toast(NOT_SAVED, 5000);
             render();
         });
+        // Marking clears any failure note: it offered to open a draft, and a
+        // recap that has gone, or is not going, needs no draft.
         _on('quarterRecapMarkSent', 'click', function () {
             var qrc = _qrc();
             var built = _currentRecap();
             if (!qrc || !built) return;
             var saved = qrc.markSent(built.ctx.name, built.ctx.year, built.ctx.quarter,
                 { to: built.mail.to, subject: built.mail.subject });
+            state.recapFailure = null;
             _toast(saved ? 'Marked sent.' : NOT_SAVED, saved ? 2600 : 5000);
             render();
         });
+        // Not sending and Undo work off who is picked, not off a built email,
+        // so somebody with nothing to recap can still be cleared off the list.
         _on('quarterRecapSkip', 'click', function () {
             var qrc = _qrc();
-            var built = _currentRecap();
-            if (!qrc || !built) return;
-            var saved = qrc.markSkipped(built.ctx.name, built.ctx.year, built.ctx.quarter);
+            if (!qrc || !state.employee) return;
+            var saved = qrc.markSkipped(state.employee, state.year, state.quarter);
+            state.recapFailure = null;
             _toast(saved ? 'Marked as not sending. It no longer counts against the list.' : NOT_SAVED, 5000);
             render();
         });
         _on('quarterRecapUndoSent', 'click', function () {
             var qrc = _qrc();
-            var built = _currentRecap();
-            if (!qrc || !built) return;
-            var saved = qrc.undoSent(built.ctx.name, built.ctx.year, built.ctx.quarter);
+            if (!qrc || !state.employee) return;
+            var saved = qrc.undoSent(state.employee, state.year, state.quarter);
+            state.recapFailure = null;
             _toast(saved ? 'Taken back.' : NOT_SAVED, saved ? 2600 : 5000);
             render();
         });
@@ -1205,10 +1224,11 @@
         var built = _currentRecap();
         var card = null;
         try {
-            // Sharp on this screen. The copy that goes into the email is
-            // drawn again at true size when it is copied.
-            var density = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
-            card = built ? _qrc().drawRecapCard(built.mail.model, { scale: density }) : null;
+            // At true size, the same as the copy the button makes, so a
+            // right-click Copy image (the way round a refused clipboard)
+            // pastes at 640 too. Drawn at the screen's density it pasted at
+            // up to twice that on a scaled display.
+            card = built ? _qrc().drawRecapCard(built.mail.model, { scale: 1 }) : null;
         } catch (err) {
             card = null;
         }

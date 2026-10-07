@@ -266,18 +266,41 @@
         if (!usable || usable.length < 2) return null;
         var first = usable[0];
         var last = usable[usable.length - 1];
+        // Measured on the numbers as they are printed, so "That is 30 seconds
+        // better" is the gap between the two figures the reader can see
+        // (451s and 421s), not the 30.8 between the values behind them. The
+        // recap email measures a move the same way, so the two agree.
+        var from = printedValue(metricKey, first.value);
+        var to = printedValue(metricKey, last.value);
         var mm = (window.DevCoachModules || {}).metricMovement;
         var better = mm && typeof mm.performanceDelta === 'function'
-            ? mm.performanceDelta(metricKey, last.value, first.value)
-            : last.value - first.value;
+            ? mm.performanceDelta(metricKey, to, from)
+            : to - from;
+        var raw = printedValue(metricKey, to - from);
         return {
             from: first,
             to: last,
-            raw: last.value - first.value,
-            size: Math.abs(last.value - first.value),
+            raw: raw,
+            size: Math.abs(raw),
             improved: Number.isFinite(better) ? better > 0 : null,
             quartersApart: usable.length
         };
+    }
+
+    /* A value as the page prints it: 92.84 is 92.8, 420.6 seconds is 421.
+     *
+     * Read back off the display rather than rounded again here, because the
+     * display rounds with toFixed and a second rounding rule disagrees with
+     * it on a tie (70.05 prints 70.0 and rounds to 70.1). Differences of two
+     * printed values are put through it too, which keeps 92.8 minus 91.6 at
+     * 1.2 rather than 1.1999999999999886.
+     */
+    function printedValue(metricKey, value) {
+        if (!Number.isFinite(value)) return value;
+        var negative = value < 0;
+        var shown = parseFloat(String(_display(metricKey, Math.abs(value))).replace(/[^0-9.]/g, ''));
+        if (!Number.isFinite(shown)) return value;
+        return negative ? -shown : shown;
     }
 
     /* Missed hours, as the year's running total at the close of each quarter.
@@ -410,7 +433,16 @@
         if (!pc || typeof pc.latestYtdReliability !== 'function') return NaN;
         var map = pc.latestYtdReliability(parseInt(year, 10)) || {};
         var value = parseFloat(map[employeeName]);
-        return Number.isFinite(value) ? value : NaN;
+        if (Number.isFinite(value)) return value;
+        // The same person typed with other spacing or case, found the way the
+        // recap's year to date column finds them, so the hours and that
+        // column always come from the same row.
+        if (typeof pc.latestYtdRow === 'function') {
+            var found = pc.latestYtdRow(employeeName, parseInt(year, 10));
+            var loose = found ? parseFloat(found.row.reliability) : NaN;
+            if (Number.isFinite(loose)) return loose;
+        }
+        return NaN;
     }
 
     /* What this associate's document actually covers.
@@ -1570,6 +1602,7 @@
         CORE_METRICS: CORE_METRICS.slice(),
         stableBand: _stableBand,
         movementAmount: _movementAmount,
+        printedValue: printedValue,
         MIN_SURVEYS_FOR_TREND: MIN_SURVEYS_FOR_TREND,
         buildContext: buildContext,
         splitForBoxes: splitForBoxes,

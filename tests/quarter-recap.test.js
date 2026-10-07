@@ -61,15 +61,23 @@ function load(t, store, ytd, extra) {
     global.ytdData = ytdStore;
     browser.store[PREFIX + 'weeklyData'] = JSON.stringify(store);
 
-    const io = { reads: 0, refuse: false };
+    // Like the real storage module in IndexedDB mode: readStore hands back
+    // the live cached object, the same one every time, and only a save that
+    // goes through replaces it. A copy per read would hide code that edits
+    // the log in place and then has the save refused.
+    const io = { reads: 0, refuse: false, cache: {} };
     global.window.DevCoachModules.storage = {
         readStore(key) {
             if (key === 'quarterRecapEmails') io.reads += 1;
-            const raw = browser.store[PREFIX + key];
-            return raw === undefined ? undefined : JSON.parse(raw);
+            if (!(key in io.cache)) {
+                const raw = browser.store[PREFIX + key];
+                io.cache[key] = raw === undefined ? undefined : JSON.parse(raw);
+            }
+            return io.cache[key];
         },
         saveWithSizeCheck(key, data) {
             if (io.refuse) return false;
+            io.cache[key] = data;
             browser.store[PREFIX + key] = JSON.stringify(data);
             return true;
         },
@@ -139,6 +147,11 @@ const YEAR = Object.assign({},
         aht: 421, scheduleAdherence: 94, overallSentiment: 86.5, cxRepOverall: 80.5, reliability: 3.5
     })])
 );
+
+// A year to date file Scott uploaded, running five days past Q3.
+const YTD_REAL_OCT5 = period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', {
+    aht: 444, repSurveyTotal: 120, reliability: 16.25
+})]);
 
 // The same associate with someone joining them, so the list has a "next".
 const TEAM = Object.assign({}, YEAR,
@@ -223,6 +236,62 @@ suite('recap email: an improvement is only claimed when the newest quarter held 
     t.check('591, 502, 503 keeps its words', /Q3 503s, down 88 seconds/.test(lineFor(mailFor(env, 'Esperanza Palomera').body, 'Average Handle Time')));
 });
 
+suite('recap email: a move is the gap between the printed numbers, in the email and on file', (t) => {
+    t.pinClock('2026-10-07');
+    // Quarter averages land between whole seconds and tenths. The move used
+    // to be worked out on the values behind the print, so "Q1 451s ... Q3
+    // 421s, down 31 seconds" went out over two numbers 30 apart.
+    const env = load(t, Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [person('Jordan Reyes', { aht: 451.4, scheduleAdherence: 91.5516 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [person('Jordan Reyes', { aht: 438.2, scheduleAdherence: 92.1 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [person('Jordan Reyes', { aht: 420.6, scheduleAdherence: 92.84 })])));
+    const mail = mailFor(env, 'Jordan Reyes');
+    t.check('451s to 421s is down 30 seconds', /Q1 451s, Q2 438s, Q3 421s, down 30 seconds/.test(mail.body));
+    t.check('91.6% to 92.8% is up 1.2 points', /Q1 91\.6%, Q2 92\.1%, Q3 92\.8%, up 1\.2 points/.test(mail.body));
+    const rec = recordingCanvas();
+    env.recap.drawRecapCard(mail.model, { document: rec.doc });
+    t.check('and the picture says the same', rec.ctx.calls.text.indexOf('down 30s since Q1') > -1
+        && rec.ctx.calls.text.indexOf('up 1.2 pts since Q1') > -1);
+    // The file note measures the same way, so the two cannot disagree.
+    const note = env.review.buildNotes(contextFor(env, 'Jordan Reyes')).full;
+    t.check('the file note says 30 seconds too', /30 seconds better/.test(note) && !/31 seconds/.test(note));
+});
+
+suite('recap email: no improvement is claimed on a path the document calls a swing', (t) => {
+    t.pinClock('2026-10-07');
+    // Esperanza's rep satisfaction and Kristin's adherence, from the 10/07
+    // replay of the real Q3.
+    const env = load(t, Object.assign({},
+        period('quarter', '2026-01-01', '2026-03-31', [
+            person('Esperanza Palomera', { cxRepOverall: 81.8 }), person('Kristin Villela', { scheduleAdherence: 91.5 }),
+            person('Pat Climber', { scheduleAdherence: 90.0, aht: 450 })]),
+        period('quarter', '2026-04-01', '2026-06-30', [
+            person('Esperanza Palomera', { cxRepOverall: 54.5 }), person('Kristin Villela', { scheduleAdherence: 93.3 }),
+            person('Pat Climber', { scheduleAdherence: 91.0, aht: 470 })]),
+        period('quarter', '2026-07-01', '2026-09-30', [
+            person('Esperanza Palomera', { cxRepOverall: 83.3 }), person('Kristin Villela', { scheduleAdherence: 92.9 }),
+            person('Pat Climber', { scheduleAdherence: 92.0, aht: 420 })])));
+
+    // 81.8, 54.5, 83.3 finished close to where it started, after a dip.
+    t.check('a dip and back is not "up 1.5 points"', !/up|down/.test(lineFor(mailFor(env, 'Esperanza Palomera').body, 'Rep Satisfaction')));
+    // 91.5, 93.3, 92.9 lost the goal in Q3.
+    t.check('slipping below goal in Q3 is not "up 1.4 points"', !/up|down/.test(lineFor(mailFor(env, 'Kristin Villela').body, 'Schedule Adherence')));
+    // A climb that held is still said.
+    t.check('a climb that held is still said', /up 2 points/.test(lineFor(mailFor(env, 'Pat Climber').body, 'Schedule Adherence')));
+    // A swing that ends well clear of where it started is a real move.
+    t.check('450, 470, 420 still counts as down 30', /down 30 seconds/.test(lineFor(mailFor(env, 'Pat Climber').body, 'Average Handle Time')));
+});
+
+suite('recap email: one KPI at goal is "one of these", not "some"', (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, Object.assign({},
+        period('quarter', '2026-07-01', '2026-09-30', [person('Jordan Reyes', {
+            aht: 470, scheduleAdherence: 90, overallSentiment: 92, cxRepOverall: 70
+        })])));
+    t.check('one of these', mailFor(env, 'Jordan Reyes').body.indexOf(
+        'One of these is already at goal, and Q4 is a full quarter to bring the rest along.') > -1);
+});
+
 suite('recap email: a survey quarter too thin to quote is left out, the same as the document', (t) => {
     t.pinClock('2026-10-07');
     const thin = Object.assign({}, YEAR,
@@ -258,7 +327,8 @@ suite('recap email: a check-in quarter too thin to judge gets no mark, and Scott
     t.check('the Q3 tile is empty', mail.model.kpis[3].points[2].shown === false);
     t.check('the summary counts only what Q3 judged', mail.body.indexOf('Most of these are at goal in Q3. Keep it going 💪') > -1);
     const notes = env.recap.buildRecapNotes(mail.model);
-    t.check('the panel tells Scott why', notes.some((n) => n === 'Rep Satisfaction has no Q3 number in the email: one survey in Q3, too few to quote.'));
+    t.check('the panel tells Scott why, and what the one reading was',
+        notes.some((n) => n === 'Rep Satisfaction has no Q3 number in the email: one survey in Q3 (100.0%), too few to quote.'));
     t.check('and the email does not', !/survey/i.test(mail.body));
 });
 
@@ -336,10 +406,60 @@ suite('recap email: the year to date upload is the year total, dated by its last
         'Reliability: 16.3 hrs missed in 2026 through October 5 (allowance 18 hrs).');
     t.check('the summed quarters are not in the email', mail.body.indexOf('14.5') === -1);
     const notes = env.recap.buildRecapNotes(mail.model);
-    t.check('Scott is told the two disagree', notes.some((n) => /year to date file says 16\.3 hrs, and the quarters add up to 14\.5 hrs/.test(n)));
+    // October 1 to 5 are in the file and in no quarter, so the two differ
+    // without either being wrong. Said as the two facts.
+    t.check('Scott is told the file runs past the quarter, with both figures', notes.indexOf(
+        'The year to date file runs through October 5, past the end of Q3. It says 16.3 hrs, and the quarters add up to 14.5 hrs. The email uses the year to date figure.') > -1);
 });
 
-suite('recap email: no hours missed is said in words', (t) => {
+suite('recap email: a file that ends inside the quarter and disagrees is called out plainly', (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, YEAR, period('ytd', '2026-01-01', '2026-09-30', [person('Jordan Reyes', { reliability: 12 })]));
+    const notes = env.recap.buildRecapNotes(mailFor(env, 'Jordan Reyes').model);
+    t.check('the plain version', notes.indexOf('The year to date file says 12 hrs, and the quarters add up to 14.5 hrs. The email uses the year to date figure.') > -1);
+});
+
+suite('recap email: hours that went down between two uploads were re-coded, and Scott is told', (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, YEAR, Object.assign({},
+        period('ytd', '2026-01-01', '2026-09-22', [person('Jordan Reyes', { reliability: 22.8 })]),
+        period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', { reliability: 17.8 })])));
+    const mail = mailFor(env, 'Jordan Reyes');
+    t.check('the email uses the newest file', /Reliability: 17\.8 hrs missed in 2026 through October 5/.test(mail.body));
+    t.check('and the panel says it came down', env.recap.buildRecapNotes(mail.model).indexOf(
+        'Jordan\'s hours went down from 22.8 hrs in the September 22 year to date file to 17.8 hrs in the October 5 one, so some were re-coded. Check the figure before sending.') > -1);
+
+    // Going up between files is just more hours, and says nothing.
+    const up = load(t, YEAR, Object.assign({},
+        period('ytd', '2026-01-01', '2026-09-22', [person('Jordan Reyes', { reliability: 12 })]),
+        period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', { reliability: 14.5 })])));
+    t.check('a rise is not flagged', !up.recap.buildRecapNotes(mailFor(up, 'Jordan Reyes').model).some((n) => /re-coded/.test(n)));
+});
+
+suite('recap email: only a year to date file Scott uploaded counts, never one the app built', (t) => {
+    t.pinClock('2026-10-07');
+    // The app stitches an auto row together after a weekly upload. It covers
+    // only the weeks on hand and is gone at the next startup.
+    const auto = (end, hours) => ({
+        [`2026-01-01|${end}`]: {
+            metadata: { periodType: 'ytd', startDate: '2026-01-01', endDate: end, autoGeneratedYtd: true },
+            employees: [person('Jordan Reyes', { aht: 999, reliability: hours })]
+        }
+    });
+    const env = load(t, YEAR, Object.assign({}, YTD_REAL_OCT5, auto('2026-10-17', 18.3)));
+    const mail = mailFor(env, 'Jordan Reyes');
+    t.check('the hours are the uploaded file\'s, dated by it', /Reliability: 16\.3 hrs missed in 2026 through October 5/.test(mail.body));
+    t.equal('the YTD column is the uploaded file\'s', mail.model.kpis[0].ytd.display, '444s');
+    t.equal('and dated by it', mail.model.ytd.through, '2026-10-05');
+
+    // With only an auto row, there is no year to date file at all.
+    const only = load(t, YEAR, auto('2026-09-26', 12.5));
+    const m2 = mailFor(only, 'Jordan Reyes');
+    t.check('the hours fall back to the quarters', /Reliability: 14\.5 hrs missed in 2026 through September 30/.test(m2.body));
+    t.equal('and there is no YTD column', m2.model.ytd, null);
+});
+
+suite('recap email: no hours missed is the counted 0, not a claim they were never out', (t) => {
     t.pinClock('2026-10-07');
     const none = {};
     Object.keys(YEAR).forEach((key) => {
@@ -348,8 +468,10 @@ suite('recap email: no hours missed is said in words', (t) => {
         });
     });
     const env = load(t, none);
-    t.equal('not "0 hrs"', lineFor(mailFor(env, 'Jordan Reyes').body, 'Reliability'),
-        'Reliability: no hours missed in 2026 through September 30 (allowance 18 hrs).');
+    // Time re-coded out of the count is still time away, so "no hours
+    // missed" claims more than the figure does.
+    t.equal('the figure as counted', lineFor(mailFor(env, 'Jordan Reyes').body, 'Reliability'),
+        'Reliability: 0 hrs missed in 2026 through September 30 (allowance 18 hrs).');
 });
 
 suite('recap email: hours past the allowance are stated, never set as something to work on', (t) => {
@@ -366,11 +488,17 @@ suite('recap email: hours past the allowance are stated, never set as something 
         !/focus|work on|improve|reduce|attendance policy|over the allowance/i.test(lineFor(mail.body, 'Reliability')));
     t.equal('24 against 18 needs no note about hours', env.recap.buildRecapNotes(mail.model).filter((n) => /hrs|hours/.test(n)).length, 0);
 
-    // Far past it is worth a second look before it goes: it may be leave.
+    // Far past it is often leave not yet coded, sometimes protected leave, so
+    // the line stays out until Scott has checked and ticks it back in.
     const far = load(t, over([20, 12, 8]));
-    const notes = far.recap.buildRecapNotes(mailFor(far, 'Jordan Reyes').model);
-    t.check('40 hrs against 18 asks Scott to check for leave',
-        notes.some((n) => n === '40 hrs is more than twice the 18 hrs allowance. If any of it is protected leave, untick Include the hours line.'));
+    const farMail = mailFor(far, 'Jordan Reyes');
+    t.check('40 hrs against 18 is left out by default', farMail.body.indexOf('Reliability') === -1);
+    t.equal('and the email says so', farMail.includedHours, false);
+    t.check('the panel says why, and how to put it back', far.recap.buildRecapNotes(farMail.model).indexOf(
+        'Hours are left out of Jordan\'s email: 40 hrs is more than twice the 18 hrs allowance. Tick Include the hours line once you have checked none of it is protected leave.') > -1);
+    const ticked = mailFor(far, 'Jordan Reyes', 3, { includeHours: true });
+    t.check('once ticked, it goes in', /Reliability: 40 hrs missed in 2026/.test(ticked.body));
+    t.check('and the note stops asking', !far.recap.buildRecapNotes(ticked.model, { includeHours: true }).some((n) => /left out/.test(n)));
 });
 
 suite('recap email: the hours line can be left out for one associate', (t) => {
@@ -694,7 +822,12 @@ suite('recap picture: the copy reports what happened, in the browser\'s own word
         t.equal('with the reason Scott has no console to read', result.reason, 'NotAllowedError: Document is not focused.');
     });
     await withNavigator({ clipboard: { write: () => new Promise(() => {}) } }, async () => {
-        const result = await env.recap.copyCardImage(canvas, { timeoutMs: 20 });
+        // Bounded here as well, so a broken timeout fails this check by name
+        // instead of hanging the run.
+        const result = await Promise.race([
+            env.recap.copyCardImage(canvas, { timeoutMs: 20 }),
+            new Promise((resolve) => setTimeout(() => resolve({ state: 'hung', reason: '' }), 1000))
+        ]);
         t.equal('a write that never answers gives up', result.state, 'failed');
         t.check('and says so', /did not answer/.test(result.reason));
     });
@@ -722,7 +855,8 @@ suite('recap log: drafted when it opens, sent only when marked, and Undo works',
     const status = () => r.statusFor('Jordan Reyes', 2026, 3);
 
     t.equal('nothing yet', status().state, 'none');
-    t.equal('hours are in by default', status().includeHours, true);
+    t.equal('the hours switch starts untouched', status().includeHours, null);
+    t.equal('which means in, for an ordinary total', r.includeHoursFor(null, mailFor(env, 'Jordan Reyes').model), true);
 
     r.recordDrafted('Jordan Reyes', 2026, 3, { to: 'jordan.reyes@aps.com', subject: 'Your Q3 check-in recap', hours: true },
         { now: '2026-10-07T15:00:00Z' });
@@ -758,9 +892,16 @@ suite('recap log: drafted when it opens, sent only when marked, and Undo works',
 suite('recap log: a refused save is never shown as sent', (t) => {
     t.pinClock('2026-10-07');
     const env = load(t, YEAR);
+    // A draft already in the log, read back through the live cache the way
+    // the storage module serves it.
+    env.recap.recordDrafted('Jordan Reyes', 2026, 3, {}, { now: '2026-10-07T15:00:00Z' });
+    t.equal('the draft is there', env.recap.statusFor('Jordan Reyes', 2026, 3).state, 'drafted');
+    // The store went stale (the other machine changed it), so saves refuse.
     env.io.refuse = true;
     t.equal('the mark reports it did not save', env.recap.markSent('Jordan Reyes', 2026, 3, {}), null);
-    t.equal('and the status has not moved', env.recap.statusFor('Jordan Reyes', 2026, 3).state, 'none');
+    t.equal('and the status has not moved', env.recap.statusFor('Jordan Reyes', 2026, 3).state, 'drafted');
+    t.equal('nor has the cached log, so a re-render cannot show it sent',
+        env.recap.readLog()['Jordan Reyes|2026|Q3'].length, 1);
 });
 
 suite('recap log: nothing reads the log while the page is still loading', (t) => {
@@ -798,6 +939,14 @@ suite('recap log: two machines marking different people both survive a merge', (
     const undone = { 'Jordan Reyes|2026|Q3': work['Jordan Reyes|2026|Q3'].concat([{ event: 'unsent', at: '2026-10-08T09:00:00.000Z' }]) };
     t.equal('the later Undo wins, by time', r.statusFor('Jordan Reyes', 2026, 3, unionValues(work, undone)).state, 'drafted');
     t.equal('whichever side the merge starts from', r.statusFor('Jordan Reyes', 2026, 3, unionValues(undone, work)).state, 'drafted');
+
+    // The merge puts the other machine's entries first, so a later decision
+    // made there can land before an earlier one made here. Read by time, the
+    // later one stands.
+    const late = { 'Jordan Reyes|2026|Q3': [{ event: 'drafted', at: '2026-10-07T15:00:00.000Z' }, { event: 'skipped', at: '2026-10-08T09:00:00.000Z' }] };
+    const mixed = unionValues(work, late);
+    t.check('the merged log really is out of time order', mixed['Jordan Reyes|2026|Q3'].map((e) => e.event).join(',') === 'drafted,skipped,sent');
+    t.equal('and still reads by time', r.statusFor('Jordan Reyes', 2026, 3, mixed).state, 'skipped');
 });
 
 suite('recap log: the store is synced and merged entry by entry', (t) => {
@@ -911,6 +1060,53 @@ suite('quarterly tab: a failed copy keeps the draft shut and says why, in the pa
     t.equal('and logs it', env.recap.statusFor('Jordan Reyes', 2026, 3).state, 'drafted');
     t.check('and the failure note is gone', !/id="quarterRecapFailure"/.test(global.document._els.q1ReviewContent.innerHTML));
     delete global.window.ClipboardItem;
+});
+
+suite('quarterly tab: marking the recap clears a failure note it no longer needs', async (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, YEAR);
+    dom();
+    const els = controls(BUTTONS);
+    global.window.ClipboardItem = class { constructor(items) { this.items = items; } };
+    renderInto(env, () => { env.ui.state.employee = 'Jordan Reyes'; env.ui.state.showRecap = true; });
+    await withNavigator({ clipboard: { write: () => Promise.reject(refusal('NotAllowedError', 'Document is not focused.')) } }, async () => {
+        press(els.quarterRecapOpen);
+        await settle();
+    });
+    t.check('the failure note is up', /id="quarterRecapFailure"/.test(global.document._els.q1ReviewContent.innerHTML));
+    // Copied by hand, pasted into a draft already open, sent, then marked.
+    press(els.quarterRecapMarkSent);
+    const html = global.document._els.q1ReviewContent.innerHTML;
+    t.check('marked sent', /✓ Recap sent/.test(html));
+    t.check('and the note offering another draft is gone', !/id="quarterRecapFailure"/.test(html) && !/id="quarterRecapOpenOnly"/.test(html));
+    delete global.window.ClipboardItem;
+});
+
+suite('quarterly tab: someone with nothing to recap can still be cleared off the list', (t) => {
+    t.pinClock('2026-10-07');
+    const blank = { aht: '', scheduleAdherence: '', overallSentiment: '', cxRepOverall: '', fcr: '', overallExperience: '',
+        transfers: '', transfersCount: '', repSurveyTotal: 0, surveyTotal: 0, fcrSurveyTotal: 0, totalCalls: 0, reliability: 0 };
+    const env = load(t, period('quarter', '2026-07-01', '2026-09-30', [
+        person('Jordan Reyes', { aht: 421 }), person('Nora Nesting', blank)]));
+    const els = controls(BUTTONS);
+    env.recap.markSent('Jordan Reyes', 2026, 3, {}, { now: '2026-10-07T15:00:00Z' });
+    const html = renderInto(env, () => { env.ui.state.employee = 'Nora Nesting'; env.ui.state.showRecap = true; });
+    t.check('her panel says there is nothing to recap', /nothing to recap/.test(html));
+    t.check('and still offers Not sending', /id="quarterRecapSkip"/.test(html));
+    press(els.quarterRecapSkip);
+    t.equal('which marks her', env.recap.statusFor('Nora Nesting', 2026, 3).state, 'skipped');
+    t.check('so the list can finish', /1 of 1 sent, 1 not sending/.test(global.document._els.q1ReviewContent.innerHTML));
+    press(els.quarterRecapUndoSent);
+    t.equal('and Undo works there too', env.recap.statusFor('Nora Nesting', 2026, 3).state, 'none');
+});
+
+suite('quarterly tab: the picture on screen is the size that gets pasted', (t) => {
+    const src = fs.readFileSync(path.join(ROOT, 'modules/quarter-review-ui.module.js'), 'utf8');
+    const mount = src.slice(src.indexOf('function _mountRecapImage'), src.indexOf('function _openMailto'));
+    // A right-click Copy image copies the canvas at its own pixel size, so a
+    // canvas drawn at the screen's density pasted at up to twice the width.
+    t.check('the on screen picture is drawn at true size', /drawRecapCard\(built\.mail\.model, \{ scale: 1 \}\)/.test(mount));
+    t.check('and never at the screen density', !/devicePixelRatio/.test(src));
 });
 
 suite('quarterly tab: a good copy opens the draft once, and Mark as sent comes forward', async (t) => {
