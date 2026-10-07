@@ -444,6 +444,25 @@
         return file ? file.endDate : null;
     }
 
+    // One associate's row in that same file, with the day it runs through.
+    // The exact spelling first, then the same name with its case and spacing
+    // forgiven, the way the quarters find a person. Null when there is no file
+    // for the year or the associate is not in it.
+    function _latestYtdRow(name, year, opts) {
+        var file = _latestYtdFile(year, opts);
+        if (!file || !name) return null;
+        var norm = function (s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toLowerCase(); };
+        var wanted = norm(name);
+        var exact = null, loose = null;
+        ((file.entry && file.entry.employees) || []).forEach(function (emp) {
+            if (!emp || !emp.name) return;
+            if (emp.name === name) exact = emp;
+            else if (!loose && norm(emp.name) === wanted) loose = emp;
+        });
+        var row = exact || loose;
+        return row ? { row: row, endDate: file.endDate } : null;
+    }
+
     function _latestYtdReliability(year, opts) {
         var file = _latestYtdFile(year, opts);
         var best = file ? file.entry : null;
@@ -1379,6 +1398,7 @@
         // applies to rebuilt months, and both must read it from one place.
         latestYtdReliability: _latestYtdReliability,
         latestYtdThrough: _latestYtdThrough,
+        latestYtdRow: _latestYtdRow,
         isMonthInProgress: _isMonthInProgress,
         compareTeams: compareTeams,
         buildMonthOverMonthRanks: buildMonthOverMonthRanks,

@@ -364,7 +364,7 @@ suite('recap email: hours past the allowance are stated, never set as something 
         'Reliability: 24 hrs missed in 2026 through September 30 (allowance 18 hrs).');
     t.check('no focus wording anywhere near it',
         !/focus|work on|improve|reduce|attendance policy|over the allowance/i.test(lineFor(mail.body, 'Reliability')));
-    t.equal('24 against 18 needs no note', env.recap.buildRecapNotes(mail.model).length, 0);
+    t.equal('24 against 18 needs no note about hours', env.recap.buildRecapNotes(mail.model).filter((n) => /hrs|hours/.test(n)).length, 0);
 
     // Far past it is worth a second look before it goes: it may be leave.
     const far = load(t, over([20, 12, 8]));
@@ -379,7 +379,7 @@ suite('recap email: the hours line can be left out for one associate', (t) => {
     const mail = mailFor(env, 'Jordan Reyes', 3, { includeHours: false });
     t.check('no hours in the text', mail.body.indexOf('Reliability') === -1 && !/hrs/.test(mail.body));
     t.equal('and the email says so', mail.includedHours, false);
-    t.equal('nor a note about hours that are not going', env.recap.buildRecapNotes(mail.model, { includeHours: false }).length, 0);
+    t.equal('nor a note about hours that are not going', env.recap.buildRecapNotes(mail.model, { includeHours: false }).filter((n) => /hrs|hours/.test(n)).length, 0);
 });
 
 suite('recap email: a part year is not judged against a whole year allowance', (t) => {
@@ -498,7 +498,9 @@ suite('recap picture: a scoreboard that sits in an email', (t) => {
 
     t.equal('640 wide, which fits a reading pane', layout.W, 640);
     t.equal('one row per KPI', layout.rows.length, 4);
-    t.check('three tiles fit beside the labels', layout.tilesX > layout.padX + 100 && layout.changeX + 60 <= layout.W - layout.padX + 10);
+    t.check('three tiles fit beside the labels', layout.tilesX > layout.padX + 100
+        && layout.columnX[2] + layout.tileW <= layout.W - layout.padX);
+    t.equal('and no year to date column without an upload', layout.ytdX, null);
     t.check('and the first name is the biggest text on it', layout.titleSize > layout.valueSize);
     t.check('rows run down the card in order', layout.rows.every((r, i) => i === 0 || r.y > layout.rows[i - 1].y));
     t.check('and the card ends below the last row', layout.rows[3].y + layout.tileH < layout.H);
@@ -522,7 +524,8 @@ suite('recap picture: what is drawn is the same numbers, and nothing it should n
     t.check('each quarter value', ['451s', '438s', '421s', '92.1%', '94.0%', '86.5%', '80.5%']
         .every((v) => drawn.indexOf(v) > -1));
     t.check('the goals', drawn.indexOf('Goal 426s or lower') > -1 && drawn.indexOf('Goal 93% or better') > -1);
-    t.check('the moves that held, short', drawn.indexOf('down 30s') > -1 && drawn.indexOf('up 4.5 pts') > -1 && drawn.indexOf('since Q1') > -1);
+    t.check('the moves that held, short, under the goal', drawn.indexOf('down 30s since Q1') > -1 && drawn.indexOf('up 4.5 pts since Q1') > -1);
+    t.check('and none for the one that slipped', !drawn.some((s) => /^(up|down) .* since/.test(s) && /87|86|89/.test(s)));
     // Handle time Q3, adherence Q2 and Q3, sentiment Q1: four tiles at goal.
     t.equal('a tick on every tile at goal, so colour is never the only sign', drawn.filter((s) => s === '✓').length, 4);
     t.check('and the key says what green means', drawn.indexOf('✓ Green tiles are at goal.') > -1);
@@ -552,6 +555,97 @@ suite('recap picture: a quarter that is not shown is an empty tile', (t) => {
     env.recap.drawRecapCard(mailFor(env, 'Jordan Reyes').model, { document: rec.doc });
     t.check('a dot stands in for it', rec.ctx.calls.text.indexOf('·') > -1);
     t.check('and its number is nowhere', rec.ctx.calls.text.indexOf('100.0%') === -1);
+});
+
+/* ── The year to date column ── */
+
+const YTD_OCT5 = period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', {
+    aht: 444, scheduleAdherence: 92.8, overallSentiment: 88.4, cxRepOverall: 77.1, repSurveyTotal: 120, reliability: 14.5
+})]);
+
+suite('recap picture: the year to date column comes straight from the upload Scott plugs in', (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, YEAR, YTD_OCT5);
+    const model = mailFor(env, 'Jordan Reyes').model;
+    const ytd = (key) => model.kpis.filter((k) => k.metricKey === key)[0].ytd;
+
+    t.equal('dated by the upload', model.ytd && model.ytd.through, '2026-10-05');
+    // Not the quarters averaged: those would be 437s, 93.2%, 87.6%, 78.5%.
+    t.equal('handle time is the upload\'s', ytd('aht').display, '444s');
+    t.equal('adherence is the upload\'s', ytd('scheduleAdherence').display, '92.8%');
+    t.equal('sentiment is the upload\'s', ytd('overallSentiment').display, '88.4%');
+    t.equal('rep satisfaction is the upload\'s', ytd('cxRepOverall').display, '77.1%');
+    t.equal('judged against the goal like a quarter', ytd('overallSentiment').meets, true);
+    t.equal('and below it when it is', ytd('scheduleAdherence').meets, false);
+
+    const layout = env.recap.layoutRecapCard(model);
+    t.check('the column sits after the quarters', layout.ytdX > layout.columnX[2] + layout.tileW);
+    t.check('and inside the card', layout.ytdX + layout.tileW <= layout.W - layout.padX);
+
+    const rec = recordingCanvas();
+    env.recap.drawRecapCard(model, { document: rec.doc });
+    const drawn = rec.ctx.calls.text;
+    t.check('headed YTD', drawn.indexOf('YTD') > -1);
+    t.check('with the day it runs to', drawn.indexOf('to Oct 5') > -1);
+    t.check('the subtitle says so', drawn.some((s) => /Each KPI against its goal, Q1 to Q3, and the year to date/.test(s)));
+    t.check('each year to date value is drawn', ['444s', '92.8%', '88.4%', '77.1%'].every((v) => drawn.indexOf(v) > -1));
+    t.check('in a band of its own, so it is never read as a fourth quarter', rec.ctx.calls.fills.indexOf('#eef4fb') > -1);
+    t.check('the email text is unchanged by it', mailFor(env, 'Jordan Reyes').body.indexOf('444s') === -1);
+});
+
+suite('recap picture: a newer upload moves the year to date column', (t) => {
+    t.pinClock('2026-10-14');
+    const env = load(t, YEAR, Object.assign({}, YTD_OCT5,
+        period('ytd', '2026-01-01', '2026-10-12', [person('Jordan Reyes', { aht: 440, repSurveyTotal: 124, reliability: 15 })])));
+    const model = mailFor(env, 'Jordan Reyes').model;
+    t.equal('the newest upload wins', model.kpis[0].ytd.display, '440s');
+    t.equal('and dates the column', model.ytd.through, '2026-10-12');
+});
+
+suite('recap picture: the upload finds the person however their name was typed', (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, YEAR, period('ytd', '2026-01-01', '2026-10-05', [person('  jordan   REYES ', { aht: 444 })]));
+    t.equal('spacing and case are forgiven', mailFor(env, 'Jordan Reyes').model.kpis[0].ytd.display, '444s');
+});
+
+suite('recap picture: a year to date survey reading on too few surveys stays empty', (t) => {
+    t.pinClock('2026-10-07');
+    const env = load(t, YEAR, period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', {
+        aht: 444, cxRepOverall: 100, repSurveyTotal: 2, surveyTotal: 2, fcrSurveyTotal: 2
+    })]));
+    const model = mailFor(env, 'Jordan Reyes').model;
+    t.equal('rep satisfaction is left empty', model.kpis[3].ytd.shown, false);
+    t.equal('the rest are shown', model.kpis[0].ytd.shown, true);
+    t.check('and the column stays', !!model.ytd);
+});
+
+suite('recap picture: no upload for the year, or none with this person in it, means no column', (t) => {
+    t.pinClock('2026-10-07');
+    // Last year's file is not this year's year to date.
+    const lastYear = load(t, YEAR, period('ytd', '2025-01-01', '2025-12-31', [person('Jordan Reyes', { aht: 400 })]));
+    const a = mailFor(lastYear, 'Jordan Reyes').model;
+    t.equal('last year\'s upload is ignored', a.ytd, null);
+    t.equal('no column is laid out', lastYear.recap.layoutRecapCard(a).ytdX, null);
+    t.check('Scott is told why, in the panel', lastYear.recap.buildRecapNotes(a).indexOf(
+        'There is no year to date upload for 2026 yet, so the picture has no YTD column. It fills in once one is uploaded.') > -1);
+
+    const someoneElse = load(t, YEAR, period('ytd', '2026-01-01', '2026-10-05', [person('Somebody Else', { aht: 400 })]));
+    const b = mailFor(someoneElse, 'Jordan Reyes').model;
+    t.equal('not in the upload, no column', b.ytd, null);
+    t.check('and the note names the upload', someoneElse.recap.buildRecapNotes(b).indexOf(
+        'Jordan is not in the year to date upload through October 5, so the picture has no YTD column.') > -1);
+});
+
+suite('recap picture: four quarters and the year to date still fit a Q4 card', (t) => {
+    t.pinClock('2027-01-12');
+    const env = load(t, Object.assign({}, YEAR,
+        period('quarter', '2026-10-01', '2026-12-31', [person('Jordan Reyes', { aht: 430 })])),
+        period('ytd', '2026-01-01', '2026-12-31', [person('Jordan Reyes', { aht: 435 })]));
+    const model = mailFor(env, 'Jordan Reyes', 4).model;
+    const layout = env.recap.layoutRecapCard(model);
+    t.equal('five columns', model.columns.length + (model.ytd ? 1 : 0), 5);
+    t.check('all inside the card', layout.ytdX + layout.tileW <= layout.W - layout.padX);
+    t.check('with numbers still big enough to read', layout.valueSize >= 15);
 });
 
 suite('recap picture: without a canvas there is no picture, and nothing throws', (t) => {

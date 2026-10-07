@@ -38,6 +38,9 @@
     var COPY_TIMEOUT_MS = 4000;
     var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'];
+    // A survey reading on fewer responses than this is not shown, in the year
+    // to date column as in the quarters. quarter-review's floor when loaded.
+    var FALLBACK_SURVEY_FLOOR = 3;
 
     function _mod(name) { return (window.DevCoachModules || {})[name] || null; }
     function _registry() { return window.METRICS_REGISTRY || {}; }
@@ -123,12 +126,49 @@
         return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
     }
 
-    // "2026-10-05" as "October 5".
-    function _monthDay(iso) {
+    // "2026-10-05" as "October 5", or "Oct 5" when short.
+    function _monthDay(iso, short) {
         var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
         if (!m) return '';
         var name = MONTHS[Number(m[2]) - 1];
-        return name ? name + ' ' + Number(m[3]) : '';
+        if (!name) return '';
+        return (short ? name.slice(0, 3) : name) + ' ' + Number(m[3]);
+    }
+
+    /* The year to date column: each KPI as the year to date upload has it.
+     *
+     * Read straight off the newest upload for the year, the file Scott
+     * plugs in, so it moves the day a new one goes up. Never averaged out of
+     * the quarters: the upload is the year's own arithmetic, and the source of
+     * truth everywhere else in the app. A survey KPI resting on fewer than
+     * three responses in it is left empty, the same rule as the quarters.
+     */
+    function _ytdFacts(ctx) {
+        var pc = _mod('periodCompare');
+        if (!pc || typeof pc.latestYtdRow !== 'function') return { status: 'none', through: null, row: null };
+        var found = pc.latestYtdRow(ctx.name, parseInt(ctx.year, 10));
+        if (found) return { status: 'ok', through: found.endDate, row: found.row };
+        var through = typeof pc.latestYtdThrough === 'function' ? pc.latestYtdThrough(parseInt(ctx.year, 10)) : null;
+        return { status: through ? 'absent' : 'none', through: through, row: null };
+    }
+
+    function _ytdPoint(metricKey, row, target) {
+        var empty = { value: null, display: '', meets: null, shown: false };
+        if (!row) return empty;
+        var value = parseFloat(row[metricKey]);
+        if (!Number.isFinite(value)) return empty;
+        var unit = (_registry()[metricKey] || {}).unit;
+        // No handle time is no calls, not a fast year.
+        if (unit === 'sec' && value <= 0) return empty;
+        var field = (window.SURVEY_WEIGHT_FIELD || {})[metricKey];
+        if (field) {
+            var own = parseInt(row[field], 10);
+            var count = Number.isInteger(own) && own > 0 ? own : parseInt(row.surveyTotal, 10);
+            var qr = _mod('quarterReview');
+            var floor = (qr && qr.MIN_SURVEYS_FOR_TREND) || FALLBACK_SURVEY_FLOOR;
+            if (!(Number.isInteger(count) && count >= floor)) return empty;
+        }
+        return { value: value, display: _display(metricKey, value), meets: _meets(metricKey, value, target), shown: true };
     }
 
     /* ── The facts ── */
@@ -171,6 +211,8 @@
             return q.quarter >= firstWithData && q.quarter <= current.quarter;
         }).map(function (q) { return { quarter: q.quarter, name: q.name }; });
 
+        var ytd = _ytdFacts(ctx);
+
         var kpis = raw.map(function (k) {
             var m = k.m;
             var target = m.target && Number.isFinite(m.target.value)
@@ -206,9 +248,11 @@
                 // whose Q3 was poor that it was fine.
                 verdict: nowPoint ? nowPoint.meets : null,
                 thinNow: thinNow,
-                improvement: _improvement(m.metricKey, shownPoints, !!m.isReverse)
+                improvement: _improvement(m.metricKey, shownPoints, !!m.isReverse),
+                ytd: _ytdPoint(m.metricKey, ytd.row, target)
             };
         });
+        var ytdShown = kpis.some(function (k) { return k.ytd.shown; });
 
         var quartersShown = columns.filter(function (col) {
             return kpis.some(function (k) {
@@ -225,6 +269,12 @@
             columns: columns,
             quartersShown: quartersShown,
             kpis: kpis,
+            // The year to date column, or null when there is nothing to put in
+            // it. ytdStatus says why for the panel: 'ok', 'none' (no upload for
+            // the year yet) or 'absent' (an upload this associate is not in).
+            ytd: ytdShown ? { through: ytd.through } : null,
+            ytdStatus: ytdShown ? 'ok' : ytd.status === 'ok' ? 'empty' : ytd.status,
+            ytdThrough: ytd.through,
             hours: _hoursFacts(ctx)
         };
     }
@@ -442,6 +492,17 @@
             notes.push(k.label + ' has no ' + model.quarterName + ' number in the email: '
                 + (n === 1 ? 'one survey' : n + ' surveys') + ' in ' + model.quarterName + ', too few to quote.');
         });
+        // Why the picture has no year to date column, when it has none.
+        if (model.ytdStatus === 'none') {
+            notes.push('There is no year to date upload for ' + model.year
+                + ' yet, so the picture has no YTD column. It fills in once one is uploaded.');
+        } else if (model.ytdStatus === 'absent') {
+            notes.push(first + ' is not in the year to date upload through ' + _monthDay(model.ytdThrough)
+                + ', so the picture has no YTD column.');
+        } else if (model.ytdStatus === 'empty') {
+            notes.push(first + ' has no KPI numbers in the year to date upload through ' + _monthDay(model.ytdThrough)
+                + ', so the picture has no YTD column.');
+        }
         return notes;
     }
 
@@ -476,35 +537,46 @@
         meetsFill: '#e4f3e8',
         meetsBorder: '#b9dfc4',
         meetsInk: '#1a6b32',
-        meetsMark: '#2e7d32'
+        meetsMark: '#2e7d32',
+        ytdBand: '#eef4fb'
     };
 
     // Sizes in CSS pixels. 640 wide sits inside a mail reading pane.
+    //
+    // The quarters, then the year to date in a column of its own, set apart
+    // by a wider gap and a tinted band so it is never read as a fourth
+    // quarter. A move worth naming sits under the goal, in the label column,
+    // so the tiles keep the width.
     function layoutRecapCard(model) {
         if (!model || !model.kpis || !model.kpis.length || !model.columns || !model.columns.length) return null;
         var W = 640, padX = 24, headerH = 72;
-        var labelW = 170, changeW = 86, sectionGap = 12, tileGap = 8;
+        var labelW = 168, sectionGap = 12, tileGap = 8, ytdGap = 18;
         var n = model.columns.length;
-        var tilesSpace = W - padX * 2 - labelW - changeW - sectionGap * 2;
-        var tileW = Math.min(120, (tilesSpace - tileGap * (n - 1)) / n);
-        var tileH = 46, rowH = 58;
+        var hasYtd = !!model.ytd;
+        var slots = n + (hasYtd ? 1 : 0);
+        var gaps = tileGap * (n - 1) + (hasYtd ? ytdGap : 0);
+        var tilesSpace = W - padX * 2 - labelW - sectionGap;
+        var tileW = Math.min(120, (tilesSpace - gaps) / slots);
+        var tileH = 46, rowH = 62;
         var tilesX = padX + labelW + sectionGap;
-        var changeX = tilesX + n * tileW + (n - 1) * tileGap + sectionGap;
-        var colHeadY = headerH + 22;
-        var rowTop = colHeadY + 14;
+        var columnX = model.columns.map(function (c, i) { return tilesX + i * (tileW + tileGap); });
+        var ytdX = hasYtd ? tilesX + n * tileW + (n - 1) * tileGap + ytdGap : null;
+        var colHeadY = headerH + 20;
+        // Room under the YTD heading for the date the upload runs to.
+        var rowTop = colHeadY + (hasYtd ? 28 : 16);
         var rows = model.kpis.map(function (k, i) {
             return { metricKey: k.metricKey, y: rowTop + i * rowH };
         });
-        var H = rowTop + rows.length * rowH + 30;
+        var H = rowTop + rows.length * rowH + 22;
         return {
             W: W, H: H, padX: padX, headerH: headerH,
             labelW: labelW, tilesX: tilesX, tileW: tileW, tileH: tileH, tileGap: tileGap,
-            changeX: changeX, changeW: changeW, colHeadY: colHeadY, rowH: rowH, rows: rows,
+            columnX: columnX, ytdX: ytdX, colHeadY: colHeadY, rowH: rowH, rows: rows,
             // The first name is the biggest thing on the card on purpose: it
             // is the last check that the right person's picture was pasted.
             titleSize: 22,
             valueSize: Math.min(21, Math.max(15, Math.floor(tileW * 0.21))),
-            footerY: H - 15
+            footerY: H - 14
         };
     }
 
@@ -565,59 +637,74 @@
         var cols = model.columns;
         var span = cols.length > 1 ? cols[0].name + ' to ' + cols[cols.length - 1].name : cols[0].name;
         text(model.firstName + '\'s ' + model.year + ', quarter by quarter', layout.padX, 30, layout.titleSize, '#ffffff', '700');
-        text('Each KPI against its goal, ' + span, layout.padX, 54, 13, COLORS.headerSub);
+        text('Each KPI against its goal, ' + span + (model.ytd ? ', and the year to date' : ''),
+            layout.padX, 54, 13, COLORS.headerSub);
         text(model.quarterName + ' check-in', W - layout.padX, 30, 13, COLORS.headerSub, '600', 'right');
 
-        var tileX = function (i) { return layout.tilesX + i * (layout.tileW + layout.tileGap); };
+        var lastRow = layout.rows[layout.rows.length - 1];
 
-        // ── Quarter headings ──
+        // ── The year to date band, behind its column ──
+        if (model.ytd) {
+            g.fillStyle = COLORS.ytdBand;
+            _roundRect(g, layout.ytdX - 7, layout.colHeadY - 13, layout.tileW + 14,
+                (lastRow.y + layout.tileH + 7) - (layout.colHeadY - 13), 9);
+            g.fill();
+        }
+
+        // ── Column headings ──
         cols.forEach(function (col, i) {
             var isNow = col.quarter === model.quarter;
-            text(col.name, tileX(i) + layout.tileW / 2, layout.colHeadY, 12,
+            text(col.name, layout.columnX[i] + layout.tileW / 2, layout.colHeadY, 12,
                 isNow ? COLORS.ink : COLORS.muted, '700', 'center');
         });
+        if (model.ytd) {
+            text('YTD', layout.ytdX + layout.tileW / 2, layout.colHeadY, 12, COLORS.ink, '700', 'center');
+            var to = _monthDay(model.ytd.through, true);
+            if (to) text('to ' + to, layout.ytdX + layout.tileW / 2, layout.colHeadY + 14, 10, COLORS.muted, '600', 'center');
+        }
+
+        var tile = function (p, x, y) {
+            var w = layout.tileW, h = layout.tileH;
+            if (!p || !p.shown) {
+                g.fillStyle = COLORS.emptyFill;
+                _roundRect(g, x, y, w, h, 7);
+                g.fill();
+                g.strokeStyle = COLORS.emptyBorder;
+                g.lineWidth = 1;
+                g.stroke();
+                text('·', x + w / 2, y + h / 2, 18, COLORS.faint, '700', 'center');
+                return;
+            }
+            var atGoal = p.meets === true;
+            g.fillStyle = atGoal ? COLORS.meetsFill : '#ffffff';
+            _roundRect(g, x, y, w, h, 7);
+            g.fill();
+            g.strokeStyle = atGoal ? COLORS.meetsBorder : COLORS.tileBorder;
+            g.lineWidth = 1;
+            g.stroke();
+            text(p.display, x + w / 2, y + h / 2 + 1, layout.valueSize,
+                atGoal ? COLORS.meetsInk : COLORS.text, '700', 'center');
+            // Colour never carries the meaning alone: at goal also wears a
+            // tick, and the key under the card says what it means.
+            if (atGoal) text('✓', x + w - 9, y + 10, 11, COLORS.meetsMark, '700', 'center');
+        };
 
         // ── One row per KPI ──
         model.kpis.forEach(function (k, r) {
             var y = layout.rows[r].y;
             if (r > 0) {
                 g.fillStyle = COLORS.rule;
-                g.fillRect(layout.padX, y - 6, W - layout.padX * 2, 1);
+                g.fillRect(layout.padX, y - 8, (layout.ytdX ? layout.ytdX - 12 : W - layout.padX) - layout.padX, 1);
             }
-            text(k.label, layout.padX, y + 17, 14, COLORS.ink, '700');
-            if (k.goalText) text('Goal ' + k.goalText, layout.padX, y + 35, 11.5, COLORS.muted);
-
-            k.points.forEach(function (p, i) {
-                var x = tileX(i), ty = y;
-                var w = layout.tileW, h = layout.tileH;
-                if (!p.shown) {
-                    g.fillStyle = COLORS.emptyFill;
-                    _roundRect(g, x, ty, w, h, 7);
-                    g.fill();
-                    g.strokeStyle = COLORS.emptyBorder;
-                    g.lineWidth = 1;
-                    g.stroke();
-                    text('·', x + w / 2, ty + h / 2, 18, COLORS.faint, '700', 'center');
-                    return;
-                }
-                var atGoal = p.meets === true;
-                g.fillStyle = atGoal ? COLORS.meetsFill : '#ffffff';
-                _roundRect(g, x, ty, w, h, 7);
-                g.fill();
-                g.strokeStyle = atGoal ? COLORS.meetsBorder : COLORS.tileBorder;
-                g.lineWidth = 1;
-                g.stroke();
-                text(p.display, x + w / 2, ty + h / 2 + 1, layout.valueSize,
-                    atGoal ? COLORS.meetsInk : COLORS.text, '700', 'center');
-                // Colour never carries the meaning alone: at goal also wears
-                // a tick, and the key under the card says what it means.
-                if (atGoal) text('✓', x + w - 9, ty + 10, 11, COLORS.meetsMark, '700', 'center');
-            });
-
+            text(k.label, layout.padX, y + 13, 14, COLORS.ink, '700');
+            if (k.goalText) text('Goal ' + k.goalText, layout.padX, y + 30, 11.5, COLORS.muted);
+            // The move, when the newest quarter held it, under the goal.
             if (k.improvement) {
-                text(k.improvement.short, layout.changeX, y + 17, 13, COLORS.meetsInk, '700');
-                text('since ' + k.improvement.since, layout.changeX, y + 34, 11, COLORS.muted);
+                text(k.improvement.short + ' since ' + k.improvement.since, layout.padX, y + 45, 11, COLORS.meetsInk, '700');
             }
+
+            k.points.forEach(function (p, i) { tile(p, layout.columnX[i], y); });
+            if (model.ytd) tile(k.ytd, layout.ytdX, y);
         });
 
         text('✓ Green tiles are at goal.', layout.padX, layout.footerY, 11.5, COLORS.muted);
