@@ -715,7 +715,6 @@ Generate the coaching email for ${preferredName} now.`;
         setCoachingLatestPeriodStatus(status, coachingLatestWeekKey, latestWeek);
         bindCoachingOutlookInputState(outlookBody, outlookBtn);
         bindCoachingEmailActionHandlers(select, generateBtn, outlookBtn);
-        if (typeof window.bindQuickCheckinHandlers === 'function') window.bindQuickCheckinHandlers();
     }
 
     // -- Export via DevCoachModules --------------------------------------------

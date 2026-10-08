@@ -7545,70 +7545,9 @@ function initializeCoachingEmail() {
     return window.DevCoachModules?.coachingEmail?.initializeCoachingEmail?.();
 }
 
-// ============================================
-// QUICK CHECK-IN (Teams message: praise + focus)
-// ============================================
-
-// This used to be a 214-line generator with its own greeting, intro, win,
-// focus and closer pools. A second, weaker implementation of the check-in
-// the Weekly Pulse tab already produced. Two pools meant the same associate
-// could get two different voices from the same app depending on which tab
-// you happened to be standing in, and only one of them was being improved.
-//
-// The Pulse builder is the real one: it reads the same period comparison the
-// Pulse tab shows, and it has the monthly/quarterly/kickoff variants. This is
-// now a thin adapter onto it.
-async function generateQuickCheckin() {
-    const select = document.getElementById('coachingEmployeeSelect');
-    const output = document.getElementById('quickCheckinOutput');
-    const copyBtn = document.getElementById('copyQuickCheckinBtn');
-    if (!select || !output) return;
-
-    const employeeName = (select.value || '').trim();
-    if (!employeeName) {
-        showToast('Pick an associate first.', 2500);
-        return;
-    }
-
-    const pulse = window.DevCoachModules?.morningPulse;
-    if (!pulse?.generateCheckinMessage || !pulse?.resolveCheckinPeriods) {
-        showToast('⚠️ Weekly Pulse module unavailable. Refresh and try again.', 3500);
-        return;
-    }
-
-    const periods = pulse.resolveCheckinPeriods();
-    if (!periods) {
-        showToast('Upload a week of data first.', 3000);
-        return;
-    }
-
-    const message = await pulse.generateCheckinMessage(
-        employeeName, periods.latestKey, periods.baselineKey
-    );
-    if (!message) {
-        showToast(`Not enough data to build a check-in for ${employeeName}.`, 3000);
-        return;
-    }
-
-    output.value = message;
-    output.style.display = 'block';
-    if (copyBtn) copyBtn.style.display = 'inline-block';
-
-    await copyToClipboard(message, { message: '📋 Quick check-in copied to clipboard' });
-}
-
-function bindQuickCheckinHandlers() {
-    const genBtn = document.getElementById('generateQuickCheckinBtn');
-    const copyBtn = document.getElementById('copyQuickCheckinBtn');
-    const output = document.getElementById('quickCheckinOutput');
-
-    if (genBtn) bindElementOnce(genBtn, 'click', generateQuickCheckin);
-    if (copyBtn && output) {
-        bindElementOnce(copyBtn, 'click', () => {
-            copyToClipboard(output.value || '', { button: copyBtn });
-        });
-    }
-}
+// The Coaching tab's Quick Check-in was the Today Check-in tone through the
+// same generator (morningPulse.generateCheckinMessage), so it went
+// (2026-10-07). The Check-in tone on the Today day page is that message.
 
 function getCallListeningEmployeeOptions() {
     const dataEmployees = getYearEndEmployees();

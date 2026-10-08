@@ -641,21 +641,6 @@ function recordKpiScoring() {
         return M().futures.buildFuturesData();
     });
 
-    record('futures / buildCheckInSummary per associate', () => {
-        const f = M().futures;
-        const data = f.buildFuturesData();
-        const out = {};
-        fixture.ALL_NAMES.forEach((n) => {
-            try { out[n] = f.buildCheckInSummary(n, data); } catch (err) { out[n] = '!! ' + err.message; }
-        });
-        return out;
-    });
-
-    cannotCover('dashboard / evaluateYearEndKpis',
-        'dashboard.module.js exports only render entry points; evaluateYearEndKpis '
-        + '(:87-109) is module-private and its results reach the DOM directly. Its rule '
-        + '("score >= 2 counts as on-track") is one of the four notions in AUDIT.md 2.2, '
-        + 'so it matters — but reaching it would mean exporting it, which is a code change.');
 }
 /* --- period math (pass 5) --- */
 

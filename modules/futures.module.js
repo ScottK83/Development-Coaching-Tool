@@ -953,7 +953,6 @@
             html += '<div style="margin-bottom: 24px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
             html += '<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4caf50; padding-bottom: 8px; margin-bottom: 0;">';
             html += '<h3 style="margin: 0; color: var(--text-primary);">' + _escapeHtml(emp.name) + '</h3>';
-            html += '<button type="button" class="futures-checkin-btn" data-employee="' + _escapeHtml(emp.name) + '" style="padding: 6px 16px; background: #1565c0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85em; white-space: nowrap;">Check-In Summary</button>';
             html += '</div>';
 
             if (emp.dataSource) {
@@ -1123,13 +1122,9 @@
 
         tableContainer.innerHTML = html;
 
-        // Bind check-in buttons
-        tableContainer.querySelectorAll('.futures-checkin-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var empName = btn.dataset.employee;
-                showCheckInModal(empName, data);
-            });
-        });
+        // The Check-In Summary modal is gone: it wrote the same goal-pace
+        // check-in as Score Card's Goal-Pace prompt (People > Numbers). The
+        // pace numbers it used are the ones in this table.
     }
 
     /** The five KPIs, as registry keys, in the order rankings uses. */
@@ -1188,193 +1183,11 @@
         return calculateRequiredAverage(currentAvg, weeksCompleted, weeksRemaining, target, volume);
     }
 
-    /**
-     * Build an employee-friendly check-in summary.
-     * Uses "next level" language — no score numbers, no goal values, no end dates.
-     */
-    function buildCheckInSummary(empName, data) {
-        var emp = null;
-        for (var i = 0; i < data.employees.length; i++) {
-            if (data.employees[i].name === empName) { emp = data.employees[i]; break; }
-        }
-        if (!emp) return 'No data available for ' + empName + '.';
-
-        var weekInfo = data.weekInfo;
-        var workingDaysLeft = getWorkingDaysRemaining();
-        var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[weekInfo.currentYear] || {};
-
-        var lines = [];
-        lines.push('Performance Check-In: ' + empName);
-        lines.push('');
-
-        var greatMetrics = [];
-        var improvementMetrics = [];
-
-        var metricKeys = Object.keys(emp.metrics);
-        metricKeys.forEach(function (metricKey) {
-            // Skip reliability — not shared with employees in check-ins
-            if (metricKey === 'reliability') return;
-
-            var m = emp.metrics[metricKey];
-            var metric = window.METRICS_REGISTRY[metricKey];
-            if (!metric) return;
-
-            var label = metric.label || metricKey;
-            var bandConfig = ratingBands[metricKey];
-
-            // Determine current score level
-            var score = null;
-            if (bandConfig) {
-                if (bandConfig.type === 'min') {
-                    if (m.currentAvg >= bandConfig.score3.min) score = 3;
-                    else if (m.currentAvg >= bandConfig.score2.min) score = 2;
-                    else score = 1;
-                } else {
-                    if (m.currentAvg <= bandConfig.score3.max) score = 3;
-                    else if (m.currentAvg <= bandConfig.score2.max) score = 2;
-                    else score = 1;
-                }
-            } else {
-                // No rating band — use meet/exceed status
-                if (m.currentlyExceeding) score = 3;
-                else if (m.currentlyMeeting) score = 2;
-                else score = 1;
-            }
-
-            if (score === 3) {
-                greatMetrics.push({ label: label, currentAvg: m.currentAvg, metricKey: metricKey });
-                return;
-            }
-
-            // Figure out the next level target
-            var nextTarget = null;
-            var levelLabel = 'next level';
-            if (bandConfig) {
-                if (score === 1) {
-                    nextTarget = bandConfig.type === 'min' ? bandConfig.score2.min : bandConfig.score2.max;
-                } else if (score === 2) {
-                    nextTarget = bandConfig.type === 'min' ? bandConfig.score3.min : bandConfig.score3.max;
-                    levelLabel = 'top level';
-                }
-            } else {
-                nextTarget = score === 1 ? m.meetTarget : m.exceedTarget;
-                if (score === 2) levelLabel = 'top level';
-            }
-
-            if (nextTarget === null) return;
-
-            // Calculate required daily average
-            var dailyTarget = null;
-            if (!m.isCumulative) {
-                var requiredAvg = calculateDailyTarget(m.currentAvg, weekInfo.weeksCompleted, weekInfo.weeksRemaining, nextTarget, m.volume);
-                if (requiredAvg !== null && isWithinReach(empName, metricKey, requiredAvg, weekInfo.yearKeys)) {
-                    dailyTarget = requiredAvg;
-                }
-            }
-
-            improvementMetrics.push({
-                label: label,
-                metricKey: metricKey,
-                currentAvg: m.currentAvg,
-                nextTarget: nextTarget,
-                dailyTarget: dailyTarget,
-                levelLabel: levelLabel,
-                isCumulative: m.isCumulative,
-                isReverse: m.isReverse,
-                budgetRemaining: m.budgetRemaining,
-                achievable: dailyTarget !== null || m.isCumulative
-            });
-        });
-
-        // Great metrics section
-        if (greatMetrics.length > 0) {
-            lines.push('DOING GREAT:');
-            greatMetrics.forEach(function (gm) {
-                lines.push('  ' + gm.label + ': ' + _formatMetricDisplay(gm.metricKey, gm.currentAvg) + ' to Top level! Keep it up.');
-            });
-            lines.push('');
-        }
-
-        // Improvement metrics section
-        if (improvementMetrics.length > 0) {
-            lines.push('AREAS TO FOCUS ON:');
-            improvementMetrics.forEach(function (im) {
-                var current = _formatMetricDisplay(im.metricKey, im.currentAvg);
-                if (im.isCumulative) {
-                    if (im.budgetRemaining > 0) {
-                        var perDay = workingDaysLeft > 0 ? im.budgetRemaining / workingDaysLeft : 0;
-                        lines.push('  ' + im.label + ': Currently at ' + current + '. You have ' + _formatMetricDisplay(im.metricKey, im.budgetRemaining) + ' remaining to stay within budget.');
-                    } else {
-                        lines.push('  ' + im.label + ': Currently at ' + current + '. Over budget. Minimize further usage.');
-                    }
-                } else if (im.dailyTarget !== null) {
-                    var targetDisplay = _formatMetricDisplay(im.metricKey, im.dailyTarget);
-                    var direction = im.isReverse ? 'at or below' : 'at or above';
-                    lines.push('  ' + im.label + ': Currently at ' + current + '. To reach the ' + im.levelLabel + ', aim for ' + direction + ' ' + targetDisplay + ' each day.');
-                } else {
-                    lines.push('  ' + im.label + ': Currently at ' + current + '. This one will be tough to move. Stay consistent and do your best.');
-                }
-            });
-            lines.push('');
-        }
-
-        if (improvementMetrics.length === 0 && greatMetrics.length > 0) {
-            lines.push('All metrics are at the top level. Outstanding work!');
-            lines.push('');
-        }
-
-        lines.push('Keep pushing. Every day counts!');
-
-        return lines.join('\n');
-    }
-
-    /**
-     * Show the check-in summary in a modal.
-     */
-    function showCheckInModal(empName, data) {
-        var summary = buildCheckInSummary(empName, data);
-
-        // Remove existing modal if any
-        var existing = document.getElementById('futuresCheckInModal');
-        if (existing) existing.remove();
-
-        var overlay = document.createElement('div');
-        overlay.id = 'futuresCheckInModal';
-        overlay.className = 'modal-overlay';
-        overlay.style.display = 'flex';
-
-        var content = document.createElement('div');
-        content.className = 'modal-content';
-        content.innerHTML =
-            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">' +
-                '<h3 style="margin: 0; color: var(--text-primary);">Check-In Summary</h3>' +
-                '<button id="futuresCheckInClose" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--text-secondary); padding: 0 4px;">&times;</button>' +
-            '</div>' +
-            '<pre id="futuresCheckInText" style="white-space: pre-wrap; font-family: Segoe UI, sans-serif; font-size: 0.92em; line-height: 1.6; background: var(--bg-surface-raised); padding: 16px; border-radius: 6px; border: 1px solid var(--border); max-height: 60vh; overflow-y: auto;">' + _escapeHtml(summary) + '</pre>' +
-            '<div style="margin-top: 16px; display: flex; gap: 10px;">' +
-                '<button id="futuresCheckInCopy" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Copy to Clipboard</button>' +
-            '</div>';
-
-        overlay.appendChild(content);
-        document.body.appendChild(overlay);
-
-        // Close handlers
-        document.getElementById('futuresCheckInClose').addEventListener('click', function () { overlay.remove(); });
-        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
-
-        // Copy handler
-        document.getElementById('futuresCheckInCopy').addEventListener('click', function () {
-            copyToClipboard(summary, { button: document.getElementById('futuresCheckInCopy') });
-        });
-    }
-
     /* ── Module export ── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.futures = {
         renderFutures: renderFutures,
         buildFuturesData: buildFuturesData,
-        buildCheckInSummary: buildCheckInSummary,
-        showCheckInModal: showCheckInModal,
         // Exported for the projection tests. These are the pieces that decide
         // what a person is told they have to do for the rest of the year, and
         // they are worth pinning down without a DOM in the way.

@@ -708,6 +708,17 @@
             totalScored++;
             if (isMet) metCount++;
 
+            // Reliability never goes in the areas to work on (Scott,
+            // 2026-10-05). Hours inside the allowance can still be a
+            // strength; hours over it appear in neither list. It still counts
+            // toward metCount above, which sets the Mid-Year tone, because that
+            // is KPI scoring and stays as it is. This list feeds both the
+            // Mid-Year prompt and the Goal-Pace prompt.
+            if (k === 'reliability') {
+                if (isMet) strengths.push({ label: m.label, val: m.val, unit: m.unit });
+                return;
+            }
+
             if (m.score <= 1) {
                 // Get tips
                 var tips = [];
@@ -728,9 +739,7 @@
                     var targetVal = actualTarget.value;
                     var gapToTarget = Math.abs(m.val - targetVal);
                     targetText = 'company target is ' + targetVal + ' ' + m.unit;
-                    if (k === 'reliability') {
-                        gapText = 'currently ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' over target. This is about Verint coding and pre-scheduling time off, not working harder';
-                    } else if (actualTarget.type === 'min') {
+                    if (actualTarget.type === 'min') {
                         gapText = 'needs to improve by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
                     } else {
                         gapText = 'needs to reduce by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
@@ -798,11 +807,10 @@
     }
 
     /* ── Goal-Pace Check-in Prompt (casual Teams message, via Copilot) ──
-     * Distinct from the Coaching tab's "Generate Quick Check-in", which
-     * writes the message directly off a week-over-week comparison. This one
-     * builds a Copilot prompt off YTD goal pace. Same-sounding buttons in two
-     * tabs doing different things is confusing, so the labels now say which
-     * is which. */
+     * Builds a Copilot prompt off YTD goal pace. It is the one goal-pace
+     * check-in: the Futures tab's Check-In Summary wrote the same message and
+     * was removed on 2026-10-07, and the week-over-week check-in lives on the
+     * Today day page as its Check-in tone. */
 
     function generateQuickCheckinPrompt() {
         var employeeName = document.getElementById('onOffTrackerEmployeeSelect')?.value;
