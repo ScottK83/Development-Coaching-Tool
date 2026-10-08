@@ -3449,28 +3449,17 @@
 
     /* Copy the picture, and say plainly when it could not be copied.
 
-       The ClipboardItem is built with the blob PROMISE rather than the blob, so
-       it is constructed inside the click and keeps the user activation the
-       clipboard demands; waiting for toBlob first loses it and the write is
-       refused. Where the clipboard will not take an image at all. Firefox and
-       Safari still refuse. The file downloads, and if even that fails the
-       picture is still on screen to be copied by hand. */
+       Through the shared copy (ui-utils copyImage), which builds the clipboard
+       item inside the click. When the clipboard refuses, nothing is saved to
+       the computer: it used to download the file on its own, which the work PC
+       does not allow (feedback-never-download-to-pc). The Save image button
+       is still there for a download you ask for. */
     function _copyYearImage(canvas, name) {
-        if (!canvas) return Promise.resolve(false);
-        if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) {
-            return _downloadCanvas(canvas, name).catch(function () { return false; });
-        }
-        var item;
-        try {
-            item = new window.ClipboardItem({ 'image/png': _canvasBlob(canvas) });
-        } catch (err) {
-            return _downloadCanvas(canvas, name).catch(function () { return false; });
-        }
-        return navigator.clipboard.write([item])
-            .then(function () { return 'copied'; })
-            .catch(function () {
-                return _downloadCanvas(canvas, name).catch(function () { return false; });
-            });
+        var ui = window.DevCoachModules && window.DevCoachModules.uiUtils;
+        if (!canvas || !ui || typeof ui.copyImage !== 'function') return Promise.resolve(false);
+        return ui.copyImage(canvas).then(function (result) {
+            return result.state === 'copied' ? 'copied' : false;
+        });
     }
 
     function _reportImageResult(result) {

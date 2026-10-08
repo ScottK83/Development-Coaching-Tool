@@ -898,17 +898,15 @@
     }
 
     async function copyGraphic() {
-        var toast = window.DevCoachModules?.uiUtils?.showToast;
+        var ui = window.DevCoachModules?.uiUtils;
         try {
-            var canvas = await renderGraphicToCanvas();
-            if (!canvas) { graphicStatus('There is nothing to copy yet.'); return; }
-
-            var blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
-            if (!blob) { graphicStatus('The image could not be built.'); return; }
-
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            // Handed over while the picture is still drawing, so the clipboard
+            // write starts inside the click. Awaiting the canvas first lost the
+            // click and the browser refused the write.
+            var result = await ui.copyImage(renderGraphicToCanvas());
+            if (result.state !== 'copied') throw new Error(result.reason);
             graphicStatus('');
-            if (toast) toast('Graphic copied. Paste it into Teams.');
+            if (ui.showToast) ui.showToast('Graphic copied. Paste it into Teams.');
         } catch (error) {
             // Clipboard image writing needs a secure context and a permission,
             // and neither is guaranteed. Say what happened and point at the

@@ -94,6 +94,7 @@ function load(t, store, ytd, extra) {
     t.loadModule('modules/metric-movement.module.js');
     t.loadModule('modules/period-compare.module.js');
     t.loadModule('modules/shared-utils.module.js');
+    t.loadModule('modules/ui-utils.module.js');
     t.loadModule('modules/quarter-trend.module.js');
     t.loadModule('modules/quarter-review.module.js');
     const readsBeforeRecap = io.reads;
@@ -842,8 +843,12 @@ suite('recap picture: copying never falls back to a download', (t) => {
         t.check(`file ${i}: no object URL`, !/createObjectURL/.test(text));
     });
     // Built with the blob promise, inside the click, or the clipboard refuses.
+    // The copy lives in ui-utils since 2026-10-08; the recap hands over to it.
+    const shared = fs.readFileSync(path.join(ROOT, 'modules/ui-utils.module.js'), 'utf8');
+    t.check('the recap copies through the shared copy', /ui\.copyImage\(canvas/.test(src));
     t.check('the clipboard item gets the promise, not an awaited blob',
-        /var blob = new Promise/.test(src) && /new window\.ClipboardItem\(\{ 'image\/png': blob \}\)/.test(src));
+        /var blob = Promise\.resolve\(source\)\.then/.test(shared) && /new window\.ClipboardItem\(\{ 'image\/png': blob \}\)/.test(shared));
+    t.check('and the shared copy never downloads', !/\.download\s*=/.test(shared) && !/createObjectURL/.test(shared));
 });
 
 /* ── The sent log ── */

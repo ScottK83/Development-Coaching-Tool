@@ -128,6 +128,68 @@
         document.head.appendChild(style);
     }
 
+    /**
+     * Put a picture on the clipboard. The one way the app does it.
+     *
+     * source is a canvas, or a promise of one (html2canvas still drawing).
+     * The ClipboardItem is built with a promise of the PNG, synchronously, so
+     * it is made inside the click and keeps the user activation the clipboard
+     * demands. Waiting for the picture first loses it, which is why Snapshot
+     * and Contest copies failed more often than the others.
+     *
+     * Nothing is ever saved to the computer as a fallback: the work PC does not
+     * allow it (feedback-never-download-to-pc). Resolves { state: 'copied' |
+     * 'unsupported' | 'failed', reason }, with the browser's own words in
+     * reason because there is no console to read them in. Never rejects.
+     * Moved here from quarter-recap (2026-10-08) so every export shares it.
+     */
+    var COPY_IMAGE_TIMEOUT_MS = 10000;
+    function copyImage(source, options) {
+        var timeoutMs = (options && options.timeoutMs) || COPY_IMAGE_TIMEOUT_MS;
+        if (!source) return Promise.resolve({ state: 'failed', reason: 'There is no picture to copy.' });
+        var isPromise = typeof source.then === 'function';
+        if (!isPromise && typeof source.toBlob !== 'function') {
+            return Promise.resolve({ state: 'failed', reason: 'There is no picture to copy.' });
+        }
+        var nav = typeof navigator !== 'undefined' ? navigator : null;
+        if (!(window.ClipboardItem && nav && nav.clipboard && typeof nav.clipboard.write === 'function')) {
+            return Promise.resolve({ state: 'unsupported', reason: 'This browser cannot put a picture on the clipboard.' });
+        }
+        var blob = Promise.resolve(source).then(function (canvas) {
+            return new Promise(function (resolve, reject) {
+                if (!canvas || typeof canvas.toBlob !== 'function') { reject(new Error('There is no picture to copy.')); return; }
+                canvas.toBlob(function (b) { if (b) resolve(b); else reject(new Error('The picture could not be made.')); }, 'image/png');
+            });
+        });
+        var write;
+        try {
+            var item = new window.ClipboardItem({ 'image/png': blob });
+            write = nav.clipboard.write([item]);
+        } catch (err) {
+            return Promise.resolve({ state: 'failed', reason: copyImageReason(err) });
+        }
+        var timer = null;
+        var timedOut = new Promise(function (resolve) {
+            timer = setTimeout(function () {
+                resolve({ state: 'failed', reason: 'The clipboard did not answer within ' + Math.round(timeoutMs / 1000) + ' seconds.' });
+            }, timeoutMs);
+        });
+        var written = Promise.resolve(write).then(
+            function () { return { state: 'copied', reason: '' }; },
+            function (err) { return { state: 'failed', reason: copyImageReason(err) }; });
+        return Promise.race([written, timedOut]).then(function (result) {
+            clearTimeout(timer);
+            return result;
+        });
+    }
+
+    function copyImageReason(err) {
+        if (!err) return 'The browser refused without saying why.';
+        var name = err.name ? String(err.name) : '';
+        var msg = err.message ? String(err.message) : String(err);
+        return name && msg.indexOf(name) !== 0 ? name + ': ' + msg : msg;
+    }
+
     // Initialize animations on module load
     injectUIAnimations();
 
@@ -136,6 +198,7 @@
     window.DevCoachModules.uiUtils = {
         showToast,
         copyToClipboard,
+        copyImage,
         flashButton,
         injectUIAnimations
     };

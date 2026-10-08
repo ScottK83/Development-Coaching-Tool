@@ -792,12 +792,6 @@
         return canvas;
     }
 
-    function _reason(err) {
-        if (!err) return 'The browser refused without saying why.';
-        var name = err.name ? String(err.name) : '';
-        var msg = err.message ? String(err.message) : String(err);
-        return name && msg.indexOf(name) !== 0 ? name + ': ' + msg : msg;
-    }
 
     /* Put the picture on the clipboard.
      *
@@ -811,37 +805,11 @@
      * them in. Never rejects.
      */
     function copyCardImage(canvas, options) {
-        var timeoutMs = (options && options.timeoutMs) || COPY_TIMEOUT_MS;
-        if (!canvas || typeof canvas.toBlob !== 'function') {
-            return Promise.resolve({ state: 'failed', reason: 'There is no picture to copy.' });
+        var ui = window.DevCoachModules && window.DevCoachModules.uiUtils;
+        if (!ui || typeof ui.copyImage !== 'function') {
+            return Promise.resolve({ state: 'failed', reason: 'The copy helper did not load. Reload the page.' });
         }
-        var nav = typeof navigator !== 'undefined' ? navigator : null;
-        if (!(window.ClipboardItem && nav && nav.clipboard && typeof nav.clipboard.write === 'function')) {
-            return Promise.resolve({ state: 'unsupported', reason: 'This browser cannot put a picture on the clipboard.' });
-        }
-        var blob = new Promise(function (resolve, reject) {
-            canvas.toBlob(function (b) { if (b) resolve(b); else reject(new Error('The picture could not be made.')); }, 'image/png');
-        });
-        var write;
-        try {
-            var item = new window.ClipboardItem({ 'image/png': blob });
-            write = nav.clipboard.write([item]);
-        } catch (err) {
-            return Promise.resolve({ state: 'failed', reason: _reason(err) });
-        }
-        var timer = null;
-        var timedOut = new Promise(function (resolve) {
-            timer = setTimeout(function () {
-                resolve({ state: 'failed', reason: 'The clipboard did not answer within ' + Math.round(timeoutMs / 1000) + ' seconds.' });
-            }, timeoutMs);
-        });
-        var written = Promise.resolve(write).then(
-            function () { return { state: 'copied', reason: '' }; },
-            function (err) { return { state: 'failed', reason: _reason(err) }; });
-        return Promise.race([written, timedOut]).then(function (result) {
-            clearTimeout(timer);
-            return result;
-        });
+        return ui.copyImage(canvas, { timeoutMs: (options && options.timeoutMs) || COPY_TIMEOUT_MS });
     }
 
     /* ── The log of what went out ──

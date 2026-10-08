@@ -2427,7 +2427,7 @@ function finalizeTrendEmailImageOutput(canvas, empName, period, onClipboardReady
             return;
         }
 
-        copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady);
+        copyTrendImageToClipboard(pngBlob, empName, period, onClipboardReady);
     }, 'image/png');
 }
 
@@ -2911,7 +2911,7 @@ function buildTrendMetricMaps(metricOrder, current, previous) {
     return { metrics, prevMetrics };
 }
 
-function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboardReady) {
+function copyTrendImageToClipboard(pngBlob, empName, period, onClipboardReady) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const dataUrl = e.target.result;
@@ -2934,20 +2934,14 @@ function copyTrendImageToClipboardOrDownload(pngBlob, empName, period, onClipboa
                     if (onClipboardReady) onClipboardReady();
                 }).catch(err2 => {
                     console.error('Image clipboard error:', err2);
-                    // Say what happened. Both success paths toast, and this one
-                    // used to drop a file into the downloads folder in silence,
-                    // which reads exactly like a copy that worked until you go
-                    // to paste it. Firefox and Safari take this path routinely.
-                    downloadImageFallback(pngBlob, empName, period);
-                    showToast('Image saved to your downloads. Attach it to the email, the clipboard would not take it.', 4000);
-                    if (onClipboardReady) onClipboardReady();
+                    // Nothing is saved to the computer (the work PC does not
+                    // allow it), and the draft does not open: pasting into it
+                    // would put in whatever picture was copied before.
+                    showToast('The picture could not be copied: ' + (err2?.message || 'the clipboard refused it') + '. Try Send Metrics again.', 5000);
                 });
             });
         } else {
-            if (window.DEBUG) console.log('Clipboard API not available, downloading instead');
-            downloadImageFallback(pngBlob, empName, period);
-            showToast('Image saved to your downloads. Attach it to the email, the clipboard would not take it.', 4000);
-            if (onClipboardReady) onClipboardReady();
+            showToast('This browser cannot copy a picture, so the draft was not opened. Open the app in Chrome or Edge.', 5000);
         }
     };
     reader.readAsDataURL(pngBlob);
@@ -3105,16 +3099,6 @@ function buildTrendHighlightsData(metricOrder, metrics, prevMetrics, centerAvg, 
     return { improvedMetrics, keyWins, focusMetrics };
 }
 
-function downloadImageFallback(blob, empName, period) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const periodMetadata = period.metadata || {};
-    a.download = `TrendReport_${empName}_${periodMetadata.startDate || 'unknown'}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('ℹ️ Image downloaded!', 4000);
-}
 
 function drawEmailCard(ctx, x, y, w, h, bgColor, borderColor, title, mainText, subText) {
     // Card background
@@ -4110,11 +4094,10 @@ function generateTeamTrendSummary(weekKeyArg) {
         drawTrendLegendOnCanvas,
         drawTrendReliabilityNoteOnCanvas,
         buildTrendMetricMaps,
-        copyTrendImageToClipboardOrDownload,
+        copyTrendImageToClipboard,
         calculateTrendSurveyTotals,
         calculateTrendSummaryStats,
         buildTrendHighlightsData,
-        downloadImageFallback,
         drawEmailCard,
         wrapCanvasTextLines,
         drawTrendSummaryBoxesOnCanvas,
@@ -4218,11 +4201,10 @@ function generateTeamTrendSummary(weekKeyArg) {
     window.drawTrendLegendOnCanvas = drawTrendLegendOnCanvas;
     window.drawTrendReliabilityNoteOnCanvas = drawTrendReliabilityNoteOnCanvas;
     window.buildTrendMetricMaps = buildTrendMetricMaps;
-    window.copyTrendImageToClipboardOrDownload = copyTrendImageToClipboardOrDownload;
+    window.copyTrendImageToClipboard = copyTrendImageToClipboard;
     window.calculateTrendSurveyTotals = calculateTrendSurveyTotals;
     window.calculateTrendSummaryStats = calculateTrendSummaryStats;
     window.buildTrendHighlightsData = buildTrendHighlightsData;
-    window.downloadImageFallback = downloadImageFallback;
     window.drawEmailCard = drawEmailCard;
     window.wrapCanvasTextLines = wrapCanvasTextLines;
     window.drawTrendSummaryBoxesOnCanvas = drawTrendSummaryBoxesOnCanvas;

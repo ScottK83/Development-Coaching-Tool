@@ -1007,30 +1007,17 @@
             return;
         }
 
-        window.html2canvas(el, snapshotCanvasOptions()).then(function(canvas) {
-            canvas.toBlob(function(blob) {
-                if (!blob) {
-                    alert('Failed to create image blob.');
-                    return;
-                }
-                try {
-                    var item = new ClipboardItem({ 'image/png': blob });
-                    navigator.clipboard.write([item]).then(function() {
-                        var toast = window.DevCoachModules?.uiUtils?.showToast;
-                        if (toast) {
-                            toast('Snapshot copied to clipboard! Paste into Teams.');
-                        } else {
-                            alert('Copied to clipboard! Paste into Teams.');
-                        }
-                    }).catch(function(err) {
-                        console.error('Clipboard write failed:', err);
-                        alert('Clipboard access denied. Use the Download button instead.');
-                    });
-                } catch(e) {
-                    console.error('ClipboardItem not supported:', e);
-                    alert('Your browser does not support clipboard image copy. Use the Download button instead.');
-                }
-            }, 'image/png');
+        // Handed over while html2canvas is still drawing, so the clipboard
+        // write starts inside the click. Waiting for the canvas and then the
+        // blob lost the click, and the browser refused the write.
+        var ui = window.DevCoachModules?.uiUtils;
+        ui.copyImage(window.html2canvas(el, snapshotCanvasOptions())).then(function(result) {
+            if (result.state === 'copied') {
+                if (ui.showToast) ui.showToast('Snapshot copied to clipboard! Paste into Teams.');
+                else alert('Copied to clipboard! Paste into Teams.');
+                return;
+            }
+            alert('The snapshot could not be copied: ' + result.reason + '\n\nUse the Download button instead.');
         });
     }
 
