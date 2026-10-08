@@ -223,58 +223,12 @@
                 `${mark}${dayName}</button>`;
         }).join('');
 
-        // The rest of My Team is a quieter second group. Still one click away,
-        // but visibly not the main thing you came here to do.
-        // Highlights and Celebrations (with the Weekly Pulse and Cheerleader
-        // inside it) used to sit here too. Everything they did lives on this
-        // page now, under the one window, so they went.
-        const others = [
-            { id: 'subSectionCoachingEmail', btn: 'subNavCoachingEmail', label: 'Coaching' },
-            { id: 'subSectionTeamSnapshot', btn: 'subNavTeamSnapshot', label: 'Snapshot' },
-            { id: 'subSectionCallListening', btn: 'subNavCallListening', label: 'Calls' },
-            { id: 'subSectionReliability', btn: 'subNavReliability', label: 'Attendance' }
-        ].map(o => `<button type="button" class="mt-other-tab" data-section="${o.id}" data-btn="${o.btn}" ` +
-            `style="background:none; border:none; padding:10px 6px; cursor:pointer; color:var(--text-secondary); font-size:0.9em; text-decoration:underline;">${o.label}</button>`
-        ).join('<span style="color:var(--border-strong);">·</span>');
-
+        // Coaching, Calls and Attendance used to sit beside the days as a
+        // quieter second group. They live under People now, and Snapshot is a
+        // tab of Today's own, so the row is the days alone.
         return `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:18px;">` +
             tabs +
-            `<span style="margin-left:auto; display:flex; align-items:center; gap:2px;">${others}</span>` +
         `</div>`;
-    }
-
-    /**
-     * Open one of the quieter tabs and let it draw itself.
-     *
-     * Showing a sub-section and initialising it are two different things, and
-     * the nav row that used to do both is gone. One place owns the pairing now
-     * because two owned it before and they disagreed: the hidden row embedded
-     * the snapshot's markup before initialising it, the day hub's row did not,
-     * and the snapshot tab opened blank as a result. Reloading onto one of
-     * these tabs comes through here as well, so a refresh lands on a drawn
-     * panel rather than an empty one.
-     */
-    const TAB_INITIALISERS = {
-        subSectionCoachingEmail: () => window.initializeCoachingEmail?.(),
-        // The snapshot's markup ships in a standalone section and is moved into
-        // this panel on first open. embedTeamSnapshot runs the initialiser
-        // itself once the content is actually in the panel.
-        subSectionTeamSnapshot: () => window.embedTeamSnapshot?.(),
-        subSectionCallListening: () => window.initializeCallListeningSection?.(),
-        subSectionReliability: () => {
-            mods().reliability?.initialize?.();
-            // The time-off tracker lives under the attendance dashboard. It
-            // reads the PTO balance PDF, which nothing else does.
-            window.embedPtoTracker?.();
-        }
-    };
-
-    function openTab(subSectionId, buttonId) {
-        if (typeof window.showMyTeamSubSection === 'function') {
-            window.showMyTeamSubSection(subSectionId, buttonId);
-        }
-        const init = TAB_INITIALISERS[subSectionId];
-        if (init) init();
     }
 
     // --- What's behind the message ---
@@ -459,10 +413,6 @@
         });
 
         bindWindowPicker(container.querySelector('#myTeamWindowPicker'));
-
-        container.querySelectorAll('.mt-other-tab').forEach(btn => {
-            btn.addEventListener('click', () => openTab(btn.dataset.section, btn.dataset.btn));
-        });
 
         const messageEl = document.getElementById('myTeamDayMessage');
         if (person) {
@@ -1286,8 +1236,6 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.myTeam = {
         initializeMyTeam,
-        openTab,
-        TAB_INITIALISERS,
         renderDayPage,
         renderDayTabs,
         renderToneRow,

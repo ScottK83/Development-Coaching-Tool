@@ -40,10 +40,15 @@ suite('my team: the tab strip carries the whole week at a glance', (t) => {
     });
     t.check('the weekend recap is not offered', html.indexOf('Weekend') === -1);
 
-    // The quieter second group is still reachable — the point was to stop it
-    // competing with the days, not to delete working features.
-    ['Coaching', 'Snapshot', 'Calls', 'Attendance'].forEach(label => {
-        t.check(`${label} is still one click away`, html.indexOf('>' + label + '</button>') > -1);
+    // Coaching, Calls and Attendance moved to People and Snapshot to a tab of
+    // Today (2026-10-07). The day row carries the days alone, and each of the
+    // four still has a button of its own.
+    t.check('the day row no longer offers the old quiet links', html.indexOf('mt-other-tab') === -1);
+    const fs = require('fs');
+    const path = require('path');
+    const index = fs.readFileSync(path.join(require('./harness').ROOT, 'index.html'), 'utf8');
+    ['subNavPeCoach', 'subNavPeCalls', 'subNavPeAttendance', 'subNavTdSnapshot'].forEach(id => {
+        t.check(`${id} is still one click away`, index.indexOf('id="' + id + '"') > -1);
     });
 
     t.check('the selected day is marked', html.indexOf('data-day="wednesday"') > -1);

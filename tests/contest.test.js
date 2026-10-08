@@ -298,10 +298,12 @@ suite('contest: the feature is wired and self-contained', (t) => {
     const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8').replace(/\r\n/g, '\n');
     const nav = fs.readFileSync(path.join(ROOT, 'modules/navigation.module.js'), 'utf8');
 
-    t.check('there is a Contest button', html.indexOf('id="contestBtn"') > -1);
-    t.check('and a section for it', html.indexOf('id="contestSection"') > -1);
-    t.check('the button is wired', src.indexOf("getElementById('contestBtn')") > -1);
-    t.check('and navigation knows the section', nav.indexOf('contestSection') > -1);
+    // Contest is a tab of Today since 2026-10-07 (it was a top-nav item).
+    t.check('there is a Contest button', html.indexOf('id="subNavTdContest"') > -1);
+    t.check('and a panel for it', html.indexOf('id="contestSection"') > -1);
+    t.check('the button is wired', src.indexOf("getElementById('subNavTdContest')") > -1);
+    t.check('and navigation knows the tab', nav.indexOf('subSectionTodayContest') > -1);
+    t.check('and carries an old saved Contest state to it', nav.indexOf("'contestSection'") > -1);
 
     // Both modules load, logic before panel.
     const logic = html.indexOf("'modules/contest.module.js'");
@@ -312,7 +314,7 @@ suite('contest: the feature is wired and self-contained', (t) => {
     // The panel is built in JS, so the shell stays small and the whole feature
     // is three files that lift out together when the month ends.
     const section = html.slice(html.indexOf('id="contestSection"'));
-    t.check('the section ships empty', section.slice(0, 80).indexOf('</section>') > -1);
+    t.check('the section ships empty', section.slice(0, 40).indexOf('></div>') > -1);
 
     // Nothing is stored in the browser. The panel reads and writes R2 directly,
     // so the numbers live in one place and the machine that typed them stops

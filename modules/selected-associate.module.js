@@ -29,6 +29,8 @@
     // Every employee picker in the app. Adding one here is all it takes to
     // join the shared selection.
     var PICKER_IDS = [
+        // The one picker at the top of People. Every panel under it follows.
+        'peopleAssociateSelect',
         'coachingEmployeeSelect',
         'yearEndEmployeeSelect',
         'onOffTrackerEmployeeSelect',

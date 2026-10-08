@@ -312,6 +312,12 @@ function showTrendsSubSection(subSectionId, activeButtonId = null) {
 function showReviewPrepSubSection(subSectionId, activeButtonId = null) {
     window.DevCoachModules?.navigation?.showReviewPrepSubSection?.(subSectionId, activeButtonId);
 }
+function showPeopleSubSection(subSectionId, activeButtonId = null) {
+    window.DevCoachModules?.navigation?.showPeopleSubSection?.(subSectionId, activeButtonId);
+}
+function showTrendsInnerSubSection(subSectionId, activeButtonId = null) {
+    window.DevCoachModules?.navigation?.showTrendsInnerSubSection?.(subSectionId, activeButtonId);
+}
 function saveUiNavState(partialState = {}) {
     window.DevCoachModules?.navigation?.saveUiNavState?.(partialState);
 }
@@ -1858,84 +1864,87 @@ function embedPtoTracker() {
 
 function bindNavigationHandlers() {
     // --- Top-level nav ---
-    document.getElementById('dashboardBtn')?.addEventListener('click', () => {
-        showOnlySection('dashboardSection');
-        initializeDashboard();
-    });
+    // Today, People and Center answer the three questions: how is the team
+    // today, how is one person doing, how does the center look. Upload and
+    // Settings are the utilities. The layout this replaced is recorded in
+    // audit/2026-10-07-layout-before-condense.md.
     document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('uploadSection'));
 
-    // --- My Team ---
+    // --- Today ---
+    // The top button always opens the day page: it is the landing page.
     document.getElementById('coachingEmailBtn')?.addEventListener('click', () => {
         showOnlySection('coachingEmailSection');
-        showMyTeamSubSection('subSectionMyTeamDay');
+        showMyTeamSubSection('subSectionMyTeamDay', 'subNavTdDay');
         window.DevCoachModules?.myTeam?.initializeMyTeam?.();
     });
-
-    // --- Trends & Analysis ---
-    document.getElementById('trendsAnalysisBtn')?.addEventListener('click', () => {
-        showOnlySection('trendsAnalysisSection');
-        showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
-        ensureTrendIntelligenceMountedInTrends();
-        renderExecutiveSummary();
+    document.getElementById('subNavTdDay')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionMyTeamDay', 'subNavTdDay');
+        window.DevCoachModules?.myTeam?.initializeMyTeam?.();
     });
-    document.getElementById('subNavTaIntelligence')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
-        ensureTrendIntelligenceMountedInTrends();
-        renderExecutiveSummary();
+    // What the Dashboard used to be.
+    document.getElementById('subNavTdYear')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionTodayYear', 'subNavTdYear');
+        initializeDashboard();
     });
-    document.getElementById('subNavTaMetricCharts')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaMetricTrends', 'subNavTaMetricCharts');
-        ensureMetricTrendsMountedInTrends();
-        initializeMetricTrends();
+    document.getElementById('subNavTdSnapshot')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionTeamSnapshot', 'subNavTdSnapshot');
+        // The snapshot's markup ships in a standalone section and is moved
+        // into this panel on first open. embedTeamSnapshot runs the
+        // initialiser itself once the content is actually in the panel.
+        embedTeamSnapshot();
     });
-    document.getElementById('subNavTaRankings')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaCenterRanking', 'subNavTaRankings');
-        ensureTrendsMounted('subSectionCenterRanking', 'subSectionTaCenterRanking');
-        if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking();
-    });
-    document.getElementById('subNavTaFutures')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaFutures', 'subNavTaFutures');
-        ensureTrendsMounted('subSectionFutures', 'subSectionTaFutures');
-        if (typeof window.renderFutures === 'function') window.renderFutures();
-    });
-    document.getElementById('subNavTaSentiment')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaSentiment', 'subNavTaSentiment');
-        ensureSentimentMountedInTrends();
-    });
-    document.getElementById('subNavTaMatchup')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaMatchup', 'subNavTaMatchup');
-        var matchupMod = window.DevCoachModules?.matchup;
-        if (matchupMod?.renderMatchup) matchupMod.renderMatchup();
-    });
-    document.getElementById('subNavTaYoY')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaYoY', 'subNavTaYoY');
-        if (window.DevCoachModules?.yoyComparison?.renderYoYComparison) {
-            window.DevCoachModules.yoyComparison.renderYoYComparison();
-        }
-    });
-    document.getElementById('subNavTaPatterns')?.addEventListener('click', () => {
-        showTrendsSubSection('subSectionTaPatterns', 'subNavTaPatterns');
-        var stab = window.DevCoachModules?.metricStability;
-        var container = document.getElementById('subSectionTaPatterns');
-        if (stab?.render && container) stab.render(container);
+    // Contest draws its whole panel in JS, so showing it without running the
+    // renderer leaves an empty page.
+    document.getElementById('subNavTdContest')?.addEventListener('click', () => {
+        showMyTeamSubSection('subSectionTodayContest', 'subNavTdContest');
+        window.DevCoachModules?.contestUi?.show?.();
     });
 
-    // --- Review Prep ---
-    document.getElementById('reviewPrepBtn')?.addEventListener('click', () => {
-        showOnlySection('reviewPrepSection');
-        ensureReviewPrepMounted('subSectionOnOffTracker');
-        showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
+    // --- People ---
+    // The top button reopens the tab you left, so a run of check-ins stays on
+    // Reviews while you change who is picked.
+    document.getElementById('peopleBtn')?.addEventListener('click', () => {
+        showOnlySection('peopleSection');
+        populatePeoplePicker();
+        window.DevCoachModules?.navigation?.restorePeopleTab?.();
+    });
+    document.getElementById('subNavPeNumbers')?.addEventListener('click', () => {
+        ensurePeopleMounted('subSectionOnOffTracker');
+        showPeopleSubSection('subSectionOnOffTracker', 'subNavPeNumbers');
         initializeOnOffTracker();
     });
+    document.getElementById('subNavPeCoach')?.addEventListener('click', () => {
+        ensurePeopleMounted('subSectionCoachingEmail');
+        showPeopleSubSection('subSectionCoachingEmail', 'subNavPeCoach');
+        initializeCoachingEmail();
+    });
+    document.getElementById('subNavPeCalls')?.addEventListener('click', () => {
+        ensurePeopleMounted('subSectionCallListening');
+        showPeopleSubSection('subSectionCallListening', 'subNavPeCalls');
+        initializeCallListeningSection();
+    });
+    document.getElementById('subNavPeAttendance')?.addEventListener('click', () => {
+        ensurePeopleMounted('subSectionReliability');
+        showPeopleSubSection('subSectionReliability', 'subNavPeAttendance');
+        window.DevCoachModules?.reliability?.initialize?.();
+        // The time-off tracker lives under the attendance dashboard. It reads
+        // the PTO balance PDF, which nothing else does.
+        embedPtoTracker();
+    });
+    document.getElementById('subNavPeFollowUp')?.addEventListener('click', () => {
+        ensureFollowUpMounted();
+        showPeopleSubSection('subSectionFollowUp', 'subNavPeFollowUp');
+    });
+    document.getElementById('subNavPeReviews')?.addEventListener('click', () => {
+        showPeopleSubSection('subSectionReviews', 'subNavPeReviews');
+        window.DevCoachModules?.navigation?.restoreReviewsTab?.();
+    });
+
+    // --- People > Reviews (the old Review Prep) ---
     document.getElementById('subNavRpMeetings')?.addEventListener('click', () => {
         ensureReviewPrepMounted('subSectionMeetings');
         showReviewPrepSubSection('subSectionMeetings', 'subNavRpMeetings');
         window.DevCoachModules?.oneOnOneUi?.initializeOneOnOne?.();
-    });
-    document.getElementById('subNavRpScoreCard')?.addEventListener('click', () => {
-        ensureReviewPrepMounted('subSectionOnOffTracker');
-        showReviewPrepSubSection('subSectionOnOffTracker', 'subNavRpScoreCard');
-        initializeOnOffTracker();
     });
     document.getElementById('subNavRpQuarterly')?.addEventListener('click', () => {
         ensureReviewPrepMounted('subSectionQ1Review');
@@ -1959,6 +1968,94 @@ function bindNavigationHandlers() {
         ensureReviewPrepMounted('subSectionYearEnd');
         showReviewPrepSubSection('subSectionYearEnd', 'subNavRpYearEnd');
         initializeYearEndComments();
+    });
+
+    // --- Center (the old Trends) ---
+    document.getElementById('trendsAnalysisBtn')?.addEventListener('click', () => {
+        showOnlySection('trendsAnalysisSection');
+        window.DevCoachModules?.navigation?.restoreCenterTab?.();
+    });
+    document.getElementById('subNavTaRankings')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaCenterRanking', 'subNavTaRankings');
+        ensureTrendsMounted('subSectionCenterRanking', 'subSectionTaCenterRanking');
+        if (typeof window.renderCenterRanking === 'function') window.renderCenterRanking();
+    });
+    document.getElementById('subNavTaMatchup')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaMatchup', 'subNavTaMatchup');
+        var matchupMod = window.DevCoachModules?.matchup;
+        if (matchupMod?.renderMatchup) matchupMod.renderMatchup();
+    });
+    document.getElementById('subNavTaFutures')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaFutures', 'subNavTaFutures');
+        ensureTrendsMounted('subSectionFutures', 'subSectionTaFutures');
+        if (typeof window.renderFutures === 'function') window.renderFutures();
+    });
+    // Trends holds the four views that used to be tabs of their own.
+    document.getElementById('subNavTaMetricCharts')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaTrendsGroup', 'subNavTaMetricCharts');
+        window.DevCoachModules?.navigation?.restoreTrendsInnerTab?.();
+    });
+    document.getElementById('innerNavTrReports')?.addEventListener('click', () => {
+        showTrendsInnerSubSection('subSectionTaMetricTrends', 'innerNavTrReports');
+        ensureMetricTrendsMountedInTrends();
+        initializeMetricTrends();
+    });
+    document.getElementById('innerNavTrYoY')?.addEventListener('click', () => {
+        showTrendsInnerSubSection('subSectionTaYoY', 'innerNavTrYoY');
+        if (window.DevCoachModules?.yoyComparison?.renderYoYComparison) {
+            window.DevCoachModules.yoyComparison.renderYoYComparison();
+        }
+    });
+    document.getElementById('innerNavTrPatterns')?.addEventListener('click', () => {
+        showTrendsInnerSubSection('subSectionTaPatterns', 'innerNavTrPatterns');
+        var stab = window.DevCoachModules?.metricStability;
+        var container = document.getElementById('subSectionTaPatterns');
+        if (stab?.render && container) stab.render(container);
+    });
+    document.getElementById('innerNavTrSentiment')?.addEventListener('click', () => {
+        showTrendsInnerSubSection('subSectionTaSentiment', 'innerNavTrSentiment');
+        ensureSentimentMountedInTrends();
+    });
+    document.getElementById('subNavTaIntelligence')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
+        ensureTrendIntelligenceMountedInTrends();
+        renderExecutiveSummary();
+    });
+}
+
+// --- DOM mount helpers for People ---
+// Numbers, Coach, Calls and Attendance are panels written inside the Today
+// section's markup. They move into #peopleContent the first time they open.
+
+function ensurePeopleMounted(subSectionId) {
+    var container = document.getElementById('peopleContent');
+    var subSection = document.getElementById(subSectionId);
+    if (!container || !subSection) return;
+    if (subSection.parentElement !== container) container.appendChild(subSection);
+    subSection.style.display = 'block';
+}
+
+// Follow Up's three panels ship in their own hidden section. Their listeners
+// are bound at boot and travel with the elements.
+function ensureFollowUpMounted() {
+    var target = document.getElementById('subSectionFollowUp');
+    var source = document.getElementById('redFlagSection');
+    if (!target || !source || target.querySelector('#followUpPanel')) return;
+    target.append(...source.childNodes);
+}
+
+/**
+ * The one associate picker at the top of People.
+ *
+ * It joins the shared selection (selected-associate.module.js), so picking
+ * here moves every panel underneath to that person, and a person picked on
+ * any other screen is already chosen here.
+ */
+function populatePeoplePicker() {
+    const select = document.getElementById('peopleAssociateSelect');
+    if (!select) return;
+    window.DevCoachModules?.associatePicker?.populateSelect?.(select, getYearEndEmployees(), {
+        selected: window.DevCoachModules?.selectedAssociate?.get?.() || ''
     });
 }
 
@@ -2081,12 +2178,6 @@ function bindManageDataNavigationHandlers() {
 }
 
 function bindQuickActionHandlers() {
-    document.getElementById('redFlagBtn')?.addEventListener('click', () => showOnlySection('redFlagSection'));
-    document.getElementById('contestBtn')?.addEventListener('click', () => {
-        showOnlySection('contestSection');
-        window.DevCoachModules?.contestUi?.show?.();
-    });
-
     document.getElementById('refreshDebugBtn')?.addEventListener('click', renderDebugPanel);
     document.getElementById('copyDebugBtn')?.addEventListener('click', copyDebugInfo);
     document.getElementById('clearDebugBtn')?.addEventListener('click', () => {
@@ -4932,7 +5023,7 @@ function deleteEmployeeDataByYear(employeeName, reviewYear) {
 // shortcut may as well not exist.
 const KEYBOARD_SHORTCUTS = [
     { keys: 'Ctrl + S', label: 'Back up / export data' },
-    { keys: 'Ctrl + H', label: 'Jump to My Team' },
+    { keys: 'Ctrl + H', label: 'Jump to Today' },
     { keys: 'Ctrl + T', label: 'Jump to Coaching Tips' },
     { keys: 'Esc',      label: 'Close the open dialog' },
     { keys: '?',        label: 'Show this list' }
@@ -4998,7 +5089,7 @@ function initializeKeyboardShortcuts() {
             document.getElementById('exportDataBtn')?.click();
         }
 
-        // Ctrl+H - My Team
+        // Ctrl+H - Today
         if (e.ctrlKey && e.key === 'h') {
             e.preventDefault();
             document.getElementById('coachingEmailBtn')?.click();

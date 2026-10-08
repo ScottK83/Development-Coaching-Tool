@@ -4,17 +4,26 @@
     var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
     var UI_NAV_STATE_STORAGE_KEY = STORAGE_PREFIX + 'uiNavState';
 
+    // The app is three questions plus two utilities (2026-10-07):
+    //   Today  - the team right now (the old My Team section, still
+    //            coachingEmailSection, with the Dashboard and Contest under it)
+    //   People - one associate, everything about them
+    //   Center - the call center as a whole (the old Trends section, still
+    //            trendsAnalysisSection)
+    //   Upload, Settings
+    // The old Dashboard, Review Prep, Follow Up and Contest sections are gone
+    // from the nav. A saved state naming one of them is rewritten on load, see
+    // migrateToCondensedLayout. The layout before this is recorded in
+    // audit/2026-10-07-layout-before-condense.md.
+
     // CSS uses .top-nav-btn[style*="gradient"] to style the active top-nav
     // button, so toggling the active state means moving an inline gradient
     // from one button to another.
     var SECTION_TO_TOP_NAV_BTN = {
-        dashboardSection: 'dashboardBtn',
-        uploadSection: 'homeBtn',
         coachingEmailSection: 'coachingEmailBtn',
+        peopleSection: 'peopleBtn',
         trendsAnalysisSection: 'trendsAnalysisBtn',
-        reviewPrepSection: 'reviewPrepBtn',
-        redFlagSection: 'redFlagBtn',
-        contestSection: 'contestBtn',
+        uploadSection: 'homeBtn',
         manageDataSection: 'manageDataBtn'
     };
     var ACTIVE_TOP_NAV_GRADIENT = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
@@ -70,9 +79,11 @@
             if (btn) {
                 if (btnId === activeButtonId) {
                     btn.style.background = activeGradient;
+                    btn.style.color = 'white';
                     btn.style.opacity = '1';
                 } else {
                     btn.style.background = '#ccc';
+                    btn.style.color = '';
                     btn.style.opacity = '0.7';
                 }
             }
@@ -84,23 +95,15 @@
         saveUiNavState(partial);
     }
 
-    // --- My Team sub-sections ---
+    // --- Today (the old My Team section) ---
 
-    // Include legacy sub-section IDs that are still children of coachingEmailSection
-    // so they get hidden when switching My Team tabs
-    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening', 'subSectionReliability', 'subSectionOnOffTracker', 'subSectionYearEnd', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionCenterRanking', 'subSectionFutures'];
-    // My Team renders its own tab row in JS and lights its own active tab, so
-    // there are no buttons here to style. The row of hidden buttons this used
-    // to name went with the seven-tab nav it belonged to.
-    var MY_TEAM_NAV_BUTTONS = [];
-    // Highlights and Celebrations are gone: the day page does what they did. A
-    // saved id for either maps to no button, and restoreSub sends that to the
-    // day page, which is where their contents live now.
+    var MY_TEAM_SUB_SECTIONS = ['subSectionMyTeamDay', 'subSectionTodayYear', 'subSectionTeamSnapshot', 'subSectionTodayContest'];
+    var MY_TEAM_NAV_BUTTONS = ['subNavTdDay', 'subNavTdYear', 'subNavTdSnapshot', 'subNavTdContest'];
     var MY_TEAM_SUB_TO_BTN = {
-        subSectionCoachingEmail: 'subNavCoachingEmail',
-        subSectionTeamSnapshot: 'subNavTeamSnapshot',
-        subSectionCallListening: 'subNavCallListening',
-        subSectionReliability: 'subNavReliability'
+        subSectionMyTeamDay: 'subNavTdDay',
+        subSectionTodayYear: 'subNavTdYear',
+        subSectionTeamSnapshot: 'subNavTdSnapshot',
+        subSectionTodayContest: 'subNavTdContest'
     };
 
     function showMyTeamSubSection(subSectionId, activeButtonId) {
@@ -108,53 +111,91 @@
         showSubSectionGeneric(subSectionId, btnId, MY_TEAM_SUB_SECTIONS, MY_TEAM_NAV_BUTTONS,
             'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 'myTeamSubSectionId');
         saveUiNavState({ sectionId: 'coachingEmailSection' });
-        // The team bar sits above the sub-nav and belongs to My Team as a
-        // whole, so it's drawn here rather than by each tab's own handler —
+        // The team bar sits above the sub-nav and belongs to Today as a
+        // whole, so it's drawn here rather than by each tab's own handler,
         // including on the refresh path that restores a tab directly.
         window.DevCoachModules?.teamHub?.initializeTeamHub?.();
         // Returning to the day hub re-renders it; leaving it is a no-op.
         if (subSectionId === 'subSectionMyTeamDay') window.DevCoachModules?.myTeam?.renderDayPage?.();
     }
 
-    // --- Trends & Analysis sub-sections ---
+    // --- People: one associate ---
 
-    var TRENDS_SUB_SECTIONS = ['subSectionTaTrendIntelligence', 'subSectionTaMetricTrends', 'subSectionTaCenterRanking', 'subSectionTaFutures', 'subSectionTaSentiment', 'subSectionTaMatchup', 'subSectionTaYoY', 'subSectionTaPatterns'];
-    var TRENDS_NAV_BUTTONS = ['subNavTaIntelligence', 'subNavTaMetricCharts', 'subNavTaRankings', 'subNavTaFutures', 'subNavTaSentiment', 'subNavTaMatchup', 'subNavTaYoY', 'subNavTaPatterns'];
-    var TRENDS_SUB_TO_BTN = {
-        subSectionTaTrendIntelligence: 'subNavTaIntelligence',
-        subSectionTaMetricTrends: 'subNavTaMetricCharts',
-        subSectionTaCenterRanking: 'subNavTaRankings',
-        subSectionTaFutures: 'subNavTaFutures',
-        subSectionTaSentiment: 'subNavTaSentiment',
-        subSectionTaMatchup: 'subNavTaMatchup',
-        subSectionTaYoY: 'subNavTaYoY',
-        subSectionTaPatterns: 'subNavTaPatterns'
+    // Numbers is the Score Card. Coach, Calls and Attendance are the panels
+    // that used to hang off My Team. All four are moved into #peopleContent on
+    // first open by script.js ensurePeopleMounted. Follow Up and Reviews live
+    // in the People section's own markup.
+    var PEOPLE_SUB_SECTIONS = ['subSectionOnOffTracker', 'subSectionCoachingEmail', 'subSectionCallListening', 'subSectionReliability', 'subSectionFollowUp', 'subSectionReviews'];
+    var PEOPLE_NAV_BUTTONS = ['subNavPeNumbers', 'subNavPeCoach', 'subNavPeCalls', 'subNavPeAttendance', 'subNavPeFollowUp', 'subNavPeReviews'];
+    var PEOPLE_SUB_TO_BTN = {
+        subSectionOnOffTracker: 'subNavPeNumbers',
+        subSectionCoachingEmail: 'subNavPeCoach',
+        subSectionCallListening: 'subNavPeCalls',
+        subSectionReliability: 'subNavPeAttendance',
+        subSectionFollowUp: 'subNavPeFollowUp',
+        subSectionReviews: 'subNavPeReviews'
     };
 
-    function showTrendsSubSection(subSectionId, activeButtonId) {
-        var btnId = activeButtonId || TRENDS_SUB_TO_BTN[subSectionId] || 'subNavTaIntelligence';
-        showSubSectionGeneric(subSectionId, btnId, TRENDS_SUB_SECTIONS, TRENDS_NAV_BUTTONS,
-            'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', 'trendsSubSectionId');
-        saveUiNavState({ sectionId: 'trendsAnalysisSection' });
+    function showPeopleSubSection(subSectionId, activeButtonId) {
+        var btnId = activeButtonId || PEOPLE_SUB_TO_BTN[subSectionId] || 'subNavPeNumbers';
+        showSubSectionGeneric(subSectionId, btnId, PEOPLE_SUB_SECTIONS, PEOPLE_NAV_BUTTONS,
+            'linear-gradient(135deg, #5c6bc0 0%, #3949ab 100%)', 'peopleSubSectionId');
+        saveUiNavState({ sectionId: 'peopleSection' });
     }
 
-    // --- Review Prep sub-sections ---
+    // --- Reviews, inside People (the old Review Prep section) ---
 
-    var REVIEW_SUB_SECTIONS = ['subSectionMeetings', 'subSectionOnOffTracker', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionYearEnd'];
-    var REVIEW_NAV_BUTTONS = ['subNavRpMeetings', 'subNavRpScoreCard', 'subNavRpQuarterly', 'subNavRpMidYear', 'subNavRpYearEnd'];
+    var REVIEW_SUB_SECTIONS = ['subSectionMeetings', 'subSectionQ1Review', 'subSectionMidYear', 'subSectionYearEnd'];
+    var REVIEW_NAV_BUTTONS = ['subNavRpMeetings', 'subNavRpQuarterly', 'subNavRpMidYear', 'subNavRpYearEnd'];
     var REVIEW_SUB_TO_BTN = {
         subSectionMeetings: 'subNavRpMeetings',
-        subSectionOnOffTracker: 'subNavRpScoreCard',
         subSectionQ1Review: 'subNavRpQuarterly',
         subSectionMidYear: 'subNavRpMidYear',
         subSectionYearEnd: 'subNavRpYearEnd'
     };
 
     function showReviewPrepSubSection(subSectionId, activeButtonId) {
-        var btnId = activeButtonId || REVIEW_SUB_TO_BTN[subSectionId] || 'subNavRpScoreCard';
+        var btnId = activeButtonId || REVIEW_SUB_TO_BTN[subSectionId] || 'subNavRpQuarterly';
         showSubSectionGeneric(subSectionId, btnId, REVIEW_SUB_SECTIONS, REVIEW_NAV_BUTTONS,
             'linear-gradient(135deg, #d84315 0%, #bf360c 100%)', 'reviewPrepSubSectionId');
-        saveUiNavState({ sectionId: 'reviewPrepSection' });
+        saveUiNavState({ sectionId: 'peopleSection', peopleSubSectionId: 'subSectionReviews' });
+    }
+
+    // --- Center (the old Trends section) ---
+
+    var TRENDS_SUB_SECTIONS = ['subSectionTaCenterRanking', 'subSectionTaMatchup', 'subSectionTaFutures', 'subSectionTaTrendsGroup', 'subSectionTaTrendIntelligence'];
+    var TRENDS_NAV_BUTTONS = ['subNavTaRankings', 'subNavTaMatchup', 'subNavTaFutures', 'subNavTaMetricCharts', 'subNavTaIntelligence'];
+    var TRENDS_SUB_TO_BTN = {
+        subSectionTaCenterRanking: 'subNavTaRankings',
+        subSectionTaMatchup: 'subNavTaMatchup',
+        subSectionTaFutures: 'subNavTaFutures',
+        subSectionTaTrendsGroup: 'subNavTaMetricCharts',
+        subSectionTaTrendIntelligence: 'subNavTaIntelligence'
+    };
+
+    function showTrendsSubSection(subSectionId, activeButtonId) {
+        var btnId = activeButtonId || TRENDS_SUB_TO_BTN[subSectionId] || 'subNavTaRankings';
+        showSubSectionGeneric(subSectionId, btnId, TRENDS_SUB_SECTIONS, TRENDS_NAV_BUTTONS,
+            'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', 'trendsSubSectionId');
+        saveUiNavState({ sectionId: 'trendsAnalysisSection' });
+    }
+
+    // The Trends tab inside Center holds the four views that used to be tabs
+    // of their own.
+    var TRENDS_INNER_SUB_SECTIONS = ['subSectionTaMetricTrends', 'subSectionTaYoY', 'subSectionTaPatterns', 'subSectionTaSentiment'];
+    var TRENDS_INNER_NAV_BUTTONS = ['innerNavTrReports', 'innerNavTrYoY', 'innerNavTrPatterns', 'innerNavTrSentiment'];
+    var TRENDS_INNER_SUB_TO_BTN = {
+        subSectionTaMetricTrends: 'innerNavTrReports',
+        subSectionTaYoY: 'innerNavTrYoY',
+        subSectionTaPatterns: 'innerNavTrPatterns',
+        subSectionTaSentiment: 'innerNavTrSentiment'
+    };
+
+    function showTrendsInnerSubSection(subSectionId, activeButtonId) {
+        var btnId = activeButtonId || TRENDS_INNER_SUB_TO_BTN[subSectionId] || 'innerNavTrReports';
+        showSubSectionGeneric(subSectionId, btnId, TRENDS_INNER_SUB_SECTIONS, TRENDS_INNER_NAV_BUTTONS,
+            'linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%)', 'trendsInnerSubSectionId');
+        saveUiNavState({ sectionId: 'trendsAnalysisSection', trendsSubSectionId: 'subSectionTaTrendsGroup' });
     }
 
     // --- Settings (Manage Data) sub-sections ---
@@ -196,10 +237,14 @@
     // --- Legacy backward compat: old showSubSection still works ---
     // Some code may still call showSubSection. Route to the correct handler.
     function showSubSection(subSectionId, activeButtonId) {
-        if (MY_TEAM_SUB_TO_BTN[subSectionId]) {
+        if (PEOPLE_SUB_TO_BTN[subSectionId]) {
+            showPeopleSubSection(subSectionId, activeButtonId);
+        } else if (MY_TEAM_SUB_TO_BTN[subSectionId]) {
             showMyTeamSubSection(subSectionId, activeButtonId);
         } else if (TRENDS_SUB_TO_BTN[subSectionId]) {
             showTrendsSubSection(subSectionId, activeButtonId);
+        } else if (TRENDS_INNER_SUB_TO_BTN[subSectionId]) {
+            showTrendsInnerSubSection(subSectionId, activeButtonId);
         } else if (REVIEW_SUB_TO_BTN[subSectionId]) {
             showReviewPrepSubSection(subSectionId, activeButtonId);
         } else {
@@ -213,15 +258,19 @@
 
     function getDefaultUiNavState() {
         return {
-            sectionId: 'dashboardSection',
+            sectionId: 'coachingEmailSection',
             myTeamSubSectionId: 'subSectionMyTeamDay',
-            trendsSubSectionId: 'subSectionTaTrendIntelligence',
-            reviewPrepSubSectionId: 'subSectionOnOffTracker',
+            peopleSubSectionId: 'subSectionOnOffTracker',
+            reviewPrepSubSectionId: 'subSectionQ1Review',
+            trendsSubSectionId: 'subSectionTaCenterRanking',
+            trendsInnerSubSectionId: 'subSectionTaMetricTrends',
             settingsSubSectionId: 'subSectionTeamMembers'
         };
     }
 
-    // Migration map: old coachingSubSectionId → { sectionId, subKey, subValue }
+    // Migration map: old coachingSubSectionId → { sectionId, subKey, subValue }.
+    // These name the layout before the 2026-04 reorg; migrateToCondensedLayout
+    // then carries the result into the 2026-10 layout.
     var OLD_SUB_MIGRATION = {
         subSectionCoachingEmail:    { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionCoachingEmail' },
         subSectionTeamSnapshot:     { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionTeamSnapshot' },
@@ -243,6 +292,73 @@
         subSectionReviewPrep:       { section: 'reviewPrepSection', key: 'reviewPrepSubSectionId', value: 'subSectionQ1Review' },
         subSectionMoreTools:        { section: 'coachingEmailSection', key: 'myTeamSubSectionId', value: 'subSectionMyTeamDay' }
     };
+
+    // My Team panels that now belong to People.
+    var MY_TEAM_TO_PEOPLE = {
+        subSectionCoachingEmail: true,
+        subSectionCallListening: true,
+        subSectionReliability: true
+    };
+
+    /**
+     * Carry a state saved under the old eight-item nav into Today / People /
+     * Center, so a refresh after the change lands on the same panel rather
+     * than on a section that no longer has a button.
+     *
+     * Runs on every load. Each rule only fires on a value the new layout
+     * never writes, so a state that is already new passes through untouched.
+     */
+    function migrateToCondensedLayout(parsed) {
+        // Review Prep is People > Reviews, except Score Card, which is People > Numbers.
+        if (parsed.reviewPrepSubSectionId === 'subSectionOnOffTracker') {
+            if (parsed.sectionId === 'reviewPrepSection') {
+                parsed.sectionId = 'peopleSection';
+                parsed.peopleSubSectionId = 'subSectionOnOffTracker';
+            }
+            delete parsed.reviewPrepSubSectionId;
+        }
+        if (parsed.sectionId === 'reviewPrepSection') {
+            parsed.sectionId = 'peopleSection';
+            parsed.peopleSubSectionId = 'subSectionReviews';
+        }
+
+        // Follow Up is People > Follow Up.
+        if (parsed.sectionId === 'redFlagSection' || parsed.sectionId === 'followUpSection') {
+            parsed.sectionId = 'peopleSection';
+            parsed.peopleSubSectionId = 'subSectionFollowUp';
+        }
+
+        // The Dashboard is Today. Its contents are Today > Year to date, but
+        // Today opens on the day page, as the Dashboard button used to open
+        // the first thing you look at.
+        if (parsed.sectionId === 'dashboardSection') {
+            parsed.sectionId = 'coachingEmailSection';
+            parsed.myTeamSubSectionId = 'subSectionMyTeamDay';
+        }
+
+        // Contest is Today > Contest.
+        if (parsed.sectionId === 'contestSection') {
+            parsed.sectionId = 'coachingEmailSection';
+            parsed.myTeamSubSectionId = 'subSectionTodayContest';
+        }
+
+        // Coaching, Calls and Attendance left My Team for People.
+        if (MY_TEAM_TO_PEOPLE[parsed.myTeamSubSectionId]) {
+            if (parsed.sectionId === 'coachingEmailSection') {
+                parsed.sectionId = 'peopleSection';
+                parsed.peopleSubSectionId = parsed.myTeamSubSectionId;
+            }
+            parsed.myTeamSubSectionId = 'subSectionMyTeamDay';
+        }
+
+        // Metric Charts, Year-over-Year, Patterns and Sentiment are views
+        // inside Center > Trends.
+        if (TRENDS_INNER_SUB_TO_BTN[parsed.trendsSubSectionId]) {
+            parsed.trendsInnerSubSectionId = parsed.trendsSubSectionId;
+            parsed.trendsSubSectionId = 'subSectionTaTrendsGroup';
+        }
+        return parsed;
+    }
 
     function loadUiNavState() {
         try {
@@ -276,12 +392,19 @@
             if (parsed.sectionId === 'hotTipSection') parsed.sectionId = 'dashboardSection';
             if (parsed.sectionId === 'teamSnapshotSection') { parsed.sectionId = 'coachingEmailSection'; parsed.myTeamSubSectionId = 'subSectionTeamSnapshot'; }
 
+            migrateToCondensedLayout(parsed);
+
+            var pick = function(key) {
+                return typeof parsed[key] === 'string' ? parsed[key] : defaults[key];
+            };
             return {
-                sectionId: typeof parsed.sectionId === 'string' ? parsed.sectionId : defaults.sectionId,
-                myTeamSubSectionId: typeof parsed.myTeamSubSectionId === 'string' ? parsed.myTeamSubSectionId : defaults.myTeamSubSectionId,
-                trendsSubSectionId: typeof parsed.trendsSubSectionId === 'string' ? parsed.trendsSubSectionId : defaults.trendsSubSectionId,
-                reviewPrepSubSectionId: typeof parsed.reviewPrepSubSectionId === 'string' ? parsed.reviewPrepSubSectionId : defaults.reviewPrepSubSectionId,
-                settingsSubSectionId: typeof parsed.settingsSubSectionId === 'string' ? parsed.settingsSubSectionId : defaults.settingsSubSectionId
+                sectionId: pick('sectionId'),
+                myTeamSubSectionId: pick('myTeamSubSectionId'),
+                peopleSubSectionId: pick('peopleSubSectionId'),
+                reviewPrepSubSectionId: pick('reviewPrepSubSectionId'),
+                trendsSubSectionId: pick('trendsSubSectionId'),
+                trendsInnerSubSectionId: pick('trendsInnerSubSectionId'),
+                settingsSubSectionId: pick('settingsSubSectionId')
             };
         } catch (error) {
             console.error('Error loading UI nav state:', error);
@@ -308,7 +431,7 @@
      * duplicating that here would be a second copy to keep in step.
      *
      * Where there isn't one, the button is shown directly. My Team broke on
-     * exactly this — the day hub replaced its nav row, so its saved id mapped
+     * exactly this: the day hub replaced its nav row, so its saved id mapped
      * to no button and fell through to a default that clicked a *hidden*
      * button, landing on a different screen than the one clicking into the
      * section shows. Falling through to a section's own default is the same bug
@@ -321,7 +444,9 @@
             // An id from a build that no longer exists, or a tab that has no
             // button of its own. Either way, show the section's default rather
             // than clicking something that belongs to a different tab.
-            showFn(defaultSubId, defaultBtnId);
+            var defaultBtn = defaultBtnId && document.getElementById(defaultBtnId);
+            if (defaultBtn) defaultBtn.click();
+            else showFn(defaultSubId, defaultBtnId);
             return;
         }
         var btn = document.getElementById(btnId);
@@ -329,42 +454,57 @@
         else showFn(subId, btnId);
     }
 
+    // The tabs that hold tabs of their own reopen on the inner view you left.
+    // script.js calls these from the outer tab's click handler.
+
+    function restorePeopleTab() {
+        restoreSub(loadUiNavState().peopleSubSectionId, PEOPLE_SUB_TO_BTN, showPeopleSubSection,
+            'subSectionOnOffTracker', 'subNavPeNumbers');
+    }
+
+    function restoreReviewsTab() {
+        restoreSub(loadUiNavState().reviewPrepSubSectionId, REVIEW_SUB_TO_BTN, showReviewPrepSubSection,
+            'subSectionQ1Review', 'subNavRpQuarterly');
+    }
+
+    function restoreCenterTab() {
+        restoreSub(loadUiNavState().trendsSubSectionId, TRENDS_SUB_TO_BTN, showTrendsSubSection,
+            'subSectionTaCenterRanking', 'subNavTaRankings');
+    }
+
+    function restoreTrendsInnerTab() {
+        restoreSub(loadUiNavState().trendsInnerSubSectionId, TRENDS_INNER_SUB_TO_BTN, showTrendsInnerSubSection,
+            'subSectionTaMetricTrends', 'innerNavTrReports');
+    }
+
     function restoreLastViewedSection() {
         var state = loadUiNavState();
-        var sectionId = state.sectionId || 'dashboardSection';
+        var sectionId = state.sectionId || 'coachingEmailSection';
 
         if (sectionId === 'coachingEmailSection') {
             showOnlySection('coachingEmailSection');
-            // The day hub has no sub-nav button — it replaced that row, and the
-            // row it replaced is hidden. Its own initializer stands in for the
-            // click handler the other tabs get.
-            // My Team's tabs have no buttons to click any more, so restoring
-            // one means opening it the same way its own row does. Showing it
-            // without drawing it is how a refresh used to land on an empty
-            // panel.
             restoreSub(state.myTeamSubSectionId, MY_TEAM_SUB_TO_BTN, function(subId, btnId) {
-                var myTeam = window.DevCoachModules?.myTeam;
-                if (myTeam?.openTab && subId !== 'subSectionMyTeamDay') {
-                    myTeam.openTab(subId, btnId);
-                    return;
-                }
                 showMyTeamSubSection(subId, btnId);
-                myTeam?.initializeMyTeam?.();
-            }, 'subSectionMyTeamDay', null);
+                window.DevCoachModules?.myTeam?.initializeMyTeam?.();
+            }, 'subSectionMyTeamDay', 'subNavTdDay');
+            return;
+        }
+
+        if (sectionId === 'peopleSection') {
+            // The People button reopens the tab you left, the same way a click does.
+            var peopleBtn = document.getElementById('peopleBtn');
+            if (peopleBtn) {
+                peopleBtn.click();
+                return;
+            }
+            showOnlySection('peopleSection');
+            restorePeopleTab();
             return;
         }
 
         if (sectionId === 'trendsAnalysisSection') {
             showOnlySection('trendsAnalysisSection');
-            restoreSub(state.trendsSubSectionId, TRENDS_SUB_TO_BTN, showTrendsSubSection,
-                'subSectionTaTrendIntelligence', 'subNavTaIntelligence');
-            return;
-        }
-
-        if (sectionId === 'reviewPrepSection') {
-            showOnlySection('reviewPrepSection');
-            restoreSub(state.reviewPrepSubSectionId, REVIEW_SUB_TO_BTN, showReviewPrepSubSection,
-                'subSectionOnOffTracker', 'subNavRpScoreCard');
+            restoreCenterTab();
             return;
         }
 
@@ -387,34 +527,15 @@
             return;
         }
 
-        if (sectionId === 'redFlagSection') {
-            showOnlySection('redFlagSection');
-            return;
-        }
-
-        // Contest draws its whole panel in JS, so showing the section without
-        // running the renderer leaves an empty page. It had no branch at all,
-        // which meant a refresh on Contest quietly landed on the dashboard.
-        if (sectionId === 'contestSection') {
-            showOnlySection('contestSection');
-            window.DevCoachModules?.contestUi?.show?.();
-            return;
-        }
-
         if (sectionId === 'uploadSection') {
             showOnlySection('uploadSection');
             return;
         }
 
-        if (sectionId === 'dashboardSection') {
-            showOnlySection('dashboardSection');
-            if (typeof window.initializeDashboard === 'function') window.initializeDashboard();
-            return;
-        }
-
-        // Fallback
-        showOnlySection('dashboardSection');
-        if (typeof window.initializeDashboard === 'function') window.initializeDashboard();
+        // Fallback: Today, the landing page.
+        var todayBtn = document.getElementById('coachingEmailBtn');
+        if (todayBtn) todayBtn.click();
+        else showOnlySection('coachingEmailSection');
     }
 
     function initializeSection(sectionId) {
@@ -446,9 +567,15 @@
         showOnlySection: showOnlySection,
         showSubSection: showSubSection,
         showMyTeamSubSection: showMyTeamSubSection,
+        showPeopleSubSection: showPeopleSubSection,
         showTrendsSubSection: showTrendsSubSection,
+        showTrendsInnerSubSection: showTrendsInnerSubSection,
         showReviewPrepSubSection: showReviewPrepSubSection,
         showManageDataSubSection: showManageDataSubSection,
+        restorePeopleTab: restorePeopleTab,
+        restoreReviewsTab: restoreReviewsTab,
+        restoreCenterTab: restoreCenterTab,
+        restoreTrendsInnerTab: restoreTrendsInnerTab,
         getDefaultUiNavState: getDefaultUiNavState,
         loadUiNavState: loadUiNavState,
         saveUiNavState: saveUiNavState,

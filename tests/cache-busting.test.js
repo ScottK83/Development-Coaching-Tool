@@ -153,6 +153,6 @@ suite('cache: the files the hook rewrites are LF and UTF-8 to begin with', (t) =
     // The characters that actually broke. If index.html can hold an emoji and
     // survive a round trip, the encoding is right.
     const html = read('index.html');
-    t.check('the nav emoji are intact', html.indexOf('📋 Dashboard') > -1);
+    t.check('the nav emoji are intact', html.indexOf('📋 Reviews') > -1 && html.indexOf('☀️ Today') > -1);
     t.check('and not mojibake', html.indexOf('ðŸ“‹') === -1);
 });

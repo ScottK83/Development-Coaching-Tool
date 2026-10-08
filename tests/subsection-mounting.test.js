@@ -53,16 +53,29 @@ function reachable(id, sectionId, mountFns) {
     return { ok: false, why: `sits outside ${sectionId} and nothing mounts it, so display:block reveals nothing` };
 }
 
-suite('sub-sections: every Review Prep tab can actually be shown', (t) => {
+suite('sub-sections: every Reviews tab can actually be shown', (t) => {
+    // Review Prep became People > Reviews on 2026-10-07. Its markup lives in
+    // the People section, and its panels are still moved in on first use.
     const ids = listFrom('REVIEW_SUB_SECTIONS');
-    t.check('the Review Prep group is still readable', ids.length > 0);
+    t.check('the Reviews group is still readable', ids.length > 0);
 
     ids.forEach(id => {
-        const result = reachable(id, 'reviewPrepSection', ['ensureReviewPrepMounted']);
+        const result = reachable(id, 'peopleSection', ['ensureReviewPrepMounted']);
         t.check(`${id}: ${result.why}`, result.ok);
     });
 
     t.check('Meetings is among them', ids.indexOf('subSectionMeetings') > -1);
+    t.check('and so is Mid-Year', ids.indexOf('subSectionMidYear') > -1);
+});
+
+suite('sub-sections: every People tab can actually be shown', (t) => {
+    const ids = listFrom('PEOPLE_SUB_SECTIONS');
+    t.check('the People group is still readable', ids.length >= 6);
+
+    ids.forEach(id => {
+        const result = reachable(id, 'peopleSection', ['ensurePeopleMounted']);
+        t.check(`${id}: ${result.why}`, result.ok);
+    });
 });
 
 suite('sub-sections: every Trends tab can actually be shown', (t) => {
@@ -75,6 +88,14 @@ suite('sub-sections: every Trends tab can actually be shown', (t) => {
         // named in the nav list and the source is moved into it.
         const named = script.indexOf(`'${id}')`) > -1 || result.ok;
         t.check(`${id}: ${result.ok ? result.why : 'reachable via a mount target'}`, result.ok || named);
+    });
+
+    // The four views inside Center > Trends sit in the Trends group's markup.
+    const inner = listFrom('TRENDS_INNER_SUB_SECTIONS');
+    t.check('the Trends views are still readable', inner.length === 4);
+    inner.forEach(id => {
+        const result = reachable(id, 'trendsAnalysisSection', []);
+        t.check(`${id}: ${result.why}`, result.ok);
     });
 });
 
@@ -89,7 +110,8 @@ suite('sub-sections: every My Team tab can actually be shown', (t) => {
 });
 
 suite('sub-sections: every nav button in a group exists in the markup', (t) => {
-    ['MY_TEAM_NAV_BUTTONS', 'REVIEW_NAV_BUTTONS', 'TRENDS_NAV_BUTTONS', 'SETTINGS_NAV_BUTTONS'].forEach(name => {
+    ['MY_TEAM_NAV_BUTTONS', 'PEOPLE_NAV_BUTTONS', 'REVIEW_NAV_BUTTONS', 'TRENDS_NAV_BUTTONS',
+     'TRENDS_INNER_NAV_BUTTONS', 'SETTINGS_NAV_BUTTONS'].forEach(name => {
         listFrom(name).forEach(btnId => {
             t.check(`${btnId} has a button`, html.indexOf(`id="${btnId}"`) > -1);
         });
@@ -101,7 +123,9 @@ suite('sub-sections: a tab nobody can click is not registered', (t) => {
     // is dead weight that still takes part in show/hide.
     const groups = {
         REVIEW_SUB_SECTIONS: 'subNavRp',
-        TRENDS_SUB_SECTIONS: 'subNavTa'
+        TRENDS_SUB_SECTIONS: 'subNavTa',
+        PEOPLE_SUB_SECTIONS: 'subNavPe',
+        TRENDS_INNER_SUB_SECTIONS: 'innerNavTr'
     };
     Object.keys(groups).forEach(group => {
         listFrom(group).forEach(id => {
@@ -111,49 +135,48 @@ suite('sub-sections: a tab nobody can click is not registered', (t) => {
     });
 });
 
-suite('sub-sections: My Team offers every tab it registers', (t) => {
-    // My Team stopped having a nav row of its own: the day hub draws one in JS
-    // and the row of hidden buttons was deleted. So "does a button with this id
-    // exist in index.html" stopped being the question. The question is whether
-    // the row the hub draws offers the tab, and whether opening it draws it.
-    //
-    // Both halves matter. Highlights and Celebrations had markup, modules and
-    // buttons that all worked, and no way in at all, because the only thing
-    // that reached them was a nav row that had been hidden. And the snapshot
-    // was offered but opened blank, because the row that offered it called the
-    // initialiser without first moving the markup into the panel.
-    const myTeam = fs.readFileSync(path.join(ROOT, 'modules', 'my-team.module.js'), 'utf8');
-
-    const offered = [...myTeam.matchAll(/\{ id: '(subSection\w+)', btn: '\w+', label: '[^']+' \}/g)]
-        .map(m => m[1]);
-    t.check('the quiet row is still readable', offered.length >= 4);
-
-    const initialisers = myTeam.slice(myTeam.indexOf('TAB_INITIALISERS'));
-    offered.forEach(id => {
-        t.check(`${id} has markup`, divPosition(id) !== -1);
-        t.check(`${id} is drawn when opened`, initialisers.indexOf(`${id}:`) > -1);
+suite('sub-sections: every Today and People button draws its panel', (t) => {
+    // Showing a sub-section and drawing it are two different things. The
+    // snapshot once opened blank because the row that offered it ran the
+    // initialiser without first moving the markup into the panel, and
+    // Highlights and Celebrations had working panels with no way in at all.
+    // So each button has to exist, be wired, and run what draws its panel.
+    function handlerFor(btnId) {
+        const start = script.indexOf(`getElementById('${btnId}')?.addEventListener('click'`);
+        if (start === -1) return '';
+        return script.slice(start, script.indexOf('\n    });', start));
+    }
+    const draws = {
+        subNavTdDay: 'initializeMyTeam',
+        subNavTdYear: 'initializeDashboard()',
+        subNavTdSnapshot: 'embedTeamSnapshot()',
+        subNavTdContest: 'contestUi?.show',
+        subNavPeNumbers: 'initializeOnOffTracker()',
+        subNavPeCoach: 'initializeCoachingEmail()',
+        subNavPeCalls: 'initializeCallListeningSection()',
+        subNavPeAttendance: 'reliability?.initialize',
+        subNavPeFollowUp: 'ensureFollowUpMounted()',
+        subNavPeReviews: 'restoreReviewsTab'
+    };
+    listFrom('MY_TEAM_NAV_BUTTONS').concat(listFrom('PEOPLE_NAV_BUTTONS')).forEach(btnId => {
+        t.check(`${btnId} has a button`, divPosition(btnId) !== -1);
+        const handler = handlerFor(btnId);
+        t.check(`${btnId} is wired`, handler.length > 0);
+        t.check(`${btnId} draws its panel (${draws[btnId]})`, !!draws[btnId] && handler.indexOf(draws[btnId]) > -1);
     });
 
-    // The tabs the hub itself owns are not in that row, so name them here
-    // rather than letting the list quietly shrink to nothing.
-    ['subSectionCoachingEmail', 'subSectionTeamSnapshot', 'subSectionCallListening',
-     'subSectionReliability'].forEach(id => {
-        t.check(`${id} is offered`, offered.indexOf(id) > -1);
+    // The People panels written inside Today's markup are moved before they
+    // are shown, by the handler that shows them.
+    ['subSectionOnOffTracker', 'subSectionCoachingEmail', 'subSectionCallListening', 'subSectionReliability'].forEach(id => {
+        t.check(`${id} is mounted into People when opened`, script.indexOf(`ensurePeopleMounted('${id}')`) > -1);
     });
 
-    // Highlights and Celebrations were folded into the day page. Offering a
-    // link to either would open a panel that is no longer there.
+    // Highlights and Celebrations were folded into the day page. Nothing may
+    // offer a link to either, or leave markup behind for one.
     ['subSectionHighlights', 'subSectionMorningPulse'].forEach(id => {
-        t.check(`${id} is no longer offered`, offered.indexOf(id) === -1);
-        t.check(`and ${id} has no markup left behind`, divPosition(id) === -1);
+        t.check(`${id} has no markup left behind`, divPosition(id) === -1);
+        t.check(`and ${id} is not a Today tab`, listFrom('MY_TEAM_SUB_SECTIONS').indexOf(id) === -1);
     });
-
-    // One owner for open-and-draw. Two owners is what let the snapshot open
-    // blank from one row and fine from the other.
-    t.check('opening a tab goes through one function',
-        /function openTab\(subSectionId, buttonId\)/.test(myTeam));
-    t.check('and a refresh restores through it too',
-        navSrc.indexOf('myTeam.openTab(subId, btnId)') > -1);
 });
 
 suite('sub-sections: the time-off tracker is inside Attendance, not stranded', (t) => {
@@ -170,7 +193,8 @@ suite('sub-sections: the time-off tracker is inside Attendance, not stranded', (
     t.check('the standalone section is still there to move from', divPosition('ptoSection') !== -1);
     t.check('the mover names that container',
         /embeddedPtoInMyTeam/.test(script) && /getElementById\('ptoSection'\)/.test(script));
-    t.check('and opening Attendance runs it', /embedPtoTracker\?\.\(\)/.test(myTeam));
+    const attendance = script.slice(script.indexOf("getElementById('subNavPeAttendance')"));
+    t.check('and opening Attendance runs it', /embedPtoTracker\(\)/.test(attendance.slice(0, attendance.indexOf('});'))));
 });
 
 suite('sub-sections: every top-level tab survives a refresh', (t) => {
@@ -181,8 +205,13 @@ suite('sub-sections: every top-level tab survives a refresh', (t) => {
     const buttons = [...html.matchAll(/id="(\w+Btn)" class="btn-secondary top-nav-btn/g)].map(m => m[1]);
     const mapped = [...navSrc.matchAll(/(\w+Section): '(\w+Btn)'/g)].map(m => m[1]);
 
-    t.check('the top nav is still readable', buttons.length >= 7);
-    t.check('and every button it holds maps to a section', mapped.length >= 7);
+    // Today, People, Center, Upload, Settings since 2026-10-07.
+    t.check('the top nav is still readable', buttons.length >= 5);
+    t.check('and every button it holds maps to a section', mapped.length >= 5);
+    // The shortcut list is a top-nav button but opens a dialog, not a section.
+    buttons.filter(btnId => btnId !== 'shortcutHelpBtn').forEach(btnId => {
+        t.check(`${btnId} maps to a section`, navSrc.indexOf(`: '${btnId}'`) > -1);
+    });
 
     mapped.forEach(sectionId => {
         t.check(`${sectionId} is restored by name`,

@@ -278,7 +278,7 @@
 
         // Header
         html += '<div style="margin-bottom: 20px;">' +
-            '<h2 style="margin: 0 0 6px 0; font-size: 1.4em; color: var(--text-primary);">Dashboard</h2>' +
+            '<h2 style="margin: 0 0 6px 0; font-size: 1.4em; color: var(--text-primary);">Year to date</h2>' +
             '<p style="margin: 0; color: var(--text-secondary); font-size: 0.9em;">' + escapeHtml(weekLabel) + '</p></div>';
 
         // Team summary bar
@@ -449,9 +449,11 @@
         // on a 100ms timer and hope the options exist by then.
         window.DevCoachModules?.selectedAssociate?.set(employeeName);
 
-        if (typeof showOnlySection === 'function') showOnlySection('coachingEmailSection');
-        if (typeof showSubSection === 'function') showSubSection('subSectionCoachingEmail', 'subNavCoachingEmail');
-        if (typeof initializeCoachingEmail === 'function') initializeCoachingEmail();
+        // Coaching lives under People now. Its own button mounts the panel and
+        // draws it, so this goes through the button rather than repeating that.
+        if (typeof showOnlySection === 'function') showOnlySection('peopleSection');
+        if (typeof populatePeoplePicker === 'function') populatePeoplePicker();
+        document.getElementById('subNavPeCoach')?.click();
     }
 
     // Export
