@@ -182,13 +182,14 @@
 
     // The Trends tab inside Center holds the four views that used to be tabs
     // of their own.
-    var TRENDS_INNER_SUB_SECTIONS = ['subSectionTaMetricTrends', 'subSectionTaYoY', 'subSectionTaPatterns', 'subSectionTaSentiment'];
-    var TRENDS_INNER_NAV_BUTTONS = ['innerNavTrReports', 'innerNavTrYoY', 'innerNavTrPatterns', 'innerNavTrSentiment'];
+    // Sentiment was a fourth view here until 2026-10-08. It could not run, and
+    // its summary is written in the sentiment upload window now.
+    var TRENDS_INNER_SUB_SECTIONS = ['subSectionTaMetricTrends', 'subSectionTaYoY', 'subSectionTaPatterns'];
+    var TRENDS_INNER_NAV_BUTTONS = ['innerNavTrReports', 'innerNavTrYoY', 'innerNavTrPatterns'];
     var TRENDS_INNER_SUB_TO_BTN = {
         subSectionTaMetricTrends: 'innerNavTrReports',
         subSectionTaYoY: 'innerNavTrYoY',
-        subSectionTaPatterns: 'innerNavTrPatterns',
-        subSectionTaSentiment: 'innerNavTrSentiment'
+        subSectionTaPatterns: 'innerNavTrPatterns'
     };
 
     function showTrendsInnerSubSection(subSectionId, activeButtonId) {

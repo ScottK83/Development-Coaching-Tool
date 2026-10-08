@@ -106,7 +106,6 @@ let teamFilterChangeHandlersBound = false;
 let debugState = { entries: [] };
 let sentimentPhraseDatabase = null;
 let associateSentimentSnapshots = {};
-let sentimentListenersAttached = false;
 
 // ============================================
 // STORAGE HELPERS (defined early for guaranteed availability)
@@ -2017,10 +2016,6 @@ function bindNavigationHandlers() {
         var container = document.getElementById('subSectionTaPatterns');
         if (stab?.render && container) stab.render(container);
     });
-    document.getElementById('innerNavTrSentiment')?.addEventListener('click', () => {
-        showTrendsInnerSubSection('subSectionTaSentiment', 'innerNavTrSentiment');
-        ensureSentimentMountedInTrends();
-    });
     document.getElementById('subNavTaIntelligence')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
         ensureTrendIntelligenceMountedInTrends();
@@ -2195,10 +2190,6 @@ function ensureTrendIntelligenceMountedInTrends() {
 }
 
 
-function ensureSentimentMountedInTrends() {
-    handleSubNavSentimentClick(true);
-}
-
 /**
  * The two email settings that sit under Team Members.
  *
@@ -2243,6 +2234,10 @@ function bindManageDataNavigationHandlers() {
         }
         renderTipsManagement();
     });
+    // Bound here, once. It used to be bound only by the Trends > Sentiment
+    // view's opener, so Save did nothing unless that view had been opened
+    // earlier in the session.
+    document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
     document.getElementById('subNavSentimentKeywords')?.addEventListener('click', () => {
         showManageDataSubSection('subSectionSentimentKeywords');
         // Repainted on open rather than trusted from page load, so an edit
@@ -2399,24 +2394,6 @@ async function handleDeleteEmployeeYearClick() {
     if (!(await cloudCopyBeforeDeleting())) return;
 
     deleteEmployeeDataByYear(employeeName, reviewYear);
-}
-
-function handleSubNavSentimentClick(skipShowSubSection) {
-    const sentimentSection = document.getElementById('sentimentSection');
-    const subSectionSentiment = document.getElementById('subSectionTaSentiment');
-    if (sentimentSection && subSectionSentiment && sentimentSection.children.length > 0) {
-        subSectionSentiment.append(...sentimentSection.childNodes);
-    }
-
-    if (!sentimentListenersAttached) {
-        document.getElementById('generateSentimentSummaryBtn')?.addEventListener('click', generateSentimentSummary);
-        document.getElementById('copySentimentSummaryBtn')?.addEventListener('click', copySentimentSummary);
-        document.getElementById('generateCoPilotPromptBtn')?.addEventListener('click', generateSentimentCoPilotPrompt);
-        document.getElementById('savePhraseDatabaseBtn')?.addEventListener('click', saveSentimentPhraseDatabaseFromForm);
-        sentimentListenersAttached = true;
-    }
-
-    renderSentimentDatabasePanel();
 }
 
 function detectUploadPeriodTypeByRange(startDate, endDate) {

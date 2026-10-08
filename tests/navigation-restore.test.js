@@ -50,8 +50,7 @@ const CENTER = {
 const TRENDS_INNER = {
     innerNavTrReports: 'subSectionTaMetricTrends',
     innerNavTrYoY: 'subSectionTaYoY',
-    innerNavTrPatterns: 'subSectionTaPatterns',
-    innerNavTrSentiment: 'subSectionTaSentiment'
+    innerNavTrPatterns: 'subSectionTaPatterns'
 };
 const SETTINGS_BUTTONS = ['subNavTeamMembers', 'subNavCoachingTips', 'subNavSyncBackup', 'subNavDeleteData'];
 

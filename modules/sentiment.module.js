@@ -1167,13 +1167,20 @@
         return out;
     }
 
-    function generateSentimentSummary() {
-        const { positive, negative, emotions } = sentimentReports;
+    // The reports from the last upload that carried all three, which the
+    // window's Copy and Copilot buttons work from. The Trends > Sentiment view
+    // read a sentimentReports variable that nothing declared, so neither of
+    // its buttons ever ran (overlap audit, 2026-10-07).
+    let lastUploadedSentimentReports = null;
+
+    // Writes the summary into the upload window and says whether it did.
+    function generateSentimentSummary(reports) {
+        const { positive, negative, emotions } = reports || lastUploadedSentimentReports || {};
 
         // Validation: ensure all 3 files uploaded
         if (!positive || !negative || !emotions) {
             alert('⚠️ Please upload all 3 files (Positive Language, Avoiding Negative Language, Managing Emotions)');
-            return;
+            return false;
         }
 
         const delegated = window.DevCoachModules?.sentiment?.buildSentimentSummaryText;
@@ -1193,14 +1200,29 @@
 
         if (!summary) {
             alert('⚠️ Sentiment module is unavailable or could not build summary. Refresh and try again.');
-            return;
+            return false;
         }
 
         // Display the summary
-        document.getElementById('sentimentSummaryText').textContent = summary;
-        document.getElementById('sentimentSummaryOutput').style.display = 'block';
+        const textEl = document.getElementById('sentimentSummaryText');
+        const outputEl = document.getElementById('sentimentSummaryOutput');
+        if (textEl) textEl.textContent = summary;
+        if (outputEl) outputEl.style.display = 'block';
+        bindSentimentSummaryButtons();
+        return true;
+    }
 
-        showToast('✅ Summary generated successfully', 2000);
+    function bindSentimentSummaryButtons() {
+        const copyBtn = document.getElementById('copySentimentSummaryBtn');
+        if (copyBtn && !copyBtn.dataset.bound) {
+            copyBtn.dataset.bound = 'true';
+            copyBtn.addEventListener('click', copySentimentSummary);
+        }
+        const promptBtn = document.getElementById('generateCoPilotPromptBtn');
+        if (promptBtn && !promptBtn.dataset.bound) {
+            promptBtn.dataset.bound = 'true';
+            promptBtn.addEventListener('click', () => generateSentimentCoPilotPrompt());
+        }
     }
 
     function parseSentimentReportDate(line, label) {
@@ -1675,6 +1697,16 @@
 
                 showToast(`✅ Sentiment data saved for ${associate}`, 3000);
 
+                // With all three reports in hand, this is the one place the
+                // full reports exist, so the summary is written here and the
+                // window stays open for Copy and the Copilot email.
+                const reports = {};
+                results.forEach(({ type, report }) => { reports[type.toLowerCase()] = report; });
+                if (reports.positive && reports.negative && reports.emotions) {
+                    lastUploadedSentimentReports = reports;
+                    if (generateSentimentSummary(reports)) return;
+                }
+
                 // Close modal after short delay
                 setTimeout(() => {
                     closeUploadSentimentModal();
@@ -1812,11 +1844,11 @@
         });
     }
 
-    function generateSentimentCoPilotPrompt() {
-        const { positive, negative, emotions } = sentimentReports;
+    function generateSentimentCoPilotPrompt(reports) {
+        const { positive, negative, emotions } = reports || lastUploadedSentimentReports || {};
 
         if (!positive || !negative || !emotions) {
-            alert('⚠️ Please generate the summary first');
+            alert('⚠️ Upload all three reports for this associate first');
             return;
         }
 

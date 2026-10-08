@@ -92,7 +92,7 @@ suite('sub-sections: every Trends tab can actually be shown', (t) => {
 
     // The four views inside Center > Trends sit in the Trends group's markup.
     const inner = listFrom('TRENDS_INNER_SUB_SECTIONS');
-    t.check('the Trends views are still readable', inner.length === 4);
+    t.check('the Trends views are still readable', inner.length === 3);
     inner.forEach(id => {
         const result = reachable(id, 'trendsAnalysisSection', []);
         t.check(`${id}: ${result.why}`, result.ok);
