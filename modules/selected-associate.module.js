@@ -40,7 +40,13 @@
         'trendEmployeeSelector',
         'ptoAssociateSelect',
         'summaryAssociateSelect',
-        'oneOnOneAssociateSelect',
+        // Meetings' picker. It was listed as oneOnOneAssociateSelect, an id
+        // nothing renders, so Meetings never followed a pick made elsewhere
+        // while it was open.
+        'oneOnOneWho',
+        // Follow Up keeps its own picker (it reaches associates outside the
+        // team), but it starts on whoever is picked.
+        'followUpPersonName',
         'relEmployeeSelect',
         'sentimentUploadAssociate'
     ];

@@ -154,6 +154,31 @@
 
     /* ── Rendering ── */
 
+    function _shared() {
+        return window.DevCoachModules && window.DevCoachModules.selectedAssociate;
+    }
+
+    /* Quarterly rebuilds its picker on every render, so it cannot be one of
+     * the shared selection's registered pickers (those are watched by element).
+     * It listens instead: a pick made in People, or on any other tab, moves
+     * the open check-in to that person. Subscribed once. */
+    var _following = false;
+    function _followSharedSelection() {
+        var shared = _shared();
+        if (_following || !shared || !shared.subscribe) return;
+        _following = true;
+        shared.subscribe(function (name) {
+            if (!name || name === state.employee) return;
+            var host = document.getElementById(CONTENT_ID);
+            // Only while the tab is on screen; otherwise render() picks the
+            // person up next time it opens.
+            if (!host || !host.getClientRects || host.getClientRects().length === 0) return;
+            if (_namesWithData().indexOf(name) < 0) return;
+            state.employee = name;
+            render();
+        });
+    }
+
     function render() {
         var host = document.getElementById(CONTENT_ID);
         if (!host) return;
@@ -192,6 +217,15 @@
 
         var names = _namesWithData();
         if (state.employee && names.indexOf(state.employee) < 0) state.employee = '';
+        // Opens on whoever is picked elsewhere (People's picker, or any tab
+        // that shares the selection), so a run of check-ins does not mean
+        // picking each person twice.
+        if (!state.employee) {
+            var shared = _shared();
+            var carried = shared && shared.get ? shared.get() : '';
+            if (carried && names.indexOf(carried) > -1) state.employee = carried;
+        }
+        _followSharedSelection();
 
         var body = _coveragePanel()
             + _pickerPanel(names)
@@ -978,6 +1012,8 @@
         });
         _on('quarterReviewEmployee', 'change', function (e) {
             state.employee = e.target.value;
+            var shared = _shared();
+            if (state.employee && shared && shared.set) shared.set(state.employee);
             render();
         });
         Array.prototype.forEach.call(
@@ -1004,6 +1040,8 @@
     function _openRecapFor(name) {
         if (!name) return;
         state.employee = name;
+        var shared = _shared();
+        if (shared && shared.set) shared.set(name);
         state.showRecap = true;
         state.recapFailure = null;
         render();

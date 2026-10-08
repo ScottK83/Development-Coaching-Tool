@@ -2031,6 +2031,7 @@ function bindNavigationHandlers() {
     });
 
     mountTrendReportCards();
+    bindPeopleFollowerPickers();
 }
 
 /**
@@ -2090,6 +2091,48 @@ function ensureFollowUpMounted() {
     var source = document.getElementById('redFlagSection');
     if (!target || !source || target.querySelector('#followUpPanel')) return;
     target.append(...source.childNodes);
+}
+
+/**
+ * The pickers under People that the top picker stands in for.
+ *
+ * Each is hidden while it agrees with the top picker, and shows again when it
+ * cannot (the person has no numbers on that screen), so there is always a way
+ * to choose. Four keep their own picker on screen: Calls reads the associate
+ * off the pasted call, Attendance's breakdown is ordered by who needs review,
+ * Follow Up reaches associates outside the team, and the trend email lists
+ * only the people in its chosen week. Those still start on the picked person.
+ */
+const PEOPLE_FOLLOWER_PICKERS = [
+    'onOffTrackerEmployeeSelect', 'coachingEmployeeSelect', 'midYearEmployeeSelect',
+    'yearEndEmployeeSelect', 'oneOnOneWho', 'quarterReviewEmployee', 'ptoAssociateSelect'
+];
+
+function syncPeopleFollowerPickers() {
+    const people = document.getElementById('peopleSection');
+    const chosen = window.DevCoachModules?.selectedAssociate?.get?.() || '';
+    PEOPLE_FOLLOWER_PICKERS.forEach((id) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const follows = Boolean(people && people.contains(select) && chosen && select.value === chosen);
+        const display = follows ? 'none' : '';
+        select.style.display = display;
+        const label = document.querySelector(`label[for="${id}"]`);
+        if (label) label.style.display = display;
+    });
+}
+
+// Screens fill and re-render their pickers on their own schedule, so the check
+// runs a moment after anything happens inside People and after any new pick.
+function bindPeopleFollowerPickers() {
+    const later = () => setTimeout(syncPeopleFollowerPickers, 120);
+    document.addEventListener('click', (e) => {
+        if (e.target?.closest?.('#peopleSection, #peopleBtn, #subNavPeCoach')) later();
+    }, true);
+    document.addEventListener('change', (e) => {
+        if (e.target?.closest?.('#peopleSection')) later();
+    }, true);
+    window.DevCoachModules?.selectedAssociate?.subscribe?.(later);
 }
 
 /**
