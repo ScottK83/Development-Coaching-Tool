@@ -230,8 +230,8 @@
         var context = getTeamSelectionContext();
         if (!context.weekKey) {
             chip.textContent = 'Active Team Filter: No data loaded';
-            chip.style.background = '#eceff1';
-            chip.style.color = '#455a64';
+            chip.style.background = 'var(--bg-surface-sunken)';
+            chip.style.color = 'var(--text-secondary)';
             return;
         }
 
@@ -241,14 +241,14 @@
 
         if (!context.isFiltering) {
             chip.textContent = 'Active Team Filter: All associates \u2022 Week ending ' + weekLabel;
-            chip.style.background = '#e8f5e9';
-            chip.style.color = '#2e7d32';
+            chip.style.background = 'var(--green-soft)';
+            chip.style.color = 'var(--green-text)';
             return;
         }
 
         chip.textContent = 'Active Team Filter: ' + context.selectedMembers.length + ' selected \u2022 Week ending ' + weekLabel;
-        chip.style.background = '#fff3e0';
-        chip.style.color = '#ef6c00';
+        chip.style.background = 'var(--orange-soft)';
+        chip.style.color = 'var(--orange)';
     }
 
     // ============================================

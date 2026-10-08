@@ -362,7 +362,7 @@
     function renderHotTipWidget() {
         var tip = getRandomTip();
         if (!tip) return '';
-        return '<div style="margin-top: 20px; padding: 14px 18px; background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%); ' +
+        return '<div style="margin-top: 20px; padding: 14px 18px; background: #fff7ed; ' +
             'border-radius: 10px; border-left: 4px solid #f59e0b;">' +
             '<div style="font-weight: 700; font-size: 0.95em; color: #92400e; margin-bottom: 6px;">\uD83D\uDD25 Tip of the Day</div>' +
             '<div style="font-size: 0.88em; color: #78350f; line-height: 1.5;">' + escapeHtml(tip) + '</div></div>';

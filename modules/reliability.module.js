@@ -2279,7 +2279,7 @@
             var active = which === 'classic' ? classicBtn : discBtn;
             var inactive = which === 'classic' ? discBtn : classicBtn;
             active.style.background = '#00695c'; active.style.color = '#fff';
-            inactive.style.background = '#eceff1'; inactive.style.color = '#455a64';
+            inactive.style.background = 'var(--bg-surface-sunken)'; inactive.style.color = 'var(--text-secondary)';
             discView.style.display = which === 'classic' ? 'none' : '';
             classicWrap.style.display = which === 'classic' ? '' : 'none';
             container.dataset.activeTab = which;
@@ -2308,7 +2308,7 @@
             var activeDefault = container.querySelector('.rel-filter-btn[data-filter="' + currentFilter + '"]');
             if (activeDefault) {
                 container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
-                    b.style.background = '#fff';
+                    b.style.background = 'var(--bg-surface)';
                     b.style.fontWeight = 'normal';
                     b.style.color = b.style.borderColor;
                 });
@@ -2339,7 +2339,7 @@
                 currentFilter = this.getAttribute('data-filter') || 'all';
                 // Update active button style
                 container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
-                    b.style.background = '#fff';
+                    b.style.background = 'var(--bg-surface)';
                     b.style.fontWeight = 'normal';
                 });
                 this.style.background = this.style.borderColor;
@@ -2360,7 +2360,7 @@
                 var reviewBtn = container.querySelector('.rel-filter-btn[data-filter="needs-review"]');
                 if (reviewBtn) {
                     container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
-                        b.style.background = '#fff';
+                        b.style.background = 'var(--bg-surface)';
                         b.style.fontWeight = 'normal';
                         b.style.color = b.style.borderColor;
                     });

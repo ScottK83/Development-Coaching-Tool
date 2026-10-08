@@ -3418,9 +3418,9 @@
                     btn.style.color = '#fff';
                     btn.style.borderColor = 'transparent';
                 } else {
-                    btn.style.background = '#fff';
-                    btn.style.color = '#334155';
-                    btn.style.borderColor = '#cbd5e1';
+                    btn.style.background = 'var(--bg-surface)';
+                    btn.style.color = 'var(--text-primary)';
+                    btn.style.borderColor = 'var(--border)';
                 }
             });
         }
@@ -3603,7 +3603,7 @@
             ? `<span style="color:#1a237e; font-weight:600;">Moves are against ${escapeHtml(comparison.baselineLabel || 'the period before')}</span>`
             : '<span style="color:var(--text-tertiary);">Nothing to compare against yet</span>';
 
-        return `<div style="display:flex; gap:16px; flex-wrap:wrap; padding:14px 18px; background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius:8px; margin-bottom:16px; align-items:center;">` +
+        return `<div style="display:flex; gap:16px; flex-wrap:wrap; padding:14px 18px; background:#f5f7fa; border-radius:8px; margin-bottom:16px; align-items:center;">` +
             `<div style="font-weight:700; font-size:1em; color:#1a237e;">Team Pulse</div>` +
             `<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.9em;">` +
                 (counts.red > 0 ? `<span style="color:#e53935; font-weight:600;">🔴 ${counts.red} Needs Support</span>` : '') +
@@ -4224,7 +4224,7 @@
                     sentSet.add(idx);
                     outreach.markSent(plan.id, stamp, repName, new Date().toISOString());
                     card.style.opacity = '0.55';
-                    card.style.background = '#f1f8e9';
+                    card.style.background = 'var(--green-soft)';
                     btn.textContent = '↩ Undo';
                 }
                 updateProgress();

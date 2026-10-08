@@ -1086,9 +1086,9 @@
                     label.style.color = '#fff';
                     label.style.borderColor = '#3b82f6';
                 } else {
-                    label.style.background = '#f1f5f9';
-                    label.style.color = '#475569';
-                    label.style.borderColor = '#e2e8f0';
+                    label.style.background = 'var(--bg-surface-sunken)';
+                    label.style.color = 'var(--text-secondary)';
+                    label.style.borderColor = 'var(--border)';
                 }
             });
         }
