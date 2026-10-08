@@ -1600,3 +1600,50 @@ suite('rankings view: the CX Adv column places people the way the year card does
     t.equal('the one-survey holder is placed against the field, not pushed off it', cxRankIn(thinRow), '1');
     t.check('and the placing says why on hover', /title="Fewer than 3 surveys/.test(thinRow));
 });
+
+suite('rankings: the KPI Rank Total counts CX with the 3-survey floor', (t) => {
+    // Scott, 2026-10-08: the overall center rank uses the same CX rule as the
+    // year card. One survey at 100% is placed against the field without
+    // joining it, so it no longer pushes every regular holder down a CX
+    // place in the add-up that decides the overall rank.
+    const people = roster(40, 4).concat([emp('Zed Thin', { surveyTotal: 1, cxRepOverall: 100 })]);
+    const key = '2026-01-01|2026-07-31';
+    const { cr } = loadRankings(t, {}, period('2026-01-01', '2026-07-31', 'ytd', people, 'YTD through Jul 31'));
+    const data = cr.buildRankingsForPeriod(key);
+    t.check('the period ranked', !!data && data.rankings.length === 41);
+    const row = (name) => data.rankings.find((r) => r.name === name);
+
+    const best = Math.max(...people.filter((p) => p.name !== 'Zed Thin').map((p) => p.cxRepOverall));
+    const leader = people.find((p) => p.name !== 'Zed Thin' && p.cxRepOverall === best).name;
+    t.equal('the best regular holder ranks #1 on CX in the scoring', row(leader).metricRanks.associateOverall, 1);
+    t.check('the one-survey holder is marked as under the floor', row('Zed Thin').cxRankThin === true);
+    t.check('and the regular holders are not', !row(leader).cxRankThin);
+
+    // The add-up uses the floored rank: the leader's total holds a 1 for CX.
+    const r = row(leader);
+    const others = ['aht', 'adherence', 'sentiment', 'reliability']
+        .map((k) => (r.metricRanks[k] > 0 ? r.metricRanks[k] : data.rankings.length + 1))
+        .reduce((a, b) => a + b, 0);
+    t.equal('and the KPI Rank Total adds that 1, not a 2', r.kpiRankTotal, others + 1);
+});
+
+suite('celebrations: a CX placing under the survey floor pushes nobody down', (t) => {
+    t.installFakeBrowser();
+    t.loadModule('modules/metrics-registry.module.js');
+    t.loadModule('modules/metric-profiles.module.js');
+    global.weeklyData = {};
+    global.ytdData = {};
+    global.dailyData = {};
+    const cel = t.loadModule('modules/celebrations.module.js').celebrations;
+    const row = (name, rank, value, thin) => ({
+        name, metricRanks: { associateOverall: rank }, values: { associateOverall: value }, cxRankThin: thin
+    });
+    // Sam: one survey at 100%, placed 1st against the field. Pat leads the
+    // regular holders at 95%, Lee follows at 90%.
+    const ranked = cel.buildDisplayRanks({ rankings: [row('Sam', 1, 100, true), row('Pat', 1, 95, false), row('Lee', 2, 90, false)] });
+    const cx = ranked.displayRankByMetric.associateOverall;
+    t.equal('Pat stays 1st', cx.Pat, 1);
+    t.equal('Lee stays 2nd', cx.Lee, 2);
+    t.equal('Sam is placed 1st without taking the spot', cx.Sam, 1);
+    t.equal('and the field is the regular holders', ranked.rankedCountByMetric.associateOverall, 2);
+});

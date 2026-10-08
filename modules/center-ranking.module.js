@@ -814,6 +814,26 @@
             });
         });
 
+        // ── CX Adv: the 3-survey floor, in the scoring too ──
+        // The CX rank uses the same rule as the year card and the Quarterly
+        // placings (_metricRankMap): a holder with fewer than
+        // MIN_SURVEYS_FOR_RANK surveys is placed against the field without
+        // joining it, so a survey or two can no longer push every regular
+        // holder down a CX place, here or in the KPI Rank Total below. Scott
+        // approved this as a scoring change on 2026-10-08, after the table and
+        // the year card were found to disagree. cxRankThin marks who sits under
+        // the floor, for the table's hover note and the shout-out placings.
+        var _cxRow = TRAJECTORY_METRIC_ROWS.filter(function (row) { return row.rankKey === 'associateOverall'; })[0];
+        if (_cxRow) {
+            var _cxPlacings = _metricRankMap(rankings.map(function (r) { return { name: r.name, holder: r }; }), _cxRow);
+            rankings.forEach(function (r) {
+                if (!r.metricRanks) r.metricRanks = {};
+                var place = _cxPlacings[r.name];
+                r.metricRanks.associateOverall = place ? place.rank : null;
+                r.cxRankThin = Boolean(place && place.thin);
+            });
+        }
+
         // ── KPI Rank Total = sum of all 5 individual ranks (lower = better) ──
         var worstRank = rankings.length + 1;
         rankings.forEach(function (r) {
@@ -3990,17 +4010,6 @@
         html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Rel' + arrow('reliability') + '</th>';
         html += '</tr></thead><tbody>';
 
-        // The CX Adv placing is the one the year card and the Quarterly
-        // placings print: survey holders under the 3-survey floor are placed
-        // against the field without joining it (Scott, 2026-09-18). The column
-        // used the raw metric rank, so one person could show two CX ranks for
-        // the same file (overlap audit, 2026-10-07). Display only: the KPI Rank
-        // Total still sums the raw ranks, because that is KPI scoring.
-        var cxRow = TRAJECTORY_METRIC_ROWS.filter(function (row) { return row.rankKey === 'associateOverall'; })[0];
-        var cxPlacings = cxRow
-            ? _metricRankMap(data.rankings.map(function (row) { return { name: row.name, holder: row }; }), cxRow)
-            : {};
-
         sorted.forEach(function (r, idx) {
             var isTeam = data.teamMembers.has(r.name);
             var supColor = _getSupervisorColor(r.name);
@@ -4079,11 +4088,9 @@
 
             metricPairs.forEach(function (mp) {
                 var display = mp.value !== null && mp.value !== undefined ? _formatMetricDisplay(mp.key, mp.value) : '--';
-                var cxPlace = mp.rankKey === 'associateOverall' ? cxPlacings[r.name] : null;
-                var metricRank = mp.rankKey === 'associateOverall'
-                    ? (cxPlace ? cxPlace.rank : '?')
-                    : (r.metricRanks?.[mp.rankKey] || '?');
-                var rankTitle = cxPlace && cxPlace.thin
+                var metricRank = r.metricRanks?.[mp.rankKey] || '?';
+                // CX Adv is ranked with the 3-survey floor (see _scoreAndRank).
+                var rankTitle = mp.rankKey === 'associateOverall' && r.cxRankThin
                     ? ' title="Fewer than 3 surveys, so placed against the field without joining it, the same as on the year card"'
                     : '';
                 var rankTextColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';

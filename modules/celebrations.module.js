@@ -542,11 +542,21 @@
                     rows.push({
                         name: r.name,
                         rank: rank,
+                        // Under the 3-survey CX floor: placed against the field
+                        // without joining it (center-ranking _scoreAndRank).
+                        thin: metricKey === 'associateOverall' && Boolean(r.cxRankThin),
                         // No display value means nothing to compare, so it never ties.
                         display: (val === null || val === undefined) ? null : formatMetricValue(metricKey, val)
                     });
                 });
                 rows.sort(function(a, b) { return a.rank - b.rank; });
+
+                // Positions are counted among the regular holders only. Someone
+                // under the CX survey floor takes no position, so they cannot
+                // push anyone down a place, the same rule as the year card and
+                // the center table (2026-10-08).
+                var thinRows = rows.filter(function(row) { return row.thin; });
+                rows = rows.filter(function(row) { return !row.thin; });
 
                 var ranksByName = {};
                 var counts = {};
@@ -561,8 +571,19 @@
                     lastDisplay = row.display;
                 });
 
+                // Placed against the regular holders: one more than the number
+                // shown strictly ahead of them, a display tie counting as a tie.
+                thinRows.forEach(function(row) {
+                    var ahead = rows.filter(function(other) {
+                        return other.rank < row.rank && other.display !== row.display;
+                    }).length;
+                    ranksByName[row.name] = ahead + 1;
+                    counts[ahead + 1] = (counts[ahead + 1] || 0) + 1;
+                });
+
                 displayRankByMetric[metricKey] = ranksByName;
                 rankCountsByMetric[metricKey] = counts;
+                // The field is the regular holders, as on the year card.
                 rankedCountByMetric[metricKey] = rows.length;
                 rank1CountsByMetric[metricKey] = counts[1] || 0;
             });
