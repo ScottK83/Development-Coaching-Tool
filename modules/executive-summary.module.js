@@ -103,8 +103,14 @@
         if (typeof window.bindElementOnce === 'function') window.bindElementOnce(element, eventName, handler);
     }
 
+    // Sets up and draws the Trend Intelligence & Coaching Hub. This used to
+    // call window.renderSupervisorIntelligence, which nothing defines, so
+    // opening Intelligence never set the hub up: its pickers stayed empty and
+    // the Weekly Priority Queue only appeared after a team-filter change.
+    // Found in the 2026-10-07 audit.
     function renderSupervisorIntelligence() {
-        if (typeof window.renderSupervisorIntelligence === 'function') window.renderSupervisorIntelligence();
+        if (typeof window.initializeTrendIntelligence === 'function') window.initializeTrendIntelligence();
+        if (typeof window.renderTrendIntelligence === 'function') window.renderTrendIntelligence();
     }
 
     function getWeeklyKeysSorted() {

@@ -6275,21 +6275,18 @@ function setTrendFocusMode(enabled) {
         focusBtn.textContent = trendIntelligenceFocusMode ? '🪄 Focus Mode: On' : '🪄 Focus Mode: Off';
     }
 
-    const secondarySectionIds = [
-        'trendVisualizationsContainer',
-        'coachingImpactTrackerPanel'
-    ];
-
-    secondarySectionIds.forEach(id => {
-        const element = document.getElementById(id);
-        if (!element) return;
-        const card = id === 'coachingImpactTrackerPanel'
-            ? element
-            : element.closest('div[style*="border: 1px solid #cfe1ff"]');
-        if (card) {
-            card.style.display = trendIntelligenceFocusMode ? 'none' : 'block';
-        }
-    });
+    // Focus Mode hides the charts and the impact card. The charts container
+    // sits inside the hub card itself, and reaching from it for the nearest
+    // bordered card hid the whole hub, the Focus Mode button included, so the
+    // mode could never be switched back off. Found in the 2026-10-07 audit.
+    const charts = document.getElementById('trendVisualizationsContainer');
+    if (charts) {
+        if (trendIntelligenceFocusMode) charts.style.display = 'none';
+        // Shows itself when it has something to draw.
+        else renderTrendVisualizations();
+    }
+    const impactCard = document.getElementById('coachingImpactTrackerPanel');
+    if (impactCard) impactCard.style.display = trendIntelligenceFocusMode ? 'none' : 'block';
 
     const simplePanel = document.getElementById('trendSimpleViewOutput');
     if (simplePanel) {
@@ -6949,6 +6946,16 @@ function initializeTrendIntelligence() {
         trendIntelligenceListenersAttached = true;
     }
 
+    // Open on a period type that has something to compare. The selector
+    // starts on Day over Day, and with fewer than two day files the whole hub,
+    // priority queue included, said "Upload at least 2 day periods" while the
+    // weeks sat ready. A choice that already has data is left alone.
+    const trendPeriodSelect = document.getElementById('trendPeriodSelector');
+    if (trendPeriodSelect && getTrendKeysForPeriodType(trendPeriodSelect.value).length < 2) {
+        const usable = ['wow', 'dod', 'mom', 'ytd'].find((type) => getTrendKeysForPeriodType(type).length >= 2);
+        if (usable) trendPeriodSelect.value = usable;
+    }
+
     setTrendFocusMode(trendIntelligenceFocusMode);
     syncTrendCadenceQuickButtons();
 
@@ -7027,7 +7034,8 @@ function renderTrendVisualizations() {
         return;
     }
 
-    visualContainer.style.display = 'block';
+    // Drawn either way, shown only when Focus Mode is off.
+    visualContainer.style.display = trendIntelligenceFocusMode ? 'none' : 'block';
 
     // Get data for selected employee across periods
     const metricsToShow = window.CORE_PERFORMANCE_METRICS || ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
