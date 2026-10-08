@@ -123,13 +123,13 @@
     }
 
     var _selectedPeriodKey = null;
-    var _selectedPeriodSource = null;
-    var _matchupPeriodInitialized = false;
 
     /* ── Scope ──
-       The period list runs to twenty-odd entries and mixes weeks, months and YTD,
-       so picking "this month" or "the year" meant hunting. Scope jumps to the
-       newest period of a kind that can actually carry a matchup.
+       Teams answers on the newest upload of one kind: year to date, a month or
+       a week. Each button jumps to the newest file of its kind, and there is no
+       list of files to pick from (Scott, 2026-10-07: "Do I need it to show the
+       file?"). It opens on year to date. Month and week came back on
+       2026-10-08, when Scott asked for them alongside the year.
 
        The floor of 30 matters: a single supervisor's report filed as a month is a
        valid period but every person in it is on one team, which produces a matchup
@@ -137,10 +137,12 @@
     var MIN_MATCHUP_EMPLOYEES = 30;
 
     var MATCHUP_SCOPES = [
-        { key: 'ytd', label: 'YTD', types: ['ytd'] },
-        { key: 'month', label: 'Monthly', types: ['month', 'month-agg'] },
-        { key: 'week', label: 'Weekly', types: ['week', 'week-in-progress'] }
+        { key: 'ytd', label: 'YTD', noun: 'Year to date', types: ['ytd'] },
+        { key: 'month', label: 'Monthly', noun: 'Month', types: ['month', 'month-agg'] },
+        { key: 'week', label: 'Weekly', noun: 'Week', types: ['week', 'week-in-progress'] }
     ];
+
+    var _matchupScope = 'ytd';
 
     function _periodsForScope(scopeKey) {
         var scope = MATCHUP_SCOPES.filter(function (s) { return s.key === scopeKey; })[0];
@@ -159,8 +161,15 @@
         return hit ? hit.key : null;
     }
 
-    function _renderScopeSelector() {
-        var active = _scopeOfPeriod(_selectedPeriodKey);
+    // The kind that was picked, or the first kind with a file covering the
+    // centre when the picked one has none.
+    function _activeScope() {
+        if (_periodsForScope(_matchupScope).length) return _matchupScope;
+        var withData = MATCHUP_SCOPES.filter(function (s) { return _periodsForScope(s.key).length > 0; })[0];
+        return withData ? withData.key : _matchupScope;
+    }
+
+    function _renderScopeSelector(active) {
         var html = '<div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">';
         html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Compare:</label>';
 
@@ -170,7 +179,7 @@
             var disabled = available.length === 0;
             html += '<button type="button" class="matchup-scope-btn" data-scope="' + s.key + '"' +
                 (disabled ? ' disabled' : '') +
-                ' title="' + (disabled ? 'No ' + s.label.toLowerCase() + ' period covers enough of the centre' : 'Newest: ' + _escapeHtml(available[0].label)) + '"' +
+                ' title="' + (disabled ? 'No ' + s.label.toLowerCase() + ' upload covers enough of the centre' : 'Newest: ' + _escapeHtml(available[0].label)) + '"' +
                 ' style="padding: 6px 14px; border-radius: 6px; font-size: 0.9em; cursor: ' + (disabled ? 'not-allowed' : 'pointer') + ';' +
                 ' font-weight: ' + (isActive ? '700' : '500') + ';' +
                 ' border: 2px solid ' + (isActive ? '#e65100' : 'var(--border)') + ';' +
@@ -184,94 +193,20 @@
         return html;
     }
 
+    // The three buttons, and one line naming the upload in use.
+    function _renderPeriodControls(scopeKey, newest) {
+        var html = _renderScopeSelector(scopeKey);
+        if (!newest) return html;
+        var scope = MATCHUP_SCOPES.filter(function (s) { return s.key === scopeKey; })[0];
+        return html + '<p style="margin: 0 0 14px; color: var(--text-secondary); font-size: 0.9em;">' +
+            _escapeHtml(scope ? scope.noun : 'Period') + ', from the newest upload: <strong>' +
+            _escapeHtml(newest.label) + '</strong></p>';
+    }
+
     function _onScopeClick(scopeKey) {
-        var available = _periodsForScope(scopeKey);
-        if (!available.length) return;
-        _selectedPeriodKey = available[0].key;
-        _selectedPeriodSource = available[0].source;
-        // A scope with fifty weeks in it opens collapsed, or switching to
-        // Weekly dumps four lines of chips on someone who wanted the newest.
-        _scopeChipsExpanded = false;
+        if (!_periodsForScope(scopeKey).length) return;
+        _matchupScope = scopeKey;
         renderMatchup();
-    }
-
-    /* ── Which period, inside the scope ──
-       The scope buttons jump to the newest of a kind, which answers "how is this
-       month going" and not "how did June go". This is the row that answers the
-       second one: every period in the active scope, newest first, so a month or
-       a week is one click instead of a hunt through a dropdown holding every
-       upload on file.
-
-       Weeks run past fifty, so the row shows the recent ones and offers the rest
-       rather than wrapping over four lines. */
-    var SCOPE_CHIPS_VISIBLE = 10;
-    var _scopeChipsExpanded = false;
-
-    var SCOPE_PERIOD_LABEL = { ytd: 'File:', month: 'Month:', week: 'Week:' };
-
-    function _renderScopePeriods() {
-        var scopeKey = _scopeOfPeriod(_selectedPeriodKey);
-        if (!scopeKey) return '';
-
-        var periods = _periodsForScope(scopeKey);
-        // One option is not a choice, and a row holding a single chip reads like
-        // something failed to load.
-        if (periods.length < 2) return '';
-
-        var shown = periods;
-        var hidden = 0;
-        if (!_scopeChipsExpanded && periods.length > SCOPE_CHIPS_VISIBLE) {
-            shown = periods.slice(0, SCOPE_CHIPS_VISIBLE);
-            hidden = periods.length - SCOPE_CHIPS_VISIBLE;
-        }
-
-        var html = '<div style="margin-bottom: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">';
-        html += '<span style="font-weight: 600; color: var(--text-secondary); font-size: 0.85em; margin-right: 2px;">' +
-            (SCOPE_PERIOD_LABEL[scopeKey] || 'Period:') + '</span>';
-
-        shown.forEach(function (period) {
-            var on = period.key === _selectedPeriodKey;
-            // "September (rebuilt from 4 weeks)" is the dropdown's job. A chip
-            // wants the name of the month, with the rest on hover.
-            var short = String(period.label).split(' (')[0];
-            html += '<button type="button" class="mu-scope-period"' +
-                ' data-mu-period="' + _escapeHtml(period.key + '||' + (period.source || '')) + '"' +
-                ' title="' + _escapeHtml(period.label + ', ' + period.count + ' associates') + '"' +
-                ' style="padding: 4px 11px; border-radius: 999px; font-size: 0.82em; font-weight: 600; cursor: pointer;' +
-                ' border: 1px solid ' + (on ? '#e65100' : 'var(--border)') + ';' +
-                ' background: ' + (on ? 'rgba(230,81,0,0.12)' : 'var(--bg-surface-raised)') + ';' +
-                ' color: ' + (on ? '#e65100' : 'var(--text-secondary)') + ';">' +
-                _escapeHtml(short) + '</button>';
-        });
-
-        if (hidden > 0 || _scopeChipsExpanded) {
-            html += '<button type="button" id="muScopeMore"' +
-                ' style="padding: 4px 11px; border-radius: 999px; font-size: 0.82em; cursor: pointer;' +
-                ' border: 1px dashed var(--border); background: transparent; color: var(--text-tertiary);">' +
-                (hidden > 0 ? 'Show ' + hidden + ' more' : 'Show fewer') + '</button>';
-        }
-
-        return html + '</div>';
-    }
-
-    function _bindScopePeriodButtons(container) {
-        if (!container || !container.querySelectorAll) return;
-        Array.prototype.forEach.call(container.querySelectorAll('.mu-scope-period'), function (btn) {
-            btn.addEventListener('click', function () {
-                var parts = String(btn.getAttribute('data-mu-period') || '').split('||');
-                _selectedPeriodKey = parts[0];
-                _selectedPeriodSource = parts[1] || '';
-                renderMatchup();
-            });
-        });
-
-        var more = document.getElementById('muScopeMore');
-        if (more) {
-            more.addEventListener('click', function () {
-                _scopeChipsExpanded = !_scopeChipsExpanded;
-                renderMatchup();
-            });
-        }
     }
 
     // Metric definitions for matchup comparison
@@ -318,6 +253,19 @@
             data = ranking.buildCenterRankings();
         }
         if (!data || !data.rankings.length) return null;
+
+        // Each person's score as their team's standing counts it: the shared
+        // scorer's, with reliability scaled to time in seat for anyone who
+        // joined partway through (center-ranking teamStandingScore). Kept
+        // beside the rows rather than written onto them, because the rows are
+        // the center table's too.
+        var seatCtx = ranking.buildSeatContext ? ranking.buildSeatContext(data.periodWindow, null) : null;
+        var standing = {};
+        data.rankings.forEach(function (r) {
+            standing[r.name] = ranking.teamStandingScore
+                ? ranking.teamStandingScore(r, seatCtx)
+                : { ratingAverage: r.ratingAverage, measuredCount: r.measuredCount, seat: null };
+        });
 
         var supervisors = _getSupervisors();
 
@@ -429,10 +377,12 @@
                dropping it would make those columns wrong to fix a different
                problem. */
             var scored = members.filter(function (r) {
-                return (r.measuredCount || 0) >= MIN_MEASURED_FOR_STANDING;
+                return (standing[r.name].measuredCount || 0) >= MIN_MEASURED_FOR_STANDING;
             });
             stats.scoredCount = scored.length;
             stats.thinCount = members.length - scored.length;
+            stats.seatScaled = members.filter(function (r) { return standing[r.name].seat && !standing[r.name].seat.tooNew; }).length;
+            stats.seatTooNew = members.filter(function (r) { return standing[r.name].seat && standing[r.name].seat.tooNew; }).length;
 
             // Average composite rank
             var composites = scored.map(function (r) { return r.compositeScore; }).filter(function (v) { return v !== Infinity; });
@@ -441,7 +391,7 @@
                 : Infinity;
 
             // Average rating
-            var ratings = scored.map(function (r) { return r.ratingAverage; }).filter(function (v) { return v != null; });
+            var ratings = scored.map(function (r) { return standing[r.name].ratingAverage; }).filter(function (v) { return v != null; });
             stats.avgRating = ratings.length > 0
                 ? ratings.reduce(function (a, b) { return a + b; }, 0) / ratings.length
                 : 0;
@@ -504,6 +454,7 @@
             teamNames: teamNames,
             teamStats: teamStats,
             rankings: data.rankings,
+            standing: standing,
             totalEmployees: data.totalEmployees,
             source: data.source,
             // Which supervisor label is mine. The movement panel groups on raw
@@ -638,141 +589,23 @@
     /**
      * Render the full Matchup view
      */
-    // Whether the full list of every upload on file is showing. Same idea as
-    // Rankings: chips for the question people ask, the list for the rarer one.
-    var _matchupShowAllPeriods = false;
-
-    function _renderPeriodSelector(selectedValue) {
-        var picker = window.DevCoachModules && window.DevCoachModules.periodPicker;
-        var periods = _getAvailablePeriods();
-        var typeOrder = ['ytd', 'quarter', 'month', 'month-agg', 'week', 'week-in-progress', 'daily'];
-        var typeLabels = { ytd: 'YTD', quarter: 'Quarterly', month: 'Monthly', 'month-agg': 'Monthly (rebuilt from weeks)', week: 'Weekly', 'week-in-progress': 'Week to Date', daily: 'Daily' };
-        var grouped = {};
-        periods.forEach(function(p) {
-            var t = p.type || 'week';
-            if (!grouped[t]) grouped[t] = [];
-            grouped[t].push(p);
-        });
-
-        // Matchup keys its own selection as "key||source", so the chip has to
-        // be matched on the key alone.
-        var chipHtml = '';
-        // Head to head runs over a year, a month or a week. A day file is not
-        // one of those, and the scope selector has no button for it, so the
-        // day chip is offered greyed rather than as a click that silently
-        // lands on a different comparison. Rankings is where a single day gets
-        // answered.
-        var windows = (picker ? picker.windows() : []).map(function (w) {
-            if (w.id !== 'day') return w;
-            return Object.assign({}, w, {
-                available: false,
-                reason: 'Head to head compares a year, a month or a week. For a single day, use Trends then Rankings.'
-            });
-        });
-        if (picker && windows.length) {
-            var selectedKey = String(selectedValue || '').split('||')[0];
-            var chosenChip = picker.idForKey(windows, selectedKey);
-            var items = windows.concat([{
-                id: 'pick',
-                label: 'Pick a period',
-                available: true,
-                title: 'Any single upload on file, by its own dates'
-            }]);
-            var showAll = _matchupShowAllPeriods || (selectedKey && !chosenChip);
-            chipHtml = picker.renderRow(items, chosenChip || (showAll ? 'pick' : 'latest'), {
-                id: 'matchupPeriodChips',
-                chipClass: 'mu-period-chip',
-                marginBottom: showAll ? '10px' : '16px'
-            });
-            if (!showAll) return chipHtml;
-        }
-
-        var html = chipHtml + '<div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">';
-        html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Period:</label>';
-        html += '<select id="matchupPeriodSelect" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; min-width: 260px;">';
-        html += '<option value="">Auto (Best Available)</option>';
-
-        typeOrder.forEach(function(t) {
-            if (!grouped[t] || grouped[t].length === 0) return;
-            html += '<optgroup label="' + (typeLabels[t] || t) + '">';
-            grouped[t].forEach(function(p) {
-                var val = p.key + '||' + p.source;
-                var sel = (val === selectedValue) ? ' selected' : '';
-                html += '<option value="' + _escapeHtml(val) + '"' + sel + '>' + _escapeHtml(p.label) + ' (' + p.count + ' employees)</option>';
-            });
-            html += '</optgroup>';
-        });
-
-        html += '</select></div>';
-        return html;
-    }
-
-    // Clicking a chip either picks that window or opens the full list.
-    function _bindMatchupPeriodChips() {
-        var picker = window.DevCoachModules && window.DevCoachModules.periodPicker;
-        var row = document.getElementById('matchupPeriodChips');
-        if (!picker || !row) return;
-        picker.bindRow(row, function (id) {
-            if (id === 'pick') {
-                _matchupShowAllPeriods = true;
-            } else {
-                _matchupShowAllPeriods = false;
-                _selectedPeriodKey = picker.keyForId(picker.windows(), id);
-                // The window knows which upload it is, not which store it came
-                // out of. Left blank, the resolver works that out for itself.
-                _selectedPeriodSource = '';
-            }
-            renderMatchup();
-        }, { chipClass: 'mu-period-chip' });
-    }
-
-    function _onPeriodChange() {
-        var select = document.getElementById('matchupPeriodSelect');
-        if (!select) return;
-        var val = select.value;
-        if (val) {
-            var parts = val.split('||');
-            _selectedPeriodKey = parts[0];
-            _selectedPeriodSource = parts[1] || '';
-        } else {
-            _selectedPeriodKey = null;
-            _selectedPeriodSource = null;
-        }
-        renderMatchup();
-    }
-
     function renderMatchup() {
         var container = document.getElementById('subSectionTaMatchup');
         if (!container) return;
 
-        // Teams always answers on the newest year-to-date file covering the
-        // centre (Scott, 2026-10-07: "it should ALWAYS be YTD"). The older YTD
-        // files stay on record, because Team Movement compares against them,
-        // but there is nothing to pick. The Compare / File / Covering rows only
-        // come back when no YTD file covers enough of the centre, so the tab
-        // still works off months or weeks then.
-        var newestYtd = _getAvailablePeriods().find(function(p) {
-            return p.type === 'ytd' && p.count >= MIN_MATCHUP_EMPLOYEES;
-        });
-        if (newestYtd) {
-            _selectedPeriodKey = newestYtd.key;
-            _selectedPeriodSource = newestYtd.source || '';
-        }
-        _matchupPeriodInitialized = true;
-
-        var currentSelectValue = _selectedPeriodKey ? (_selectedPeriodKey + '||' + _selectedPeriodSource) : '';
-        var periodControls = newestYtd
-            ? '<p style="margin: 0 0 14px; color: var(--text-secondary); font-size: 0.9em;">Year to date, from the newest upload: <strong>' +
-                _escapeHtml(newestYtd.label) + '</strong></p>'
-            : _renderScopeSelector() + _renderScopePeriods() + _renderPeriodSelector(currentSelectValue);
+        // The newest upload of the kind picked above: year to date unless
+        // Monthly or Weekly was clicked. Older files stay on record, because
+        // Team Movement compares against them, but there is nothing to pick.
+        var scope = _activeScope();
+        var newest = _periodsForScope(scope)[0] || null;
+        _selectedPeriodKey = newest ? newest.key : null;
+        var periodControls = _renderPeriodControls(scope, newest);
 
         var data = buildMatchupData(_selectedPeriodKey);
         if (!data) {
-            container.innerHTML = _renderPeriodSelector(currentSelectValue) +
+            container.innerHTML = periodControls +
                 '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No matchup data available. Upload a full center data set and assign supervisors in Settings > Team Members.</p>';
-            var sel = document.getElementById('matchupPeriodSelect');
-            if (sel) sel.addEventListener('change', _onPeriodChange);
-            _bindMatchupPeriodChips();
+            _bindScopeButtons(container);
             return;
         }
 
@@ -785,7 +618,7 @@
             // set up, and sending someone to Settings to fix that wastes their time.
             var _onlyMine = data.totalEmployees > 0 && data.totalEmployees < 40;
             var _why = _onlyMine
-                ? 'This period only has <strong>' + data.totalEmployees + ' associates</strong> in it, and they are all on one team, so there is nothing to match against. Upload a year-to-date file covering the whole centre.'
+                ? 'This period only has <strong>' + data.totalEmployees + ' associates</strong> in it, and they are all on one team, so there is nothing to match against. Upload a file covering the whole centre.'
                 : 'No supervisors are assigned. Go to <strong>Settings &gt; Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.';
             container.innerHTML = periodControls +
                 '<div style="padding: 30px; text-align: center;">' +
@@ -793,18 +626,14 @@
                 '<p style="color: var(--text-secondary); max-width: 560px; margin: 0 auto;">' + _why + '</p>' +
                 '<p style="color: var(--text-tertiary); font-size: 0.85em; margin-top: 10px;">Source: ' + _escapeHtml(data.source) + '</p>' +
                 '</div>';
-            var sel = document.getElementById('matchupPeriodSelect');
-            if (sel) sel.addEventListener('change', _onPeriodChange);
-            _bindMatchupPeriodChips();
-            // Bound here too, or the buttons the message points at do nothing.
+            // Bound here too, so another kind can still be picked.
             _bindScopeButtons(container);
-            _bindScopePeriodButtons(container);
             return;
         }
 
         var html = '';
 
-        // The newest YTD line, or the period controls when there is no YTD
+        // YTD / Monthly / Weekly, and which upload is in use
         html += periodControls;
 
         // Header
@@ -836,12 +665,7 @@
 
         container.innerHTML = html;
 
-        // Bind period selector
-        var sel = document.getElementById('matchupPeriodSelect');
-        if (sel) sel.addEventListener('change', _onPeriodChange);
-        _bindMatchupPeriodChips();
         _bindScopeButtons(container);
-        _bindScopePeriodButtons(container);
 
         var diagBtn = document.getElementById('matchupDiagBtn');
         if (diagBtn) diagBtn.addEventListener('click', function () {
@@ -961,6 +785,29 @@
                 (thin === 1 ? 'it is' : 'they are') + ' left out of the standings. ' +
                 'A KPI with no data is dropped rather than failed, which lifts a partial scorecard above a complete one. ' +
                 'The Agents column says what each team was placed on.');
+        }
+
+        // Reliability is hours against a whole year's allowance, so anyone who
+        // joined partway through is scored on their hours scaled to the whole
+        // period (center-ranking teamStandingScore).
+        var scaled = allTeams.reduce(function (a, t) { return a + (t.seatScaled || 0); }, 0);
+        var tooNew = allTeams.reduce(function (a, t) { return a + (t.seatTooNew || 0); }, 0);
+        if (scaled || tooNew) {
+            var joined = scaled + tooNew;
+            var scaledText = 'reliability hours scaled to the whole period before scoring, so a short time in seat is not a head start';
+            var newText = 'under 4 weeks in seat, so reliability is left out for now';
+            var detail;
+            if (scaled && tooNew) {
+                detail = scaled + (scaled === 1 ? ' has' : ' have') + ' their ' + scaledText + '; ' +
+                    tooNew + (tooNew === 1 ? ' has ' : ' have ') + newText;
+            } else if (scaled) {
+                detail = 'their ' + scaledText.replace('hours scaled', 'hours are scaled');
+            } else {
+                detail = 'they have ' + newText;
+            }
+            notes.push('<strong>' + joined + ' associate' + (joined === 1 ? '' : 's') +
+                ' joined partway through this period</strong>: ' + detail + '. ' +
+                'Only the team standings do this. Each person\'s own scorecard is unchanged.');
         }
 
         var unranked = allTeams.filter(function (t) { return !t.rankable; });
@@ -1133,11 +980,11 @@
             .map(function (n) {
                 var s = data.teamStats[n] || {};
                 var mem = data.teams[n] || [];
-                var mc = mem.map(function (r) { return r.measuredCount || 0; });
+                var mc = mem.map(function (r) { return _standingOf(data, r).measuredCount || 0; });
                 var avgMc = mc.length ? mc.reduce(function (a, b) { return a + b; }, 0) / mc.length : 0;
                 var full = mc.filter(function (v) { return v >= 5; }).length;
-                var thin = mem.filter(function (r) { return (r.measuredCount || 0) < MIN_MEASURED_FOR_STANDING; });
-                var thinPerfect = thin.filter(function (r) { return r.ratingAverage >= 2.999; });
+                var thin = mem.filter(function (r) { return (_standingOf(data, r).measuredCount || 0) < MIN_MEASURED_FOR_STANDING; });
+                var thinPerfect = thin.filter(function (r) { return _standingOf(data, r).ratingAverage >= 2.999; });
 
                 // The same members averaged by call volume instead of by head.
                 // Every metric column in the table above is weighted this way and
@@ -1146,9 +993,10 @@
                 var calls = 0, weighted = 0;
                 mem.forEach(function (r) {
                     var c = r.totalCalls || 0;
-                    if (c <= 0 || r.ratingAverage == null) return;
+                    var ra = _standingOf(data, r).ratingAverage;
+                    if (c <= 0 || ra == null) return;
                     calls += c;
-                    weighted += r.ratingAverage * c;
+                    weighted += ra * c;
                 });
 
                 return {
@@ -1203,20 +1051,21 @@
         var topName = teamRows.length ? teamRows[0].name : null;
         if (topName) {
             var members = (data.teams[topName] || []).slice().sort(function (a, b) {
-                return (b.ratingAverage || 0) - (a.ratingAverage || 0);
+                return (_standingOf(data, b).ratingAverage || 0) - (_standingOf(data, a).ratingAverage || 0);
             });
             html += '<h5 style="margin: 0 0 6px 0; color: var(--text-primary); font-size: 0.9em;">2. ' +
                 _escapeHtml(topName) + ', member by member</h5>';
             html += _diagTable(
                 ['Name', 'KPI score', 'KPIs measured', 'Centre rank', 'Calls', 'Surveys'],
                 members.map(function (r) {
-                    var isThin = (r.measuredCount || 0) < MIN_MEASURED_FOR_STANDING;
+                    var st = _standingOf(data, r);
+                    var isThin = (st.measuredCount || 0) < MIN_MEASURED_FOR_STANDING;
                     var mcCell = isThin
-                        ? '<span style="color: #c62828; font-weight: bold;">' + (r.measuredCount || 0) + ' of 5</span>'
-                        : (r.measuredCount || 0) + ' of 5';
+                        ? '<span style="color: #c62828; font-weight: bold;">' + (st.measuredCount || 0) + ' of 5</span>'
+                        : (st.measuredCount || 0) + ' of 5';
                     return [
                         _escapeHtml(r.name),
-                        (r.ratingAverage != null ? r.ratingAverage.toFixed(2) : '-'),
+                        (st.ratingAverage != null ? st.ratingAverage.toFixed(2) : '-'),
                         mcCell,
                         '#' + r.rank + ' of ' + data.totalEmployees,
                         // A year-to-date file has no calls column. Its count
@@ -1290,6 +1139,13 @@
         return html;
     }
 
+    // The score a person counts for in their team's standing. Data built by
+    // hand (the tests) carries no standing, so the row's own score is used.
+    function _standingOf(data, r) {
+        var st = data && data.standing && data.standing[r.name];
+        return st || { ratingAverage: r.ratingAverage, measuredCount: r.measuredCount, seat: null };
+    }
+
     function _renderTeamRoster(teamName, data) {
         var members = data.teams[teamName] || [];
         if (members.length === 0) return '';
@@ -1326,7 +1182,14 @@
             html += '<tr style="border-bottom: 1px solid var(--border); background: ' + (idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-raised)') + ';">';
             html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
             html += '<td style="padding: 5px 8px;">' + _escapeHtml(r.name) + '</td>';
-            html += '<td style="padding: 5px 8px; text-align: center; color: ' + statusColor + '; font-weight: bold;">' + r.ratingAverage.toFixed(2) + '</td>';
+            var st = _standingOf(data, r);
+            var seatTitle = st.seat
+                ? ' title="' + (st.seat.tooNew
+                    ? 'Under 4 weeks in seat, so reliability is not counted yet'
+                    : 'Reliability scored on ' + st.seat.scaledHours + ' hours, ' + st.seat.hours + ' scaled to the whole period') + '"'
+                : '';
+            html += '<td' + seatTitle + ' style="padding: 5px 8px; text-align: center; color: ' + statusColor + '; font-weight: bold;">' +
+                (st.ratingAverage != null ? st.ratingAverage.toFixed(2) : '--') + (st.seat ? '*' : '') + '</td>';
             html += '<td style="padding: 5px 8px; text-align: center;">#' + r.rank + ' <span style="font-size: 0.75em; color: #888;">of ' + data.totalEmployees + '</span></td>';
 
             MATCHUP_METRICS.forEach(function (m) {
@@ -1356,18 +1219,23 @@
         // Same reason: the placings, the coverage cells and the caveats above
         // them are the output worth asserting, and none of it needs a document.
         renderTeamRankings: _renderTeamRankings,
-        // Same reason: which periods a scope offers, and what it does with fifty
-        // of them, is worth asserting and needs no DOM.
-        renderScopePeriods: _renderScopePeriods,
+        // Same reason: the YTD / Monthly / Weekly buttons and which upload each
+        // one lands on are worth asserting and need no DOM.
+        renderPeriodControls: function () {
+            var scope = _activeScope();
+            return _renderPeriodControls(scope, _periodsForScope(scope)[0] || null);
+        },
+        periodForScope: function (scopeKey) {
+            var newest = _periodsForScope(scopeKey)[0];
+            return newest ? newest.key : null;
+        },
+        pickScopeForTest: function (scopeKey) { _matchupScope = scopeKey; },
         // Same reason: which pair of periods the movement panel settled on, and
         // what it says when it could not honour the selection, is string
         // building over injected data and needs no DOM.
         renderTeamMovement: _renderTeamMovement,
-        setSelectedPeriodForTest: function (key, source) {
+        setSelectedPeriodForTest: function (key) {
             _selectedPeriodKey = key;
-            _selectedPeriodSource = source || '';
-            _scopeChipsExpanded = false;
-        },
-        expandScopeChipsForTest: function () { _scopeChipsExpanded = true; }
+        }
     };
 })();

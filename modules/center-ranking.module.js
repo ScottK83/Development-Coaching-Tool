@@ -715,7 +715,8 @@
             totalEmployees: rankings.length,
             source: bestSource,
             periodKey: bestKey,
-            teamMembers: teamSet
+            teamMembers: teamSet,
+            periodWindow: _periodWindow(bestKey, bestPeriod.metadata || {}, bestPeriod === bestYtd)
         };
     }
 
@@ -928,6 +929,136 @@
      * reliability converted from a running year-to-date total into the hours
      * actually accrued in that month.
      */
+    /* ── Team standings: reliability by time in seat ──
+       Scott, 2026-10-08, for Teams and Team Movement.
+
+       Reliability is hours missed, scored against one allowance for the whole
+       year (18 for a 3, 24 for a 2). Someone hired in June has had a third of
+       the year to miss hours in, so a pace that costs a full-year associate the
+       KPI left a new hire on a 3, and a team carrying new hires looked more
+       reliable than it was. Their hours are scaled to the whole period before
+       scoring: hours x days in the period / days in seat. With fewer than
+       SEAT_MIN_DAYS in seat there is too little to scale, so reliability is
+       left out for them, the way a blank KPI is.
+
+       Nobody keeps a hire date, so the seat starts where the person first
+       appears in the year's uploads (weeks and months only: a year-to-date file
+       lists everyone from January 1). Anyone already there in the year's first
+       month of uploads is in seat for the whole period, because uploads that
+       start late in the year say nothing about when anybody began.
+
+       Teams only. scoreEmployee is shared by every screen and stays as it is,
+       so the person's own card, the center table and their rank do not move.
+       CX under three surveys needs nothing here: the shared scorer already
+       leaves it out (MIN_SURVEYS_TO_SCORE in on-off-tracker). */
+    var SEAT_MIN_DAYS = 28;
+    var TEAM_SCORE_KEYS = ['aht', 'adherence', 'sentiment', 'associateOverall', 'reliability'];
+
+    function _dayNumber(iso) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+        return m ? Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000) : null;
+    }
+
+    function _seatName(name) {
+        return String(name == null ? '' : name).trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    // The dates a stored upload covers. A year-to-date file with no usable
+    // start runs from January 1 of the year it ends in.
+    function _periodWindow(key, meta, isYtd) {
+        var parts = String(key || '').indexOf('|') > -1 ? String(key).split('|') : [];
+        var end = (meta && meta.endDate) || parts[1] || '';
+        var start = (meta && meta.startDate) || parts[0] || '';
+        if (_dayNumber(start) === null && isYtd && _dayNumber(end) !== null) start = String(end).slice(0, 4) + '-01-01';
+        return (_dayNumber(start) !== null && _dayNumber(end) !== null) ? { start: start, end: end } : null;
+    }
+
+    /**
+     * When each person first shows up in a year's uploads, and when the uploads
+     * begin. Anything longer than a month is skipped: a quarter or a custom range
+     * starting in January would seat everyone in it from January.
+     */
+    function _firstSeenInYear(year) {
+        var firstSeen = {};
+        var dataStart = null;
+        var wData = _getWeeklyData();
+        Object.keys(wData).forEach(function (key) {
+            var entry = wData[key];
+            var win = _periodWindow(key, (entry && entry.metadata) || {}, false);
+            if (!win || parseInt(String(win.end).slice(0, 4), 10) !== year) return;
+            var s = _dayNumber(win.start), e = _dayNumber(win.end);
+            if (e - s > 31) return;
+            var emps = (entry && entry.employees) || [];
+            if (!emps.length) return;
+            if (dataStart === null || s < dataStart) dataStart = s;
+            emps.forEach(function (emp) {
+                if (!emp || !emp.name) return;
+                var n = _seatName(emp.name);
+                if (!(n in firstSeen) || s < firstSeen[n]) firstSeen[n] = s;
+            });
+        });
+        return { firstSeen: firstSeen, dataStart: dataStart };
+    }
+
+    /**
+     * What teamStandingScore needs about one period, built once per period
+     * rather than once per person. Null when the dates are unknown, which
+     * leaves every score as the shared scorer gave it.
+     */
+    function buildSeatContext(win, year) {
+        if (!win) return null;
+        var s = _dayNumber(win.start), e = _dayNumber(win.end);
+        if (s === null || e === null || e < s) return null;
+        var yr = parseInt(year, 10) || parseInt(String(win.end).slice(0, 4), 10);
+        var seen = _firstSeenInYear(yr);
+        if (seen.dataStart === null) return null;
+        return { year: yr, start: s, end: e, firstSeen: seen.firstSeen, dataStart: seen.dataStart };
+    }
+
+    function _reliabilityScore(hours, year) {
+        var onOff = window.DevCoachModules && window.DevCoachModules.onOffTracker;
+        if (!onOff || typeof onOff.getYearEndOnOffScoreOrFallback !== 'function') return null;
+        return onOff.getYearEndOnOffScoreOrFallback('reliability', hours, year);
+    }
+
+    /**
+     * One person's KPI score as their team's standing counts it. Starts from
+     * the shared scorer's per-KPI scores and changes reliability only, on a
+     * copy. `seat` says what was done: scaled (with the hours before and
+     * after) or left out as too new. Null when nothing changed.
+     */
+    function teamStandingScore(row, ctx) {
+        var scores = Object.assign({}, (row && row.scores) || {});
+        var seat = null;
+        var hasReliability = scores.reliability !== null && scores.reliability !== undefined;
+        if (ctx && row && hasReliability) {
+            var first = ctx.firstSeen[_seatName(row.name)];
+            var hours = Number(row.reliability);
+            var joinedLate = Number.isFinite(first) &&
+                first - ctx.dataStart > SEAT_MIN_DAYS &&
+                first > ctx.start && first <= ctx.end;
+            if (joinedLate && Number.isFinite(hours)) {
+                var inSeat = ctx.end - first + 1;
+                if (inSeat < SEAT_MIN_DAYS) {
+                    scores.reliability = null;
+                    seat = { daysInSeat: inSeat, tooNew: true };
+                } else {
+                    var periodDays = ctx.end - ctx.start + 1;
+                    var scaled = Math.round(hours * periodDays / inSeat * 100) / 100;
+                    scores.reliability = _reliabilityScore(scaled, ctx.year);
+                    seat = { daysInSeat: inSeat, hours: hours, scaledHours: scaled };
+                }
+            }
+        }
+        var valid = TEAM_SCORE_KEYS.map(function (k) { return scores[k]; })
+            .filter(function (v) { return v !== null && v !== undefined; });
+        return {
+            measuredCount: valid.length,
+            ratingAverage: valid.length ? valid.reduce(function (a, b) { return a + b; }, 0) / valid.length : null,
+            seat: seat
+        };
+    }
+
     function _buildRankingsForMonth(monthKey) {
         var pc = window.DevCoachModules && window.DevCoachModules.periodCompare;
         if (!pc || !pc.buildMonthAggregate) return null;
@@ -964,7 +1095,9 @@
                one would overstate the pace fourfold. */
             spanStart: agg.spanStart || null,
             spanEnd: agg.spanEnd || null,
-            weekCount: agg.fromUpload ? null : agg.weekCount
+            weekCount: agg.fromUpload ? null : agg.weekCount,
+            // The same dates in the shape buildSeatContext reads.
+            periodWindow: (agg.spanStart && agg.spanEnd) ? { start: agg.spanStart, end: agg.spanEnd } : null
         };
     }
 
@@ -1002,7 +1135,9 @@
             totalEmployees: rankings.length,
             source: meta.label || periodKey,
             periodKey: periodKey,
-            teamMembers: teamSet
+            teamMembers: teamSet,
+            // The dates the upload covers, for the team standings' seat check.
+            periodWindow: _periodWindow(periodKey, meta, _isYtdSource)
         };
     }
 
@@ -4169,6 +4304,10 @@
         // Ranks an arbitrary employee array. period-compare uses it to re-rank a
         // past month, since rank is computed on demand and never stored.
         scoreAndRankEmployees: _scoreAndRank,
+        // Teams and Team Movement: a person's score with reliability scaled to
+        // their time in seat, over the context for one period.
+        buildSeatContext: buildSeatContext,
+        teamStandingScore: teamStandingScore,
         // The modal body, built without touching the DOM, so what a name click
         // shows can be asserted rather than eyeballed.
         buildTrajectoryHtml: buildTrajectoryHtml,

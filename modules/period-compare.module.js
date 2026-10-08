@@ -729,6 +729,21 @@
         var ranked = _rankShared(prevEmployees, curEmployees, yr, minShared);
         if (!ranked) return null;
 
+        /* Each side is scored the way the Teams standings score it, with
+           reliability scaled to time in seat for anyone who joined partway
+           through (center-ranking teamStandingScore). Without the period's
+           dates there is nothing to scale against, and the shared scorer's
+           figures stand. */
+        var cr = window.DevCoachModules && window.DevCoachModules.centerRanking;
+        function seatContext(win) {
+            return (win && cr && cr.buildSeatContext) ? cr.buildSeatContext(win, yr) : null;
+        }
+        function standingOf(r, ctx) {
+            return (cr && cr.teamStandingScore)
+                ? cr.teamStandingScore(r, ctx)
+                : { ratingAverage: r.ratingAverage, measuredCount: r.measuredCount };
+        }
+
         /* A KPI score is a mean over whatever was populated, so it RISES as KPIs
            go missing: two measured at Exceeds is a perfect 3.00, better than
            anyone scored on all five can realistically reach. Averaging those
@@ -738,17 +753,18 @@
            The two panels sit on one screen, both claim to place the same teams
            over the same people, and without this they answer differently: the
            table gates on measuredCount and this did not. */
-        function group(rankedList, tally) {
+        function group(rankedList, tally, ctx) {
             var out = {};
             rankedList.forEach(function (r) {
                 var sup = sups[r.name];
                 if (!sup) return; // unassigned people cannot be attributed to a team
-                if ((r.measuredCount || 0) < MIN_MEASURED_FOR_STANDING) {
+                var st = standingOf(r, ctx);
+                if ((st.measuredCount || 0) < MIN_MEASURED_FOR_STANDING) {
                     if (tally) tally.thin++;
                     return;
                 }
                 if (!out[sup]) out[sup] = { ratings: [], ranks: [] };
-                if (Number.isFinite(r.ratingAverage)) out[sup].ratings.push(r.ratingAverage);
+                if (Number.isFinite(st.ratingAverage)) out[sup].ratings.push(st.ratingAverage);
                 if (Number.isFinite(r.rank)) out[sup].ranks.push(r.rank);
             });
             return out;
@@ -770,8 +786,8 @@
         }
 
         var curTally = { thin: 0 };
-        var prev = summarise(group(ranked.prevRanked));
-        var cur = summarise(group(ranked.curRanked, curTally));
+        var prev = summarise(group(ranked.prevRanked, null, seatContext(options.prevWindow)));
+        var cur = summarise(group(ranked.curRanked, curTally, seatContext(options.curWindow)));
 
         var names = Object.keys(cur).filter(function (n) { return n in prev; });
         if (names.length < 2) return null;
@@ -1251,7 +1267,10 @@
         var prev = buildMonthAggregate(prevKey, yr);
         if (!cur || !prev) return null;
 
-        var compared = compareTeams(prev.employees, cur.employees, supervisors, yr);
+        var compared = compareTeams(prev.employees, cur.employees, supervisors, yr, {
+            prevWindow: _windowOf(prev, 'month'),
+            curWindow: _windowOf(cur, 'month')
+        });
         if (!compared) return null;
 
         return {
@@ -1314,7 +1333,8 @@
             if (parseInt(end.split('-')[0], 10) !== yr) return;
             var emps = (entry && entry.employees) || [];
             if (!emps.length) return;
-            out.push({ key: k, label: meta.label || end, employees: emps, end: end, count: emps.length });
+            var start = String(meta.startDate || (k.indexOf('|') > -1 ? k.split('|')[0] : ''));
+            out.push({ key: k, label: meta.label || end, employees: emps, start: start, end: end, count: emps.length });
         });
 
         out.sort(function (a, b) { return a.end.localeCompare(b.end); });
@@ -1324,6 +1344,18 @@
             p.partial = fullest > 0 && p.count < fullest * PARTIAL_MONTH_FRACTION;
         });
         return out;
+    }
+
+    // The dates a period covers, for the team standings' seat check. A month
+    // carries its span; a week or a YTD file its own dates, and a YTD file
+    // with no usable start runs from January 1.
+    function _windowOf(p, scope) {
+        if (!p) return null;
+        var isDate = function (d) { return /^\d{4}-\d{2}-\d{2}/.test(String(d || '')); };
+        var start = p.spanStart || p.start;
+        var end = p.spanEnd || p.end;
+        if (!isDate(start) && scope === 'ytd' && isDate(end)) start = String(end).slice(0, 4) + '-01-01';
+        return (isDate(start) && isDate(end)) ? { start: start, end: end } : null;
     }
 
     /**
@@ -1387,7 +1419,10 @@
         var cur = usable[curIdx];
         var prev = usable[curIdx - 1];
 
-        var compared = compareTeams(prev.employees, cur.employees, supervisors, yr);
+        var compared = compareTeams(prev.employees, cur.employees, supervisors, yr, {
+            prevWindow: _windowOf(prev, scope),
+            curWindow: _windowOf(cur, scope)
+        });
         if (!compared) return null;
 
         return {

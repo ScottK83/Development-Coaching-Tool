@@ -3,16 +3,17 @@
 const { suite } = require('./harness');
 
 /**
- * Picking which month, not just the newest one.
+ * Teams: year to date, a month or a week, each on its newest upload.
  *
- * The scope buttons jump to the newest period of a kind, which answers "how is
- * this month going" and never "how did June go". Getting to June meant opening a
- * dropdown holding every upload on file, which is the thing the period chips
- * were built to replace everywhere else.
+ * On 2026-10-07 Scott asked whether he needed to see the file at all ("it
+ * should ALWAYS be YTD"), so the file chips and the Covering list went and
+ * Teams was pinned to the newest year-to-date file. On 2026-10-08 he asked for
+ * month and week as well. What came back is the choice of kind, not the file
+ * list: each button lands on the newest upload of its kind and names it.
  *
- * This row lists the periods inside the active scope. What is pinned here is
- * that it offers the whole scope, that it does not offer a choice of one, and
- * that fifty-odd weeks arrive collapsed rather than as four lines of chips.
+ * Pinned here: the three buttons, that each kind lands on its newest upload,
+ * that it opens on year to date, that a kind with nothing covering the centre
+ * is greyed and never chosen, and that no list of files returns.
  */
 
 function names(n) {
@@ -22,8 +23,7 @@ function names(n) {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Twelve completed months rebuilt from weekly uploads, the way period-compare
-// hands them over. Two more than a collapsed row shows.
+// Twelve months rebuilt from weekly uploads, the way period-compare hands them over.
 const MONTHS = MONTH_NAMES.map((name, i) => {
     const mo = String(i + 1).padStart(2, '0');
     return {
@@ -36,7 +36,6 @@ const MONTHS = MONTH_NAMES.map((name, i) => {
     };
 });
 
-// Fifteen weeks, also past the ten a row shows before it asks.
 const WEEKS = {};
 for (let i = 1; i <= 15; i += 1) {
     const d = '2026-06-' + String(i).padStart(2, '0');
@@ -70,95 +69,27 @@ function load(t, opts) {
     return t.loadModule('modules/matchup.module.js').matchup;
 }
 
-// The chip carries the month name alone. The provenance lives on hover, so
-// asserting on the chip text means asserting between the tags.
-function chipText(html, label) {
-    return html.includes('>' + label + '<');
+// One button's markup, from its data-scope to its closing tag.
+function button(html, scope) {
+    const at = html.indexOf('data-scope="' + scope + '"');
+    return at === -1 ? '' : html.slice(at, html.indexOf('</button>', at));
 }
-function chipCount(html) {
-    return (html.match(/class="mu-scope-period"/g) || []).length;
-}
+const isActive = (btn) => btn.includes('background: #e65100');
 
-suite('matchup periods: the months in the scope are one click each', (t) => {
+suite('teams periods: YTD, Monthly and Weekly, opening on year to date', (t) => {
     const matchup = load(t);
-    matchup.setSelectedPeriodForTest('month-agg:2026-06', 'computed');
-    const html = matchup.renderScopePeriods();
+    const html = matchup.renderPeriodControls();
 
-    t.check('the row is labelled for what it picks', html.includes('Month:'));
-    t.check('the newest month is offered', chipText(html, 'December'));
-    t.check('so is the one selected', chipText(html, 'June'));
-
-    // "June (rebuilt from 4 weeks)" is what the dropdown is for. The chip is
-    // the name of the month and the rest is on hover.
-    t.check('the parenthetical is not chip text', !chipText(html, 'June (rebuilt from 4 weeks)'));
-    t.check('but it is on hover', html.includes('June (rebuilt from 4 weeks), 120 associates'));
+    t.check('there is a YTD button', !!button(html, 'ytd'));
+    t.check('a Monthly one', !!button(html, 'month'));
+    t.check('and a Weekly one', !!button(html, 'week'));
+    t.check('year to date is the one in use', isActive(button(html, 'ytd')));
+    t.check('the others are not', !isActive(button(html, 'month')) && !isActive(button(html, 'week')));
+    t.check('and the upload in use is named',
+        html.includes('Year to date, from the newest upload: <strong>YTD through 2026-09-03</strong>'));
 });
 
-suite('matchup periods: the chosen one is marked', (t) => {
-    const matchup = load(t);
-    matchup.setSelectedPeriodForTest('month-agg:2026-06', 'computed');
-    const html = matchup.renderScopePeriods();
-
-    const june = html.slice(html.indexOf('month-agg:2026-06'), html.indexOf('>June<'));
-    const july = html.slice(html.indexOf('month-agg:2026-07'), html.indexOf('>July<'));
-
-    t.check('the selected month is accented', june.includes('#e65100'));
-    t.check('an unselected one is not', !july.includes('#e65100'));
-});
-
-suite('matchup periods: a year of months arrives collapsed', (t) => {
-    const matchup = load(t);
-    matchup.setSelectedPeriodForTest('month-agg:2026-06', 'computed');
-    const html = matchup.renderScopePeriods();
-
-    t.equal('only the recent ones are shown', chipCount(html), 10);
-    t.check('the oldest are held back', !chipText(html, 'January'));
-    t.check('and offered rather than dropped', html.includes('Show 2 more'));
-
-    matchup.expandScopeChipsForTest();
-    const all = matchup.renderScopePeriods();
-    t.equal('expanding shows the year', chipCount(all), 12);
-    t.check('including the oldest', chipText(all, 'January'));
-    t.check('and offers to collapse again', all.includes('Show fewer'));
-});
-
-suite('matchup periods: fifty weeks do not arrive all at once', (t) => {
-    const matchup = load(t);
-    // Selecting a week puts the row in the weekly scope, where there are 15.
-    matchup.setSelectedPeriodForTest('2026-06-01|2026-06-15', 'weekly');
-    const html = matchup.renderScopePeriods();
-
-    t.check('the row is labelled for weeks', html.includes('Week:'));
-    t.equal('only the recent ones are shown', chipCount(html), 10);
-    t.check('and the rest are offered', html.includes('Show 5 more'));
-
-    matchup.expandScopeChipsForTest();
-    t.equal('expanding shows all of them', chipCount(matchup.renderScopePeriods()), 15);
-});
-
-suite('matchup periods: switching scope collapses the row again', (t) => {
-    const matchup = load(t);
-    matchup.setSelectedPeriodForTest('2026-06-01|2026-06-15', 'weekly');
-    matchup.expandScopeChipsForTest();
-    t.equal('it is open', chipCount(matchup.renderScopePeriods()), 15);
-
-    // Otherwise switching to Weekly drops four lines of chips on someone who
-    // wanted the newest week.
-    matchup.setSelectedPeriodForTest('month-agg:2026-06', 'computed');
-    t.equal('and closed again on the next scope', chipCount(matchup.renderScopePeriods()), 10);
-});
-
-suite('matchup periods: a scope with one period offers no choice', (t) => {
-    // There is exactly one YTD file on Scott's machine. A row holding a single
-    // chip reads like something failed to load rather than like a choice.
-    const matchup = load(t);
-    matchup.setSelectedPeriodForTest('ytd|2026-09-03', 'ytd');
-
-    t.equal('nothing is rendered', matchup.renderScopePeriods(), '');
-});
-
-suite('matchup periods: two YTD files are a choice', (t) => {
-    // The guard has to be about how many there are, not about YTD being YTD.
+suite('teams periods: each kind lands on its newest upload', (t) => {
     const matchup = load(t, {
         ytdData: Object.assign({
             'ytd|2026-06-30': {
@@ -167,33 +98,63 @@ suite('matchup periods: two YTD files are a choice', (t) => {
             }
         }, YTD_ONE)
     });
-    matchup.setSelectedPeriodForTest('ytd|2026-09-03', 'ytd');
-    const html = matchup.renderScopePeriods();
 
-    t.check('the row appears', html.includes('File:'));
-    t.equal('with both files', chipCount(html), 2);
+    t.equal('the newest year-to-date file', matchup.periodForScope('ytd'), 'ytd|2026-09-03');
+    t.equal('the newest month', matchup.periodForScope('month'), 'month-agg:2026-12');
+    t.equal('the newest week', matchup.periodForScope('week'), '2026-06-01|2026-06-15');
+
+    matchup.pickScopeForTest('month');
+    const html = matchup.renderPeriodControls();
+    t.check('Monthly is the one in use', isActive(button(html, 'month')));
+    t.check('and the month is named',
+        html.includes('Month, from the newest upload: <strong>December (rebuilt from 4 weeks)</strong>'));
+
+    matchup.pickScopeForTest('week');
+    t.check('Weekly names its week',
+        matchup.renderPeriodControls().includes('Week, from the newest upload: <strong>Week ending 2026-06-15</strong>'));
 });
 
-suite('matchup periods: no selection means no row', (t) => {
+suite('teams periods: no list of files comes back', (t) => {
+    // Scott, 2026-10-07: "Do I need it to show the file?"
     const matchup = load(t);
-    matchup.setSelectedPeriodForTest(null, '');
-
-    // The scope buttons still work with nothing selected. This row cannot know
-    // which scope to list, and guessing one would move the selection silently.
-    t.equal('it stays out of the way', matchup.renderScopePeriods(), '');
+    ['ytd', 'month', 'week'].forEach((scope) => {
+        matchup.pickScopeForTest(scope);
+        const html = matchup.renderPeriodControls();
+        t.check(scope + ': no file chips', !html.includes('mu-scope-period'));
+        t.check(scope + ': no Covering chips', !html.includes('matchupPeriodChips'));
+        t.check(scope + ': no dropdown of uploads', !html.includes('matchupPeriodSelect') && !html.includes('<select'));
+        t.check(scope + ': no File, Month or Week row label', !/>(File|Month|Week):</.test(html));
+    });
+    t.check('and the old chip row is not exported', typeof matchup.renderScopePeriods === 'undefined');
 });
 
-suite('matchup periods: a period too small for a matchup is not offered', (t) => {
+suite('teams periods: a kind with nothing covering the centre is greyed and never chosen', (t) => {
+    const matchup = load(t, { weekly: {} });
+    let html = matchup.renderPeriodControls();
+    t.check('Weekly is disabled', button(html, 'week').includes(' disabled'));
+    t.check('and says why', button(html, 'week').includes('No weekly upload covers enough of the centre'));
+
+    // A stale pick must not leave the page on nothing.
+    matchup.pickScopeForTest('week');
+    html = matchup.renderPeriodControls();
+    t.check('a pick with nothing behind it falls back to year to date', isActive(button(html, 'ytd')));
+    t.equal('and there is no week to land on', matchup.periodForScope('week'), null);
+});
+
+suite('teams periods: one supervisor\'s upload is never the newest month', (t) => {
     // A single supervisor's report filed as a month is a real period with nobody
-    // to match against, so it must not appear as a pickable one.
+    // to match against.
     const small = MONTHS.slice(0, 3).concat([{
         key: 'month-agg:2026-04', label: 'April (rebuilt from 1 week)',
         type: 'month-agg', source: 'computed', count: 14, endDate: '2026-04-30'
     }]);
     const matchup = load(t, { months: small });
-    matchup.setSelectedPeriodForTest('month-agg:2026-01', 'computed');
-    const html = matchup.renderScopePeriods();
+    t.equal('the newest full month is used instead', matchup.periodForScope('month'), 'month-agg:2026-03');
+});
 
-    t.check('the full months are offered', chipText(html, 'January') && chipText(html, 'March'));
-    t.check('the one-team month is not', !chipText(html, 'April'));
+suite('teams periods: with no year-to-date file it opens on the next kind', (t) => {
+    const matchup = load(t, { ytdData: {} });
+    const html = matchup.renderPeriodControls();
+    t.check('YTD is greyed', button(html, 'ytd').includes(' disabled'));
+    t.check('and Monthly is in use', isActive(button(html, 'month')));
 });
