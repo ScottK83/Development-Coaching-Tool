@@ -1433,15 +1433,28 @@
     // Tails for a top spot nobody else reached, in the batch post. The placing
     // itself is stated every time — that is the fact — and only the way it is
     // said out loud changes.
+    // Tense: the lines in the plain pools are true whether or not the period
+    // has ended. The _DONE pools say it has ("nobody else came close"), and
+    // their _ONGOING counterparts say it while it runs ("nobody else is coming
+    // close"). Which one a post draws from is periodIsComplete's call. Scott,
+    // 2026-10-07: a week in progress came out as "went absolutely off".
     var SOLO_TOP_TAILS = [
-        '#1 in the Call Center. Nobody else got there!',
-        '#1 in the Call Center, and not one other person matched it!',
         '#1 in the Call Center. Untouched by anybody else!',
         '#1 in the Call Center. That number belongs to them alone!',
-        '#1 in the Call Center, and nobody else came close!',
         '#1 in the Call Center. One name on that number, and it is theirs!',
-        '#1 in the Call Center. They set the bar and stood there alone!',
         '#1 in the Call Center, matched by nobody on the floor!'
+    ];
+    var SOLO_TOP_TAILS_DONE = [
+        '#1 in the Call Center. Nobody else got there!',
+        '#1 in the Call Center, and not one other person matched it!',
+        '#1 in the Call Center, and nobody else came close!',
+        '#1 in the Call Center. They set the bar and stood there alone!'
+    ];
+    var SOLO_TOP_TAILS_ONGOING = [
+        '#1 in the Call Center. Nobody else is there!',
+        '#1 in the Call Center, and not one other person is matching it!',
+        '#1 in the Call Center, and nobody else is coming close!',
+        '#1 in the Call Center. They are setting the bar and standing there alone!'
     ];
 
     var SHOUTOUT_OPENERS = [
@@ -1451,16 +1464,33 @@
         function(name) { return '\uD83C\uDFC6\u2B50 Let\'s hear it for ' + name + '! \u2B50\uD83C\uDFC6'; },
         function(name) { return '\uD83D\uDD25\uD83D\uDD25 ' + name + ' is on FIRE! \uD83D\uDD25\uD83D\uDD25'; },
         function(name) { return '\uD83D\uDCA5\uD83D\uDE80 Can we talk about ' + name + ' for a second?! INCREDIBLE! \uD83D\uDE80\uD83D\uDCA5'; },
-        function(name) { return '\u2B50\u2B50\u2B50 ' + name + ' just put on a CLINIC! \u2B50\u2B50\u2B50'; },
-        function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' showed up and showed OUT! \uD83D\uDD25'; },
         function(name) { return '\uD83C\uDFC6 BIG TIME performance from ' + name + '! \uD83C\uDFC6'; },
-        function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' just did! \uD83C\uDF1F\uD83C\uDF1F'; },
-        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' came to WORK! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; },
         function(name) { return '\uD83C\uDF89 Stop what you\'re doing and give ' + name + ' some love! \uD83C\uDF89'; },
         function(name) { return '\uD83D\uDE80\uD83D\uDE80 ' + name + ' is absolutely FLYING right now! \uD83D\uDE80\uD83D\uDE80'; },
         function(name) { return '\uD83D\uDCA5\uD83C\uDFC6 THIS is what greatness looks like! ' + name + ' take a bow! \uD83C\uDFC6\uD83D\uDCA5'; },
         function(name) { return '\uD83D\uDD25 I gotta brag on ' + name + ' for a minute! \uD83D\uDD25'; },
         function(name) { return '\u2B50\uD83C\uDF89 The spotlight is on ' + name + ' today! Look at this! \uD83C\uDF89\u2B50'; }
+    ];
+
+    var SHOUTOUT_OPENERS_DONE = [
+        function(name) { return '\u2B50\u2B50\u2B50 ' + name + ' just put on a CLINIC! \u2B50\u2B50\u2B50'; },
+        function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' showed up and showed OUT! \uD83D\uDD25'; },
+        function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' just did! \uD83C\uDF1F\uD83C\uDF1F'; },
+        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' came to WORK! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; }
+    ];
+    var SHOUTOUT_OPENERS_ONGOING = [
+        function(name) { return '\u2B50\u2B50\u2B50 ' + name + ' is putting on a CLINIC! \u2B50\u2B50\u2B50'; },
+        function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' is showing up and showing OUT! \uD83D\uDD25'; },
+        function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' is doing! \uD83C\uDF1F\uD83C\uDF1F'; },
+        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' is bringing the WORK! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; }
+    ];
+    // Openers built on the shared fifty sayings (message-voice HYPE), framed
+    // a few different ways. They take the tense along with the name.
+    var SHOUTOUT_OPENERS_HYPE = [
+        function(name, ongoing) { return '\uD83D\uDD25 ' + hypeLine(name, ongoing) + '! \uD83D\uDD25'; },
+        function(name, ongoing) { return '\uD83D\uDCE3 Heads up, team: ' + hypeLine(name, ongoing) + '! \uD83D\uDCE3'; },
+        function(name, ongoing) { return '\uD83C\uDF1F\uD83C\uDF1F ' + hypeLine(name, ongoing) + '! \uD83C\uDF1F\uD83C\uDF1F'; },
+        function(name, ongoing) { return '\uD83D\uDE80 No exaggeration, ' + hypeLine(name, ongoing) + '! \uD83D\uDE80'; }
     ];
 
     // The uniqueness here is the NUMBER, not the metric \u2014 other associates
@@ -1470,7 +1500,7 @@
     // Standing alone in the whole building is the rarest thing this tool can
     // find, so it gets said at full volume: not "nobody else matched it", but
     // nobody else in the Call Center.
-    var ONLY_ONE_LINES = [
+    var ONLY_ONE_LINES_DONE = [
         function(label, val) { return '\uD83E\uDD47 ' + label + ' at ' + val + '. Nobody else in the Call Center achieved this!'; },
         function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Not one other person in the Call Center got there!'; },
         function(label, val) { return '\uD83C\uDFC6 ' + label + ' at ' + val + '. Nobody else in the entire Call Center put up that number!'; },
@@ -1483,26 +1513,56 @@
         function(label, val) { return '\uD83C\uDFC6 Set the bar at ' + val + ' on ' + label + ' and stood there alone in the whole Call Center!'; },
         function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. One name in the Call Center on that number, and it\'s theirs!'; }
     ];
+    // The lines in ONLY_ONE_LINES_DONE that say nothing about the period being over.
+    var ONLY_ONE_LINES = ONLY_ONE_LINES_DONE.filter(function (fn) {
+        return !/achieved|got there|put up|came close|could match|was them|stood there/.test(fn('x', 'y'));
+    });
+    var ONLY_ONE_LINES_ONGOING = [
+        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + '. Nobody else in the Call Center is there!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Not one other person in the Call Center is getting there!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + '. Nobody else in the entire Call Center is putting up that number!'; },
+        function(label, val) { return '\uD83D\uDC51 One person in the whole Call Center is at ' + val + ' on ' + label + '. ONE. And it\'s them!'; },
+        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Nobody in the Call Center is coming close!'; },
+        function(label, val) { return '\uD83D\uDC51 Setting the bar at ' + val + ' on ' + label + ' and standing there alone in the whole Call Center!'; }
+    ];
+    var ONLY_ONE_LINES_DONE_ONLY = ONLY_ONE_LINES_DONE.filter(function (fn) { return ONLY_ONE_LINES.indexOf(fn) === -1; });
     // Fallback when a value is somehow missing \u2014 never claim uniqueness of
     // the metric itself, only of the performance.
-    var ONLY_ONE_NO_VALUE_LINES = [
+    var ONLY_ONE_NO_VALUE_LINES_DONE = [
         function(label) { return '\uD83E\uDD47 Nobody else in the Call Center matched this ' + label + ' performance!'; },
         function(label) { return '\uD83D\uDC51 No one else in the Call Center put up a ' + label + ' number like this!'; },
         function(label) { return '\uD83C\uDFC6 This ' + label + ' performance went unmatched across the whole Call Center!'; }
     ];
 
+    var ONLY_ONE_NO_VALUE_LINES_ONGOING = [
+        function(label) { return '\uD83D\uDC51 Nobody else in the Call Center is matching this ' + label + ' performance!'; },
+        function(label) { return '\uD83D\uDC51 No one else in the Call Center is putting up a ' + label + ' number like this!'; },
+        function(label) { return '\uD83D\uDC51 This ' + label + ' performance is unmatched across the whole Call Center!'; }
+    ];
     var STANDOUT_LINES = [
-        function(label) { return '\uD83C\uDFC5 Absolutely crushed it in ' + label + '!'; },
         function(label) { return '\u2B50 Outstanding ' + label + ' performance!'; },
         function(label) { return '\uD83D\uDCAA Elite-level ' + label + '! That\'s impressive!'; },
+        function(label) { return '\uD83C\uDF1F Seriously impressive work in ' + label + '!'; }
+    ];
+    var STANDOUT_LINES_DONE = [
+        function(label) { return '\uD83C\uDFC5 Absolutely crushed it in ' + label + '!'; },
         function(label) { return '\uD83D\uDD25 Brought the heat in ' + label + '!'; },
         function(label) { return '\uD83D\uDE80 ' + label + ' was next level!'; },
         function(label) { return '\uD83C\uDFC6 Put up a monster ' + label + ' number!'; },
-        function(label) { return '\uD83C\uDF1F Seriously impressive work in ' + label + '!'; },
         function(label) { return '\uD83D\uDCA5 Went OFF in ' + label + '! Love to see it!'; },
         function(label) { return '\uD83D\uDCAA Threw down a huge ' + label + ' performance!'; },
         function(label) { return '\u2B50 Made ' + label + ' look easy!'; },
         function(label) { return '\uD83D\uDD25 ' + label + ' was absolutely on point!'; }
+    ];
+    var STANDOUT_LINES_ONGOING = [
+        function(label) { return '\uD83C\uDFC5 Absolutely crushing it in ' + label + '!'; },
+        function(label) { return '\uD83D\uDD25 Bringing the heat in ' + label + '!'; },
+        function(label) { return '\uD83D\uDE80 ' + label + ' is next level!'; },
+        function(label) { return '\uD83C\uDFC6 Putting up a monster ' + label + ' number!'; },
+        function(label) { return '\uD83D\uDCA5 Going OFF in ' + label + '! Love to see it!'; },
+        function(label) { return '\uD83D\uDCAA Throwing down a huge ' + label + ' performance!'; },
+        function(label) { return '\u2B50 Making ' + label + ' look easy!'; },
+        function(label) { return '\uD83D\uDD25 ' + label + ' is absolutely on point!'; }
     ];
 
     var SHOUTOUT_CLOSERS = [
@@ -1519,35 +1579,54 @@
         '\uD83D\uDD25 That work ethic is contagious. Thank you!',
         '\uD83D\uDCAF You should be really proud of that. We are!',
         '\u2B50 Performances like this are what make this team special!',
-        '\uD83C\uDFC6 You brought your A-game and it shows!',
-        '\uD83D\uDE4C Take a moment and be proud of what you accomplished!',
         '\uD83C\uDF1F Consistent excellence. That\'s what we\'re seeing from you!'
     ];
 
+    var SHOUTOUT_CLOSERS_DONE = [
+        '\uD83C\uDFC6 You brought your A-game and it shows!',
+        '\uD83D\uDE4C Take a moment and be proud of what you accomplished!'
+    ];
+    var SHOUTOUT_CLOSERS_ONGOING = [
+        '\uD83C\uDFC6 You\'re bringing your A-game and it shows!',
+        '\uD83D\uDE4C Take a moment and be proud of what you\'re building!'
+    ];
     var BATCH_INTRO = [
         '\uD83C\uDF89\uD83C\uDF89\uD83C\uDF89 SHOUT-OUT TIME! \uD83C\uDF89\uD83C\uDF89\uD83C\uDF89\n\nSome AMAZING performances from the team! Let\'s celebrate these wins:\n\n',
         '\uD83D\uDD25 TEAM WINS ALERT \uD83D\uDD25\n\nI\'ve got some incredible achievements to share. These folks are KILLING it:\n\n',
         '\u2B50 CELEBRATION TIME \u2B50\n\nLook at what this team is doing! So proud of these performers:\n\n',
         '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n',
-        '\uD83D\uDE80 WINS WORTH SHARING \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks showed up BIG:\n\n',
         '\uD83D\uDCA5\uD83D\uDCA5 DROP EVERYTHING, WE\'RE CELEBRATING! \uD83D\uDCA5\uD83D\uDCA5\n\nThese performances deserve the spotlight:\n\n',
-        '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\nSome of our people went absolutely OFF. Check this out:\n\n',
         '\uD83D\uDCAA TEAM FLEXES \uD83D\uDCAA\n\nI love getting to share wins like these. Look what our team is doing:\n\n',
         '\uD83C\uDF89 WHO\'S POPPING OFF?! \uD83C\uDF89\n\nSpoiler: these amazing people right here:\n\n',
         '\uD83D\uDD25\uD83C\uDFC6 VICTORY LAP TIME \uD83C\uDFC6\uD83D\uDD25\n\nLet\'s give some well-deserved recognition to these standout performers:\n\n'
     ];
 
+    // Intros that take the tense: functions get handed whether the period is
+    // still running. ROLL CALL used to say "went absolutely OFF" over a week in
+    // progress; it now draws on the shared fifty sayings in either tense.
+    var BATCH_INTRO_TENSED = [
+        function(ongoing) { return '\uD83D\uDE80 WINS WORTH SHARING \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks ' + (ongoing ? 'are showing up BIG' : 'showed up BIG') + ':\n\n'; },
+        function(ongoing) { return '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\n' + hypeLine('Some of our people', ongoing, true) + '. Check this out:\n\n'; },
+        function(ongoing) { return '\uD83D\uDD25 HEAT CHECK \uD83D\uDD25\n\n' + hypeLine('This team', ongoing) + '. The proof:\n\n'; },
+        function(ongoing) { return '\uD83D\uDCE3 BRAG BOARD \uD83D\uDCE3\n\n' + hypeLine('These folks', ongoing, true) + ', and here are the numbers:\n\n'; }
+    ];
     var BATCH_CLOSERS = [
         '\n\uD83D\uDE4C Amazing work everyone! Let\'s keep this energy going!',
         '\n\uD83D\uDCAF This team is something special. Proud of each and every one of you!',
         '\n\uD83D\uDE80 The bar keeps rising and you all keep clearing it. Incredible!',
         '\n\uD83D\uDD25 This is what happens when a great team shows up and shows out!',
-        '\n\u2B50 Every single one of these people made a difference here. Thank you!',
         '\n\uD83C\uDFC6 I could brag about this team all day. Outstanding work across the board!',
         '\n\uD83D\uDCAA When you see your name up here, know that it means something. We see you!',
         '\n\uD83C\uDF89 THIS is the energy! Let\'s carry this momentum forward!',
         '\n\uD83D\uDE80 Proud doesn\'t even begin to cover it. This team is BUILT DIFFERENT!',
         '\n\uD83D\uDD25 Keep bringing this fire! You all are incredible!'
+    ];
+
+    var BATCH_CLOSERS_DONE = [
+        '\n\u2B50 Every single one of these people made a difference here. Thank you!'
+    ];
+    var BATCH_CLOSERS_ONGOING = [
+        '\n\u2B50 Every single one of these people is making a difference here. Thank you!'
     ];
 
     /**
@@ -1566,28 +1645,35 @@
     var BATCH_METRIC_STEMS = [
         function(label, val) { return label + ': ' + val + '!'; },
         function(label, val) { return val + ' on ' + label + '!'; },
-        function(label, val) { return 'Put up ' + val + ' on ' + label + '!'; },
         function(label, val) { return 'Look at ' + label + ': ' + val + '!'; },
-        function(label, val) { return 'Took ' + label + ' to ' + val + '!'; },
         function(label, val) { return val + ' on ' + label + ', and it holds up!'; },
         function(label, val) { return label + ' is at ' + val + '!'; },
         // No stem that leans on a sentence before it. "That is 83.8% on First
         // Call Resolution!" opens a bullet as though it were finishing one,
         // and every one of these has to stand on its own. Scott, 2026-09-21.
-        function(label, val) { return 'Hit ' + val + ' on ' + label + '!'; },
-        function(label, val) { return 'Posted ' + val + ' on ' + label + '!'; }
     ];
 
     // Only drawn from once the period has actually ended. "Finished the period
     // at 93.8%" under a month to date with ten days still to run is not a
     // wording problem, it is a false statement about the month.
     var BATCH_CLOSED_STEMS = [
+        function(label, val) { return 'Put up ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Took ' + label + ' to ' + val + '!'; },
+        function(label, val) { return 'Hit ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Posted ' + val + ' on ' + label + '!'; },
         function(label, val) { return 'Finished the period at ' + val + ' on ' + label + '!'; },
         function(label, val) { return label + ' came in at ' + val + '!'; },
         function(label, val) { return label + ' landed on ' + val + '!'; },
         function(label, val) { return 'Closed out at ' + val + ' on ' + label + '!'; }
     ];
 
+    // Only drawn from while the period is still running.
+    var BATCH_OPEN_STEMS = [
+        function(label, val) { return 'Running at ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Sitting at ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Tracking at ' + val + ' on ' + label + '!'; },
+        function(label, val) { return 'Holding ' + val + ' on ' + label + ' so far!'; }
+    ];
     var BATCH_NO_VALUE_STEMS = [
         function(label) { return 'Outstanding ' + label + '!'; },
         function(label) { return 'Big ' + label + ' period!'; },
@@ -1601,11 +1687,14 @@
     var BATCH_SOLO_STEMS = [
         function(label, val) { return val ? label + ': ' + val + '.' : label + '.'; },
         function(label, val) { return val ? val + ' on ' + label + '.' : label + '.'; },
-        function(label, val) { return val ? label + ' at ' + val + '.' : label + '.'; },
-        function(label, val) { return val ? 'Put up ' + val + ' on ' + label + '.' : label + '.'; }
+        function(label, val) { return val ? label + ' at ' + val + '.' : label + '.'; }
     ];
-
+    var BATCH_SOLO_OPEN_STEMS = [
+        function(label, val) { return val ? 'Sitting at ' + val + ' on ' + label + '.' : label + '.'; },
+        function(label, val) { return val ? 'Running at ' + val + ' on ' + label + '.' : label + '.'; }
+    ];
     var BATCH_SOLO_CLOSED_STEMS = [
+        function(label, val) { return val ? 'Put up ' + val + ' on ' + label + '.' : label + '.'; },
         function(label, val) { return val ? label + ' finished on ' + val + '.' : label + '.'; },
         function(label, val) { return val ? label + ' closed out on ' + val + '.' : label + '.'; }
     ];
@@ -1619,8 +1708,23 @@
     // Walked rather than drawn fresh each time, so regenerating twice in a row
     // cannot land on the same opening. A random pick out of ten repeats about
     // one time in ten, which is often enough to look like nothing changed.
-    var nextBatchIntro = rotator(BATCH_INTRO);
-    var nextBatchCloser = rotator(BATCH_CLOSERS);
+    var nextBatchIntro = {
+        done: rotator(BATCH_INTRO.concat(BATCH_INTRO_TENSED)),
+        ongoing: rotator(BATCH_INTRO.concat(BATCH_INTRO_TENSED))
+    };
+    var nextBatchCloser = {
+        done: rotator(BATCH_CLOSERS.concat(BATCH_CLOSERS_DONE)),
+        ongoing: rotator(BATCH_CLOSERS.concat(BATCH_CLOSERS_ONGOING))
+    };
+
+    // The shared fifty sayings, in the period's tense. Falls back to one plain
+    // saying when message-voice is not loaded (a module tested on its own).
+    function hypeLine(subject, ongoing, plural) {
+        var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
+        if (voice && voice.hype) return voice.hype(subject, ongoing, { plural: plural });
+        if (!ongoing) return subject + ' caught FIRE';
+        return subject + (plural ? ' are' : ' is') + ' on FIRE';
+    }
 
     function formatMetricValue(key, value) {
         if (value === null || value === undefined) return '';
@@ -1827,6 +1931,8 @@
         var ytd = typeof ytdData !== 'undefined' ? ytdData : {};
         var daily = typeof dailyData !== 'undefined' ? dailyData : {};
         var meta = (weekly[periodKey] || ytd[periodKey] || daily[periodKey] || {}).metadata || {};
+        var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
+        if (voice && voice.isOngoingPeriod) return !voice.isOngoingPeriod(meta.periodType, meta.endDate);
         return Boolean(CLOSED_PERIOD_TYPES[meta.periodType]);
     }
 
@@ -1847,11 +1953,15 @@
         return c ? ' Better than ' + c.beat + ' of ' + c.pool + ' associates.' : '';
     }
 
-    function generateShoutOut(person, dateRange) {
+    function generateShoutOut(person, dateRange, periodKey) {
         var lines = [];
+        // A period still running is talked about in the present. With no
+        // period to judge by, it is treated as running, the safe way round.
+        var closed = periodKey ? periodIsComplete(periodKey) : false;
+        var openers = SHOUTOUT_OPENERS.concat(closed ? SHOUTOUT_OPENERS_DONE : SHOUTOUT_OPENERS_ONGOING, SHOUTOUT_OPENERS_HYPE);
         // Same reason as the batch post: this goes in the channel, so the name
         // is written the way a mention is written.
-        lines.push(pick(SHOUTOUT_OPENERS)('@' + person.firstName));
+        lines.push(pick(openers)('@' + person.firstName, !closed));
         if (dateRange) lines.push('📅 ' + dateRange);
         lines.push('');
         if (person.perfectSurveys) {
@@ -1863,36 +1973,37 @@
             var badge = tierBadge(a);
             if (a.soloRank1) {
                 lines.push(valStr
-                    ? pick(ONLY_ONE_LINES)(a.label, valStr.trim())
-                    : pick(ONLY_ONE_NO_VALUE_LINES)(a.label));
+                    ? pick(ONLY_ONE_LINES.concat(closed ? ONLY_ONE_LINES_DONE_ONLY : ONLY_ONE_LINES_ONGOING))(a.label, valStr.trim())
+                    : pick(closed ? ONLY_ONE_NO_VALUE_LINES_DONE : ONLY_ONE_NO_VALUE_LINES_ONGOING)(a.label));
             } else {
                 // Lead with the fact/value, then say where in the building it
                 // put them \u2014 that is the half people repeat to each other.
                 if (valStr) {
-                    lines.push('\uD83C\uDF1F ' + a.label + ' hit ' + valStr.trim() + '!' + placing
+                    lines.push('\uD83C\uDF1F ' + a.label + (closed ? ' hit ' : ' is at ') + valStr.trim() + '!' + placing
                         + (badge ? ' ' + badge : '')
                         + tieClause(describeTie(a, valStr.trim()), ' (', ')'));
                 } else {
-                    lines.push(pick(STANDOUT_LINES)(a.label) + placing);
+                    lines.push(pick(STANDOUT_LINES.concat(closed ? STANDOUT_LINES_DONE : STANDOUT_LINES_ONGOING))(a.label) + placing);
                 }
             }
         });
         lines.push('');
-        lines.push(pick(SHOUTOUT_CLOSERS));
+        lines.push(pick(SHOUTOUT_CLOSERS.concat(closed ? SHOUTOUT_CLOSERS_DONE : SHOUTOUT_CLOSERS_ONGOING)));
         return lines.join('\n');
     }
 
     function generateAllShoutOuts(celebrations, dateRange, periodKey) {
         if (!celebrations.length) return 'No celebrations to report right now.';
-        var msg = nextBatchIntro();
+        // A period still running gets only the wordings that are true while it
+        // is running, from the intro to the closer.
+        var closed = periodIsComplete(periodKey);
+        var intro = nextBatchIntro[closed ? 'done' : 'ongoing']();
+        var msg = typeof intro === 'function' ? intro(!closed) : intro;
         // Fresh per post, so the lines inside one post read as separate
         // sentences rather than one sentence with the nouns swapped.
-        // A period still running gets only the wordings that are true while it
-        // is running.
-        var closed = periodIsComplete(periodKey);
-        var metricStem = rotator(closed ? BATCH_METRIC_STEMS.concat(BATCH_CLOSED_STEMS) : BATCH_METRIC_STEMS);
+        var metricStem = rotator(BATCH_METRIC_STEMS.concat(closed ? BATCH_CLOSED_STEMS : BATCH_OPEN_STEMS));
         var noValueStem = rotator(BATCH_NO_VALUE_STEMS);
-        var soloStem = rotator(closed ? BATCH_SOLO_STEMS.concat(BATCH_SOLO_CLOSED_STEMS) : BATCH_SOLO_STEMS);
+        var soloStem = rotator(BATCH_SOLO_STEMS.concat(closed ? BATCH_SOLO_CLOSED_STEMS : BATCH_SOLO_OPEN_STEMS));
         var lineIcon = rotator(BATCH_LINE_ICONS);
         // At the foot of a nine-person post nobody ever reached it, so people
         // were reading a week-old shout-out as if it were today's.
@@ -1917,7 +2028,7 @@
             }
             // Fresh per person, so four top spots read as four wins rather than
             // one sentence stamped four times.
-            var soloTail = rotator(SOLO_TOP_TAILS);
+            var soloTail = rotator(SOLO_TOP_TAILS.concat(closed ? SOLO_TOP_TAILS_DONE : SOLO_TOP_TAILS_ONGOING));
             person.achievements.forEach(function(a) {
                 var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
                 var placing = sentencePlacement(a);
@@ -1936,7 +2047,7 @@
                 }
             });
         });
-        msg += nextBatchCloser();
+        msg += nextBatchCloser[closed ? 'done' : 'ongoing']();
         return msg;
     }
 

@@ -300,7 +300,7 @@
     // `pw`/`cw` are the period words ("last week"/"this week", "in May"/"in
     // June") so the same templates serve both weekly and monthly cheers.
     var DELTA_TEMPLATES = [
-        function (l, p, c, pw, cw) { return 'Your ' + l + ' went from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw) { return 'Your ' + l + ' has gone from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
         function (l, p, c, pw, cw) { return l + ' moved the right way, ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
         function (l, p, c, pw, cw) { return 'Nice move on ' + l + ': ' + p + ' ' + pw + ', ' + c + ' ' + cw + '.'; },
         function (l, p, c, pw, cw) { return 'Your ' + l + ' improved from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },

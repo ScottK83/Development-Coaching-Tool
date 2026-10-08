@@ -27,21 +27,23 @@
     const GREETINGS = (window.DevCoachModules?.messageVoice?.greetingPool('neutral')) || [
         name => `Hey ${name}!`
     ];
+    // The line that says the numbers are in. It used to say "the week of
+    // <date>" in every line, so a month or a year to date was announced as a
+    // week, and "The week of 10/06 is all wrapped up" went out over a week in
+    // progress. `when` is describeWeekRecency's name for the stretch (last
+    // week, in September, the week ending 9/26), and a period still running
+    // draws from DATA_IN_ONGOING instead.
     const DATA_IN = [
-        date => `Your numbers for the week of ${date} just came in.`,
-        date => `Got your data for the week of ${date}.`,
-        date => `Just pulled up your week of ${date} numbers.`,
-        date => `Your stats from the week of ${date} are in.`,
-        date => `Took a look at your week of ${date} performance.`,
-        date => `Week of ${date} data is fresh off the press.`,
-        date => `Wanted to share your numbers from the week of ${date}.`,
-        date => `The week of ${date} is all wrapped up, here's how it went.`,
-        date => `Pulled your report for the week of ${date}.`,
-        date => `Your week of ${date} recap is ready.`,
-        date => `Just sat down with your week of ${date} data.`,
-        date => `Here's the rundown for the week of ${date}.`,
-        date => `Week of ${date} numbers landed on my desk.`,
-        date => `Got the latest from the week of ${date} for you.`,
+        (date, when) => `Here's how you did ${when}.`,
+        (date, when) => `Took a look at how things went ${when}.`,
+        (date, when) => `Got your numbers. Here's where you finished ${when}.`,
+        (date, when) => `Here's what you put up ${when}.`,
+        (date, when) => `Wanted to share how things shook out ${when}.`,
+        (date, when) => `Pulled your report. Here's how it all landed ${when}.`,
+        (date, when) => `Here's the recap of how you did ${when}.`,
+        (date, when) => `Here's the rundown on how you did ${when}.`,
+        (date, when) => `Went through your numbers. Here's how you did ${when}.`,
+        (date, when) => `Got the final numbers on how you did ${when}.`,
     ];
     // `when` is describeWeekRecency's word for the stretch the numbers cover:
     // this week, last week, in September, this year. It used to be "this week"
@@ -411,19 +413,19 @@
         (label, val, target) => `Great news: ${label} is at ${val}, beating the ${target} target. Proud of this.`,
         (label, val, target) => `${label} at ${val} is on target (${target}) and that's a real midweek win. 💪`,
         (label, val, target) => `Look at that. ${label} at ${val} is hitting the mark (${target}). Love it.`,
-        (label, val, target) => `You did it! ${label} at ${val} is right where we want it (${target}). Strong work. ✅`,
+        (label, val, target) => `You're doing it! ${label} at ${val} is right where we want it (${target}). Strong work. ✅`,
         (label, val, target) => `${label} at ${val} is at or above ${target}. The focus is clearly paying off!`,
         (label, val, target) => `${label} at ${val} vs ${target} target? That's a win worth celebrating.`,
         (label, val, target) => `The work on ${label} is showing. ${val} against a ${target} target is legit progress.`,
         (label, val, target) => `${label} at ${val} is through the ${target} bar. That's what showing up looks like. 🎯`,
         (label, val, target) => `Already hitting it on ${label}. ${val} vs ${target} target. Fantastic.`,
-        (label, val, target) => `This is the stuff. ${label} at ${val}, target was ${target}. Nailed it.`,
+        (label, val, target) => `This is the stuff. ${label} at ${val}, target is ${target}. Nailing it.`,
         (label, val, target) => `Goal met. ${label} sitting at ${val} (target ${target}). Keep it rolling.`,
-        (label, val, target) => `You're there. ${label} at ${val} cleared ${target}. That's the formula.`,
-        (label, val, target) => `${label}: ${val}. Target: ${target}. Verdict: done deal. 🔥`,
+        (label, val, target) => `You're there. ${label} at ${val} is clearing ${target}. That's the formula.`,
+        (label, val, target) => `${label}: ${val}. Target: ${target}. Verdict: right on track. 🔥`,
         (label, val, target) => `The ${label} number (${val}) is past ${target}. Don't let up, but take a second to feel good about that.`,
         (label, val, target) => `Over the line already. ${label} at ${val}, target ${target}. Big deal.`,
-        (label, val, target) => `${label} at ${val} is a real midweek statement. ${target} was the ask and you're past it.`,
+        (label, val, target) => `${label} at ${val} is a real midweek statement. ${target} is the ask and you're past it.`,
     ];
     const MW_CLOSE = [
         (label, val, target, gap) => `You're close. ${label} at ${val}, just ${gap} from ${target}. That's exciting momentum.`,
@@ -610,7 +612,7 @@
         extras => `Throw in ${extras} and you've basically had the perfect run.`,
         extras => `As if that wasn't enough, ${extras} also hit.`,
         extras => `And to top it all off, ${extras}. What a run.`,
-        extras => `Then there's ${extras} on top of everything else. You went off.`,
+        extras => `Then there's ${extras} on top of everything else. ${hypeYou(false)}.`,
         extras => `Can't forget about ${extras} either. Just stacking wins.`,
     ];
     const HF_CONSISTENCY = [
@@ -736,6 +738,196 @@
         'Thanks for the effort this month. Let\'s keep the conversation going.',
         'New month, new opportunities. Let\'s go.',
     ];
+
+    /* ── Tense ──
+     *
+     * The pools above say a period has ended: "You crushed it on AHT last
+     * week", "landed at 92%", "Your numbers for the week are in". Over a week,
+     * month or year still running that is false, and it read that way: a
+     * week in progress came out as "went absolutely off" (Scott, 2026-10-07).
+     *
+     * Each pool that makes such a claim has a twin here in the present, with
+     * the same arguments. tensed() hands back the twin when describeWeekRecency
+     * says the period is still running, and the pool itself otherwise. Lines
+     * that are true either way are carried over unchanged, so a running week
+     * keeps as much variety as a finished one.
+     */
+    function hypeYou(ongoing) {
+        const voice = window.DevCoachModules?.messageVoice;
+        if (voice?.hype) return voice.hype('You', ongoing);
+        return ongoing ? 'You\'re on FIRE' : 'You caught FIRE';
+    }
+
+    const DATA_IN_ONGOING = [
+        (date, when) => `Here's how ${when} is shaping up so far.`,
+        (date, when) => `Quick look at how ${when} is going.`,
+        (date, when) => `Wanted to share where you're at ${when} so far.`,
+        (date, when) => `Here's where things stand ${when}, with more still to come.`,
+        (date, when) => `Checking in on how ${when} is coming along.`,
+        (date, when) => `Here's your progress ${when} so far.`,
+        (date, when) => `Pulled up your numbers ${when} to date.`,
+        (date, when) => `Here's how you're tracking ${when}.`,
+        (date, when) => `Peeked at your numbers ${when} so far.`,
+        (date, when) => `Here's the story ${when} so far.`,
+    ];
+    const JUMP_INTROS_ONGOING = [
+        (label, delta, range, when) => `Huge improvement in ${label} ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `Big move in ${label} ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `Love seeing ${label} move like that ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `${label} is really standing out ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `You're crushing it on ${label} ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `That swing in ${label} ${when} is catching my eye, ${delta}. (${range})`,
+        (label, delta, range, when) => `${label} is moving in a serious way ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Not gonna lie, ${label} at ${delta} ${when} has me doing a double take. (${range})`,
+        (label, delta, range, when) => `Okay, ${label}! That's a ${delta} swing ${when}. (${range})`,
+        (label, delta, range, when) => `Your ${label} is heading the right direction ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Seriously though, ${label} moving ${delta} ${when} is no joke. (${range})`,
+        (label, delta, range, when) => `Look at ${label} go ${when}, ${delta}! (${range})`,
+        (label, delta, range, when) => `${label} is taking a real shift ${when}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Gotta call out your ${label} ${when}, ${delta}. (${range})`,
+    ];
+    const TWO_WINS_ONGOING = TWO_WINS.map((fn) => (/nailed it/i.test(fn('a', 'b', 'c', 'd'))
+        ? (l1, v1, l2, v2) => `You're nailing it on ${l1} (${v1}) and ${l2} (${v2}).`
+        : fn));
+    const FOCUS_PERSISTENT_ONGOING = [
+        (label, val, ytdVal, target, when) => `One thing to zero in on: ${label}. You're at ${val} ${when} so far and YTD is sitting at ${ytdVal} (target ${target}). This one needs real attention.`,
+        (label, val, ytdVal, target, when) => `Let's work on ${label} together. You're sitting at ${val} ${when}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
+        (label, val, ytdVal, target, when) => `The one I really want us to tackle: ${label}. ${val} ${when} so far, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
+        (label, val, ytdVal, target, when) => `${label} is the focus. You're at ${val} ${when}, YTD at ${ytdVal}, target ${target}. It keeps missing and I want us to change that.`,
+    ];
+    const FOCUS_YTD_ONLY_ONGOING = [
+        (label, val, ytdVal, target, when) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. You're doing better ${when} at ${val}. Let's keep that going and pull the YTD back up.`,
+        (label, val, ytdVal, target, when) => `You've got ${label} at ${val} ${when}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so let's keep that momentum going.`,
+        (label, val, ytdVal, target, when) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but hitting ${val} ${when} shows you can do it. Let's keep it up.`,
+    ];
+    const FOCUS_WEEK_DIP_ONGOING = [
+        (label, val, ytdVal, target, when) => `Quick note on ${label}: it's dipped to ${val} ${when} so far, but your YTD is solid at ${ytdVal} (target ${target}). Not worried, there's time to shake off the blip.`,
+        (label, val, ytdVal, target, when) => `${label} has slipped to ${val} ${when}, but your YTD at ${ytdVal} is still above target (${target}). Plenty of time to get back to normal.`,
+        (label, val, ytdVal, target, when) => `Only watch-out: ${label} is sitting at ${val} ${when}. YTD ${ytdVal} vs target ${target} says you're fine. Just don't let it turn into a trend.`,
+    ];
+    const FOCUS_FALLBACK_ONGOING = [
+        (label, val, target, when) => `One thing to zero in on: ${label}. You're at ${val} ${when} so far, target is ${target}.`,
+        (label, val, target, when) => `Let's work on getting ${label} closer to target (${val} ${when} vs ${target}).`,
+        (label, val, target, when) => `Area to focus on: ${label} is at ${val} ${when}, we want ${target}.`,
+        (label, val, target, when) => `If I had to pick one thing, it'd be ${label}. You're sitting at ${val} ${when}, target is ${target}.`,
+    ];
+    const MK_FOCUS_PERSISTENT_ONGOING = [
+        (label, val, ytdVal, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You're at ${val} ${when} so far and YTD is at ${ytdVal} vs target ${target}. It's been a pattern and I want us to break it.`,
+        (label, val, ytdVal, target, when) => `The one to attack: ${label}. ${val} ${when} so far, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
+        (label, val, ytdVal, target, when) => `Game plan: get ${label} moving. ${val} ${when} so far, ${ytdVal} YTD, we need ${target}. I'll help however you need.`,
+        (label, val, ytdVal, target, when, ahead) => `The mission ${ahead}: ${label}. You're sitting at ${val} ${when}, YTD ${ytdVal} vs target ${target}. I think you can get there. Let's lock in.`,
+        (label, val, ytdVal, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. ${val} ${when} so far, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
+    ];
+    const MK_FOCUS_YTD_ONLY_ONGOING = [
+        (label, val, ytdVal, target, when) => `Love that ${label} is at ${val} ${when}. Now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is pulling that number up.`,
+        (label, val, ytdVal, target, when) => `Your focus: keep doing what you're doing on ${label} ${when} (${val}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
+        (label, val, ytdVal, target, when) => `${label} is the one to keep pushing. Hitting ${val} ${when} is the right direction. YTD is at ${ytdVal}, target ${target}, so let's keep stringing those together.`,
+        (label, val, ytdVal, target, when) => `Here's the one to own: ${label}. Hitting ${val} ${when} shows you can do it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
+    ];
+    const MK_FOCUS_WEEK_DIP_ONGOING = [
+        (label, val, ytdVal, target, when) => `Only thing on my radar: ${label} has dipped to ${val} ${when}. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-off. Just don't let it turn into a trend.`,
+        (label, val, ytdVal, target, when, ahead) => `Watch-out for ${ahead}: ${label}. You're sitting at ${val} ${when}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
+        (label, val, ytdVal, target, when) => `One thing to keep in mind: ${label} has slipped to ${val} ${when}. YTD at ${ytdVal}, target ${target}. You're fine, just shake off the dip.`,
+    ];
+    const MK_FOCUS_FALLBACK_ONGOING = [
+        (label, val, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You're at ${val} ${when} so far, target is ${target}.`,
+        (label, val, target, when) => `The one to attack: ${label}. ${val} ${when} vs target ${target}. Let's close that gap.`,
+        (label, val, target, when, ahead) => `The mission ${ahead}: ${label}. You're sitting at ${val} ${when}, target ${target}. I think you can get there.`,
+        (label, val, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. You're at ${val} ${when}, aiming for ${target}.`,
+    ];
+    const HF_JUMP_ONGOING = [
+        (label, delta, range, when) => `Incredible move in ${label} ${when}, ${delta}! (${range}) That kind of progress stands out.`,
+        (label, delta, range, when) => `You're moving ${label} in a big way ${when}, ${delta}! (${range}) That's impressive.`,
+        (label, delta, range, when) => `${label} is taking a real swing ${when}, ${delta}! (${range}) Love to see it.`,
+        (label, delta, range, when) => `The progress on ${label} ${when} is awesome, ${delta}! (${range}) Keep that energy.`,
+        (label, delta, range, when) => `Your ${label} has moved ${delta} ${when} and honestly it's one of the best improvements I've seen. (${range})`,
+        (label, delta, range, when) => `That ${delta} move in ${label} ${when} is worth celebrating. (${range}) That takes real effort.`,
+        (label, delta, range, when) => `${label} is going from good to great ${when}, ${delta}. (${range}) You should feel good about that.`,
+        (label, delta, range, when) => `I have to point out that ${label} swing ${when}, ${delta}. (${range}) That's not easy to do.`,
+        (label, delta, range, when) => `When I saw ${label} at ${delta} ${when}, I knew I had to say something. (${range}) Wow.`,
+        (label, delta, range, when) => `The kind of improvement you're showing on ${label} ${when}, ${delta}, doesn't happen by accident. (${range})`,
+    ];
+    const HF_TWO_WINS_ONGOING = [
+        (l1, v1, l2, v2, when) => `Your ${l1} at ${v1} and ${l2} at ${v2} are outstanding!`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2}? Absolutely killing it!`,
+        (l1, v1, l2, v2, when) => `Crushing it on ${l1} (${v1}) and ${l2} (${v2}) ${when}!`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2} are both legit impressive.`,
+        (l1, v1, l2, v2, when) => `Between ${l1} at ${v1} and ${l2} at ${v2}, you're having one heck of a run.`,
+        (l1, v1, l2, v2, when) => `I mean, ${l1} at ${v1} AND ${l2} at ${v2}? Come on now.`,
+        (l1, v1, l2, v2, when) => `Your ${l1} (${v1}) and ${l2} (${v2}) are both standout numbers ${when}.`,
+        (l1, v1, l2, v2, when) => `Two words: ${l1} at ${v1}. Two more: ${l2} at ${v2}. Just great.`,
+        (l1, v1, l2, v2, when) => `${l1} at ${v1}, ${l2} at ${v2}. That's the kind of stretch you want to have.`,
+        (l1, v1, l2, v2, when) => `Can we talk about ${l1} at ${v1} and ${l2} at ${v2}? Because those are excellent.`,
+    ];
+    const HF_ONE_WIN_ONGOING = [
+        (label, val, when) => `Your ${label} at ${val} is outstanding!`,
+        (label, val, when) => `${label} at ${val}? That's what I'm talking about!`,
+        (label, val, when) => `Killing it on ${label} at ${val} ${when}!`,
+        (label, val, when) => `Your ${label} coming in at ${val} is seriously impressive.`,
+        (label, val, when) => `${label} at ${val} is the highlight and it deserves a callout.`,
+        (label, val, when) => `I saw your ${label} at ${val} and honestly just wanted to say great job.`,
+        (label, val, when) => `That ${label} number at ${val}? Chef's kiss.`,
+        (label, val, when) => `${label} at ${val} tells me everything about how you're showing up ${when}.`,
+        (label, val, when) => `Huge props on ${label} at ${val}. That's no small thing.`,
+        (label, val, when) => `Let's be real, ${label} at ${val} is just flat out good.`,
+    ];
+    const HF_NO_WINS_ONGOING = [
+        when => `I wanted to recognize your effort ${when}. You're showing up and putting in the work, and that matters.`,
+        when => 'Just want you to know I see the grind. Keep at it.',
+        when => `Appreciate the effort you're putting in ${when}. It doesn't go unnoticed.`,
+        when => 'The numbers are one thing, but showing up every day is the foundation. You\'re doing that.',
+        when => `I wanted to take a sec to acknowledge your work ${when}. It matters more than you think.`,
+        when => 'Not every stretch is going to be flashy, but the work ethic you bring is what builds a great track record.',
+        when => 'I see you out there putting in the work. That consistency is going to pay off.',
+        when => 'Wanted to make sure you know that the effort hasn\'t gone unnoticed. Keep going.',
+    ];
+    const HF_EXTRAS_ONGOING = [
+        extras => `On top of that, ${extras}... you're on a roll!`,
+        extras => `And ${extras} too? You're firing on all cylinders.`,
+        extras => `Plus ${extras}. Just an all-around great showing.`,
+        extras => `Not to mention ${extras}. Seriously impressive.`,
+        extras => `Oh and did I mention ${extras}? Because yeah, that's happening too.`,
+        extras => `Throw in ${extras} and you're basically having the perfect run.`,
+        extras => `As if that wasn't enough, there's ${extras} too.`,
+        extras => `And to top it all off, ${extras}. What a run.`,
+        extras => `Then there's ${extras} on top of everything else. ${hypeYou(true)}.`,
+        extras => `Can't forget about ${extras} either. Just stacking wins.`,
+    ];
+
+    const ONGOING_TWIN = new Map([
+        [DATA_IN, DATA_IN_ONGOING],
+        [JUMP_INTROS, JUMP_INTROS_ONGOING],
+        [TWO_WINS, TWO_WINS_ONGOING],
+        [FOCUS_PERSISTENT, FOCUS_PERSISTENT_ONGOING],
+        [FOCUS_YTD_ONLY, FOCUS_YTD_ONLY_ONGOING],
+        [FOCUS_WEEK_DIP, FOCUS_WEEK_DIP_ONGOING],
+        [FOCUS_FALLBACK, FOCUS_FALLBACK_ONGOING],
+        [MK_FOCUS_PERSISTENT, MK_FOCUS_PERSISTENT_ONGOING],
+        [MK_FOCUS_YTD_ONLY, MK_FOCUS_YTD_ONLY_ONGOING],
+        [MK_FOCUS_WEEK_DIP, MK_FOCUS_WEEK_DIP_ONGOING],
+        [MK_FOCUS_FALLBACK, MK_FOCUS_FALLBACK_ONGOING],
+        [HF_JUMP, HF_JUMP_ONGOING],
+        [HF_TWO_WINS, HF_TWO_WINS_ONGOING],
+        [HF_ONE_WIN, HF_ONE_WIN_ONGOING],
+        [HF_NO_WINS, HF_NO_WINS_ONGOING],
+        [HF_EXTRAS, HF_EXTRAS_ONGOING]
+    ]);
+
+    // The pool to draw from for this period: its present-tense twin while the
+    // period is still running, the pool itself once it has ended.
+    function tensed(pool, recency) {
+        return (recency && recency.ongoing && ONGOING_TWIN.get(pool)) || pool;
+    }
+
+    // The four focus pools of a set, each in the period's tense.
+    function tensedFocus(set, recency) {
+        return {
+            persistent: tensed(set.persistent, recency),
+            ytdOnly: tensed(set.ytdOnly, recency),
+            weekDip: tensed(set.weekDip, recency),
+            fallback: tensed(set.fallback, recency)
+        };
+    }
     // --- Data helpers ---
 
     // Which uploads are week-shaped is a question period-index owns. This used
@@ -1515,12 +1707,12 @@
         // Build praise — lead with biggest jump if we have trajectory data
         let praiseText = '';
         if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency), recency.when);
+            praiseText = pick(tensed(JUMP_INTROS, recency))(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency), recency.when);
             if (wins.length > 0 && wins[0].metricKey !== biggestJump.metricKey) {
                 praiseText += ` ${pick(PLUS_SOLID)(wins[0].label, fmtVal(wins[0]))}`;
             }
         } else if (wins.length >= 2) {
-            praiseText = pick(TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
+            praiseText = pick(tensed(TWO_WINS, recency))(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
         } else if (wins.length === 1) {
             praiseText = pick(ONE_WIN)(wins[0].label, fmtVal(wins[0]));
         } else {
@@ -1543,14 +1735,14 @@
                 }
             } catch (e) { /* no tips */ }
 
-            focusText = `\uD83C\uDFAF ${buildFocalText(focalPoint, { persistent: FOCUS_PERSISTENT, ytdOnly: FOCUS_YTD_ONLY, weekDip: FOCUS_WEEK_DIP, fallback: FOCUS_FALLBACK }, recency.when)}`;
+            focusText = `\uD83C\uDFAF ${buildFocalText(focalPoint, tensedFocus({ persistent: FOCUS_PERSISTENT, ytdOnly: FOCUS_YTD_ONLY, weekDip: FOCUS_WEEK_DIP, fallback: FOCUS_FALLBACK }, recency), recency.when)}`;
             if (tipText) {
                 const cleanTip = tipText.replace(/^(Practice this|Try this|Tip|Focus on this)\s*:\s*/i, '').trim();
                 focusText += ` \uD83D\uDCA1 ${cleanTip.charAt(0).toUpperCase() + cleanTip.slice(1)}`;
             }
         }
 
-        let message = `${pick(GREETINGS)(firstName)} \uD83D\uDC4B ${pick(DATA_IN)(endDate)} ${praiseText}`;
+        let message = `${pick(GREETINGS)(firstName)} \uD83D\uDC4B ${pick(tensed(DATA_IN, recency))(endDate, recency.when)} ${praiseText}`;
         if (focusText) message += `\n\n${focusText}`;
         message += `\n\n${pick(CLOSERS)}`;
 
@@ -1571,6 +1763,37 @@
     // ended the previous Friday. Calling that "this week" reads like the
     // numbers are still live, and dates the message wrong by seven days.
     function describeWeekRecency(latestKey, period, when) {
+        const named = describeWeekRecencyWords(latestKey, period, when);
+        named.ongoing = periodStillRunning(latestKey, period, when);
+        return named;
+    }
+
+    // Is the stretch these numbers cover still running today? The kind of
+    // upload decides (message-voice isOngoingPeriod), and the date keeps a
+    // stale partial honest: last week's week-in-progress file, or a month to
+    // date from a month that has since ended, is talked about as finished.
+    function periodStillRunning(latestKey, period, when) {
+        const today = when instanceof Date ? new Date(when.getTime()) : new Date();
+        today.setHours(12, 0, 0, 0);
+        const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const todayIso = iso(today);
+        const monday = new Date(today);
+        monday.setDate(monday.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+        const endIso = String(period?.metadata?.endDate
+            || (latestKey && latestKey.indexOf('|') > -1 ? latestKey.split('|')[1] : latestKey)
+            || '');
+        const periodType = period?.metadata?.periodType;
+        const voice = window.DevCoachModules?.messageVoice;
+        const byType = voice?.isOngoingPeriod ? voice.isOngoingPeriod(periodType, endIso) : periodType === 'week-in-progress';
+        if (!byType) return false;
+        if (periodType === 'month-to-date') return endIso.slice(0, 7) === todayIso.slice(0, 7);
+        if (periodType === 'ytd') return endIso.slice(0, 4) === todayIso.slice(0, 4);
+        // A week in progress, or an upload of unknown kind: running only if it
+        // reaches into the current week.
+        return !endIso || endIso >= iso(monday);
+    }
+
+    function describeWeekRecencyWords(latestKey, period, when) {
         const today = when instanceof Date ? new Date(when.getTime()) : new Date();
         today.setHours(12, 0, 0, 0);
         const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1659,24 +1882,24 @@
             // recency wins over the period word, and always did: the 'week'
             // sitting here was dead the moment a label set was passed.
             const range = fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency);
-            message += ` ${pick(HF_JUMP)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), range, recency.when)} \uD83D\uDD25`;
+            message += ` ${pick(tensed(HF_JUMP, recency))(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), range, recency.when)} \uD83D\uDD25`;
             namedWins.add(biggestJump.metricKey);
         } else if (wins.length >= 2) {
-            message += ` ${pick(HF_TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]), recency.when)} \uD83D\uDD25\uD83D\uDCAA`;
+            message += ` ${pick(tensed(HF_TWO_WINS, recency))(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]), recency.when)} \uD83D\uDD25\uD83D\uDCAA`;
             namedWins.add(wins[0].metricKey);
             namedWins.add(wins[1].metricKey);
         } else if (wins.length === 1) {
-            message += ` ${pick(HF_ONE_WIN)(wins[0].label, fmtVal(wins[0]), recency.when)} \uD83D\uDD25`;
+            message += ` ${pick(tensed(HF_ONE_WIN, recency))(wins[0].label, fmtVal(wins[0]), recency.when)} \uD83D\uDD25`;
             namedWins.add(wins[0].metricKey);
         } else {
-            message += ` ${pick(HF_NO_WINS)(recency.when)} \uD83D\uDCAA`;
+            message += ` ${pick(tensed(HF_NO_WINS, recency))(recency.when)} \uD83D\uDCAA`;
         }
 
         // Name every remaining win, not just the next couple \u2014 a strong
         // week should get credited in full.
         const extraWins = wins.filter(w => !namedWins.has(w.metricKey));
         if (extraWins.length > 0) {
-            message += ` ${pick(HF_EXTRAS)(joinWinPhrases(extraWins))}`;
+            message += ` ${pick(tensed(HF_EXTRAS, recency))(joinWinPhrases(extraWins))}`;
         }
 
         // Count how many metrics are on track
@@ -1857,7 +2080,7 @@
                 praiseText = pick(PERFECT_SURVEYS_SOLO)(surveysText);
             }
         } else if (biggestJump && biggestJump.delta > 0) {
-            praiseText = pick(JUMP_INTROS)(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency), recency.when);
+            praiseText = pick(tensed(JUMP_INTROS, recency))(biggestJump.label, fmtDelta(biggestJump.metricKey, biggestJump.delta), fmtRange(biggestJump.metricKey, biggestJump.baseValue, biggestJump.latestValue, null, recency), recency.when);
             namedWins.add(biggestJump.metricKey);
             const otherWins = wins.filter(w => w.metricKey !== biggestJump.metricKey).slice(0, 1);
             if (otherWins.length > 0) {
@@ -1865,7 +2088,7 @@
                 namedWins.add(otherWins[0].metricKey);
             }
         } else if (wins.length >= 2) {
-            praiseText = pick(TWO_WINS)(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
+            praiseText = pick(tensed(TWO_WINS, recency))(wins[0].label, fmtVal(wins[0]), wins[1].label, fmtVal(wins[1]));
             namedWins.add(wins[0].metricKey);
             namedWins.add(wins[1].metricKey);
         } else if (wins.length === 1) {
@@ -1880,13 +2103,13 @@
         // should say so instead of stopping at the lead sentence.
         const remainingWins = allWinsSorted.filter(w => !namedWins.has(w.metricKey));
         if (remainingWins.length > 0) {
-            praiseText += ` ${pick(HF_EXTRAS)(joinWinPhrases(remainingWins))}`;
+            praiseText += ` ${pick(tensed(HF_EXTRAS, recency))(joinWinPhrases(remainingWins))}`;
         }
 
         // FOCUS section — set the weekly focal point
         let focusText = '';
         if (focalPoint) {
-            const focalPhrase = buildFocalText(focalPoint, { persistent: MK_FOCUS_PERSISTENT, ytdOnly: MK_FOCUS_YTD_ONLY, weekDip: MK_FOCUS_WEEK_DIP, fallback: MK_FOCUS_FALLBACK }, recency.when, ahead);
+            const focalPhrase = buildFocalText(focalPoint, tensedFocus({ persistent: MK_FOCUS_PERSISTENT, ytdOnly: MK_FOCUS_YTD_ONLY, weekDip: MK_FOCUS_WEEK_DIP, fallback: MK_FOCUS_FALLBACK }, recency), recency.when, ahead);
             focusText = `\n\n${pick(lookingAhead(MK_TRANSITION, ahead))}\n\n🎯 ${focalPhrase}`;
 
             // Fetch a tip for the focal metric

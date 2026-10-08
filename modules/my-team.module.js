@@ -506,7 +506,7 @@
             },
             shoutout: () => {
                 const c = celebrationFor(person);
-                return c && cel?.generateShoutOut ? cel.generateShoutOut(c.entry, c.dateRange) : '';
+                return c && cel?.generateShoutOut ? cel.generateShoutOut(c.entry, c.dateRange, cmp?.latestKey) : '';
             },
             cheer: () => mods().cheerleading?.cheerMessageFor?.(person, cmp) || '',
             checkin: () => pulse?.generateCheckinMessage?.(person, cmp?.latestKey, cmp?.baselineKey),
