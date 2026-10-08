@@ -3990,6 +3990,17 @@
         html += '<th class="rank-sort-header" data-sort="reliability" style="' + thStyle + '">Rel' + arrow('reliability') + '</th>';
         html += '</tr></thead><tbody>';
 
+        // The CX Adv placing is the one the year card and the Quarterly
+        // placings print: survey holders under the 3-survey floor are placed
+        // against the field without joining it (Scott, 2026-09-18). The column
+        // used the raw metric rank, so one person could show two CX ranks for
+        // the same file (overlap audit, 2026-10-07). Display only: the KPI Rank
+        // Total still sums the raw ranks, because that is KPI scoring.
+        var cxRow = TRAJECTORY_METRIC_ROWS.filter(function (row) { return row.rankKey === 'associateOverall'; })[0];
+        var cxPlacings = cxRow
+            ? _metricRankMap(data.rankings.map(function (row) { return { name: row.name, holder: row }; }), cxRow)
+            : {};
+
         sorted.forEach(function (r, idx) {
             var isTeam = data.teamMembers.has(r.name);
             var supColor = _getSupervisorColor(r.name);
@@ -4068,7 +4079,13 @@
 
             metricPairs.forEach(function (mp) {
                 var display = mp.value !== null && mp.value !== undefined ? _formatMetricDisplay(mp.key, mp.value) : '--';
-                var metricRank = r.metricRanks?.[mp.rankKey] || '?';
+                var cxPlace = mp.rankKey === 'associateOverall' ? cxPlacings[r.name] : null;
+                var metricRank = mp.rankKey === 'associateOverall'
+                    ? (cxPlace ? cxPlace.rank : '?')
+                    : (r.metricRanks?.[mp.rankKey] || '?');
+                var rankTitle = cxPlace && cxPlace.thin
+                    ? ' title="Fewer than 3 surveys, so placed against the field without joining it, the same as on the year card"'
+                    : '';
                 var rankTextColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';
                 var scoreBadge = mp.score !== null
                     ? '<span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; font-size: 0.7em; font-weight: bold; color: white; background: ' + scoreColor(mp.score) + '; text-align: center; margin-right: 3px;">' + mp.score + '</span>'
@@ -4079,7 +4096,7 @@
                 }
                 var cellColor = mp.score !== null ? scoreColor(mp.score) : '#333';
                 html += '<td style="padding: 4px 3px; text-align: center; color: ' + cellColor + '; white-space: nowrap;">' +
-                    scoreBadge + display + surveyBadge + ' <span style="font-size: 0.72em; color: ' + rankTextColor + ';">#' + metricRank + '</span></td>';
+                    scoreBadge + display + surveyBadge + ' <span' + rankTitle + ' style="font-size: 0.72em; color: ' + rankTextColor + ';">#' + metricRank + '</span></td>';
             });
 
             html += '</tr>';

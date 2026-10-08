@@ -1565,3 +1565,38 @@ suite('rankings view: a thin CX Adv month is placed without moving anyone', (t) 
         t.check('no survey count is printed', !texts.some((x) => /^\d+ surveys?$/.test(x)));
     });
 });
+
+/* ── CX Adv: one placing, on the table and on the year card ── */
+
+suite('rankings view: the CX Adv column places people the way the year card does', (t) => {
+    // One survey at 100%, beside forty people with ten surveys each. The year
+    // card and the Quarterly placings place a holder under the 3-survey floor
+    // against the field without letting them join it (Scott, 2026-09-18). The
+    // table used the raw metric rank, so the best regular holder read #2 on
+    // the table and #1 on the year card for the same file (overlap audit).
+    const people = roster(40, 4).concat([emp('Zed Thin', { surveyTotal: 1, cxRepOverall: 100 })]);
+    const ytd = period('2026-01-01', '2026-07-31', 'ytd', people, 'YTD through Jul 31');
+    const { dom, cr } = loadRankings(t, {}, ytd);
+    cr.renderCenterRanking();
+    const html = String(dom.table() || "");
+
+    const rowFor = (name) => {
+        const at = html.indexOf('data-employee="' + name + '"');
+        return at === -1 ? '' : html.slice(at, html.indexOf('</tr>', at));
+    };
+    const cxRankIn = (row) => {
+        const spans = [...row.matchAll(/<span(?: title="[^"]*")? style="font-size: 0\.72em; color: [^;]+;">#(\d+|\?)<\/span>/g)];
+        return spans.length >= 4 ? spans[3][1] : null;
+    };
+
+    const best = Math.max(...people.filter((p) => p.name !== 'Zed Thin').map((p) => p.cxRepOverall));
+    const leaders = people.filter((p) => p.name !== 'Zed Thin' && p.cxRepOverall === best).map((p) => p.name);
+    t.check('the table rendered', rowFor(leaders[0]).length > 0);
+    leaders.forEach((name) => {
+        t.equal(`${name}, the best regular holder, is #1 on CX, as on the year card`, cxRankIn(rowFor(name)), '1');
+    });
+
+    const thinRow = rowFor('Zed Thin');
+    t.equal('the one-survey holder is placed against the field, not pushed off it', cxRankIn(thinRow), '1');
+    t.check('and the placing says why on hover', /title="Fewer than 3 surveys/.test(thinRow));
+});
