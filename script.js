@@ -2371,7 +2371,7 @@ function handleUploadMoreDataClick() {
     showOnlySection('uploadSection');
 }
 
-function handleDeleteEmployeeYearClick() {
+async function handleDeleteEmployeeYearClick() {
     const employeeSelect = document.getElementById('deleteEmployeeYearSelect');
     const reviewYearInput = document.getElementById('deleteEmployeeYearInput');
     const employeeName = String(employeeSelect?.value || '').trim();
@@ -2387,8 +2387,9 @@ function handleDeleteEmployeeYearClick() {
         return;
     }
 
-    const confirmed = confirm(`Delete ${employeeName}'s ${reviewYear} data from weekly uploads, YTD uploads, year-end entries, and matching dated logs?\n\nThis action cannot be undone.`);
+    const confirmed = confirm(`Delete ${employeeName}'s ${reviewYear} data from weekly uploads, YTD uploads, year-end entries, and matching dated logs?\n\nEverything is saved to the cloud first.`);
     if (!confirmed) return;
+    if (!(await cloudCopyBeforeDeleting())) return;
 
     deleteEmployeeDataByYear(employeeName, reviewYear);
 }
@@ -2573,6 +2574,20 @@ function refreshStorageQuotaWidget() {
  * more copy on the same disk, while the cloud copy is already off the machine,
  * versioned, and provably readable.
  */
+/**
+ * Run before a delete. Saves to the cloud first and says so if it cannot, so a
+ * delete never leaves this computer holding the only copy of what it removed.
+ * The local equivalent used to be "Back up first via Download Backup", which
+ * the work PC cannot do.
+ */
+async function cloudCopyBeforeDeleting() {
+    const cloud = await ensureCloudCopyIsCurrent();
+    if (cloud.ok) return true;
+    alert('⚠️ Nothing was deleted.\n\nYour data could not be saved to the cloud first: ' + cloud.reason +
+          '\n\nDeleting now would leave no way to get it back, so it was stopped. Check Settings > Sync & Backup and try again.');
+    return false;
+}
+
 async function ensureCloudCopyIsCurrent() {
     const sync = window.DevCoachModules?.manifestSync;
     const storage = window.DevCoachModules?.storage;
@@ -4136,13 +4151,14 @@ async function handleResetMetricDataClick() {
         `  • Pattern memory\n` +
         `  • Sentiment data\n` +
         `  • Employee nicknames\n\n` +
-        `Back up first via "Download Backup" if you haven't.\n\n` +
+        `Your data is saved to the cloud first, so this can be undone from Settings > Sync & Backup.\n\n` +
         `Type "RESET" to confirm:`
     );
     if (confirmation !== 'RESET') {
         alert('Reset cancelled.');
         return;
     }
+    if (!(await cloudCopyBeforeDeleting())) return;
 
     const storage = window.DevCoachModules?.storage;
     weeklyData = {};
@@ -4232,7 +4248,7 @@ async function handleDeleteAllDataClick() {
     location.reload();
 }
 
-function handleDeleteSelectedWeekClick() {
+async function handleDeleteSelectedWeekClick() {
     const weekSelect = document.getElementById('deleteWeekSelect');
     if (!weekSelect) return;
     const selectedWeek = weekSelect.value;
@@ -4243,9 +4259,10 @@ function handleDeleteSelectedWeekClick() {
     }
 
     const weekLabel = weekSelect.options[weekSelect.selectedIndex].text;
-    if (!confirm(`Are you sure you want to delete data for:\n\n${weekLabel}\n\nThis action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete data for:\n\n${weekLabel}\n\nIt is saved to the cloud first.`)) {
         return;
     }
+    if (!(await cloudCopyBeforeDeleting())) return;
 
     // Delete from whichever store holds this key (weekly, ytd, daily, or any combination)
     if (weeklyData[selectedWeek]) {
@@ -4322,7 +4339,7 @@ function handleToggleTeamMembersEmployeesPanelClick() {
     saveTeamMembersEmployeesPanelExpandedPreference(shouldExpand);
 }
 
-function handleDeleteSelectedSentimentClick() {
+async function handleDeleteSelectedSentimentClick() {
     const sentimentSelect = document.getElementById('deleteSentimentSelect');
     if (!sentimentSelect) return;
     const selectedKey = sentimentSelect.value;
@@ -4333,9 +4350,10 @@ function handleDeleteSelectedSentimentClick() {
     }
 
     const sentimentLabel = sentimentSelect.options[sentimentSelect.selectedIndex].text;
-    if (!confirm(`Are you sure you want to delete:\n\n${sentimentLabel}\n\nThis action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete:\n\n${sentimentLabel}\n\nIt is saved to the cloud first.`)) {
         return;
     }
+    if (!(await cloudCopyBeforeDeleting())) return;
 
     const pipeIndex = selectedKey.indexOf('|');
     if (pipeIndex === -1) {
