@@ -725,17 +725,6 @@
         </div>`;
     }
 
-    function buildPanelText(read) {
-        if (!read?.ok || !read.lost?.length) return '';
-        const lines = ['Where the customer got lost:'];
-        read.lost.forEach(moment => {
-            lines.push(`- ${moment.time ? `${moment.time} ` : ''}${moment.topicLabel}: "${moment.customerQuote}"`);
-            const notes = momentNotes(moment);
-            if (notes.length) lines.push(`  ${notes.join(' ')}`);
-        });
-        return lines.join('\n');
-    }
-
     /* ── Handing the wording to Copilot ──
      *
      * The playbook knows the shape of a good explanation; it cannot rewrite
@@ -780,7 +769,6 @@
         coachingFor,
         praiseFor,
         buildPanelHtml,
-        buildPanelText,
         buildCopilotPrompt,
         unexplainedJargon,
         isConfused,

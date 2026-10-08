@@ -602,10 +602,6 @@
         };
     }
 
-    function getLocalSyncVersion() {
-        return loadSyncState().version || 0;
-    }
-
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.manifestSync = {
         push,
@@ -615,7 +611,6 @@
         compareWithCloud,
         createFirstManifest,
         getDeviceId,
-        getLocalSyncVersion,
         loadSyncState,
         saveSyncState,
         sha256Hex

@@ -1898,17 +1898,6 @@
         return parts.join('.').toLowerCase() + '@aps.com';
     }
 
-    function _padEnd(text, width) {
-        var out = String(text);
-        while (out.length < width) out += ' ';
-        return out;
-    }
-    function _padStart(text, width) {
-        var out = String(text);
-        while (out.length < width) out = ' ' + out;
-        return out;
-    }
-
     /**
      * The two most recent points that both carry data, oldest first, or null.
      * A trajectory with one month has no month-over-month story to tell.

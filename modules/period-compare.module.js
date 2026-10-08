@@ -165,13 +165,6 @@
         var mi = parseInt(parts[1], 10) - 1;
         return (MONTH_NAMES[mi] || monthKey) + ' ' + parts[0];
     }
-    function _prevMonthKey(monthKey) {
-        var parts = String(monthKey).split('-');
-        var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
-        if (!y || !m) return null;
-        if (m === 1) return (y - 1) + '-12';
-        return y + '-' + String(m - 1).padStart(2, '0');
-    }
 
     /* ── Month bucketing ──
        Weeks bucket by the month they END in, so "July" means the weeks ending in
@@ -1200,12 +1193,6 @@
         return out;
     }
 
-    /** One person's trajectory, oldest first, or null if they were never scored. */
-    function getTimelineFor(name, scope, year) {
-        var tl = buildRankTimeline(scope, year);
-        return (tl && tl.byName[name]) || null;
-    }
-
     /**
      * Selector-ready entries for months that can be rebuilt from weekly uploads.
      * Shared by the rankings and matchup period pickers so "which months exist"
@@ -1415,15 +1402,6 @@
         };
     }
 
-    /** Movement for one person, or null. Convenience for coaching surfaces. */
-    function getMovementFor(name, momData) {
-        if (!name || !momData || !momData.movements) return null;
-        for (var i = 0; i < momData.movements.length; i++) {
-            if (momData.movements[i].name === name) return momData.movements[i];
-        }
-        return null;
-    }
-
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.periodCompare = {
         MIN_WEEKS_FOR_MONTH: MIN_WEEKS_FOR_MONTH,
@@ -1448,10 +1426,8 @@
         buildMovementForScope: buildMovementForScope,
         buildMonthCoverage: buildMonthCoverage,
         buildRankTimeline: buildRankTimeline,
-        getTimelineFor: getTimelineFor,
         resetTimelineCache: resetTimelineCache,
         buildTeamMovementForScope: buildTeamMovementForScope,
-        getMovementFor: getMovementFor,
         monthLabel: _monthLabel
     };
 })();

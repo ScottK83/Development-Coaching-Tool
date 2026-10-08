@@ -369,64 +369,6 @@
     }
 
     // ============================================
-    // POSTABLE STANDINGS
-    // ============================================
-
-    function buildStandingsPost(monthData, monthLabel, options) {
-        const board = buildLeaderboard(monthData, options);
-        if (!board.length) return '';
-
-        const pool = board.reduce((sum, row) => sum + row.total, 0);
-        const lines = [`Raffle entries so far, ${monthLabel}`, ''];
-
-        board.forEach((row) => {
-            const bits = [];
-            if (row.perfectSurvey) bits.push(`${row.perfectSurvey} perfect survey${row.perfectSurvey === 1 ? '' : 's'}`);
-            if (row.dailyAdherence) bits.push(`${row.dailyAdherence} day${row.dailyAdherence === 1 ? '' : 's'} on adherence`);
-            if (row.weeklyAdherence) bits.push(`${row.weeklyAdherence} week${row.weeklyAdherence === 1 ? '' : 's'}`);
-            if (row.monthlyAdherence) bits.push('the month');
-            lines.push(`${row.associate}: ${row.total} (${bits.join(', ')})`);
-        });
-
-        lines.push('', `${pool} entries in the draw so far. Every perfect survey and every day at ${adherenceTarget()}% adds another.`);
-        return lines.join('\n');
-    }
-
-
-    // ============================================
-    // THE POSTABLE TEXT
-    // ============================================
-    //
-    // The graphic carries the standings, so this does not repeat them. It
-    // frames the pool, names who is out front, restates the three ways to earn
-    // a ticket, and closes with a reason to go get one. That is the whole job.
-    //
-    // The lines rotate because this gets posted week after week to the same
-    // channel, and a post that opens the same way every time stops being read.
-
-    var POST_CLOSERS = [
-        function () { return 'The person who wins this may not be the one leading right now. That is the whole point of a drawing.'; },
-        function () { return 'One ticket is enough to win. Zero tickets is not.'; },
-        function () { return 'Not on the board yet? One perfect survey puts you in.'; },
-        function () { return 'Every perfect survey is another ticket in the bowl. Go get a few.'; },
-        function () { return 'Nobody is out of this. Get one ticket in and you are in the drawing with everybody else.'; },
-        function (v) { return 'Your odds go up every day you hit ' + v.target + '%, and that part is all yours.'; },
-        function () { return 'One name comes out at the end of the month. Make sure yours is in there more than once.'; },
-        function () { return 'Plenty of month left. Load up. 🎟️'; }
-    ];
-
-    /**
-     * Picks from a pool. Takes an index so a test can pin the line it gets;
-     * without one it rotates at random, which is the point of having a pool.
-     */
-    function pickLine(pool, values, forcedIndex) {
-        var index = Number.isInteger(forcedIndex)
-            ? ((forcedIndex % pool.length) + pool.length) % pool.length
-            : Math.floor(Math.random() * pool.length);
-        return pool[index](values);
-    }
-
-    // ============================================
     // THE STANDINGS GRAPHIC
     // ============================================
     //
@@ -2259,7 +2201,6 @@
         drawWinner,
         recordedWinners,
         describeTicket,
-        buildStandingsPost,
         buildCheckinPost,
         buildStandingsGraphicHtml,
         buildImportPreview,

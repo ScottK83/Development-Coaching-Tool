@@ -611,14 +611,6 @@ Requirements:
         return /[.!?:]$|["'”]\)$/.test(trimmed) ? trimmed : `${trimmed}.`;
     }
 
-    function lowerFirst(text) {
-        const trimmed = String(text || '').trim();
-        if (!trimmed) return '';
-        // Only a plain capital. Lowering "APS" or "Oscar" would be wrong.
-        if (/^[A-Z][a-z]/.test(trimmed)) return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
-        return trimmed;
-    }
-
     /**
      * How the message should carry, from the balance of the notes.
      *

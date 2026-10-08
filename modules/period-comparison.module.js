@@ -384,20 +384,10 @@
         return out;
     }
 
-    function resolveById(windowId, todayIso) {
-        var cel = _mods().celebrations;
-        var win = null;
-        try {
-            win = cel && cel.resolveShoutOutWindow ? cel.resolveShoutOutWindow(windowId, todayIso) : null;
-        } catch (e) { win = null; }
-        return resolve(win, todayIso);
-    }
-
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.periodComparison = {
         UNIT_BY_WINDOW: UNIT_BY_WINDOW,
         resolve: resolve,
-        resolveById: resolveById,
         describe: describe,
         periodFor: periodFor,
         resetCache: resetCache

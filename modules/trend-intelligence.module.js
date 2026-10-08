@@ -177,25 +177,6 @@ Team Update - Week of ${input.endDate}
 Please generate the email now.`;
     }
 
-    function buildTodaysFocusCopilotPrompt(input = {}) {
-        return `You are a contact center supervisor drafting a short team email for the week ending ${input.endDate}.
-
-Include:
-1) Wins: highlight the strongest team win (${input.winLabel}) and why it matters.
-2) Focus Areas: call out the main focus area (${input.focusLabel}) with a supportive coaching tone.
-3) Callouts: recognize these teammates by name: ${input.calloutText}.
-4) A clear next-step ask for the team.
-
-Requirements:
-- Keep it concise and Teams/Outlook-ready
-- Use friendly, motivating language
-- Include a subject line
-- Do NOT use em dashes; use commas or full stops
-- Add a few emojis for warmth (not excessive)
-
-Write the complete email.`;
-    }
-
     function collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel, context = {}) {
         const warnings = [];
         const rationale = [];
@@ -592,7 +573,6 @@ Write the complete email.`;
         buildTeamVsCenterAnalysis,
         buildExecutiveSummarySavedNotesText,
         buildExecutiveSummaryCopilotPrompt,
-        buildTodaysFocusCopilotPrompt,
         collectIndividualTrendWarningsAndRationale,
         collectIndividualTrendWinsAndRationale,
         buildIndividualTrendHeaderHtml,

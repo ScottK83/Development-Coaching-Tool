@@ -184,16 +184,6 @@
         return anywhere ? anywhere.topic : '';
     }
 
-    // The customer's first real turns. "hello" and "yes" are not why they
-    // called, so anything under six words is skipped.
-    function openingCustomerTurns(turns, count) {
-        return turns
-            .filter(turn => turn.role === 'customer'
-                && String(turn.text || '').split(' ').filter(Boolean).length >= 6)
-            .slice(0, count || 3)
-            .map(turn => turn.text);
-    }
-
     // How an advisor opens or asks, used to keep the structural guess below
     // from mistaking their line for the customer's.
     const AGENT_OPENING = /thank you (?:so much )?for (?:being|calling|choosing)|my name is|how m(?:ay|ight) i help|how can i help|(?:can|may|could) i (?:please )?(?:get|have|go ahead)|i'?ll need|allow me one moment/i;

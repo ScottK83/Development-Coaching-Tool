@@ -5,7 +5,6 @@
     'use strict';
 
     var PTOST_BUFFER_LIMIT = 40;
-    var STORAGE_KEY = 'reliabilityTracker';
 
     // ============================================
     // STORAGE
@@ -1168,50 +1167,6 @@
     // EMAIL DRAFTS
     // ============================================
 
-    function buildPtostDesignationEmail(employeeName, events) {
-        var lines = [];
-        lines.push('Hi WFM Team,\n');
-        lines.push('Please review the entries below for ' + employeeName + ' and update coding to PTOST where applicable.\n');
-
-        events.forEach(function(ev) {
-            lines.push('  - ' + ev.dateStr + ': ' + ev.hours + 'h (' + ev.activity + ')');
-        });
-
-        lines.push('\nThese updates are limited to remaining PTOST eligibility under the 40-hour policy cap.');
-        lines.push('\nThank you,');
-        return lines.join('\n');
-    }
-
-    function buildWfmCorrectionEmail(employeeName, discrepancies) {
-        var lines = [];
-        lines.push('Hi WFM Team,\n');
-        lines.push('Please review the discrepancies below for ' + employeeName + ' between Verint and Payroll:\n');
-
-        discrepancies.forEach(function(d) {
-            lines.push('  - ' + d.date + ': Verint shows "' + d.verintActivity + '" (' + d.verintHours + 'h), while Payroll shows REG ' + d.payrollHours + 'h with clock-in at ' + d.payrollClockIn + '.');
-        });
-
-        lines.push('\nPlease update as needed.\n');
-        lines.push('Thank you,');
-        return lines.join('\n');
-    }
-
-    function buildPcIssueEmail(employeeName, pcIssues) {
-        var firstName = getFirstName(employeeName);
-        var lines = [];
-        lines.push('Hi ' + firstName + ',\n');
-        lines.push('I reviewed a few attendance records where Verint marked tardy but Payroll shows you clocked in on time.');
-        lines.push('I am documenting these as potential PC/system issues for follow-up:\n');
-
-        (pcIssues || []).forEach(function(d) {
-            lines.push('  - ' + d.date + ': Verint "' + d.verintActivity + '" (' + d.verintHours + 'h), Payroll clock-in at ' + d.payrollClockIn);
-        });
-
-        lines.push('\nIf you had technical issues on these dates, reply with any details so we can keep the record accurate.');
-        lines.push('\nThanks,');
-        return lines.join('\n');
-    }
-
     function buildVerintCorrectionsDraft(employeeName, correctionCandidates, pcIssues, discrepancies, reviewCodingCandidates) {
         var lines = [];
         var items = [];
@@ -1380,13 +1335,6 @@
         return { label: 'Termination', color: '#4a148c', bg: '#f3e5f5' };
     }
 
-    function summarizeDateList(list) {
-        var dates = Array.isArray(list) ? list : [];
-        if (!dates.length) return '-';
-        if (dates.length <= 3) return dates.join(', ');
-        return dates.slice(0, 3).join(', ') + ' (+' + (dates.length - 3) + ')';
-    }
-
     function getReliabilityNamesByTeamFilter(allNames) {
         var names = Array.isArray(allNames) ? allNames : [];
         var tf = window.DevCoachModules?.teamFilter;
@@ -1414,116 +1362,6 @@
             var first = getFirstToken(raw);
             return selectedExact.has(exact) || selectedLookup.has(lookup) || selectedExact.has(first);
         });
-    }
-
-    function buildAllEmployeesDayTable(employees) {
-        var rows = [];
-
-        Object.keys(employees || {}).forEach(function(name) {
-            var emp = employees[name] || {};
-            var r = emp.reconciled || {};
-            var timeline = r.timeline || [];
-            var buckets = r.dayBuckets || {};
-            var sameDaySet = new Set(buckets.sameDay || []);
-            var sameDayPtostSet = new Set(buckets.sameDayPtost || []);
-            var bereavementSet = new Set(buckets.bereavement || []);
-            var fmlaSet = new Set(buckets.fmla || []);
-
-            timeline.forEach(function(t) {
-                var verintText = (t.verint || []).map(function(v) {
-                    return v.activity + ' (' + v.hours + 'h)';
-                }).join('; ') || '-';
-
-                var payrollText = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; }).map(function(p) {
-                    var label = p.trc;
-                    var taskCode = normalizeTaskCode(p.taskCode);
-                    if (taskCode) label += ' / ' + taskCode;
-                    return label + ' (' + p.quantity + 'h)';
-                }).join('; ');
-                if (!payrollText) payrollText = '-';
-
-                var totalHours = 0;
-                (t.verint || []).forEach(function(v) { totalHours += Number(v.hours || 0); });
-                var payrollNonReg = (t.payroll || []).filter(function(p) { return p.trc !== 'REG'; });
-                if (payrollNonReg.length > 0) {
-                    totalHours = payrollNonReg.reduce(function(sum, p) { return sum + Number(p.quantity || 0); }, 0);
-                }
-
-                rows.push({
-                    date: t.dateStr || '',
-                    dateKey: t.date || '',
-                    employee: name,
-                    sameDay: sameDaySet.has(t.dateStr || ''),
-                    sameDayPtost: sameDayPtostSet.has(t.dateStr || ''),
-                    bereavement: bereavementSet.has(t.dateStr || ''),
-                    fmla: fmlaSet.has(t.dateStr || ''),
-                    verint: verintText,
-                    payroll: payrollText,
-                    hours: round2(totalHours),
-                    flags: (t.flags || []).join('; ')
-                });
-            });
-        });
-
-        rows.sort(function(a, b) {
-            if (a.dateKey === b.dateKey) return a.employee.localeCompare(b.employee);
-            return String(a.dateKey).localeCompare(String(b.dateKey)) * -1;
-        });
-
-        var html = '';
-        html += '<div id="relAllEmployeesLedger" style="margin-top:16px;">';
-        html += '<h4 style="margin:0 0 8px 0; color:#00695c;">Day-by-Day Breakdown (All Employees)</h4>';
-        html += '<div style="font-size:0.8em; color:var(--text-secondary); margin-bottom:8px;">Use this to match exact dates across associates.</div>';
-
-        if (!rows.length) {
-            html += '<div style="padding:12px; border:1px solid var(--border); border-radius:6px; color:#777;">No day-level events yet.</div>';
-            html += '</div>';
-            return html;
-        }
-
-        var minKey = rows[rows.length - 1].dateKey;
-        var maxKey = rows[0].dateKey;
-
-        html += '<div style="display:flex; gap:8px; align-items:end; flex-wrap:wrap; margin-bottom:8px;">';
-        html += '<div><label style="display:block; font-size:0.76em; color:var(--text-secondary); margin-bottom:2px;">From</label><input type="date" id="relLedgerFrom" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
-        html += '<div><label style="display:block; font-size:0.76em; color:var(--text-secondary); margin-bottom:2px;">To</label><input type="date" id="relLedgerTo" min="' + escapeHtml(minKey) + '" max="' + escapeHtml(maxKey) + '" style="padding:5px 8px; border:1px solid #cdd; border-radius:4px;"></div>';
-        html += '<button type="button" id="relLedgerApply" style="padding:6px 10px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer;">Apply</button>';
-        html += '<button type="button" id="relLedgerClear" style="padding:6px 10px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-primary); border-radius:4px; cursor:pointer;">Clear</button>';
-        html += '<div id="relLedgerCount" style="font-size:0.8em; color:var(--text-secondary); margin-left:auto;">Rows: ' + rows.length + '</div>';
-        html += '</div>';
-
-        html += '<div style="max-height:360px; overflow:auto; border:1px solid #dfe6e6; border-radius:6px;">';
-        html += '<table style="width:100%; border-collapse:collapse; font-size:0.82em;">';
-        html += '<thead><tr style="position:sticky; top:0; background:#ecf6f5; z-index:1;">';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Date</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Employee</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Same Day</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Same Day PTOST</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Bereavement</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">FMLA</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Verint</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Payroll</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:1px solid #c8dedd;">Hours</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:1px solid #c8dedd;">Flags</th>';
-        html += '</tr></thead><tbody>';
-
-        rows.forEach(function(row) {
-            html += '<tr class="rel-ledger-row" data-date-key="' + escapeHtml(row.dateKey) + '" style="border-bottom:1px solid #eef2f2;">';
-            html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(row.date) + '</td>';
-            html += '<td style="padding:6px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.employee) + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDay ? '✓' : '-') + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.sameDayPtost ? '✓' : '-') + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.bereavement ? '✓' : '-') + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + (row.fmla ? '✓' : '-') + '</td>';
-            html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.verint) + '</td>';
-            html += '<td style="padding:6px 8px; min-width:190px;">' + escapeHtml(row.payroll) + '</td>';
-            html += '<td style="padding:6px 8px; text-align:center;">' + row.hours + '</td>';
-            html += '<td style="padding:6px 8px; min-width:180px; color:var(--text-secondary);">' + escapeHtml(row.flags || '-') + '</td>';
-            html += '</tr>';
-        });
-
-        html += '</tbody></table></div></div>';
-        return html;
     }
 
     function getEmployeeReviewPriority(name, employeeRecord) {
@@ -1561,41 +1399,6 @@
             needsReview: needsReview,
             label: label
         };
-    }
-
-    function bindAllEmployeesLedgerFilters(container) {
-        var fromInput = container.querySelector('#relLedgerFrom');
-        var toInput = container.querySelector('#relLedgerTo');
-        var applyBtn = container.querySelector('#relLedgerApply');
-        var clearBtn = container.querySelector('#relLedgerClear');
-        var countEl = container.querySelector('#relLedgerCount');
-        var rows = Array.from(container.querySelectorAll('.rel-ledger-row'));
-        if (!fromInput || !toInput || !applyBtn || !clearBtn || !rows.length) return;
-
-        function applyFilter() {
-            var fromVal = fromInput.value || '';
-            var toVal = toInput.value || '';
-            var visible = 0;
-
-            rows.forEach(function(row) {
-                var key = row.getAttribute('data-date-key') || '';
-                var keep = true;
-                if (fromVal && key < fromVal) keep = false;
-                if (toVal && key > toVal) keep = false;
-                row.style.display = keep ? '' : 'none';
-                if (keep) visible++;
-            });
-
-            if (countEl) countEl.textContent = 'Rows: ' + visible + ' / ' + rows.length;
-        }
-
-        applyBtn.addEventListener('click', applyFilter);
-        clearBtn.addEventListener('click', function() {
-            fromInput.value = '';
-            toInput.value = '';
-            rows.forEach(function(row) { row.style.display = ''; });
-            if (countEl) countEl.textContent = 'Rows: ' + rows.length;
-        });
     }
 
     function renderTeamTable(container) {
@@ -2599,21 +2402,6 @@
             if (hint) hint.style.display = 'none';
             renderEmployeeDetail(panel, name);
             panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-    }
-
-    function bindRowClicks(container) {
-        var rows = container.querySelectorAll('.rel-employee-row');
-        rows.forEach(function(row) {
-            row.addEventListener('click', function() {
-                var name = this.getAttribute('data-name');
-                var panel = document.getElementById('relDetailPanel');
-                if (panel) {
-                    panel.style.display = 'block';
-                    renderEmployeeDetail(panel, name);
-                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
         });
     }
 

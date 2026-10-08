@@ -297,9 +297,6 @@ function clearUnsavedChanges() {
 function showOnlySection(sectionId) {
     window.DevCoachModules?.navigation?.showOnlySection?.(sectionId);
 }
-function showSubSection(subSectionId, activeButtonId = null) {
-    window.DevCoachModules?.navigation?.showSubSection?.(subSectionId, activeButtonId);
-}
 function showManageDataSubSection(subSectionId) {
     window.DevCoachModules?.navigation?.showManageDataSubSection?.(subSectionId);
 }
@@ -2041,6 +2038,7 @@ function bindNavigationHandlers() {
  * by initializeMetricTrends and travel with the elements.
  */
 function mountTrendReportCards() {
+    const bin = document.getElementById('metricTrendsSection');
     const averages = document.getElementById('trendAveragesCard');
     const uploadHost = document.getElementById('uploadCenterAveragesHost');
     if (averages && uploadHost && averages.parentElement !== uploadHost) uploadHost.appendChild(averages);
@@ -2048,6 +2046,15 @@ function mountTrendReportCards() {
     const email = document.getElementById('trendEmailCard');
     const coach = document.getElementById('subSectionCoachingEmail');
     if (email && coach && email.parentElement !== coach) coach.appendChild(email);
+
+    // The "upload data first" notice sat in the section the cards came from,
+    // which is never shown. It belongs at the top of the trend email.
+    const status = document.getElementById('metricTrendsStatus');
+    const heading = email?.querySelector('h3');
+    if (status && email && status.parentElement !== email) email.insertBefore(status, heading ? heading.nextSibling : email.firstChild);
+
+    // What is left of metricTrendsSection is its own heading. Nothing shows it.
+    if (bin && !bin.querySelector('[id]')) bin.remove();
 }
 
 /**
@@ -10232,9 +10239,6 @@ function renderYearEndOnOffMirror(employeeRecord, reviewYear = new Date().getFul
     return window.DevCoachModules?.onOffTracker?.renderYearEndOnOffMirror?.(employeeRecord, reviewYear, periodMetadata);
 }
 
-function buildOnOffScoreTableHtml(result, reviewYear = new Date().getFullYear(), options = {}) {
-    return window.DevCoachModules?.onOffTracker?.buildOnOffScoreTableHtml?.(result, reviewYear, options) || '';
-}
 
 function initializeOnOffTracker() {
     return window.DevCoachModules?.onOffTracker?.initializeOnOffTracker?.();

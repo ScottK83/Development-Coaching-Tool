@@ -126,10 +126,6 @@
         return window.DevCoachModules?.storage?.loadYtdData?.() || {};
     }
 
-    function getMyTeamMembers() {
-        return window.DevCoachModules?.storage?.loadTeamMembers?.() || {};
-    }
-
     // ============================================
     // DATA RETRIEVAL
     // ============================================

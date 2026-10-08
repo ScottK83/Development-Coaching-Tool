@@ -234,26 +234,6 @@
         saveUiNavState({ sectionId: 'manageDataSection', settingsSubSectionId: subSectionId });
     }
 
-    // --- Legacy backward compat: old showSubSection still works ---
-    // Some code may still call showSubSection. Route to the correct handler.
-    function showSubSection(subSectionId, activeButtonId) {
-        if (PEOPLE_SUB_TO_BTN[subSectionId]) {
-            showPeopleSubSection(subSectionId, activeButtonId);
-        } else if (MY_TEAM_SUB_TO_BTN[subSectionId]) {
-            showMyTeamSubSection(subSectionId, activeButtonId);
-        } else if (TRENDS_SUB_TO_BTN[subSectionId]) {
-            showTrendsSubSection(subSectionId, activeButtonId);
-        } else if (TRENDS_INNER_SUB_TO_BTN[subSectionId]) {
-            showTrendsInnerSubSection(subSectionId, activeButtonId);
-        } else if (REVIEW_SUB_TO_BTN[subSectionId]) {
-            showReviewPrepSubSection(subSectionId, activeButtonId);
-        } else {
-            // Fallback: try to show it directly
-            var target = document.getElementById(subSectionId);
-            if (target) target.style.display = 'block';
-        }
-    }
-
     // --- State management ---
 
     function getDefaultUiNavState() {
@@ -541,34 +521,9 @@
         else showOnlySection('coachingEmailSection');
     }
 
-    function initializeSection(sectionId) {
-        switch(sectionId) {
-            case 'tipsManagementSection':
-                if (typeof window.renderTipsManagement === 'function') window.renderTipsManagement();
-                else if (typeof renderTipsManagement === 'function') renderTipsManagement();
-                break;
-            case 'metricTrendsSection':
-                if (typeof window.initializeMetricTrends === 'function') window.initializeMetricTrends();
-                else if (typeof initializeMetricTrends === 'function') initializeMetricTrends();
-                break;
-            case 'manageDataSection':
-                if (typeof window.populateDeleteWeekDropdown === 'function') window.populateDeleteWeekDropdown();
-                if (typeof window.populateDeleteSentimentDropdown === 'function') window.populateDeleteSentimentDropdown();
-                if (typeof window.renderEmployeesList === 'function') window.renderEmployeesList();
-                break;
-            case 'executiveSummarySection':
-                if (typeof window.renderExecutiveSummary === 'function') window.renderExecutiveSummary();
-                break;
-            case 'debugSection':
-                if (typeof window.renderDebugPanel === 'function') window.renderDebugPanel();
-                break;
-        }
-    }
-
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.navigation = {
         showOnlySection: showOnlySection,
-        showSubSection: showSubSection,
         showMyTeamSubSection: showMyTeamSubSection,
         showPeopleSubSection: showPeopleSubSection,
         showTrendsSubSection: showTrendsSubSection,
@@ -583,6 +538,5 @@
         loadUiNavState: loadUiNavState,
         saveUiNavState: saveUiNavState,
         restoreLastViewedSection: restoreLastViewedSection,
-        initializeSection: initializeSection
     };
 })();

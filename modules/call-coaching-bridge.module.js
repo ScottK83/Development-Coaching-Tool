@@ -207,10 +207,6 @@
         return said || null;
     }
 
-    function qaMetricsFor(key) {
-        return QA_POINTS[key]?.metrics || [];
-    }
-
     // QA's own ids and labels, to the finding keys EVIDENCE_MAP knows.
     const QA_CHECK_KEYS = {
         disclosures: 'qaDisclosures',

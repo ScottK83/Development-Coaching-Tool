@@ -271,25 +271,6 @@ suite('contest: a week the month cuts off pays when the month ends', (t) => {
         contest.buildLeaderboard(lastWeek, { asOf: '2026-10-05' })[0].weeklyAdherence, 1);
 });
 
-suite('contest: the standings post names the reasons, not just the totals', (t) => {
-    const contest = load(t);
-
-    const days = {};
-    ['2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11'].forEach((d) => {
-        days[d] = { 'Dana Roe': { adherence: 96, perfectSurveys: 1 } };
-    });
-
-    const post = contest.buildStandingsPost(month(days), 'September', { asOf: '2026-10-01' });
-
-    t.check('it names the person', post.indexOf('Dana Roe') > -1);
-    t.check('it counts the perfect surveys', /5 perfect surveys/.test(post));
-    t.check('it counts the days', /5 days on adherence/.test(post));
-    t.check('and the week and month', /1 week/.test(post) && /the month/.test(post));
-    t.check('it gives the pool size', /12 entries in the draw/.test(post));
-    // House style: no em dashes anywhere in generated copy.
-    t.check('and uses no em dashes', post.indexOf('—') === -1);
-});
-
 suite('contest: the feature is wired and self-contained', (t) => {
     const fs = require('fs');
     const path = require('path');

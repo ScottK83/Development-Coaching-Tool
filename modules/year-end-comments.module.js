@@ -6,9 +6,6 @@
      * ────────────────────────────────────────────── */
     function _showToast(msg, ms) { return window.showToast(msg, ms); }
     function _getYearEndEmployees() { return window.getYearEndEmployees(); }
-    function _copilotUrl() {
-        return window.DevCoachModules.sharedUtils.copilotUrl();
-    }
 
     function _picker() { return window.DevCoachModules.associatePicker; }
     function _getLatestYearPeriodForEmployee(name, year) { return window.getLatestYearPeriodForEmployee(name, year); }

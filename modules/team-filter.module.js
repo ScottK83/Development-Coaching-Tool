@@ -57,13 +57,6 @@
     // TEAM MEMBER ACCESSORS
     // ============================================
 
-    function setTeamMembersForWeek(weekKey, memberNames) {
-        var members = getMyTeamMembers();
-        members[weekKey] = memberNames;
-        saveTeamMembers(members);
-        notifyTeamFilterChanged();
-    }
-
     function getTeamMembersForWeek(weekKey) {
         var members = getMyTeamMembers();
         // Exact match first
@@ -86,11 +79,6 @@
         // Fall back to DEFAULT_TEAM_MEMBERS from script.js
         if (typeof window.getDefaultTeamMembers === 'function') return window.getDefaultTeamMembers();
         return [];
-    }
-
-    function isTeamMember(weekKey, employeeName) {
-        var members = getTeamMembersForWeek(weekKey);
-        return members.length === 0 || members.includes(employeeName);
     }
 
     // ============================================
@@ -274,9 +262,7 @@
     window.DevCoachModules.teamFilter = {
         loadTeamMembers: loadTeamMembers,
         saveTeamMembers: saveTeamMembers,
-        setTeamMembersForWeek: setTeamMembersForWeek,
         getTeamMembersForWeek: getTeamMembersForWeek,
-        isTeamMember: isTeamMember,
         getLatestTeamSelectionWeekKey: getLatestTeamSelectionWeekKey,
         getTeamSelectionWeekKey: getTeamSelectionWeekKey,
         getTeamSelectionContext: getTeamSelectionContext,
