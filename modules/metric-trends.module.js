@@ -310,12 +310,13 @@ function populateTrendPeriodDropdown() {
         chipClass: 'mt-period-chip'
     });
 
-    // Restore last selected period
+    // Restore the last selected period, or open on the newest upload. The
+    // associate list is built from the chosen period, so leaving the period
+    // blank left the list empty and nobody could be picked.
     const savedPeriod = localStorage.getItem(LAST_TREND_PERIOD_KEY);
-    if (savedPeriod && filteredPeriods.includes(savedPeriod)) {
-        trendPeriodSelect.value = savedPeriod;
-        populateEmployeeDropdownForPeriod(savedPeriod);
-    }
+    const openOn = savedPeriod && filteredPeriods.includes(savedPeriod) ? savedPeriod : filteredPeriods[0];
+    trendPeriodSelect.value = openOn;
+    populateEmployeeDropdownForPeriod(openOn);
 
     // Add change listener to filter employees by selected period
     if (!trendPeriodSelect.dataset.bound) {

@@ -745,18 +745,26 @@
         var container = document.getElementById('subSectionTaMatchup');
         if (!container) return;
 
-        // Default to most recent YTD period on first render
-        if (!_matchupPeriodInitialized) {
-            _matchupPeriodInitialized = true;
-            var periods = _getAvailablePeriods();
-            var ytdPeriod = periods.find(function(p) { return p.type === 'ytd' && p.count >= 30; });
-            if (ytdPeriod) {
-                _selectedPeriodKey = ytdPeriod.key;
-                _selectedPeriodSource = ytdPeriod.source || '';
-            }
+        // Teams always answers on the newest year-to-date file covering the
+        // centre (Scott, 2026-10-07: "it should ALWAYS be YTD"). The older YTD
+        // files stay on record, because Team Movement compares against them,
+        // but there is nothing to pick. The Compare / File / Covering rows only
+        // come back when no YTD file covers enough of the centre, so the tab
+        // still works off months or weeks then.
+        var newestYtd = _getAvailablePeriods().find(function(p) {
+            return p.type === 'ytd' && p.count >= MIN_MATCHUP_EMPLOYEES;
+        });
+        if (newestYtd) {
+            _selectedPeriodKey = newestYtd.key;
+            _selectedPeriodSource = newestYtd.source || '';
         }
+        _matchupPeriodInitialized = true;
 
         var currentSelectValue = _selectedPeriodKey ? (_selectedPeriodKey + '||' + _selectedPeriodSource) : '';
+        var periodControls = newestYtd
+            ? '<p style="margin: 0 0 14px; color: var(--text-secondary); font-size: 0.9em;">Year to date, from the newest upload: <strong>' +
+                _escapeHtml(newestYtd.label) + '</strong></p>'
+            : _renderScopeSelector() + _renderScopePeriods() + _renderPeriodSelector(currentSelectValue);
 
         var data = buildMatchupData(_selectedPeriodKey);
         if (!data) {
@@ -777,9 +785,9 @@
             // set up, and sending someone to Settings to fix that wastes their time.
             var _onlyMine = data.totalEmployees > 0 && data.totalEmployees < 40;
             var _why = _onlyMine
-                ? 'This period only has <strong>' + data.totalEmployees + ' associates</strong> in it, and they are all on one team, so there is nothing to match against. Pick a period covering the whole centre using the scope buttons above.'
+                ? 'This period only has <strong>' + data.totalEmployees + ' associates</strong> in it, and they are all on one team, so there is nothing to match against. Upload a year-to-date file covering the whole centre.'
                 : 'No supervisors are assigned. Go to <strong>Settings &gt; Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.';
-            container.innerHTML = _renderScopeSelector() + _renderScopePeriods() + _renderPeriodSelector(currentSelectValue) +
+            container.innerHTML = periodControls +
                 '<div style="padding: 30px; text-align: center;">' +
                 '<h3 style="color: #e65100;">🥊 Team Matchup</h3>' +
                 '<p style="color: var(--text-secondary); max-width: 560px; margin: 0 auto;">' + _why + '</p>' +
@@ -796,10 +804,8 @@
 
         var html = '';
 
-        // Scope buttons, the periods inside that scope, then the full period list
-        html += _renderScopeSelector();
-        html += _renderScopePeriods();
-        html += _renderPeriodSelector(currentSelectValue);
+        // The newest YTD line, or the period controls when there is no YTD
+        html += periodControls;
 
         // Header
         html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #e65100;">';
