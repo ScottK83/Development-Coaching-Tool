@@ -153,6 +153,9 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Center averages are entered here, right after an upload. The card is moved in from Trend reports at boot. -->
+                <div id="uploadCenterAveragesHost"></div>
             </div>
             </section>
 
@@ -811,12 +814,19 @@ Box 2 - Future Improvement Areas:
                     <!-- Trends groups the four views that used to be tabs of their own -->
                     <div id="subSectionTaTrendsGroup" style="display: none;">
                         <div class="sub-nav" style="border-bottom: 1px solid #ce93d8; gap: 8px;">
-                            <button type="button" id="innerNavTrReports" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">📈 Trend reports</button>
+                            <button type="button" id="innerNavTrReports" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">👥 Team summary</button>
                             <button type="button" id="innerNavTrYoY" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">📊 Year over Year</button>
                             <button type="button" id="innerNavTrPatterns" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">📊 Patterns</button>
                             <button type="button" id="innerNavTrSentiment" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">💬 Sentiment</button>
                         </div>
-                        <div id="subSectionTaMetricTrends" style="display: block;"></div>
+                        <div id="subSectionTaMetricTrends" style="display: block;">
+                            <h3 style="margin-top: 0;">👥 Team trend summary</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 14px;">A Copilot prompt and an email draft about the whole team for one week: what improved, what slipped, and where to focus.</p>
+                            <div class="flex-row-center" style="gap: 10px; flex-wrap: wrap; justify-content: flex-start;">
+                                <select id="teamSummaryPeriodSelect" style="max-width: 320px;"></select>
+                                <button type="button" id="generateTeamTrendBtn" class="btn-primary">👥 Write the team summary</button>
+                            </div>
+                        </div>
                         <div id="subSectionTaYoY" style="display: none;"></div>
                         <div id="subSectionTaPatterns" style="display: none;"></div>
                         <div id="subSectionTaSentiment" style="display: none;"></div>
@@ -896,8 +906,8 @@ Box 2 - Future Improvement Areas:
                         <p style="margin: 5px 0 0 0;">Please upload weekly data first using the <strong>📤 Upload Data</strong> tab to use this feature.</p>
                     </div>
                     
-                    <!-- Call Center Averages Management -->
-                    <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
+                    <!-- Call Center Averages Management (shown on the Upload page) -->
+                    <div id="trendAveragesCard" style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
                         <h3 style="color: #9c27b0; margin-top: 0;">📊 Call Center Averages</h3>
                         <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px;">View the call center average metrics for your selected period.</p>
                         
@@ -1019,9 +1029,9 @@ Box 2 - Future Improvement Areas:
                         </div>
                     </div>
                     
-                    <!-- Generate Trend Email -->
-                    <div style="padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
-                        <h3 style="color: #9c27b0; margin-top: 0;">✉️ Generate Trend Email</h3>
+                    <!-- Generate Trend Email (shown under People > Coach) -->
+                    <div id="trendEmailCard" style="margin-top: 20px; padding: 20px; background: white; border-radius: 8px; border: 2px solid #9c27b0;">
+                        <h3 style="color: #9c27b0; margin-top: 0;">✉️ Trend email: metrics picture and coaching follow-up</h3>
                         
                         <div style="margin-bottom: 15px;">
                             <label for="trendPeriodSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">1. Select Period:</label>
@@ -1066,8 +1076,6 @@ Box 2 - Future Improvement Areas:
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button type="button" id="generateTrendBtn" style="background: #2563eb; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📊 Send Metrics</button>
                             <button type="button" id="generateCoachingFollowupBtn" style="background: #9c27b0; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">💬 Coaching Follow-up</button>
-                            <button type="button" id="generateAllTrendBtn" style="background: #6f42c1; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">📬 Generate All</button>
-                            <button type="button" id="generateTeamTrendBtn" style="background: #2e7d32; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em; display: none;">👥 Generate Team Summary</button>
                         </div>
                         
                     </div>

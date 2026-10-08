@@ -104,6 +104,8 @@ suite('metric charts: the daily period offers its associates', (t) => {
         captured.opts.placeholder !== 'No employees in this period');
     t.equal('both associates from the day are offered', captured.names.length, 2);
     t.check('by name', captured.names.indexOf('Ada Stretch') > -1);
-    t.check('and the All Associates option travels with them',
-        (captured.opts.extraOptions || []).some((o) => o.value === 'ALL'));
+    // The team summary has its own panel in Center > Trends since 2026-10-07,
+    // so this picker names people only.
+    t.check('and no All Associates instruction is mixed in with them',
+        !((captured.opts || {}).extraOptions || []).some((o) => o.value === 'ALL'));
 });

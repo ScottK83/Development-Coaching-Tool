@@ -392,11 +392,9 @@ function populateEmployeeDropdownForPeriod(weekKey) {
         .map(emp => emp.name)
         .sort();
 
-    // "All Associates" is an instruction, not a person, so it is passed as an
-    // extra option rather than mixed into the roster.
-    window.DevCoachModules.associatePicker.populateSelect(trendEmployeeSelect, employees, {
-        extraOptions: [{ value: 'ALL', label: 'All Associates' }]
-    });
+    // The team summary has its own panel in Center > Trends, so this picker
+    // names people only.
+    window.DevCoachModules.associatePicker.populateSelect(trendEmployeeSelect, employees);
 
     updateTrendButtonsVisibility();
 }
@@ -620,31 +618,18 @@ function displayCallCenterAverages(weekKey) {
 function updateTrendButtonsVisibility() {
     const employeeDropdown = document.getElementById('trendEmployeeSelect');
     const generateTrendBtn = document.getElementById('generateTrendBtn');
-    const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
-    const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
     const selectedValue = employeeDropdown?.value || '';
 
-    applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn);
+    applyTrendButtonVisibility(selectedValue, generateTrendBtn);
 }
 
-function applyTrendButtonVisibility(selectedValue, generateTrendBtn, generateAllTrendBtn, generateTeamTrendBtn) {
+// Send Metrics and Coaching Follow-up are for one person, so they show once
+// someone is picked.
+function applyTrendButtonVisibility(selectedValue, generateTrendBtn) {
     const coachingFollowupBtn = document.getElementById('generateCoachingFollowupBtn');
-    if (selectedValue === '') {
-        if (generateTrendBtn) generateTrendBtn.style.display = 'none';
-        if (coachingFollowupBtn) coachingFollowupBtn.style.display = 'none';
-        if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
-        if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
-    } else if (selectedValue === 'ALL') {
-        if (generateTrendBtn) generateTrendBtn.style.display = 'none';
-        if (coachingFollowupBtn) coachingFollowupBtn.style.display = 'none';
-        if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'block';
-        if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'block';
-    } else {
-        if (generateTrendBtn) generateTrendBtn.style.display = 'block';
-        if (coachingFollowupBtn) coachingFollowupBtn.style.display = 'block';
-        if (generateAllTrendBtn) generateAllTrendBtn.style.display = 'none';
-        if (generateTeamTrendBtn) generateTeamTrendBtn.style.display = 'none';
-    }
+    const show = selectedValue && selectedValue !== 'ALL' ? 'block' : 'none';
+    if (generateTrendBtn) generateTrendBtn.style.display = show;
+    if (coachingFollowupBtn) coachingFollowupBtn.style.display = show;
 }
 
 function updateReliabilityCalcPreview() {
@@ -722,7 +707,6 @@ function setupMetricTrendsListeners() {
 
     // Generate trend email buttons
     const generateTrendBtn = document.getElementById('generateTrendBtn');
-    const generateAllTrendBtn = document.getElementById('generateAllTrendBtn');
     const generateTeamTrendBtn = document.getElementById('generateTeamTrendBtn');
     const saveMetricsPreviewBtn = document.getElementById('saveMetricsPreviewBtn');
 
@@ -737,11 +721,6 @@ function setupMetricTrendsListeners() {
         coachingFollowupBtn.addEventListener('click', generateCoachingFollowup);
     }
 
-    if (!generateAllTrendBtn) {
-        console.error('generateAllTrendBtn element not found!');
-    } else {
-        generateAllTrendBtn.addEventListener('click', generateAllTrendEmails);
-    }
 
     if (!generateTeamTrendBtn) {
         console.error('generateTeamTrendBtn element not found!');
@@ -3996,8 +3975,12 @@ function attachTeamTrendSummaryModalHandlers(modal, teamSubject, weekKey, period
     });
 }
 
-function generateTeamTrendSummary() {
-    const weekKey = document.getElementById('trendPeriodSelect')?.value;
+function generateTeamTrendSummary(weekKeyArg) {
+    // Called from the Center > Trends panel with that panel's period. A click
+    // handler passes an event, which is not a period.
+    const weekKey = (typeof weekKeyArg === 'string' && weekKeyArg)
+        || document.getElementById('teamSummaryPeriodSelect')?.value
+        || document.getElementById('trendPeriodSelect')?.value;
     if (!weekKey) {
         showToast('Please select a period first', 5000);
         return;
@@ -4047,38 +4030,6 @@ function generateTeamTrendSummary() {
 }
 
 
-function generateAllTrendEmails() {
-    const weekKey = document.getElementById('trendPeriodSelect')?.value;
-    if (!weekKey) {
-        showToast('Please select a period first', 5000);
-        return;
-    }
-
-    const week = weeklyData[weekKey];
-    if (!week || !week.employees || week.employees.length === 0) {
-        showToast('No data found for this period', 5000);
-        return;
-    }
-
-    const teamFilterContext = getTeamSelectionContext();
-    const employeeNames = week.employees
-        .filter(emp => isAssociateIncludedByTeamFilter(emp?.name, teamFilterContext))
-        .map(emp => emp.name)
-        .filter(Boolean);
-    if (employeeNames.length === 0) {
-        showToast('No checked team members found for this period', 5000);
-        return;
-    }
-
-    showToast('Opening drafts for all associates... Please allow pop-ups.', 6000);
-
-    employeeNames.forEach((name, index) => {
-        setTimeout(() => {
-            // Batch email generation using canvas-based email system
-            generateTrendEmail(name, weekKey);
-        }, index * 500);
-    });
-}
 
     // Export functions
     window.DevCoachModules = window.DevCoachModules || {};
@@ -4189,7 +4140,6 @@ function generateAllTrendEmails() {
         createTeamTrendSummaryPanel,
         attachTeamTrendSummaryModalHandlers,
         generateTeamTrendSummary,
-        generateAllTrendEmails
     };
 
     // Backward compatibility - expose key functions on window
@@ -4297,7 +4247,6 @@ function generateAllTrendEmails() {
     window.createTeamTrendSummaryPanel = createTeamTrendSummaryPanel;
     window.attachTeamTrendSummaryModalHandlers = attachTeamTrendSummaryModalHandlers;
     window.generateTeamTrendSummary = generateTeamTrendSummary;
-    window.generateAllTrendEmails = generateAllTrendEmails;
 
 })();
 

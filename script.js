@@ -1868,7 +1868,11 @@ function bindNavigationHandlers() {
     // today, how is one person doing, how does the center look. Upload and
     // Settings are the utilities. The layout this replaced is recorded in
     // audit/2026-10-07-layout-before-condense.md.
-    document.getElementById('homeBtn')?.addEventListener('click', () => showOnlySection('uploadSection'));
+    // Upload also holds the center averages, entered right after an upload.
+    document.getElementById('homeBtn')?.addEventListener('click', () => {
+        showOnlySection('uploadSection');
+        initializeMetricTrends();
+    });
 
     // --- Today ---
     // The top button always opens the day page: it is the landing page.
@@ -1917,6 +1921,9 @@ function bindNavigationHandlers() {
         ensurePeopleMounted('subSectionCoachingEmail');
         showPeopleSubSection('subSectionCoachingEmail', 'subNavPeCoach');
         initializeCoachingEmail();
+        // The trend email (metrics picture and coaching follow-up) sits at
+        // the foot of Coach and follows the People picker.
+        initializeMetricTrends();
     });
     document.getElementById('subNavPeCalls')?.addEventListener('click', () => {
         ensurePeopleMounted('subSectionCallListening');
@@ -1995,10 +2002,11 @@ function bindNavigationHandlers() {
         showTrendsSubSection('subSectionTaTrendsGroup', 'subNavTaMetricCharts');
         window.DevCoachModules?.navigation?.restoreTrendsInnerTab?.();
     });
+    // The team summary is the one team-wide job Trend reports had.
     document.getElementById('innerNavTrReports')?.addEventListener('click', () => {
         showTrendsInnerSubSection('subSectionTaMetricTrends', 'innerNavTrReports');
-        ensureMetricTrendsMountedInTrends();
         initializeMetricTrends();
+        populateTeamSummaryPeriods();
     });
     document.getElementById('innerNavTrYoY')?.addEventListener('click', () => {
         showTrendsInnerSubSection('subSectionTaYoY', 'innerNavTrYoY');
@@ -2021,6 +2029,46 @@ function bindNavigationHandlers() {
         ensureTrendIntelligenceMountedInTrends();
         renderExecutiveSummary();
     });
+
+    mountTrendReportCards();
+}
+
+/**
+ * Trend reports was two unrelated jobs on one Center page. Each card moves to
+ * where the job happens: the center averages to Upload, and the trend email
+ * for one associate to the foot of People > Coach. Their listeners are bound
+ * by initializeMetricTrends and travel with the elements.
+ */
+function mountTrendReportCards() {
+    const averages = document.getElementById('trendAveragesCard');
+    const uploadHost = document.getElementById('uploadCenterAveragesHost');
+    if (averages && uploadHost && averages.parentElement !== uploadHost) uploadHost.appendChild(averages);
+
+    const email = document.getElementById('trendEmailCard');
+    const coach = document.getElementById('subSectionCoachingEmail');
+    if (email && coach && email.parentElement !== coach) coach.appendChild(email);
+}
+
+/**
+ * The weeks the team summary can be written for, newest first. It runs on
+ * weekly files with employees in them, the same rule the summary checks.
+ */
+function populateTeamSummaryPeriods() {
+    const select = document.getElementById('teamSummaryPeriodSelect');
+    if (!select) return;
+    const weeks = Object.keys(weeklyData || {})
+        .filter((key) => (weeklyData[key]?.metadata?.periodType || 'week') === 'week'
+            && Array.isArray(weeklyData[key]?.employees) && weeklyData[key].employees.length > 0)
+        .sort()
+        .reverse();
+    const previous = select.value;
+    if (!weeks.length) {
+        select.innerHTML = '<option value="">No weekly uploads yet</option>';
+        return;
+    }
+    select.innerHTML = weeks.map((key) =>
+        `<option value="${escapeHtml(key)}">${escapeHtml(weeklyData[key]?.metadata?.label || key)}</option>`).join('');
+    if (previous && weeks.indexOf(previous) > -1) select.value = previous;
 }
 
 // --- DOM mount helpers for People ---
@@ -2096,13 +2144,6 @@ function ensureTrendIntelligenceMountedInTrends() {
     target.append(...source.childNodes);
 }
 
-function ensureMetricTrendsMountedInTrends() {
-    var target = document.getElementById('subSectionTaMetricTrends');
-    if (!target || target.hasChildNodes()) return;
-    var source = document.getElementById('metricTrendsSection');
-    if (!source) return;
-    target.append(...source.childNodes);
-}
 
 function ensureSentimentMountedInTrends() {
     handleSubNavSentimentClick(true);

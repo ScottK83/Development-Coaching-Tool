@@ -528,7 +528,10 @@
         }
 
         if (sectionId === 'uploadSection') {
-            showOnlySection('uploadSection');
+            // Through the button, which also fills the center averages panel.
+            var uploadBtn = document.getElementById('homeBtn');
+            if (uploadBtn) uploadBtn.click();
+            else showOnlySection('uploadSection');
             return;
         }
 
