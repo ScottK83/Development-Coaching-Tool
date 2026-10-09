@@ -279,6 +279,67 @@ suite('consolidation: the status cards read the window and lead to the person', 
     t.equal('narrowed to one person, one card', (one.match(/class="pulse-card"/g) || []).length, 1);
 });
 
+suite('consolidation: the badge is the share of the scorecard met, and the team view is a line each', (t) => {
+    t.installFakeBrowser();
+    const names = ['Ann Four', 'Bea Three', 'Cal Two', 'Dee One'];
+    const rows = () => names.map((name) => ({ name, totalCalls: 200, surveyTotal: 4, repSurveyTotal: 4 }));
+    global.weeklyData = {
+        '2026-09-07|2026-09-13': { metadata: { periodType: 'week', startDate: '2026-09-07', endDate: '2026-09-13' }, employees: rows() },
+        '2026-09-14|2026-09-20': { metadata: { periodType: 'week', startDate: '2026-09-14', endDate: '2026-09-20' }, employees: rows() }
+    };
+    global.ytdData = {};
+    global.dailyData = {};
+    const registry = t.loadModule('modules/metrics-registry.module.js');
+    global.isReverseMetric = registry.metricsRegistryHelpers.isReverseMetric;
+    global.METRICS_REGISTRY = global.window.METRICS_REGISTRY;
+
+    // Four scorecard metrics each, met by four, three, two and one of them.
+    // Every off-scorecard metric is missed, which under the old rule (red at
+    // three misses of any kind) made all four of them "Needs Support".
+    const metMany = { 'Ann Four': 4, 'Bea Three': 3, 'Cal Two': 2, 'Dee One': 1 };
+    const scorecard = [
+        ['scheduleAdherence', 'Schedule Adherence'], ['aht', 'Average Handle Time'],
+        ['overallSentiment', 'Overall Sentiment'], ['cxRepOverall', 'Rep Satisfaction']
+    ];
+    global.window.analyzeTrendMetrics = (emp) => ({
+        allMetrics: scorecard.map(([metricKey, label], i) => {
+            const meets = i < metMany[emp.name];
+            return { metricKey, label, employeeValue: 1, target: 2, targetType: 'min',
+                classification: meets ? 'On Track' : 'Needs Focus', meetsTarget: meets, gapFromTarget: meets ? 0 : 1 };
+        }).concat(['transfers', 'holdTime', 'acw'].map((metricKey) => ({
+            metricKey, label: metricKey, employeeValue: 1, target: 2, targetType: 'min',
+            classification: 'Needs Focus', meetsTarget: false, gapFromTarget: 1
+        })))
+    });
+    const pulse = t.loadModule('modules/morning-pulse.module.js').morningPulse;
+
+    const cmp = { latestKey: '2026-09-14|2026-09-20', baselineKey: '2026-09-07|2026-09-13',
+        latestLabel: 'last week', baselineLabel: 'the week before', unit: 'week' };
+    const html = pulse.buildTeamPulseHtml(cmp, {
+        compact: true,
+        actionFor: (name) => `<button class="open" data-name="${name}">Write</button>`
+    });
+    const rowFor = (name) => {
+        const start = html.indexOf(`data-employee="${name}"`);
+        return html.slice(start, html.indexOf('</summary>', start));
+    };
+
+    t.check('all four met is Crushing It', rowFor('Ann Four').indexOf('Crushing It') > -1);
+    t.check('three of four is Doing Good, not Needs Support', rowFor('Bea Three').indexOf('Doing Good') > -1);
+    t.check('two of four is Watch', rowFor('Cal Two').indexOf('Watch') > -1);
+    t.check('one of four is Needs Support', rowFor('Dee One').indexOf('Needs Support') > -1);
+    t.check('the line says how much of the scorecard is on target', rowFor('Bea Three').indexOf('3 of 4 scorecard on target') > -1);
+    t.check('and the one thing to look at', rowFor('Bea Three').indexOf('Focus:') > -1);
+
+    t.equal('a line each', (html.match(/class="pulse-row"/g) || []).length, 4);
+    t.check('opening to the full card', (html.match(/class="pulse-card"/g) || []).length === 4);
+    t.equal('the button is on the line, not repeated in the card', (html.match(/class="open"/g) || []).length, 4);
+    t.check('the count bar agrees with the lines',
+        html.indexOf('1 Crushing It') > -1 && html.indexOf('1 Doing Good') > -1
+        && html.indexOf('1 Watch') > -1 && html.indexOf('1 Needs Support') > -1);
+    t.check('and is drawn in theme colours, not a fixed light grey', html.indexOf('#f5f7fa') === -1);
+});
+
 // --- Beat a target ----------------------------------------------------------
 
 suite('consolidation: Beat a target is the Highlights post, over the window', (t) => {
@@ -420,4 +481,55 @@ suite('consolidation: the team view draws both shout-out styles', async (t) => {
     t.check('the ranking bar is in the card', els.myTeamShoutOutSlot.innerHTML.indexOf('id="myTeamTopN"') > -1);
     t.check('and so is History', els.myTeamShoutOutSlot.innerHTML.indexOf('myTeamHistoryToggle') > -1);
     t.check('and the style switch', els.myTeamShoutOutSlot.innerHTML.indexOf('data-style="targets"') > -1);
+
+    // The card showed the post twice (a coloured copy and a text box) under a
+    // line explaining the colours. It shows it once now.
+    const card = els.myTeamShoutOutSlot.innerHTML;
+    const more = card.slice(card.indexOf('id="myTeamShoutOutMore"'));
+    t.check('the bar and History are tucked in a More fold', more.indexOf('id="myTeamTopN"') > -1 && more.indexOf('myTeamHistoryToggle') > -1);
+    t.check('which starts shut', !/id="myTeamShoutOutMore"[^>]*\sopen/.test(card));
+    t.check('the text box starts hidden behind Edit', /id="myTeamShoutOutText"[^>]*display:none/.test(card) && card.indexOf('id="myTeamShoutOutEdit"') > -1);
+    t.check('and there is no colour key line', card.indexOf('shoutout-legend') === -1 && card.indexOf('Colour is on screen only') === -1);
+});
+
+suite('consolidation: who did not make it is in the shout-out card, and the team panel is shut', async (t) => {
+    const myTeam = loadMyTeam(t, 'lastWeek');
+    const { els } = fakePage();
+    wireWriters();
+    const m = global.window.DevCoachModules;
+    m.teamScope = { getActiveMember: () => null };
+    m.celebrations.describeNoCelebration = (info) => info.sentence;
+    m.celebrations.detectCelebrations = () => ({
+        celebrations: [{ name: 'Alyssa Dimes', firstName: 'Alyssa', achievements: [{ key: 'aht', label: 'Handle Time', rank: 3 }] }],
+        missed: [{ name: 'Sabrina Ochoa', reason: 'thinVolume', sentence: 'Sabrina only took 11 calls this period.' }],
+        dateRange: 'Sep 14 - Sep 20',
+        periodKey: 'K'
+    });
+
+    await myTeam.renderDayPage();
+    const page = els.myTeamDayContainer.innerHTML;
+    t.check('the panel under the page is shut for the whole team', /<details[^>]*>\s*<summary[^>]*>How everyone is tracking/.test(page)
+        && !/<details[^>]*open>\s*<summary[^>]*>How everyone is tracking/.test(page));
+    t.check('and no longer repeats the shout-out', els.myTeamDayContext.innerHTML.indexOf('The shout-out') === -1
+        && els.myTeamDayContext.innerHTML.indexOf("Who didn't make it") === -1);
+
+    myTeam.renderShoutOut();
+    t.check('the shout-out card says who did not make it', els.myTeamShoutOutSlot.innerHTML.indexOf("Who didn't make it, and why (1)") > -1);
+    t.check('and why', els.myTeamShoutOutSlot.innerHTML.indexOf('only took 11 calls') > -1);
+
+    // An empty window is when "why is nobody in here" matters most.
+    m.celebrations.detectCelebrations = () => ({
+        celebrations: [],
+        missed: [{ name: 'Sabrina Ochoa', reason: 'thinVolume', sentence: 'Sabrina only took 11 calls this period.' }],
+        dateRange: 'Sep 14 - Sep 20',
+        periodKey: 'K2'
+    });
+    await myTeam.renderDayPage(); // a fresh render forgets the last answer
+    myTeam.renderShoutOut();
+    t.check('an empty post still says who did not make it', els.myTeamShoutOutSlot.innerHTML.indexOf('only took 11 calls') > -1);
+
+    m.teamScope = { getActiveMember: () => 'Alyssa Dimes' };
+    await myTeam.renderDayPage();
+    t.check('for one person the panel opens, as the evidence for the message',
+        /<details[^>]*open>\s*<summary[^>]*>What's behind it/.test(els.myTeamDayContainer.innerHTML));
 });

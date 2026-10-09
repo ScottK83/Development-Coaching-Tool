@@ -2279,16 +2279,6 @@ turning "background: #f0f9ff" into
     overflow-y: auto;
 }
 
-.shoutout-legend {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-    font-size: 0.78em;
-    color: var(--text-tertiary);
-    margin: 8px 0 4px;
-}
-
 /* Contest draw: the x by the winner's name only shows with the mouse on it. */
 .contest-draw-name .contest-draw-x {
     opacity: 0;

@@ -1400,16 +1400,33 @@
             .map(line => line.replace(/\bthis week\b/g, ahead));
     }
 
-    function getStatusBadge(allMetrics) {
-        const needsFocus = allMetrics.filter(m => m.classification === 'Needs Focus').length;
-        const exceeding = allMetrics.filter(m => m.classification === 'Exceeding Expectation').length;
-        const onTrack = allMetrics.filter(m => m.classification === 'On Track').length;
+    // The scorecard metrics a status badge is judged on. Reliability is the
+    // fifth on the scorecard and stays off these cards on purpose.
+    const BADGE_SCORECARD_KEYS = ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall'];
 
-        if (needsFocus >= 3) return { label: 'Needs Support', color: '#e53935', bg: '#ffebee', icon: '\uD83D\uDD34' };
-        if (needsFocus >= 1) return { label: 'Watch', color: '#fb8c00', bg: '#fff3e0', icon: '\uD83D\uDFE1' };
-        if (exceeding >= 3) return { label: 'Crushing It', color: '#2e7d32', bg: '#e8f5e9', icon: '\uD83D\uDFE2' };
-        if (onTrack + exceeding >= allMetrics.length * 0.7) return { label: 'Solid', color: '#1e88e5', bg: '#e3f2fd', icon: '\uD83D\uDD35' };
-        return { label: 'Steady', color: '#78909c', bg: '#eceff1', icon: '\u26AA' };
+    /**
+     * How someone is doing, by the share of their scorecard they are meeting.
+     *
+     * It used to go red at three misses across every metric on the card. With
+     * thirteen metrics nearly everybody has three, so 17 of 18 on the team were
+     * "Needs Support" and the badge said nothing. Scott, 2026-10-09: meeting 3
+     * of 5 may still need coaching, but that is doing good. So it is a share of
+     * the scorecard, and 3 of 4 reads the same as 3 of 5.
+     */
+    function getStatusBadge(allMetrics) {
+        const scorecard = (allMetrics || []).filter(m =>
+            BADGE_SCORECARD_KEYS.includes(m.metricKey) && typeof m.meetsTarget === 'boolean');
+        const met = scorecard.filter(m => m.meetsTarget).length;
+        const measured = scorecard.length;
+        const tally = { met, measured };
+
+        // One number is not a scorecard.
+        if (measured < 2) return { ...tally, label: 'Steady', color: '#78909c', bg: '#eceff1', icon: '\u26AA' };
+        const share = met / measured;
+        if (share >= 1) return { ...tally, label: 'Crushing It', color: '#2e7d32', bg: '#e8f5e9', icon: '\uD83D\uDFE2' };
+        if (share >= 0.6) return { ...tally, label: 'Doing Good', color: '#1e88e5', bg: '#e3f2fd', icon: '\uD83D\uDD35' };
+        if (share >= 0.4) return { ...tally, label: 'Watch', color: '#fb8c00', bg: '#fff3e0', icon: '\uD83D\uDFE1' };
+        return { ...tally, label: 'Needs Support', color: '#e53935', bg: '#ffebee', icon: '\uD83D\uDD34' };
     }
 
     // --- Formatting helpers ---
@@ -3813,7 +3830,10 @@
     function buildSummaryBar(cardData, comparison) {
         const counts = { red: 0, yellow: 0, green: 0, blue: 0, gray: 0 };
         cardData.forEach(d => {
-            const badge = getStatusBadge(d.analysis.allMetrics || []);
+            // The card's own metrics. Counting off the full list here while
+            // the card counted the speakable ones let the bar and the cards
+            // disagree about the same person.
+            const badge = getStatusBadge(speakableMetrics(d.emp, d.analysis));
             if (badge.icon.includes('🔴')) counts.red++;
             else if (badge.icon.includes('🟡')) counts.yellow++;
             else if (badge.icon.includes('🟢')) counts.green++;
@@ -3826,17 +3846,55 @@
             ? `<span style="color:#1a237e; font-weight:600;">Moves are against ${escapeHtml(comparison.baselineLabel || 'the period before')}</span>`
             : '<span style="color:var(--text-tertiary);">Nothing to compare against yet</span>';
 
-        return `<div style="display:flex; gap:16px; flex-wrap:wrap; padding:14px 18px; background:#f5f7fa; border-radius:8px; margin-bottom:16px; align-items:center;">` +
-            `<div style="font-weight:700; font-size:1em; color:#1a237e;">Team Pulse</div>` +
+        // Theme colours: the fixed light grey this used to sit on was a pale
+        // slab in the middle of the dark theme.
+        return `<div style="display:flex; gap:16px; flex-wrap:wrap; padding:12px 16px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:8px; margin-bottom:12px; align-items:center;">` +
             `<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.9em;">` +
-                (counts.red > 0 ? `<span style="color:#e53935; font-weight:600;">🔴 ${counts.red} Needs Support</span>` : '') +
-                (counts.yellow > 0 ? `<span style="color:#fb8c00; font-weight:600;">🟡 ${counts.yellow} Watch</span>` : '') +
-                (counts.blue > 0 ? `<span style="color:#1e88e5; font-weight:600;">🔵 ${counts.blue} Solid</span>` : '') +
                 (counts.green > 0 ? `<span style="color:#2e7d32; font-weight:600;">🟢 ${counts.green} Crushing It</span>` : '') +
+                (counts.blue > 0 ? `<span style="color:#1e88e5; font-weight:600;">🔵 ${counts.blue} Doing Good</span>` : '') +
+                (counts.yellow > 0 ? `<span style="color:#fb8c00; font-weight:600;">🟡 ${counts.yellow} Watch</span>` : '') +
+                (counts.red > 0 ? `<span style="color:#e53935; font-weight:600;">🔴 ${counts.red} Needs Support</span>` : '') +
                 (counts.gray > 0 ? `<span style="color:#78909c; font-weight:600;">⚪ ${counts.gray} Steady</span>` : '') +
             `</div>` +
-            `<div style="margin-left:auto; font-size:0.85em; color:#37474f;">${cardData.length} associates • ${compareNote}</div>` +
+            `<div style="margin-left:auto; font-size:0.85em; color:var(--text-secondary);">${cardData.length} associates • ${compareNote}</div>` +
         `</div>`;
+    }
+
+    /**
+     * One line for one person, opening to their full card.
+     *
+     * Eighteen full cards ran to about 3,300px, which buried everything else
+     * on the day page. The line carries what a scan needs: the badge, how much
+     * of the scorecard is on target, and the one thing to look at. The card is
+     * still there behind it. The button sits in the line so it is not repeated
+     * inside the card.
+     */
+    function buildPulseRow(d, cardOptions, actionHtml) {
+        const escapeHtml = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s));
+        const metrics = speakableMetrics(d.emp, d.analysis);
+        const badge = getStatusBadge(metrics);
+        const focal = pickFocalPoint(metrics);
+        const firstName = typeof getEmployeeNickname === 'function'
+            ? getEmployeeNickname(d.emp.name)
+            : d.emp.name.split(/[\s,]+/)[0];
+
+        const tally = badge.measured >= 2
+            ? `${badge.met} of ${badge.measured} scorecard on target`
+            : 'Too little scored to judge';
+        const focus = focal
+            ? `Focus: ${escapeHtml(focal.label)} ${fmtVal(focal)} vs ${fmtTarget(focal)}`
+            : 'Nothing below target';
+
+        return `<details class="pulse-row" data-employee="${escapeHtml(d.emp.name)}" style="border-bottom:1px solid var(--border);">` +
+            `<summary style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 4px; cursor:pointer;">` +
+                `<span style="font-weight:700; color:var(--text-primary); min-width:96px;">${escapeHtml(firstName)}</span>` +
+                `<span style="font-size:0.78em; font-weight:600; padding:2px 9px; border-radius:12px; color:${badge.color}; background:${badge.bg};">${badge.icon} ${badge.label}</span>` +
+                `<span style="font-size:0.84em; color:var(--text-secondary);">${tally}</span>` +
+                `<span style="font-size:0.84em; color:var(--text-tertiary); flex:1; min-width:180px;">${focus}</span>` +
+                (actionHtml || '') +
+            `</summary>` +
+            `<div style="padding:4px 0 12px;">${buildEmployeeCard(d.emp, d.analysis, d.weekDeltas, d.biggestJump, cardOptions)}</div>` +
+        `</details>`;
     }
 
     /**
@@ -3850,7 +3908,8 @@
      * the tone row above, where the window already applies to them.
      *
      * options.person narrows it to one card. options.actionFor(name) supplies
-     * that card's button.
+     * that card's button. options.compact draws a line per person instead,
+     * each opening to the card.
      */
     function buildTeamPulseHtml(comparison, options = {}) {
         const latestKey = comparison?.latestKey;
@@ -3880,12 +3939,23 @@
         const rangeLabels = baselineKey && comparison.baselineLabel
             ? { when, prior: comparison.baselineLabel }
             : null;
-        const cards = cardData.map(d => buildEmployeeCard(d.emp, d.analysis, d.weekDeltas, d.biggestJump, {
+        const cardOptions = {
             periodType: comparison.unit === 'month' ? 'month' : 'week',
             deltaContextLabel: when,
             whenLabel: when,
-            rangeLabels,
-            actionHtml: typeof options.actionFor === 'function' ? options.actionFor(d.emp.name) : ''
+            rangeLabels
+        };
+        const actionFor = (name) => (typeof options.actionFor === 'function' ? options.actionFor(name) : '');
+
+        // options.compact: a line each, opening to the card (the whole-team view).
+        if (options.compact && !only) {
+            return buildSummaryBar(cardData, comparison) +
+                `<div>${cardData.map(d => buildPulseRow(d, cardOptions, actionFor(d.emp.name))).join('')}</div>`;
+        }
+
+        const cards = cardData.map(d => buildEmployeeCard(d.emp, d.analysis, d.weekDeltas, d.biggestJump, {
+            ...cardOptions,
+            actionHtml: actionFor(d.emp.name)
         })).join('');
 
         return (only ? '' : buildSummaryBar(cardData, comparison)) +
@@ -4199,8 +4269,9 @@
                 return;
             }
 
-            const metrics = (analysis.allMetrics || []).filter(m => !PULSE_EXCLUDED_METRICS.includes(m.metricKey));
-            const badge = getStatusBadge(metrics);
+            // The same metrics the card judges, so the round and the card
+            // never give one person two different badges.
+            const badge = getStatusBadge(speakableMetrics(emp, analysis));
             const sentEntry = outreach.getSentEntry(sentLog, plan.id, stamp, emp.name);
             cardData.push({ emp, analysis, badge, dailyEntry, coverage, sentEntry });
         });

@@ -41,6 +41,12 @@
     let shoutOutStyle = 'ranked';
     // Whether the shout-out card has its history log open.
     let showHistory = false;
+    // Whether the card's More fold (the extra band and History) is open, so
+    // saving a band or opening History does not snap it shut on redraw.
+    let shoutOutMoreOpen = false;
+    // Whether the team's "How everyone is tracking" fold is open. Shut until
+    // opened, then kept open across a window change rather than snapping shut.
+    let trackingOpen = false;
     // Which round the slot under the three team buttons is holding, so a
     // window change rewrites that one rather than always the shout-out.
     let openSlot = null;
@@ -384,8 +390,11 @@
             renderComparisonLine() +
             (person ? renderToneRow(person) : '') +
             `<div id="myTeamDayMessage"></div>` +
-            `<details style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);" open>` +
-                `<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">What's behind it</summary>` +
+            // Open for one person, where it is the evidence for the message
+            // above it. Shut for the whole team, where it is eighteen people's
+            // numbers and was burying the page.
+            `<details id="myTeamBehindFold" style="margin-top:18px; border:1px solid var(--border); border-radius:10px; padding:12px 16px; background:var(--bg-surface-raised);"${person || trackingOpen ? ' open' : ''}>` +
+                `<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">${person ? "What's behind it" : 'How everyone is tracking'}</summary>` +
                 `<div id="myTeamDayContext" style="margin-top:10px;"></div>` +
             `</details>`;
 
@@ -413,6 +422,9 @@
         });
 
         bindWindowPicker(container.querySelector('#myTeamWindowPicker'));
+
+        const fold = container.querySelector('#myTeamBehindFold');
+        if (fold && !person) fold.addEventListener('toggle', () => { trackingOpen = fold.open; });
 
         const messageEl = document.getElementById('myTeamDayMessage');
         if (person) {
@@ -574,11 +586,15 @@
 
     /**
      * Everything underneath the message: how each person is tracking over the
-     * window, the day files when the window is a day or this week, and who made
-     * the shout-out and who did not.
+     * window, and the day files when the window is a day or this week. For one
+     * person it also says whether they made the shout-out and why not.
      *
      * The status cards were the Weekly Pulse tab. They read the window now, and
      * a card is a way in: it picks that person, which brings up their tones.
+     *
+     * For the whole team the cards are a line each, and the shout-out list is
+     * gone from here. It repeated the post, and who did not make it lives in
+     * the shout-out card now.
      */
     function buildBehindHtml(person) {
         const pulse = mods().morningPulse;
@@ -589,12 +605,13 @@
         try {
             pulseHtml = pulse?.buildTeamPulseHtml?.(cmp, {
                 person,
+                compact: !person,
                 actionFor: person ? null : (name) => {
                     const first = typeof window.getEmployeeNickname === 'function'
                         ? window.getEmployeeNickname(name)
                         : String(name).split(/[\s,]+/)[0];
                     return `<button type="button" class="mt-open-person" data-name="${escapeHtml(name)}" ` +
-                        `style="width:100%; background:var(--bg-surface-raised); color:#4527a0; border:1px solid #c7b3ff; border-radius:6px; padding:8px 10px; cursor:pointer; font-weight:600; font-size:0.85em;">✉️ Write to ${escapeHtml(first)}</button>`;
+                        `style="background:var(--bg-surface); color:#4527a0; border:1px solid #c7b3ff; border-radius:6px; padding:4px 10px; cursor:pointer; font-weight:600; font-size:0.8em; white-space:nowrap;">✉️ Write to ${escapeHtml(first)}</button>`;
                 }
             }) || '';
         } catch (e) { pulseHtml = ''; }
@@ -612,11 +629,18 @@
             (extra ? `<span style="margin-left:auto;">${extra}</span>` : '') +
         `</div>`;
 
-        return (pulseHtml
-                ? heading(person ? 'How they are tracking' : 'How everyone is tracking', patterns) + pulseHtml
-                : (patterns ? heading('How everyone is tracking', patterns) : '')) +
-            (dailyHtml ? `<div style="margin-top:16px;">${dailyHtml}</div>` : '') +
-            `<div style="margin-top:${pulseHtml || dailyHtml ? '18px' : '0'};">` +
+        // The fold it sits in already says "How everyone is tracking", so the
+        // team view does not say it twice.
+        const tracking = person
+            ? (pulseHtml ? heading('How they are tracking', patterns) + pulseHtml : '')
+            : (patterns ? heading('', patterns) : '') + pulseHtml;
+
+        const body = tracking +
+            (dailyHtml ? `<div style="margin-top:16px;">${dailyHtml}</div>` : '');
+        if (!person) return body || `<div style="font-size:0.9em; color:var(--text-tertiary);">Nothing uploaded for this window yet.</div>`;
+
+        return body +
+            `<div style="margin-top:${body ? '18px' : '0'};">` +
                 heading('The shout-out') +
                 buildContextHtml(person) +
             `</div>`;
@@ -628,7 +652,10 @@
         contextEl.innerHTML = buildBehindHtml(person);
 
         contextEl.querySelectorAll('.mt-open-person').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                // The button sits in the row's summary line, where a click
+                // would otherwise also open the row.
+                e.preventDefault();
                 activeTone = null;
                 const hub = mods().teamHub;
                 if (hub?.selectMember) hub.selectMember(btn.dataset.name);
@@ -1006,8 +1033,9 @@
      *
      * The style is which post: placings in the center, or everyone who beat a
      * target (what the Highlights tab posted). The bar and History came off
-     * the Celebrations tab. The bar only means anything for placings, so it is
-     * only shown for them.
+     * the Celebrations tab and are set once in a while, not every post, so
+     * they sit in a More fold. The bar only means anything for placings, so it
+     * is only shown for them.
      */
     function shoutOutControlsHtml() {
         const cel = mods().celebrations;
@@ -1030,11 +1058,18 @@
             ? `<button type="button" id="myTeamHistoryToggle" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised); color:var(--text-secondary); cursor:pointer; font-size:0.82em;">${showHistory ? 'Hide history' : '📊 History'}</button>`
             : '';
 
-        return `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">` +
-            `<span style="font-size:0.82em; color:var(--text-tertiary);">Post:</span>` +
+        const more = bar || history
+            ? `<details id="myTeamShoutOutMore" style="margin-left:auto;"${shoutOutMoreOpen || showHistory ? ' open' : ''}>` +
+                `<summary style="cursor:pointer; font-size:0.82em; color:var(--text-tertiary); text-align:right;">More</summary>` +
+                `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; margin-top:6px;">${bar}${history}</div>` +
+              `</details>`
+            : '';
+
+        return `<div style="display:flex; align-items:flex-start; gap:6px; flex-wrap:wrap; margin-bottom:10px;">` +
+            `<span style="font-size:0.82em; color:var(--text-tertiary); padding-top:5px;">Post:</span>` +
             style('ranked', '🏅 Placings', 'Who placed high in the call center, with the placing') +
             style('targets', '✨ Beat a target', 'Everyone who beat a target, with no placings') +
-            `<span style="margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${bar}${history}</span>` +
+            more +
         `</div>`;
     }
 
@@ -1063,6 +1098,9 @@
             showHistory = !showHistory;
             renderShoutOut();
         });
+
+        const more = slot.querySelector('#myTeamShoutOutMore');
+        more?.addEventListener('toggle', () => { shoutOutMoreOpen = more.open; });
     }
 
     function historyHtml() {
@@ -1103,8 +1141,12 @@
         let text = '';
         let count = 0;
         let dateRange = '';
+        // Who did not make it, folded at the foot of the card. It used to sit
+        // in the panel under the page beside a second copy of the post.
+        let missedHtml = '';
         try {
             const result = detectForWindow();
+            missedHtml = buildMissedHtml(celebrations, result);
             count = (result?.celebrations || []).length;
             dateRange = result?.dateRange || chosen.dateRange || '';
             text = count
@@ -1125,7 +1167,8 @@
             slot.innerHTML = shoutOutCard('var(--border)',
                 `<div style="color:var(--text-secondary); font-size:0.92em;">Nobody cleared both the ranking bar and their own target ` +
                     `${chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase())}, so there is nothing to put in the channel yet. ` +
-                    `Try another window in <strong>Covering</strong> above, or <strong>Beat a target</strong>.</div>`);
+                    `Try another window in <strong>Covering</strong> above, or <strong>Beat a target</strong>.</div>` +
+                missedHtml);
             bindShoutOutControls(slot);
             return;
         }
@@ -1135,36 +1178,42 @@
                 `<div style="font-weight:700; color:#e65100;">📣 Team shout-out. ${count} ${count === 1 ? 'person' : 'people'}</div>` +
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
             `</div>` +
-            // The preview carries the colour; the textarea carries the text.
-            // A textarea cannot hold markup, and the post is pasted into a
-            // channel that would show any markup literally, so the two are kept
-            // apart rather than one being made to do both jobs. Copy reads the
-            // textarea, so what lands in the channel is exactly what is typed
-            // here, colour or no colour.
-            `<div class="shoutout-legend">` +
-                `<span>Placing:</span>` +
-                `<span class="placement-tier placement-tier-first">#1</span>` +
-                `<span class="placement-tier placement-tier-top5">Top 5</span>` +
-                `<span class="placement-tier placement-tier-top10">Top 10</span>` +
-                `<span class="placement-tier placement-tier-top15">Top 15</span>` +
-                `<span class="placement-tier placement-tier-top25">Top 25</span>` +
-                `<span style="margin-left:auto;">Colour is on screen only. The copied post is plain text.</span>` +
-            `</div>` +
+            // The post is shown once. The coloured view is what you read; Edit
+            // swaps it for the text box, and Done puts the coloured view back
+            // with the edits in it. A textarea cannot hold colour and the
+            // channel would show markup literally, so Copy always reads the
+            // text box: what lands in the channel is exactly what was typed.
+            // It used to show both at once, under a key explaining the colours,
+            // which was the same post twice and a line nobody needed.
             `<div id="myTeamShoutOutPreview" class="shoutout-preview">${highlightShoutOut(text)}</div>` +
-            `<label for="myTeamShoutOutText" style="display:block; font-size:0.78em; color:var(--text-tertiary); margin:10px 0 4px;">Edit before copying</label>` +
-            `<textarea id="myTeamShoutOutText" style="width:100%; min-height:160px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
-            `<div style="display:flex; gap:8px; margin-top:10px;">` +
+            `<textarea id="myTeamShoutOutText" aria-label="Edit the shout-out" style="display:none; width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
+            `<div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">` +
                 `<button type="button" id="myTeamShoutOutCopy" style="background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
+                `<button type="button" id="myTeamShoutOutEdit" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">✏️ Edit</button>` +
                 `<button type="button" id="myTeamShoutOutRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Reword</button>` +
-            `</div>`);
+            `</div>` +
+            missedHtml);
 
         bindShoutOutControls(slot);
 
-        // Edits have to show up in the preview, or the colour is describing a
-        // post that no longer exists.
         const preview = slot.querySelector('#myTeamShoutOutPreview');
-        slot.querySelector('#myTeamShoutOutText')?.addEventListener('input', function () {
-            if (preview) preview.innerHTML = highlightShoutOut(this.value);
+        const box = slot.querySelector('#myTeamShoutOutText');
+        const editBtn = slot.querySelector('#myTeamShoutOutEdit');
+        editBtn?.addEventListener('click', () => {
+            if (!preview || !box) return;
+            const editing = box.style.display !== 'none';
+            if (editing) {
+                // Done: the coloured view comes back describing the edited post.
+                preview.innerHTML = highlightShoutOut(box.value);
+                box.style.display = 'none';
+                preview.style.display = '';
+                editBtn.textContent = '✏️ Edit';
+            } else {
+                box.style.display = 'block';
+                preview.style.display = 'none';
+                editBtn.textContent = '✓ Done';
+                box.focus();
+            }
         });
 
         slot.querySelector('#myTeamShoutOutCopy')?.addEventListener('click', () => {
