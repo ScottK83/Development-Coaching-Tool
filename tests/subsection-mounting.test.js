@@ -169,6 +169,11 @@ suite('sub-sections: every Today and People button draws its panel', (t) => {
     // are shown, by the handler that shows them.
     ['subSectionOnOffTracker', 'subSectionCoachingEmail', 'subSectionCallListening', 'subSectionReliability'].forEach(id => {
         t.check(`${id} is mounted into People when opened`, script.indexOf(`ensurePeopleMounted('${id}')`) > -1);
+        // Until it is moved it sits inside Today, so it has to start hidden.
+        // Coach started visible and hung its whole page, trend email and all,
+        // under the day page until People > Coach was opened.
+        const tag = html.slice(divPosition(id), html.indexOf('>', divPosition(id)));
+        t.check(`and ${id} starts hidden while it is parked in Today`, /display:\s*none/.test(tag));
     });
 
     // Highlights and Celebrations were folded into the day page. Nothing may

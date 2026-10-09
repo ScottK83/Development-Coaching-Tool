@@ -252,8 +252,10 @@
                         <div id="contestSection"></div>
                     </div>
 
-                    <!-- Coaching Email Sub-section -->
-                    <div id="subSectionCoachingEmail" class="panel-section" style="display: block;">
+                    <!-- Coaching Email Sub-section. People > Coach moves it out of
+                         Today on first open, so until then it must stay hidden or
+                         it hangs under the day page. -->
+                    <div id="subSectionCoachingEmail" class="panel-section" style="display: none;">
                     <p class="text-muted-sm" style="margin-bottom: var(--space-5);">Generate weekly coaching check-ins based on the latest uploaded data.</p>
 
                     <div id="coachingEmailStatus" class="call-note" style="display: none; margin-bottom: var(--space-5);"></div>
