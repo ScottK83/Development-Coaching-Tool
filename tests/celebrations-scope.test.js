@@ -576,7 +576,7 @@ suite('celebrations: a big week does not read as a form letter', (t) => {
         name: 'Oceane Ingram', firstName: 'Oceane', perfectSurveys: null,
         achievements: [
             solo('sentiment', 'Overall Sentiment', 97.6),
-            solo('negativeWord', 'Negative Word Usage', 98.2),
+            solo('negativeWord', 'Avoiding Negative Words', 98.2),
             solo('fcr', 'First Call Resolution', 100),
             solo('managingEmotions', 'Managing Emotions', 99.1)
         ]
@@ -1036,7 +1036,7 @@ suite('celebrations: knocking on the door of the top 15', (t) => {
     const miss = celebrations.nearMissFor('Erica Mora', '2026-08-17|2026-08-21');
 
     t.check('a placing just outside the bar is found', Boolean(miss));
-    t.equal('named by metric', miss.label, 'Negative Word Usage');
+    t.equal('named by metric', miss.label, 'Avoiding Negative Words');
     t.equal('with the placing', miss.rank, 17);
     t.equal('and how far off the bar it is', miss.away, 2);
     t.equal('against the bar itself', miss.bar, 15);
@@ -1049,7 +1049,7 @@ suite('celebrations: knocking on the door of the top 15', (t) => {
 
     t.check('it is written more than one way', lines.size >= 4);
     t.check('every one names the metric',
-        Array.from(lines).every(l => l.indexOf('Negative Word Usage') > -1));
+        Array.from(lines).every(l => l.indexOf('Avoiding Negative Words') > -1));
     t.check('every one says the placing',
         Array.from(lines).every(l => l.indexOf('#17') > -1));
     t.check('every one says how far off the bar',
@@ -1094,7 +1094,7 @@ suite('celebrations: the bar reaches fifteen', (t) => {
     const erica = result.celebrations.find(c => c.name === 'Erica Mora');
 
     t.check('twelfth is celebrated', Boolean(erica));
-    t.equal('on the metric she placed in', erica.achievements[0].label, 'Negative Word Usage');
+    t.equal('on the metric she placed in', erica.achievements[0].label, 'Avoiding Negative Words');
     t.equal('and the badge names the band she is in', celebrations.tierBadge(erica.achievements[0]), 'Top 15!');
 
     const post = celebrations.generateAllShoutOuts(result.celebrations, '', '2026-08-17|2026-08-21');
@@ -1133,7 +1133,7 @@ suite('celebrations: what somebody did is a bulleted list', (t) => {
     const people = [
         { name: 'James King', firstName: 'James', perfectSurveys: { count: 1, periodNoun: 'this month' }, achievements: [
             { key: 'managingEmotions', label: 'Managing Emotions', value: 98.9, rank: 1, tiedCount: 1, rankedCount: 126, soloRank1: true },
-            { key: 'negativeWord', label: 'Negative Word Usage', value: 94, rank: 6, tiedCount: 2, rankedCount: 126, soloRank1: false }] },
+            { key: 'negativeWord', label: 'Avoiding Negative Words', value: 94, rank: 6, tiedCount: 2, rankedCount: 126, soloRank1: false }] },
         { name: 'Oceane Ingram', firstName: 'Oceane', perfectSurveys: null, achievements: [
             { key: 'sentiment', label: 'Overall Sentiment', value: 97, rank: 2, tiedCount: 1, rankedCount: 126, soloRank1: false }] }
     ];
@@ -1184,7 +1184,7 @@ function loadWithPeriod(t, key, periodType) {
 
 const wordingPerson = () => ([
     { name: 'Robert Diaz', firstName: 'Robert', perfectSurveys: null, achievements: [
-        { key: 'negativeWord', label: 'Negative Word Usage', value: 93.8, rank: 8, tiedCount: 1, rankedCount: 126, soloRank1: false },
+        { key: 'negativeWord', label: 'Avoiding Negative Words', value: 93.8, rank: 8, tiedCount: 1, rankedCount: 126, soloRank1: false },
         { key: 'adherence', label: 'Schedule Adherence', value: 99.2, rank: 1, tiedCount: 1, rankedCount: 126, soloRank1: true }] }
 ]);
 

@@ -43,7 +43,9 @@
         overallExperience: { label: 'Overall Experience', icon: '\uD83C\uDF08', registry: 'overallExperience' },
         transfers: { label: 'Transfers', icon: '\uD83D\uDD00', registry: 'transfers' },
         positiveWord: { label: 'Positive Word Usage', icon: '\uD83D\uDCAC', registry: 'positiveWord' },
-        negativeWord: { label: 'Negative Word Usage', icon: '\uD83D\uDEAB', registry: 'negativeWord' },
+        // The score is how often negative words were avoided, so a high one is
+        // good. "Negative Word Usage 98%" read as the opposite.
+        negativeWord: { label: 'Avoiding Negative Words', icon: '\uD83D\uDEAB', registry: 'negativeWord' },
         managingEmotions: { label: 'Managing Emotions', icon: '\uD83E\uDDD8', registry: 'managingEmotions' },
         reliability: { label: 'Reliability', icon: '\uD83D\uDEE1\uFE0F', registry: 'reliability' }
     };
