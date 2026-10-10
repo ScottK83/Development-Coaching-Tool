@@ -1405,28 +1405,48 @@
     const BADGE_SCORECARD_KEYS = ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall'];
 
     /**
-     * How someone is doing, by the share of their scorecard they are meeting.
+     * A scorecard metric counts when it is on target, or when it is level
+     * with or ahead of the center that period.
+     *
+     * The targets sit past where the floor runs: in the week of Oct 5, 14 of
+     * 18 on the team were over the 426s Handle Time target with the team at
+     * 517s, so judged on targets alone nearly everybody "missed" it. Somebody
+     * doing what the center does is not a miss worth a red badge. A metric
+     * with no center figure behind it is judged on its target alone.
+     */
+    function scorecardMet(m) {
+        if (m.meetsTarget) return true;
+        return Number(m.centerValue) > 0 && m.isBelowCenter === false;
+    }
+
+    /**
+     * How someone is doing, by how much of their scorecard they are meeting.
      *
      * It used to go red at three misses across every metric on the card. With
      * thirteen metrics nearly everybody has three, so 17 of 18 on the team were
      * "Needs Support" and the badge said nothing. Scott, 2026-10-09: meeting 3
      * of 5 may still need coaching, but that is doing good. So it is a share of
      * the scorecard, and 3 of 4 reads the same as 3 of 5.
+     *
+     * Red is kept for the few who need you: nothing met, or one of four or
+     * more. One of three is Watch, because most weeks only a handful have
+     * surveys, so most people are judged on three. Crushing It means every
+     * one of them on its actual target, not just ahead of the center.
      */
     function getStatusBadge(allMetrics) {
         const scorecard = (allMetrics || []).filter(m =>
             BADGE_SCORECARD_KEYS.includes(m.metricKey) && typeof m.meetsTarget === 'boolean');
-        const met = scorecard.filter(m => m.meetsTarget).length;
         const measured = scorecard.length;
-        const tally = { met, measured };
+        const met = scorecard.filter(scorecardMet).length;
+        const onTarget = scorecard.filter(m => m.meetsTarget).length;
+        const tally = { met, measured, onTarget };
 
         // One number is not a scorecard.
         if (measured < 2) return { ...tally, label: 'Steady', color: '#78909c', bg: '#eceff1', icon: '\u26AA' };
-        const share = met / measured;
-        if (share >= 1) return { ...tally, label: 'Crushing It', color: '#2e7d32', bg: '#e8f5e9', icon: '\uD83D\uDFE2' };
-        if (share >= 0.6) return { ...tally, label: 'Doing Good', color: '#1e88e5', bg: '#e3f2fd', icon: '\uD83D\uDD35' };
-        if (share >= 0.4) return { ...tally, label: 'Watch', color: '#fb8c00', bg: '#fff3e0', icon: '\uD83D\uDFE1' };
-        return { ...tally, label: 'Needs Support', color: '#e53935', bg: '#ffebee', icon: '\uD83D\uDD34' };
+        if (onTarget === measured) return { ...tally, label: 'Crushing It', color: '#2e7d32', bg: '#e8f5e9', icon: '\uD83D\uDFE2' };
+        if (met === 0 || (met === 1 && measured >= 4)) return { ...tally, label: 'Needs Support', color: '#e53935', bg: '#ffebee', icon: '\uD83D\uDD34' };
+        if (met / measured >= 0.6) return { ...tally, label: 'Doing Good', color: '#1e88e5', bg: '#e3f2fd', icon: '\uD83D\uDD35' };
+        return { ...tally, label: 'Watch', color: '#fb8c00', bg: '#fff3e0', icon: '\uD83D\uDFE1' };
     }
 
     // --- Formatting helpers ---
@@ -3879,7 +3899,7 @@
             : d.emp.name.split(/[\s,]+/)[0];
 
         const tally = badge.measured >= 2
-            ? `${badge.met} of ${badge.measured} scorecard on target`
+            ? `${badge.met} of ${badge.measured} scorecard on target or ahead of the center`
             : 'Too little scored to judge';
         const focus = focal
             ? `Focus: ${escapeHtml(focal.label)} ${fmtVal(focal)} vs ${fmtTarget(focal)}`

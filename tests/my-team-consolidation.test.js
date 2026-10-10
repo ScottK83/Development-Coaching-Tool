@@ -281,7 +281,21 @@ suite('consolidation: the status cards read the window and lead to the person', 
 
 suite('consolidation: the badge is the share of the scorecard met, and the team view is a line each', (t) => {
     t.installFakeBrowser();
-    const names = ['Ann Four', 'Bea Three', 'Cal Two', 'Dee One'];
+    // kpis: how many scorecard metrics were scored. onTarget: how many hit
+    // their target. ahead: how many more missed it but were level with or
+    // ahead of the center. center: false means no center figure at all.
+    const plan = {
+        'Ann Four': { kpis: 4, onTarget: 4 },
+        'Bea Three': { kpis: 4, onTarget: 3 },
+        'Cal Two': { kpis: 4, onTarget: 2 },
+        'Dee One': { kpis: 4, onTarget: 1 },
+        'Eve Third': { kpis: 3, onTarget: 1 },
+        'Fay None': { kpis: 3, onTarget: 0 },
+        'Gus Center': { kpis: 4, onTarget: 1, ahead: 2 },
+        'Hal Level': { kpis: 4, onTarget: 0, ahead: 4 },
+        'Ivy Nocenter': { kpis: 4, onTarget: 1, center: false }
+    };
+    const names = Object.keys(plan);
     const rows = () => names.map((name) => ({ name, totalCalls: 200, surveyTotal: 4, repSurveyTotal: 4 }));
     global.weeklyData = {
         '2026-09-07|2026-09-13': { metadata: { periodType: 'week', startDate: '2026-09-07', endDate: '2026-09-13' }, employees: rows() },
@@ -293,24 +307,28 @@ suite('consolidation: the badge is the share of the scorecard met, and the team 
     global.isReverseMetric = registry.metricsRegistryHelpers.isReverseMetric;
     global.METRICS_REGISTRY = global.window.METRICS_REGISTRY;
 
-    // Four scorecard metrics each, met by four, three, two and one of them.
     // Every off-scorecard metric is missed, which under the old rule (red at
-    // three misses of any kind) made all four of them "Needs Support".
-    const metMany = { 'Ann Four': 4, 'Bea Three': 3, 'Cal Two': 2, 'Dee One': 1 };
+    // three misses of any kind) made every one of them "Needs Support".
     const scorecard = [
         ['scheduleAdherence', 'Schedule Adherence'], ['aht', 'Average Handle Time'],
         ['overallSentiment', 'Overall Sentiment'], ['cxRepOverall', 'Rep Satisfaction']
     ];
-    global.window.analyzeTrendMetrics = (emp) => ({
-        allMetrics: scorecard.map(([metricKey, label], i) => {
-            const meets = i < metMany[emp.name];
-            return { metricKey, label, employeeValue: 1, target: 2, targetType: 'min',
-                classification: meets ? 'On Track' : 'Needs Focus', meetsTarget: meets, gapFromTarget: meets ? 0 : 1 };
-        }).concat(['transfers', 'holdTime', 'acw'].map((metricKey) => ({
-            metricKey, label: metricKey, employeeValue: 1, target: 2, targetType: 'min',
-            classification: 'Needs Focus', meetsTarget: false, gapFromTarget: 1
-        })))
-    });
+    global.window.analyzeTrendMetrics = (emp) => {
+        const p = plan[emp.name];
+        const hasCenter = p.center !== false;
+        return {
+            allMetrics: scorecard.slice(0, p.kpis).map(([metricKey, label], i) => {
+                const meets = i < p.onTarget;
+                const ahead = !meets && i < p.onTarget + (p.ahead || 0);
+                return { metricKey, label, employeeValue: 1, target: 2, targetType: 'min',
+                    classification: meets ? 'On Track' : 'Needs Focus', meetsTarget: meets, gapFromTarget: meets ? 0 : 1,
+                    centerValue: hasCenter ? 5 : 0, isBelowCenter: hasCenter ? !(meets || ahead) : false };
+            }).concat(['transfers', 'holdTime', 'acw'].map((metricKey) => ({
+                metricKey, label: metricKey, employeeValue: 1, target: 2, targetType: 'min',
+                classification: 'Needs Focus', meetsTarget: false, gapFromTarget: 1, centerValue: 5, isBelowCenter: true
+            })))
+        };
+    };
     const pulse = t.loadModule('modules/morning-pulse.module.js').morningPulse;
 
     const cmp = { latestKey: '2026-09-14|2026-09-20', baselineKey: '2026-09-07|2026-09-13',
@@ -323,20 +341,27 @@ suite('consolidation: the badge is the share of the scorecard met, and the team 
         const start = html.indexOf(`data-employee="${name}"`);
         return html.slice(start, html.indexOf('</summary>', start));
     };
+    const badgeOf = (name) => (rowFor(name).match(/(Crushing It|Doing Good|Watch|Needs Support|Steady)/) || [])[1];
 
-    t.check('all four met is Crushing It', rowFor('Ann Four').indexOf('Crushing It') > -1);
-    t.check('three of four is Doing Good, not Needs Support', rowFor('Bea Three').indexOf('Doing Good') > -1);
-    t.check('two of four is Watch', rowFor('Cal Two').indexOf('Watch') > -1);
-    t.check('one of four is Needs Support', rowFor('Dee One').indexOf('Needs Support') > -1);
-    t.check('the line says how much of the scorecard is on target', rowFor('Bea Three').indexOf('3 of 4 scorecard on target') > -1);
+    t.equal('every one on target is Crushing It', badgeOf('Ann Four'), 'Crushing It');
+    t.equal('three of four is Doing Good, not Needs Support', badgeOf('Bea Three'), 'Doing Good');
+    t.equal('two of four is Watch', badgeOf('Cal Two'), 'Watch');
+    t.equal('one of four is Needs Support', badgeOf('Dee One'), 'Needs Support');
+    t.equal('one of three is Watch', badgeOf('Eve Third'), 'Watch');
+    t.equal('none of three is Needs Support', badgeOf('Fay None'), 'Needs Support');
+    t.equal('ahead of the center counts: one on target and two ahead is Doing Good', badgeOf('Gus Center'), 'Doing Good');
+    t.equal('ahead of the center everywhere is Doing Good, not Crushing It', badgeOf('Hal Level'), 'Doing Good');
+    t.equal('with no center figure it is the target alone', badgeOf('Ivy Nocenter'), 'Needs Support');
+
+    t.check('the line says how much of the scorecard is met, and how', rowFor('Gus Center').indexOf('3 of 4 scorecard on target or ahead of the center') > -1);
     t.check('and the one thing to look at', rowFor('Bea Three').indexOf('Focus:') > -1);
 
-    t.equal('a line each', (html.match(/class="pulse-row"/g) || []).length, 4);
-    t.check('opening to the full card', (html.match(/class="pulse-card"/g) || []).length === 4);
-    t.equal('the button is on the line, not repeated in the card', (html.match(/class="open"/g) || []).length, 4);
+    t.equal('a line each', (html.match(/class="pulse-row"/g) || []).length, names.length);
+    t.check('opening to the full card', (html.match(/class="pulse-card"/g) || []).length === names.length);
+    t.equal('the button is on the line, not repeated in the card', (html.match(/class="open"/g) || []).length, names.length);
     t.check('the count bar agrees with the lines',
-        html.indexOf('1 Crushing It') > -1 && html.indexOf('1 Doing Good') > -1
-        && html.indexOf('1 Watch') > -1 && html.indexOf('1 Needs Support') > -1);
+        html.indexOf('1 Crushing It') > -1 && html.indexOf('3 Doing Good') > -1
+        && html.indexOf('2 Watch') > -1 && html.indexOf('3 Needs Support') > -1);
     t.check('and is drawn in theme colours, not a fixed light grey', html.indexOf('#f5f7fa') === -1);
 });
 
