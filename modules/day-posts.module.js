@@ -214,6 +214,10 @@
             : '';
 
         let bodyHtml;
+        // Which team note the message on screen carries, so saving a new one
+        // moves it over without writing the rest of the message again.
+        let appliedNote = '';
+        const hasNoteEditor = typeof ctx.pulse?.teamNoteEditorHtml === 'function';
         if (!ctx.periodCheck.ok) {
             // The period itself is missing, which is not the same as this
             // associate having no numbers. Say which one it is.
@@ -238,13 +242,15 @@
                     ctx.periods
                 ) || '';
             } catch (e) { message = ''; }
+            if (message && hasNoteEditor) appliedNote = ctx.pulse.teamNoteFor(employeeName, ctx.periods?.latestKey);
 
             bodyHtml = `<textarea id="dayPostText" style="width:100%; min-height:230px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
                 `<div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">` +
                     `<button type="button" id="dayPostCopy" style="flex:1; min-width:140px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
                     `<button type="button" id="dayPostRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Regenerate</button>` +
                     `<button type="button" id="dayPostSent" style="background:${ctx.sentEntry ? '#c8e6c9' : '#e3f2fd'}; color:${ctx.sentEntry ? '#2e7d32' : '#1565c0'}; border:1px solid ${ctx.sentEntry ? '#81c784' : '#90caf9'}; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">${ctx.sentEntry ? '↩ Mark unsent' : '✓ Mark sent'}</button>` +
-                `</div>`;
+                `</div>` +
+                (hasNoteEditor ? `<div style="margin-top:12px;">${ctx.pulse.teamNoteEditorHtml('dayPost')}</div>` : '');
         }
 
         container.innerHTML = `<div style="margin-bottom:14px;">` +
@@ -265,6 +271,29 @@
         });
 
         const rerender = async () => renderDayPosts(container, employeeName, comparison);
+
+        function showNoteStatus() {
+            if (!hasNoteEditor) return;
+            const note = ctx.pulse.loadTeamNote();
+            const status = !note.text ? 'none written'
+                : appliedNote ? 'added to this message'
+                : `not added, ${who} is meeting Schedule Adherence and AHT`;
+            ctx.pulse.setTeamNoteStatus('dayPost', status);
+        }
+
+        if (hasNoteEditor && container.querySelector('#dayPostText')) {
+            showNoteStatus();
+            ctx.pulse.wireTeamNoteEditor('dayPost', (next) => {
+                const textarea = container.querySelector('#dayPostText');
+                // Already sent: the box keeps the words that went out.
+                if (textarea && !ctx.sentEntry) {
+                    const nextNote = textarea.value ? ctx.pulse.teamNoteFor(employeeName, ctx.periods?.latestKey, next) : '';
+                    textarea.value = ctx.pulse.swapTeamNote(textarea.value, appliedNote, nextNote);
+                    appliedNote = nextNote;
+                }
+                showNoteStatus();
+            });
+        }
 
         container.querySelector('#dayPostUnsend')?.addEventListener('click', async () => {
             outreach.clearSent(ctx.plan.id, ctx.stamp, employeeName);
@@ -290,7 +319,13 @@
                     ctx.periods
                 );
                 const textarea = container.querySelector('#dayPostText');
-                if (msg && textarea) textarea.value = msg;
+                if (msg && textarea) {
+                    textarea.value = msg;
+                    if (hasNoteEditor) {
+                        appliedNote = ctx.pulse.teamNoteFor(employeeName, ctx.periods?.latestKey);
+                        showNoteStatus();
+                    }
+                }
             } catch (error) {
                 // Said on screen: there is no console to read, and a button that
                 // silently does nothing reads as broken.

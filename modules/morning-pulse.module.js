@@ -4098,6 +4098,146 @@
         return line ? message + '\n\n' + line : message;
     }
 
+    /* The team note: one paragraph written once and carried on the private
+     * messages until it is cleared.
+     *
+     * Some asks are not about one person's week. Service level at risk for the
+     * year is a whole-center problem, and the two levers an associate holds on
+     * it are being on the phones when scheduled and not keeping a caller longer
+     * than the call needs. Pasted into eighteen cards by hand every round, that
+     * paragraph stops getting sent, so it is stored once and added by
+     * buildOutreachMessage, the door both private surfaces already go through.
+     *
+     * 'missing' adds it only for whoever is missing Schedule Adherence or AHT in
+     * the window being read, judged by the same analysis the card's badge
+     * reads, so it never lands on someone whose card says both are fine.
+     */
+    const TEAM_NOTE_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'teamNote';
+    const TEAM_NOTE_METRICS = ['scheduleAdherence', 'aht'];
+
+    function loadTeamNote() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(TEAM_NOTE_STORAGE_KEY) || 'null');
+            return {
+                text: String(parsed?.text || '').trim(),
+                who: parsed?.who === 'everyone' ? 'everyone' : 'missing'
+            };
+        } catch (e) {
+            return { text: '', who: 'missing' };
+        }
+    }
+
+    // Written even when cleared, rather than removed, so the cleared note is
+    // what syncs and a restore cannot bring the old paragraph back.
+    function saveTeamNote(note) {
+        const clean = {
+            text: String(note?.text || '').trim(),
+            who: note?.who === 'everyone' ? 'everyone' : 'missing',
+            updatedAt: new Date().toISOString()
+        };
+        try {
+            localStorage.setItem(TEAM_NOTE_STORAGE_KEY, JSON.stringify(clean));
+        } catch (e) { /* storage full or blocked; the messages still write without it */ }
+        return { text: clean.text, who: clean.who };
+    }
+
+    // A failure in here leaves the note off rather than costing the message.
+    function teamNoteMisses(employeeName, latestKey) {
+        try {
+            const emp = getPeriodData(latestKey)?.employees?.find(e => e?.name === employeeName);
+            if (!emp) return [];
+            const analysis = analyzeCurrentSnapshot(emp, centerAveragesFor(latestKey), latestKey);
+            return speakableMetrics(emp, analysis)
+                .filter(m => TEAM_NOTE_METRICS.includes(m.metricKey) && m.meetsTarget === false)
+                .map(m => m.metricKey);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // The paragraph this person's message carries, or '' when it carries none.
+    function teamNoteFor(employeeName, latestKey, note) {
+        const current = note || loadTeamNote();
+        if (!current.text) return '';
+        if (current.who === 'everyone') return current.text;
+        return teamNoteMisses(employeeName, latestKey).length ? current.text : '';
+    }
+
+    function withTeamNote(message, employeeName, latestKey) {
+        if (!message) return message;
+        const note = teamNoteFor(employeeName, latestKey);
+        return note ? message + '\n\n' + note : message;
+    }
+
+    /* Moves a message that is already on screen from one note to the next
+     * without writing the rest of it again, so a fresh draw of phrases and any
+     * edit made in the box both survive a change to the note. A message whose
+     * note was edited by hand no longer ends with it and is left exactly as
+     * it is, because adding the new note under the edited one sends both.
+     */
+    function swapTeamNote(message, oldNote, newNote) {
+        let text = String(message || '').replace(/\s+$/, '');
+        const oldText = String(oldNote || '').trim();
+        const newText = String(newNote || '').trim();
+        if (oldText) {
+            if (!text.endsWith(oldText)) return String(message || '');
+            text = text.slice(0, text.length - oldText.length).replace(/\s+$/, '');
+        }
+        if (!text) return String(message || '');
+        return newText ? text + '\n\n' + newText : text;
+    }
+
+    const TEAM_NOTE_PLACEHOLDER = 'Example: As a center we are at risk of missing our 93% service level for the year. Adherence and handle time are the two pieces you control most...';
+
+    function teamNoteEditorHtml(idPrefix) {
+        const note = loadTeamNote();
+        const esc = window.DevCoachModules?.sharedUtils?.escapeHtml || ((s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+        return `<details id="${idPrefix}TeamNote" style="border:1px solid #c7b3ff; border-radius:10px; padding:10px 14px; background:var(--bg-surface);">` +
+            `<summary style="cursor:pointer; font-weight:600; color:#4527a0;">📌 Team note <span id="${idPrefix}TeamNoteStatus" style="font-weight:400; color:var(--text-secondary);"></span></summary>` +
+            `<div style="margin-top:8px; font-size:0.85em; color:var(--text-secondary);">Written once and added to the end of the private messages until you clear it.</div>` +
+            `<textarea id="${idPrefix}TeamNoteText" placeholder="${esc(TEAM_NOTE_PLACEHOLDER)}" style="width:100%; min-height:110px; margin-top:8px; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${esc(note.text)}</textarea>` +
+            `<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:0.88em;">` +
+                `<label for="${idPrefix}TeamNoteWho" style="color:var(--text-secondary);">Add it for</label>` +
+                `<select id="${idPrefix}TeamNoteWho" style="padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised); color:var(--text-primary);">` +
+                    `<option value="missing"${note.who === 'missing' ? ' selected' : ''}>anyone missing Schedule Adherence or AHT</option>` +
+                    `<option value="everyone"${note.who === 'everyone' ? ' selected' : ''}>everyone</option>` +
+                `</select>` +
+                `<button type="button" id="${idPrefix}TeamNoteSave" style="background:#4527a0; color:#fff; border:none; border-radius:6px; padding:7px 14px; cursor:pointer; font-weight:bold;">Save note</button>` +
+                `<button type="button" id="${idPrefix}TeamNoteClear" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:7px 14px; cursor:pointer;">Clear</button>` +
+            `</div>` +
+        `</details>`;
+    }
+
+    // onSaved(note) runs after every save or clear, so the surface can move
+    // the messages it is showing onto the new note.
+    function wireTeamNoteEditor(idPrefix, onSaved) {
+        const el = (id) => document.getElementById(idPrefix + id);
+        const save = (text) => {
+            const next = saveTeamNote({ text, who: el('TeamNoteWho')?.value });
+            if (typeof onSaved === 'function') onSaved(next);
+            if (typeof showToast === 'function') showToast(next.text ? 'Team note saved' : 'Team note cleared', 2500);
+        };
+        el('TeamNoteSave')?.addEventListener('click', () => save(el('TeamNoteText')?.value || ''));
+        el('TeamNoteClear')?.addEventListener('click', () => {
+            const box = el('TeamNoteText');
+            if (box) box.value = '';
+            save('');
+        });
+    }
+
+    function setTeamNoteStatus(idPrefix, text) {
+        const status = document.getElementById(idPrefix + 'TeamNoteStatus');
+        if (status) status.textContent = text ? `(${text})` : '';
+    }
+
+    // The one-to-one message as both private surfaces get it. The team note
+    // goes on last, after the standings and near-miss tails: it is the
+    // manager's own paragraph, and those are about this person's numbers.
+    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry, comparison) {
+        const message = await writeOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry, comparison);
+        return withTeamNote(message, employeeName, latestKey);
+    }
+
     /**
      * comparison is the window My Team is showing, when it is showing one. Two
      * things depend on it, and both of them used to be assumed:
@@ -4111,7 +4251,7 @@
      *   year-to-date window that is a different stretch of time bolted onto the
      *   bottom of the message, so it is left off.
      */
-    async function buildOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry, comparison) {
+    async function writeOutreachMessage(outreach, plan, employeeName, latestKey, baselineKey, dailyEntry, comparison) {
         // Every exit from here goes through finish(), which is what makes the
         // standings block a property of the one-to-one message rather than of
         // whichever generator happened to write the body. A fifth exit added
@@ -4378,6 +4518,9 @@
             `<div style="padding:12px 24px; background:#f8f9fc; border-bottom:1px solid #eceff1; font-size:0.85em; color:#546e7a;">` +
                 `In alphabetical order. Copy each message and send it, then click <strong>Sent</strong>. That flag sticks, so re-running skips them.` +
             `</div>` +
+            `<div style="padding:10px 24px; border-bottom:1px solid #eceff1;">` +
+                teamNoteEditorHtml('rmm') +
+            `</div>` +
             `<div id="runMyDayList" style="padding:16px 24px; overflow-y:auto; flex:1;">` +
                 `<div style="text-align:center; color:var(--text-tertiary); padding:30px;">⏳ Generating messages…</div>` +
             `</div>` +
@@ -4420,7 +4563,10 @@
             try {
                 message = await buildOutreachMessage(outreach, plan, entry.emp.name, latestKey, baselineKey, entry.dailyEntry, comparison) || '';
             } catch (e) { message = ''; }
-            rendered.push({ ...entry, message });
+            // Which note the message went out with, so a change to the note
+            // can be moved onto the card without writing the message again.
+            const appliedNote = message ? teamNoteFor(entry.emp.name, latestKey) : '';
+            rendered.push({ ...entry, message, appliedNote });
         }
 
         const cardsHtml = rendered.map((r, idx) => {
@@ -4431,7 +4577,10 @@
             return `<div class="rmm-rep-card" data-rep-index="${idx}" data-rep-name="${safeName}" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; background:var(--bg-surface);">` +
                 `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">` +
                     `<div style="font-weight:700; color:#1a237e;">${safeName}</div>` +
-                    `<div style="font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:${r.badge.color}; background:${r.badge.bg};">${r.badge.icon} ${escapeHtml(r.badge.label)}</div>` +
+                    `<div style="display:flex; gap:6px; align-items:center;">` +
+                        `<span class="rmm-note-chip" style="display:${r.appliedNote ? 'inline-block' : 'none'}; font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:#4527a0; background:#ede7f6;">📌 Team note</span>` +
+                        `<div style="font-size:0.78em; font-weight:600; padding:3px 10px; border-radius:12px; color:${r.badge.color}; background:${r.badge.bg};">${r.badge.icon} ${escapeHtml(r.badge.label)}</div>` +
+                    `</div>` +
                 `</div>` +
                 warning +
                 `<textarea class="rmm-rep-text" style="width:100%; min-height:120px; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(r.message)}</textarea>` +
@@ -4514,7 +4663,12 @@
                 btn.textContent = '⏳';
                 try {
                     const msg = await buildOutreachMessage(outreach, plan, repName, latestKey, baselineKey, entry?.dailyEntry, comparison);
-                    if (msg) textarea.value = msg;
+                    if (msg) {
+                        textarea.value = msg;
+                        if (entry) entry.appliedNote = teamNoteFor(repName, latestKey);
+                        const chip = card.querySelector('.rmm-note-chip');
+                        if (chip) chip.style.display = entry?.appliedNote ? 'inline-block' : 'none';
+                    }
                 } catch (error) {
                     // Said on screen: there is no console to read, and a button that
                     // silently does nothing reads as broken.
@@ -4543,6 +4697,30 @@
                 }
                 updateProgress();
             });
+        });
+
+        const noteStatus = () => {
+            if (!loadTeamNote().text) return 'none written';
+            if (!rendered.length) return 'saved';
+            const on = rendered.filter(r => r.appliedNote).length;
+            return `added to ${on} of ${rendered.length} message${rendered.length === 1 ? '' : 's'}`;
+        };
+        setTeamNoteStatus('rmm', noteStatus());
+
+        // A card already marked sent keeps the words that went out.
+        wireTeamNoteEditor('rmm', (next) => {
+            listEl.querySelectorAll('.rmm-rep-card').forEach(card => {
+                const idx = parseInt(card.dataset.repIndex, 10);
+                const entry = rendered[idx];
+                if (!entry || sentSet.has(idx)) return;
+                const textarea = card.querySelector('.rmm-rep-text');
+                const nextNote = textarea?.value ? teamNoteFor(entry.emp.name, latestKey, next) : '';
+                if (textarea) textarea.value = swapTeamNote(textarea.value, entry.appliedNote, nextNote);
+                entry.appliedNote = nextNote;
+                const chip = card.querySelector('.rmm-note-chip');
+                if (chip) chip.style.display = nextNote ? 'inline-block' : 'none';
+            });
+            setTeamNoteStatus('rmm', noteStatus());
         });
     }
 
@@ -4580,6 +4758,15 @@
         // Exported so the rule that the two tails never name the same metric
         // twice can be asserted rather than reasoned about.
         withNearMiss,
+        // The team note, shared by the private round and the one-person
+        // post, which both write through buildOutreachMessage.
+        loadTeamNote,
+        saveTeamNote,
+        teamNoteFor,
+        swapTeamNote,
+        teamNoteEditorHtml,
+        wireTeamNoteEditor,
+        setTeamNoteStatus,
         collectDailyRowsThisWeek,
         generateMonthlyCheckinMessage,
         generateGrowthMessage,
