@@ -4115,9 +4115,38 @@
     const TEAM_NOTE_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'teamNote';
     const TEAM_NOTE_METRICS = ['scheduleAdherence', 'aht'];
 
+    /* The note that is on before one has ever been saved, so the round
+     * carries it from the first time it opens. It speaks for October to
+     * December 2026 and says so, so it is only offered in that stretch; past
+     * it, a stale "rest of the year" would go out to people in January.
+     * Saving anything, an empty note included, takes over from it for good.
+     */
+    const DEFAULT_TEAM_NOTE = {
+        from: '2026-10-01',
+        until: '2026-12-31',
+        who: 'missing',
+        text: "One more thing, and it matters. As a center we're at risk of missing our 93% service level goal for 2026. " +
+            "If we miss it, our bonus could be less than half of what we've seen in past years, or nothing at all. " +
+            "Service level comes down to being on the phones when customers call, and the two pieces you control most are your adherence and your handle time. " +
+            "When we're off schedule or calls run long, customers wait longer. " +
+            "We have the rest of October, November and December to get there. " +
+            "I know VPN and system issues are frustrating, but the whole center is dealing with the same ones, and we still have people sitting at 98% adherence for the year. " +
+            "This is our chance to make a big push and finish the year strong, and I need you with us on it."
+    };
+
+    function defaultTeamNote() {
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return today >= DEFAULT_TEAM_NOTE.from && today <= DEFAULT_TEAM_NOTE.until
+            ? { text: DEFAULT_TEAM_NOTE.text, who: DEFAULT_TEAM_NOTE.who }
+            : { text: '', who: 'missing' };
+    }
+
     function loadTeamNote() {
         try {
-            const parsed = JSON.parse(localStorage.getItem(TEAM_NOTE_STORAGE_KEY) || 'null');
+            const raw = localStorage.getItem(TEAM_NOTE_STORAGE_KEY);
+            if (raw === null || raw === undefined) return defaultTeamNote();
+            const parsed = JSON.parse(raw);
             return {
                 text: String(parsed?.text || '').trim(),
                 who: parsed?.who === 'everyone' ? 'everyone' : 'missing'

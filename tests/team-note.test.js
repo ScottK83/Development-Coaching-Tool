@@ -72,10 +72,40 @@ function load(t) {
     return { pulse, outreach };
 }
 
-suite('team note: nothing is added until one is written', (t) => {
+suite('team note: outside October to December 2026 nothing is added until one is written', (t) => {
     const { pulse } = load(t);
-    t.equal('no note saved', pulse.loadTeamNote().text, '');
+    t.pinClock('2026-08-18');
+    t.equal('no note in August', pulse.loadTeamNote().text, '');
     t.equal('so nobody gets one', pulse.teamNoteFor('Ana Missing', THIS_WEEK), '');
+    t.pinClock('2027-01-04');
+    t.equal('nor in January, when "the rest of the year" has run out', pulse.loadTeamNote().text, '');
+});
+
+suite('team note: the service level note is on by default for the rest of 2026', async (t) => {
+    const { pulse, outreach } = load(t);
+    t.pinClock('2026-10-20');
+    const note = pulse.loadTeamNote();
+    t.check('nothing saved, and the default is there', note.text.indexOf('93% service level') > -1);
+    t.equal('for whoever misses adherence or AHT', note.who, 'missing');
+    t.check('with no em dash in it', note.text.indexOf('—') === -1);
+    t.equal('Ana gets it', pulse.teamNoteFor('Ana Missing', THIS_WEEK), note.text);
+    t.equal('Ben does not', pulse.teamNoteFor('Ben Fine', THIS_WEEK), '');
+
+    const comparison = { unit: 'week', latestKey: THIS_WEEK, baselineKey: LAST_WEEK };
+    const ana = await pulse.buildOutreachMessage(outreach, outreach.planById('monday'), 'Ana Missing', THIS_WEEK, LAST_WEEK, null, comparison);
+    t.check('and her message ends with it', Boolean(ana) && ana.endsWith('\n\n' + note.text));
+
+    t.pinClock('2026-12-31');
+    t.check('still on New Year\'s Eve', pulse.loadTeamNote().text === note.text);
+});
+
+suite('team note: saving or clearing takes over from the default for good', (t) => {
+    const { pulse } = load(t);
+    t.pinClock('2026-10-20');
+    pulse.saveTeamNote({ text: NOTE, who: 'everyone' });
+    t.equal('a saved note wins', pulse.loadTeamNote().text, NOTE);
+    pulse.saveTeamNote({ text: '', who: 'missing' });
+    t.equal('and a cleared one stays cleared', pulse.loadTeamNote().text, '');
 });
 
 suite('team note: by default it goes to whoever misses adherence or AHT', (t) => {
