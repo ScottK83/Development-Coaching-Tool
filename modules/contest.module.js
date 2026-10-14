@@ -1276,11 +1276,34 @@
         return ', for ' + bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1];
     }
 
-    /** "9/1" from "2026-09-01". The way a date gets typed in a chat. */
+    var SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    /** "Oct 1" from "2026-10-01". */
     function shortDate(iso) {
         var parts = String(iso || '').split('-');
         if (parts.length < 3) return String(iso || '');
-        return Number(parts[1]) + '/' + Number(parts[2]);
+        var month = SHORT_MONTHS[Number(parts[1]) - 1];
+        return month ? month + ' ' + Number(parts[2]) : String(iso || '');
+    }
+
+    /**
+     * "Oct 1 to 13" for the days entered, "Oct 1" for one of them. A month
+     * named once reads easier than "10/1 to 10/13", which is how a date is
+     * typed into a form rather than said. Scott, 2026-10-14.
+     */
+    function shortSpan(first, last) {
+        if (!first) return '';
+        if (!last || last === first) return shortDate(first);
+        var sameMonth = String(first).slice(0, 7) === String(last).slice(0, 7);
+        return shortDate(first) + ' to ' + (sameMonth ? String(Number(String(last).split('-')[2])) : shortDate(last));
+    }
+
+    // Two emojis a post, the ticket at the top and the one in the sign-off
+    // (Scott, 2026-10-13). The lines are written inside that; this is the
+    // floor under them, and without message-voice the post goes as written.
+    function limitEmojis(text) {
+        var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
+        return voice && typeof voice.limitEmojis === 'function' ? voice.limitEmojis(text, 2) : text;
     }
 
     /**
@@ -1308,14 +1331,12 @@
         var target = opts.target || adherenceTarget();
         var pool = board.reduce(function (sum, row) { return sum + row.total; }, 0);
         var dates = Object.keys((monthData && monthData.days) || {}).sort();
-        var span = '';
-        if (dates.length === 1) span = shortDate(dates[0]);
-        else if (dates.length > 1) span = shortDate(dates[0]) + ' to ' + shortDate(dates[dates.length - 1]);
+        var span = dates.length ? shortSpan(dates[0], dates[dates.length - 1]) : '';
 
+        // "So for the days 10/1 to 10/13, these are all those who have earned
+        // a raffle ticket" took a sentence to say a heading. Scott, 2026-10-14.
         var lines = [];
-        lines.push('🎟️ ' + (span
-            ? 'So for the days ' + span + ', these are all those who have earned a raffle ticket.'
-            : 'These are all those who have earned a raffle ticket.'));
+        lines.push('🎟️ Raffle tickets so far' + (span ? ', ' + span : '') + ':');
         lines.push('');
 
         // Names go out as @First so Teams turns them into real mentions when
@@ -1344,8 +1365,12 @@
         });
 
         lines.push('');
-        lines.push('💡 Remember, you get a raffle ticket for a day above ' + target
-            + '% adherence, and for a perfect survey.');
+        // "A day above 93%" was not the rule: computeEntries pays a day AT the
+        // target too, so the post said a 93.0% day earned nothing when it had.
+        // And no lightbulb or party popper in front of these two: the ticket
+        // up top and the sign-off are the post's two emojis. Scott, 2026-10-14.
+        lines.push('Remember, you get a raffle ticket for every day at ' + target
+            + '% adherence or better, and for every perfect survey.');
 
         // Only mentioned once it has actually paid. Naming a bonus nobody has
         // earned yet reads as a rule somebody missed.
@@ -1353,8 +1378,8 @@
             return sum + row.weeklyAdherence + row.monthlyAdherence;
         }, 0);
         if (bonus) {
-            lines.push('🎉 A full week at ' + target
-                + '% adds a bonus ticket, and so does the whole month.');
+            lines.push('A full week at ' + target
+                + '% or better adds a bonus ticket, and so does the whole month.');
         }
 
         // One warm line at the foot, chosen from what actually happened rather
@@ -1367,14 +1392,14 @@
         var cleanDays = board.reduce(function (sum, row) { return sum + row.dailyAdherence; }, 0);
         lines.push('');
         if (cleanDays >= board.length * 2) {
-            lines.push('👏 Cracking run on adherence. Keep it going.');
+            lines.push('Great run on adherence, everyone. Keep it going! 👏');
         } else if (cleanDays) {
-            lines.push('👏 Good days on adherence in there. Plenty of month left for more.');
+            lines.push('Good days on adherence in there. Plenty of month left for more! 👏');
         } else {
-            lines.push('💪 One clean day on adherence is a ticket, and there are thirty of them in a month.');
+            lines.push('One clean day on adherence is a ticket, and there are thirty of them in a month. 💪');
         }
 
-        return lines.join('\n');
+        return limitEmojis(lines.join('\n'));
     }
 
     // ============================================

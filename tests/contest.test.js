@@ -910,14 +910,19 @@ suite('contest: the Teams post says what it covers and how to earn', (t) => {
 
     // The span comes from the days that were entered, never the calendar, so it
     // cannot claim to cover a day nobody has uploaded.
-    t.check('it names the days it covers', /So for the days 9\/1 to 9\/2,/.test(post));
-    t.check('and says what the list is', /earned a raffle ticket\./.test(post));
+    // Said as a heading, with the month named once: "Sep 1 to 2", not
+    // "So for the days 9/1 to 9/2, these are all those who...". Scott, 2026-10-14.
+    t.check('it names the days it covers', /Raffle tickets so far, Sep 1 to 2:/.test(post));
+    t.check('and says what the list is', /^🎟️ Raffle tickets so far/.test(post));
 
     t.check('everyone who earned one is listed', /@Alyssa, 3 tickets/.test(post)
         && /@Betty, 1 ticket/.test(post));
     t.check('and nobody who earned none is', post.indexOf('Esther Ramos') === -1);
 
-    t.check('the rule is restated', /Remember, you get a raffle ticket for a day above 93% adherence, and for a perfect survey\./.test(post));
+    // At the target counts: computeEntries pays a 93.0% day, so "above 93%"
+    // told somebody a ticket they had earned did not exist.
+    t.check('the rule is restated', /Remember, you get a raffle ticket for every day at 93% adherence or better, and for every perfect survey\./.test(post));
+    t.check('and never as "above" the target', post.indexOf('above 93%') === -1);
 
     // Nothing else. It is read on a phone.
     t.check('no leaderboard numbering', !/^1\. /m.test(post));
@@ -931,7 +936,7 @@ suite('contest: a single day reads as one day, and a bonus is only named once ea
     const oneDay = contest.buildCheckinPost(month({
         '2026-09-01': { 'Alyssa Dimes': { adherence: 95 } }
     }), { target: 93, asOf: '2026-09-02' });
-    t.check('one day is not a range', /So for the days 9\/1, /.test(oneDay));
+    t.check('one day is not a range', /Raffle tickets so far, Sep 1:/.test(oneDay));
     // Naming a bonus nobody has earned yet reads as a rule somebody missed.
     t.check('the bonus is not mentioned', oneDay.indexOf('bonus ticket') === -1);
 
@@ -941,7 +946,7 @@ suite('contest: a single day reads as one day, and a bonus is only named once ea
         days[d] = { 'Dana Roe': { adherence: 96 } };
     });
     const withBonus = contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-16' });
-    t.check('once a bonus is earned it is explained', /A full week at 93% adds a bonus ticket/.test(withBonus));
+    t.check('once a bonus is earned it is explained', /A full week at 93% or better adds a bonus ticket/.test(withBonus));
 
     t.equal('an empty month has nothing to post', contest.buildCheckinPost(month({}), {}), '');
 });
@@ -1043,9 +1048,12 @@ suite('contest: the post carries emoji that mean something', (t) => {
                         'Betty Yanez': { adherence: 95 } }
     }), { target: 93, asOf: '2026-09-08' });
 
-    t.check('the header is a ticket', /^🎟️ So for the days/.test(post));
-    t.check('the rules read as a note', /💡 Remember,/.test(post));
-    t.check('and it closes warmly', /(👏|💪)/.test(post));
+    // Two emojis a post (Scott, 2026-10-13): the ticket up top and the one in
+    // the sign-off. The lightbulb on the rules and the popper on the bonus
+    // went. Scott, 2026-10-14.
+    t.check('the header is a ticket', /^🎟️ Raffle tickets/.test(post));
+    t.check('the rules read as a plain note', /\nRemember, /.test(post) && post.indexOf('💡') === -1);
+    t.check('and it closes warmly', /(👏|💪)$/.test(post));
 
     /* No badge on a standings row. A star sat on perfect surveys for a while on
        the theory they were the harder lever. They are not: there are simply
@@ -1082,7 +1090,7 @@ suite('contest: the closing line points at the lever you can choose', (t) => {
         days[d] = { 'Dana Roe': { adherence: 96 } };
     });
     t.check('a strong run gets applause',
-        /Cracking run on adherence/.test(contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-10' })));
+        /Great run on adherence/.test(contest.buildCheckinPost(month(days), { target: 93, asOf: '2026-09-10' })));
 });
 
 suite('contest: names go out as Teams mentions', (t) => {

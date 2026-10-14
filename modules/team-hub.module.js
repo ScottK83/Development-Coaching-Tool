@@ -41,9 +41,66 @@
         return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
+    // With its unit and without a trailing ".0": "409s", "99.3%", "93%". The
+    // bare formatMetricValue this used printed "409" and "99.3", and a number
+    // with no unit on it is a number nobody can read. Scott, 2026-10-14.
     function formatValue(key, value) {
+        if (typeof window.formatMetricDisplay === 'function') return window.formatMetricDisplay(key, value);
         if (typeof window.formatMetricValue === 'function') return window.formatMetricValue(key, value);
         return String(value);
+    }
+
+    // How far something moved, in the unit a person says it in: "3 points",
+    // "40 seconds". A percentage move is in points, not percent: 73.4% to
+    // 88.2% is up 14.8 points, and "+14.8%" says something else.
+    function formatDelta(key, amount) {
+        const n = Math.abs(Number(amount));
+        if (!Number.isFinite(n)) return '';
+        const unit = window.METRICS_REGISTRY?.[key]?.unit;
+        if (unit === 'sec') {
+            const secs = Math.round(n);
+            return `${secs} second${secs === 1 ? '' : 's'}`;
+        }
+        if (unit === '%') {
+            const pts = n.toFixed(1).replace(/\.0$/, '');
+            return `${pts} point${pts === '1' ? '' : 's'}`;
+        }
+        return formatValue(key, n);
+    }
+
+    // The names these metrics go by in a sentence. The registry's are column
+    // headers ("Average Handle Time", "Avoid Negative Words"); these match the
+    // shout-out and the cheer, so one metric has one name across the posts.
+    const SENTENCE_LABELS = {
+        aht: 'Handle Time',
+        negativeWord: 'Avoiding Negative Words',
+        positiveWord: 'Positive Word Usage'
+    };
+
+    // The kudos at the foot of the post, each with the post's second emoji.
+    // True of everyone on the list, whether they beat a goal or are moving
+    // toward one.
+    const HIGHLIGHT_CLOSERS = [
+        'Great work, everyone. Keep it going! 🙌',
+        'Proud of every name on this list. Keep it up! 🙌',
+        'This is what showing up looks like. Nice work, team! 💪',
+        'Love seeing these numbers. Keep stacking the wins! 🙌',
+        'Every one of you earned a spot here. Keep it rolling! 💪'
+    ];
+
+    function limitEmojis(text) {
+        const voice = window.DevCoachModules?.messageVoice;
+        return typeof voice?.limitEmojis === 'function' ? voice.limitEmojis(text, 2) : text;
+    }
+
+    // "Oct 5 to 11" from the period's own dates, or '' when it has none.
+    function shortSpan(period, key) {
+        const fromKey = String(key || '').split('|');
+        const start = period?.metadata?.startDate || (fromKey.length === 2 ? fromKey[0] : '');
+        const end = period?.metadata?.endDate || (fromKey.length === 2 ? fromKey[1] : '');
+        const span = window.DevCoachModules?.celebrations?.friendlyRange;
+        if (typeof span === 'function' && start && end) return span('', `${start}|${end}`) || '';
+        return '';
     }
 
     function preferredName(fullName) {
@@ -153,7 +210,7 @@
                 if (!target || !Number.isFinite(parseFloat(target.value))) return null;
                 return {
                     key,
-                    label: entry.label || key,
+                    label: SENTENCE_LABELS[key] || entry.label || key,
                     target: parseFloat(target.value),
                     targetType: target.type === 'max' ? 'max' : 'min',
                     noise: noiseThreshold(key)
@@ -180,6 +237,7 @@
         const isDay = comparison.windowId === 'day' || period?.metadata?.periodType === 'daily';
         return {
             title: comparison.latestLabel || 'This period',
+            key: comparison.latestKey,
             period,
             previous: comparison.baselineKey ? periodFor(comparison.baselineKey) : null,
             label: period?.metadata?.endDate || String(comparison.latestKey).split('|').pop(),
@@ -196,16 +254,23 @@
         if (!engine || !resolved) return { post: '', people: 0, scanned: 0, resolved: null };
         const { groups, scanned } = buildGroupsFrom(resolved);
         if (!groups.length) return { post: '', people: 0, scanned, resolved };
-        const dateLabel = typeof window.formatDateMMDDYYYY === 'function'
+        // "Oct 5 to 11" rather than "(10/11/2026)": the span, said the way a
+        // person says it. A window that is a whole month already names it.
+        const span = shortSpan(resolved.period, resolved.key);
+        const fallback = typeof window.formatDateMMDDYYYY === 'function'
             ? window.formatDateMMDDYYYY(resolved.label) || resolved.label
             : resolved.label;
+        const when = span || fallback;
+        const named = when && resolved.title.toLowerCase().indexOf(String(when).toLowerCase()) > -1;
         const title = resolved.title.charAt(0).toUpperCase() + resolved.title.slice(1);
         const post = engine.buildHighlightPost(groups, {
-            title: `✨ Highlights, ${title} (${dateLabel})`,
+            title: `✨ Highlights, ${title}${when && !named ? ` (${when})` : ''}`,
             formatValue,
-            preferredName
+            formatDelta,
+            preferredName,
+            closer: HIGHLIGHT_CLOSERS[Math.floor(Math.random() * HIGHLIGHT_CLOSERS.length)]
         });
-        return { post, people: engine.countPeople(groups), scanned, resolved };
+        return { post: limitEmojis(post), people: engine.countPeople(groups), scanned, resolved };
     }
 
     function buildGroupsFrom(resolved) {
@@ -260,6 +325,7 @@
         selectMember,
         buildHighlightsForComparison,
         buildMetricSpecs,
+        formatDelta,
         refreshVisibleMyTeamSection,
         DAILY_METRIC_KEYS,
         SURVEY_METRIC_KEYS,

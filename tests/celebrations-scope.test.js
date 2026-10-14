@@ -163,9 +163,13 @@ suite('celebrations: tie counts come off the real rankings', (t) => {
     t.equal('a genuinely solo top spot counts one', james.achievements[0].tiedCount, 1);
     t.check('and is still marked solo', james.achievements[0].soloRank1 === true);
 
-    // The public post is where this was overstating things.
+    // The public post is where this was overstating things. "Tied for" says
+    // the spot is shared; the "(one of 3 associates at 100%)" that used to
+    // follow it said so a second time and shrank a #1 in front of the whole
+    // team. Scott, 2026-10-14.
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
-    t.check('the post names the tie', post.indexOf('one of 3 associates at') > -1);
+    t.check('the post says the top spot is shared', post.indexOf('Tied for #1 in the Call Center') > -1);
+    t.check('without counting the tie in public', post.indexOf('one of 3 associates') === -1);
     t.check('and still calls the solo win out across the center', post.indexOf('#1 in the Call Center') > -1);
     // The tail is picked from a pool now, so the placing is what gets asserted;
     // the wording around it is deliberately free to vary.
@@ -204,7 +208,9 @@ suite('celebrations: numbers that read the same are tied', (t) => {
 
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post never claims the center was unmatched', post.indexOf('Nobody else in the Call Center') === -1);
-    t.check('it names the shared number instead', post.indexOf('one of 3 associates at 100.0%') > -1);
+    t.check('it says the spot is shared instead', post.indexOf('Tied for #1 in the Call Center') > -1);
+    t.check('and the number reads simply', post.indexOf('100%') > -1 && post.indexOf('100.0%') === -1);
+    t.check('without a tie count in public', post.indexOf('one of 3 associates') === -1);
 });
 
 suite('celebrations: says why someone came up empty', (t) => {
@@ -369,22 +375,24 @@ suite('celebrations: the field is only named where it cannot become a podium', (
 
     // One-to-one, so there is nobody to be measured against in the room.
     const dm = celebrations.generateDirectMessage(person, 'Jul 27 - Aug 2, 2026');
-    t.check('the private message says how many they beat', dm.indexOf('Better than 43 of 50 associates') > -1);
-    t.check('and leads with the period it covers', dm.indexOf('📅 Jul 27 - Aug 2, 2026') > -1);
+    t.check('the private message says how many they beat', dm.indexOf('better than 43 of 50 associates') > -1);
+    // Said the way a person writes it, with no calendar emoji (two emojis a
+    // message, Scott, 2026-10-13).
+    t.check('and leads with the period it covers', dm.indexOf('Jul 27 to Aug 2') > -1);
 
     // The channel post names several people at once, so the same sentence would
     // quietly rank the winners against each other.
     const post = celebrations.generateAllShoutOuts(result.celebrations, 'Jul 27 - Aug 2, 2026');
     t.check('the public post never counts who was beaten', post.indexOf('better than') === -1);
     t.check('nor capitalised at the head of a sentence', post.indexOf('Better than') === -1);
-    t.check('but it does say what week it covers', post.indexOf('📅 Jul 27 - Aug 2, 2026') > -1);
+    t.check('but it does say what week it covers', post.indexOf('Jul 27 to Aug 2') > -1);
     // Buried under nine names, the date may as well not be there.
-    t.check('up top, not at the foot of the post', post.indexOf('📅') < post.indexOf('Managing Emotions'));
-    t.equal('and said once, not once at each end', post.split('📅').length - 1, 1);
+    t.check('up top, not at the foot of the post', post.indexOf('Jul 27 to Aug 2') < post.indexOf('Managing Emotions'));
+    t.equal('and said once, not once at each end', post.split('Jul 27 to Aug 2').length - 1, 1);
 
     const single = celebrations.generateShoutOut(person, 'Jul 27 - Aug 2, 2026');
     t.check('a single public shout-out stays value-only', single.indexOf('etter than') === -1);
-    t.check('and still dates itself', single.indexOf('📅 Jul 27 - Aug 2, 2026') > -1);
+    t.check('and still dates itself', single.indexOf('Jul 27 to Aug 2') > -1);
 });
 
 suite('celebrations: a field too thin to describe says nothing', (t) => {
@@ -540,13 +548,15 @@ suite('celebrations: the post is spaced evenly and the names are mentionable', (
     t.check('no rule between people', post.indexOf('---') === -1);
     t.check('one blank line separates them instead', post.indexOf('!\n\n') > -1);
     t.equal('and every name is still its own block',
-        (post.match(/ @[A-Z]/g) || []).length, 3);
+        (post.match(/^@[A-Z]/gm) || []).length, 3);
 
     // Posted as written, every name should be pickable as a real mention
     // rather than retyped by hand.
-    t.check('a top-spot name is written as a mention', post.indexOf(' @Sabrina\n') > -1);
-    t.check('so is a placing name', post.indexOf(' @Esperanza\n') > -1);
-    t.check('and so is someone carried by their surveys alone', post.indexOf(' @Matrece\n') > -1);
+    // On a line of their own, with no crown or medal in front: the emojis are
+    // spent on the opener and the sign-off. Scott, 2026-10-14.
+    t.check('a top-spot name is written as a mention', post.indexOf('\n@Sabrina\n') > -1);
+    t.check('so is a placing name', post.indexOf('\n@Esperanza\n') > -1);
+    t.check('and so is someone carried by their surveys alone', post.indexOf('\n@Matrece\n') > -1);
 
     // The header emoji used to be the same one as the line under it whenever
     // surveys were the whole story, which read as a stutter. (Counting the
@@ -583,22 +593,26 @@ suite('celebrations: a big week does not read as a form letter', (t) => {
     };
 
     // Randomised, so this runs enough times to catch a pool that repeats.
+    // Three lines a person in the channel, then the rest in one (Scott,
+    // 2026-10-14), so four top spots show three and count the fourth.
     let sawRepeat = false;
     for (let run = 0; run < 40; run++) {
         const lines = celebrations.generateAllShoutOuts([person], '')
             .split('\n')
             .filter(l => l.indexOf('#1 in the Call Center') > -1)
             .map(l => l.slice(l.indexOf('#1 in the Call Center')));
-        if (lines.length !== 4) { sawRepeat = true; break; }
+        if (lines.length !== 3) { sawRepeat = true; break; }
         if (new Set(lines).size !== lines.length) { sawRepeat = true; break; }
     }
-    t.check('four top spots get four different closings, every time', !sawRepeat);
+    t.check('the top spots shown get different closings, every time', !sawRepeat);
 
     // The variation is in the wording only. The placing is the fact and is
-    // stated on every one of them.
+    // stated on every one shown, and the one left off is still counted.
     const post = celebrations.generateAllShoutOuts([person], '');
-    t.equal('every line still names the placing',
-        (post.match(/#1 in the Call Center/g) || []).length, 4);
+    t.equal('every line shown still names the placing',
+        (post.match(/#1 in the Call Center/g) || []).length, 3);
+    t.check('and the fourth is counted, not dropped',
+        post.indexOf('Plus 1 more #1 spot in the Call Center!') > -1);
 
     // A pool that runs out has to keep going rather than hand back nothing.
     const rotate = celebrations.rotator(['a', 'b']);
@@ -1145,13 +1159,16 @@ suite('celebrations: what somebody did is a bulleted list', (t) => {
     t.equal('every line of evidence is there', detail.length, 4);
     t.check('and every one of them is a bullet', detail.every(l => l.indexOf('\u2022 ') === 0));
 
-    // A solo top spot and a flawless survey week keep the emoji that says which
-    // kind of line they are; the bullet goes in front of it.
-    t.check('the top spot is still marked', post.indexOf('\u2022 \uD83E\uDD47') > -1);
-    t.check('so is the perfect survey week', post.indexOf('\u2022 \uD83D\uDCAF') > -1);
+    // The medal and the hundred that used to sit after each bullet are gone:
+    // two emojis a message, the opener's and the sign-off's (Scott,
+    // 2026-10-13). The words say which kind of line it is.
+    t.check('the top spot is a plain bullet', post.indexOf('\u2022 \uD83E\uDD47') === -1
+        && detail.some(l => /^\u2022 [^\n]*#1 in the Call Center/.test(l)));
+    t.check('so is the perfect survey week', post.indexOf('\u2022 \uD83D\uDCAF') === -1
+        && detail.some(l => l.indexOf('\u2022 PERFECT') === 0));
 
     // The names themselves are headings, not list items.
-    lines.filter(l => l.indexOf(' @') > -1).forEach(l => {
+    lines.filter(l => l.indexOf('@') > -1).forEach(l => {
         t.check('a name is not bulleted', l.indexOf('\u2022') === -1);
     });
 });
@@ -1164,7 +1181,8 @@ suite('celebrations: what somebody did is a bulleted list', (t) => {
  * false statement about the month, sitting in a post going to a channel.
  */
 function closedWordings() {
-    return ['Finished the period at', 'came in at', 'landed on', 'Closed out at',
+    // "Finished the period at" names the period now ("Finished the week at").
+    return ['Finished the', 'came in at', 'landed on', 'Closed out at',
         'finished on', 'closed out on'];
 }
 
@@ -1244,7 +1262,10 @@ suite('celebrations: no line opens mid-sentence', (t) => {
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.join(ROOT, 'modules/celebrations.module.js'), 'utf8');
-    const block = src.slice(src.indexOf('var BATCH_METRIC_STEMS'), src.indexOf('var BATCH_LINE_ICONS'));
+    // The line icons that used to follow the stems are gone (two emojis a
+    // message, Scott, 2026-10-13), so the block ends where the intro rotator
+    // starts.
+    const block = src.slice(src.indexOf('var BATCH_METRIC_STEMS'), src.indexOf('var nextBatchIntro'));
     t.check('the stem blocks were found', block.length > 200);
 
     const openers = (block.match(/return '([A-Za-z][^']*?)'/g) || [])

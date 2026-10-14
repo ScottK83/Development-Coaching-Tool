@@ -729,7 +729,16 @@
                     // rather than counted as wins, so fifteen people at 100% are
                     // each "better than" the 109 below them, not each other.
                     betterThan: Math.max(0, rankedCount - (metricRank - 1) - tiedCount),
-                    value: metricValue
+                    value: metricValue,
+                    // Under the 3-survey CX floor. The placing still stands
+                    // (Scott, 2026-10-13), but it rests on a survey or two, so
+                    // the copy names the count, and a perfect-survey line that
+                    // already names it carries the win on its own. One survey
+                    // was being celebrated as a #1 twice. Scott, 2026-10-14.
+                    thin: metricKey === 'associateOverall' && Boolean(r.cxRankThin),
+                    surveys: metricKey === 'associateOverall'
+                        ? (Number(r.associateOverallSurveys) || Number(r.repSurveyTotal) || Number(r.surveyTotal) || null)
+                        : null
                 });
             });
 
@@ -1480,176 +1489,191 @@
         '#1 in the Call Center. They are setting the bar and standing there alone!'
     ];
 
+    /*
+     * Two emojis a message, the channel post included (Scott, 2026-10-13:
+     * "2 emojis."). Every opener carries exactly one and every closer exactly
+     * one; the lines between them carry none. The single shout-out opened on
+     * six ("🎉🎉🎉 HUGE shout-out to @Kristin! 🎉🎉🎉") and the team post ran
+     * to a median of thirty, which reads as noise and buries the numbers the
+     * post exists to show. Scott, 2026-10-14.
+     */
     var SHOUTOUT_OPENERS = [
-        function(name) { return '\uD83C\uDF89\uD83C\uDF89\uD83C\uDF89 HUGE shout-out to ' + name + '! \uD83C\uDF89\uD83C\uDF89\uD83C\uDF89'; },
-        function(name) { return '\uD83D\uDE80\uD83C\uDF1F ' + name + ' is CRUSHING it! \uD83C\uDF1F\uD83D\uDE80'; },
-        function(name) { return '\uD83D\uDCA5 Everyone give it up for ' + name + '! \uD83D\uDCA5'; },
-        function(name) { return '\uD83C\uDFC6\u2B50 Let\'s hear it for ' + name + '! \u2B50\uD83C\uDFC6'; },
-        function(name) { return '\uD83D\uDD25\uD83D\uDD25 ' + name + ' is on FIRE! \uD83D\uDD25\uD83D\uDD25'; },
-        function(name) { return '\uD83D\uDCA5\uD83D\uDE80 Can we talk about ' + name + ' for a second?! INCREDIBLE! \uD83D\uDE80\uD83D\uDCA5'; },
-        function(name) { return '\uD83C\uDFC6 BIG TIME performance from ' + name + '! \uD83C\uDFC6'; },
-        function(name) { return '\uD83C\uDF89 Stop what you\'re doing and give ' + name + ' some love! \uD83C\uDF89'; },
-        function(name) { return '\uD83D\uDE80\uD83D\uDE80 ' + name + ' is absolutely FLYING right now! \uD83D\uDE80\uD83D\uDE80'; },
-        function(name) { return '\uD83D\uDCA5\uD83C\uDFC6 THIS is what greatness looks like! ' + name + ' take a bow! \uD83C\uDFC6\uD83D\uDCA5'; },
-        function(name) { return '\uD83D\uDD25 I gotta brag on ' + name + ' for a minute! \uD83D\uDD25'; },
-        function(name) { return '\u2B50\uD83C\uDF89 The spotlight is on ' + name + ' today! Look at this! \uD83C\uDF89\u2B50'; }
+        function(name) { return '🎉 HUGE shout-out to ' + name + '!'; },
+        function(name) { return '🚀 ' + name + ' is CRUSHING it!'; },
+        function(name) { return '💥 Everyone give it up for ' + name + '!'; },
+        function(name) { return '🏆 Let\'s hear it for ' + name + '!'; },
+        function(name) { return '🔥 ' + name + ' is on FIRE!'; },
+        function(name) { return '💥 Can we talk about ' + name + ' for a second?! INCREDIBLE!'; },
+        function(name) { return '🏆 BIG TIME performance from ' + name + '!'; },
+        function(name) { return '🎉 Stop what you\'re doing and give ' + name + ' some love!'; },
+        function(name) { return '💥 THIS is what greatness looks like! ' + name + ', take a bow!'; },
+        function(name) { return '🔥 I gotta brag on ' + name + ' for a minute!'; },
+        function(name) { return '⭐ The spotlight is on ' + name + ' today! Look at this!'; }
     ];
 
     var SHOUTOUT_OPENERS_DONE = [
-        function(name) { return '\u2B50\u2B50\u2B50 ' + name + ' just put on a CLINIC! \u2B50\u2B50\u2B50'; },
-        function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' showed up and showed OUT! \uD83D\uDD25'; },
-        function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' just did! \uD83C\uDF1F\uD83C\uDF1F'; },
-        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' came to WORK! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; }
+        function(name) { return '⭐ ' + name + ' just put on a CLINIC!'; },
+        function(name) { return '📣 ATTENTION TEAM! ' + name + ' showed up and showed OUT!'; },
+        function(name) { return '🌟 Y\'all need to see what ' + name + ' just did!'; },
+        function(name) { return '💪 ' + name + ' came to WORK! Let\'s GO!'; }
     ];
+    // "FLYING right now" lives here: after a finished week there is no "right
+    // now" to be flying in.
     var SHOUTOUT_OPENERS_ONGOING = [
-        function(name) { return '\u2B50\u2B50\u2B50 ' + name + ' is putting on a CLINIC! \u2B50\u2B50\u2B50'; },
-        function(name) { return '\uD83D\uDCE3 ATTENTION TEAM! ' + name + ' is showing up and showing OUT! \uD83D\uDD25'; },
-        function(name) { return '\uD83C\uDF1F\uD83C\uDF1F Y\'all need to see what ' + name + ' is doing! \uD83C\uDF1F\uD83C\uDF1F'; },
-        function(name) { return '\uD83D\uDCAA\uD83D\uDD25 ' + name + ' is bringing the WORK! Let\'s GO! \uD83D\uDD25\uD83D\uDCAA'; }
+        function(name) { return '⭐ ' + name + ' is putting on a CLINIC!'; },
+        function(name) { return '📣 ATTENTION TEAM! ' + name + ' is showing up and showing OUT!'; },
+        function(name) { return '🌟 Y\'all need to see what ' + name + ' is doing!'; },
+        function(name) { return '💪 ' + name + ' is bringing the WORK! Let\'s GO!'; },
+        function(name) { return '🚀 ' + name + ' is absolutely FLYING right now!'; }
     ];
     // Openers built on the shared fifty sayings (message-voice HYPE), framed
     // a few different ways. They take the tense along with the name.
     var SHOUTOUT_OPENERS_HYPE = [
-        function(name, ongoing) { return '\uD83D\uDD25 ' + hypeLine(name, ongoing) + '! \uD83D\uDD25'; },
-        function(name, ongoing) { return '\uD83D\uDCE3 Heads up, team: ' + hypeLine(name, ongoing) + '! \uD83D\uDCE3'; },
-        function(name, ongoing) { return '\uD83C\uDF1F\uD83C\uDF1F ' + hypeLine(name, ongoing) + '! \uD83C\uDF1F\uD83C\uDF1F'; },
-        function(name, ongoing) { return '\uD83D\uDE80 No exaggeration, ' + hypeLine(name, ongoing) + '! \uD83D\uDE80'; }
+        function(name, ongoing) { return '🔥 ' + hypeLine(name, ongoing) + '!'; },
+        function(name, ongoing) { return '📣 Heads up, team: ' + hypeLine(name, ongoing) + '!'; },
+        function(name, ongoing) { return '🌟 Big news, team: ' + hypeLine(name, ongoing) + '!'; },
+        function(name, ongoing) { return '🚀 No exaggeration, ' + hypeLine(name, ongoing) + '!'; }
     ];
 
-    // The uniqueness here is the NUMBER, not the metric \u2014 other associates
+    // The uniqueness here is the NUMBER, not the metric. Other associates
     // can (and do) get recognized for the same metric at other values. Copy
     // that says "the only one for AHT" reads as a contradiction the moment a
     // second AHT card shows up, so every line points at the value itself.
     // Standing alone in the whole building is the rarest thing this tool can
     // find, so it gets said at full volume: not "nobody else matched it", but
     // nobody else in the Call Center.
+    //
+    // Split three ways by tense, the same as every other pool here: the plain
+    // lines are true either way, the _DONE ones say the period is over.
+    var ONLY_ONE_LINES = [
+        function(label, val) { return val + ' on ' + label + '. Untouched by anyone else in the Call Center!'; },
+        function(label, val) { return label + ' at ' + val + ', and that number belongs to them alone in the Call Center!'; },
+        function(label, val) { return 'Solo mission: ' + val + ' on ' + label + ', matched by nobody in the Call Center!'; },
+        function(label, val) { return val + ' on ' + label + '. One name in the Call Center on that number, and it\'s theirs!'; }
+    ];
     var ONLY_ONE_LINES_DONE = [
-        function(label, val) { return '\uD83E\uDD47 ' + label + ' at ' + val + '. Nobody else in the Call Center achieved this!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Not one other person in the Call Center got there!'; },
-        function(label, val) { return '\uD83C\uDFC6 ' + label + ' at ' + val + '. Nobody else in the entire Call Center put up that number!'; },
-        function(label, val) { return '\uD83D\uDCA5 One person in the whole Call Center hit ' + val + ' on ' + label + '. ONE. And it was them!'; },
-        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. Untouched by anyone else in the Call Center!'; },
-        function(label, val) { return '\uD83C\uDF1F ' + label + ' at ' + val + ', and that number belongs to them alone in this Call Center!'; },
-        function(label, val) { return '\uD83E\uDD47 Solo mission. ' + val + ' on ' + label + ', matched by nobody in the Call Center!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + '. Nobody else in the Call Center could match it!'; },
-        function(label, val) { return '\uD83D\uDCA5 ' + val + ' on ' + label + '. Nobody in the Call Center came close!'; },
-        function(label, val) { return '\uD83C\uDFC6 Set the bar at ' + val + ' on ' + label + ' and stood there alone in the whole Call Center!'; },
-        function(label, val) { return '\uD83D\uDD25 ' + val + ' on ' + label + '. One name in the Call Center on that number, and it\'s theirs!'; }
+        function(label, val) { return label + ' at ' + val + '. Nobody else in the Call Center got there!'; },
+        function(label, val) { return val + ' on ' + label + '. Not one other person in the Call Center matched it!'; },
+        function(label, val) { return val + ' on ' + label + '. Nobody in the Call Center came close!'; },
+        function(label, val) { return 'Set the bar at ' + val + ' on ' + label + ' and stood there alone in the whole Call Center!'; }
     ];
-    // The lines in ONLY_ONE_LINES_DONE that say nothing about the period being over.
-    var ONLY_ONE_LINES = ONLY_ONE_LINES_DONE.filter(function (fn) {
-        return !/achieved|got there|put up|came close|could match|was them|stood there/.test(fn('x', 'y'));
-    });
     var ONLY_ONE_LINES_ONGOING = [
-        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + '. Nobody else in the Call Center is there!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Not one other person in the Call Center is getting there!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + label + ' at ' + val + '. Nobody else in the entire Call Center is putting up that number!'; },
-        function(label, val) { return '\uD83D\uDC51 One person in the whole Call Center is at ' + val + ' on ' + label + '. ONE. And it\'s them!'; },
-        function(label, val) { return '\uD83D\uDC51 ' + val + ' on ' + label + '. Nobody in the Call Center is coming close!'; },
-        function(label, val) { return '\uD83D\uDC51 Setting the bar at ' + val + ' on ' + label + ' and standing there alone in the whole Call Center!'; }
+        function(label, val) { return label + ' at ' + val + '. Nobody else in the Call Center is there!'; },
+        function(label, val) { return val + ' on ' + label + '. Not one other person in the Call Center is matching it!'; },
+        function(label, val) { return val + ' on ' + label + '. Nobody in the Call Center is coming close!'; },
+        function(label, val) { return 'Setting the bar at ' + val + ' on ' + label + ' and standing there alone in the whole Call Center!'; }
     ];
-    var ONLY_ONE_LINES_DONE_ONLY = ONLY_ONE_LINES_DONE.filter(function (fn) { return ONLY_ONE_LINES.indexOf(fn) === -1; });
-    // Fallback when a value is somehow missing \u2014 never claim uniqueness of
+    // Fallback when a value is somehow missing. Never claim uniqueness of
     // the metric itself, only of the performance.
     var ONLY_ONE_NO_VALUE_LINES_DONE = [
-        function(label) { return '\uD83E\uDD47 Nobody else in the Call Center matched this ' + label + ' performance!'; },
-        function(label) { return '\uD83D\uDC51 No one else in the Call Center put up a ' + label + ' number like this!'; },
-        function(label) { return '\uD83C\uDFC6 This ' + label + ' performance went unmatched across the whole Call Center!'; }
+        function(label) { return 'Nobody else in the Call Center matched this ' + label + ' performance!'; },
+        function(label) { return 'No one else in the Call Center put up a ' + label + ' number like this!'; },
+        function(label) { return 'This ' + label + ' performance went unmatched across the whole Call Center!'; }
     ];
 
     var ONLY_ONE_NO_VALUE_LINES_ONGOING = [
-        function(label) { return '\uD83D\uDC51 Nobody else in the Call Center is matching this ' + label + ' performance!'; },
-        function(label) { return '\uD83D\uDC51 No one else in the Call Center is putting up a ' + label + ' number like this!'; },
-        function(label) { return '\uD83D\uDC51 This ' + label + ' performance is unmatched across the whole Call Center!'; }
+        function(label) { return 'Nobody else in the Call Center is matching this ' + label + ' performance!'; },
+        function(label) { return 'No one else in the Call Center is putting up a ' + label + ' number like this!'; },
+        function(label) { return 'This ' + label + ' performance is unmatched across the whole Call Center!'; }
     ];
     var STANDOUT_LINES = [
-        function(label) { return '\u2B50 Outstanding ' + label + ' performance!'; },
-        function(label) { return '\uD83D\uDCAA Elite-level ' + label + '! That\'s impressive!'; },
-        function(label) { return '\uD83C\uDF1F Seriously impressive work in ' + label + '!'; }
+        function(label) { return 'Outstanding ' + label + ' performance!'; },
+        function(label) { return 'Elite-level ' + label + '! That\'s impressive!'; },
+        function(label) { return 'Seriously impressive work in ' + label + '!'; }
     ];
     var STANDOUT_LINES_DONE = [
-        function(label) { return '\uD83C\uDFC5 Absolutely crushed it in ' + label + '!'; },
-        function(label) { return '\uD83D\uDD25 Brought the heat in ' + label + '!'; },
-        function(label) { return '\uD83D\uDE80 ' + label + ' was next level!'; },
-        function(label) { return '\uD83C\uDFC6 Put up a monster ' + label + ' number!'; },
-        function(label) { return '\uD83D\uDCA5 Went OFF in ' + label + '! Love to see it!'; },
-        function(label) { return '\uD83D\uDCAA Threw down a huge ' + label + ' performance!'; },
-        function(label) { return '\u2B50 Made ' + label + ' look easy!'; },
-        function(label) { return '\uD83D\uDD25 ' + label + ' was absolutely on point!'; }
+        function(label) { return 'Absolutely crushed it in ' + label + '!'; },
+        function(label) { return 'Brought the heat in ' + label + '!'; },
+        function(label) { return label + ' was next level!'; },
+        function(label) { return 'Put up a monster ' + label + ' number!'; },
+        function(label) { return 'Went OFF in ' + label + '! Love to see it!'; },
+        function(label) { return 'Threw down a huge ' + label + ' performance!'; },
+        function(label) { return 'Made ' + label + ' look easy!'; },
+        function(label) { return label + ' was absolutely on point!'; }
     ];
     var STANDOUT_LINES_ONGOING = [
-        function(label) { return '\uD83C\uDFC5 Absolutely crushing it in ' + label + '!'; },
-        function(label) { return '\uD83D\uDD25 Bringing the heat in ' + label + '!'; },
-        function(label) { return '\uD83D\uDE80 ' + label + ' is next level!'; },
-        function(label) { return '\uD83C\uDFC6 Putting up a monster ' + label + ' number!'; },
-        function(label) { return '\uD83D\uDCA5 Going OFF in ' + label + '! Love to see it!'; },
-        function(label) { return '\uD83D\uDCAA Throwing down a huge ' + label + ' performance!'; },
-        function(label) { return '\u2B50 Making ' + label + ' look easy!'; },
-        function(label) { return '\uD83D\uDD25 ' + label + ' is absolutely on point!'; }
+        function(label) { return 'Absolutely crushing it in ' + label + '!'; },
+        function(label) { return 'Bringing the heat in ' + label + '!'; },
+        function(label) { return label + ' is next level!'; },
+        function(label) { return 'Putting up a monster ' + label + ' number!'; },
+        function(label) { return 'Going OFF in ' + label + '! Love to see it!'; },
+        function(label) { return 'Throwing down a huge ' + label + ' performance!'; },
+        function(label) { return 'Making ' + label + ' look easy!'; },
+        function(label) { return label + ' is absolutely on point!'; }
     ];
 
     var SHOUTOUT_CLOSERS = [
-        '\uD83D\uDE4C Keep up the amazing work!',
-        '\uD83D\uDCAF That\'s the kind of excellence we love to see!',
-        '\uD83C\uDF1F You\'re setting the standard!',
-        '\uD83D\uDE80 Sky\'s the limit! Keep pushing!',
-        '\uD83D\uDD25 Absolutely incredible work!',
-        '\uD83C\uDFC6 We see you and we appreciate you!',
-        '\u2B50 The whole team is better because of you!',
-        '\uD83D\uDCAA This kind of effort doesn\'t go unnoticed. Keep doing your thing!',
-        '\uD83C\uDF89 You make this team better every single day!',
-        '\uD83D\uDE80 Can\'t wait to see what you do next!',
-        '\uD83D\uDD25 That work ethic is contagious. Thank you!',
-        '\uD83D\uDCAF You should be really proud of that. We are!',
-        '\u2B50 Performances like this are what make this team special!',
-        '\uD83C\uDF1F Consistent excellence. That\'s what we\'re seeing from you!'
+        '🙌 Keep up the amazing work!',
+        '💯 That\'s the kind of excellence we love to see!',
+        '🌟 You\'re setting the standard!',
+        '🚀 Sky\'s the limit! Keep pushing!',
+        '🔥 Absolutely incredible work!',
+        '🏆 We see you and we appreciate you!',
+        '⭐ The whole team is better because of you!',
+        '💪 This kind of effort doesn\'t go unnoticed. Keep doing your thing!',
+        '🎉 You make this team better every single day!',
+        '🚀 Can\'t wait to see what you do next!',
+        '🔥 That work ethic is contagious. Thank you!',
+        '💯 You should be really proud of that. We are!',
+        '⭐ Performances like this are what make this team special!',
+        '🌟 Consistent excellence. That\'s what we\'re seeing from you!'
     ];
 
     var SHOUTOUT_CLOSERS_DONE = [
-        '\uD83C\uDFC6 You brought your A-game and it shows!',
-        '\uD83D\uDE4C Take a moment and be proud of what you accomplished!'
+        '🏆 You brought your A-game and it shows!',
+        '🙌 Take a moment and be proud of what you accomplished!'
     ];
     var SHOUTOUT_CLOSERS_ONGOING = [
-        '\uD83C\uDFC6 You\'re bringing your A-game and it shows!',
-        '\uD83D\uDE4C Take a moment and be proud of what you\'re building!'
+        '🏆 You\'re bringing your A-game and it shows!',
+        '🙌 Take a moment and be proud of what you\'re building!'
     ];
+    // One emoji on the heading and none on the sentence under it. The heading
+    // is the post's one opener emoji; the closer carries the other.
     var BATCH_INTRO = [
-        '\uD83C\uDF89\uD83C\uDF89\uD83C\uDF89 SHOUT-OUT TIME! \uD83C\uDF89\uD83C\uDF89\uD83C\uDF89\n\nSome AMAZING performances from the team! Let\'s celebrate these wins:\n\n',
-        '\uD83D\uDD25 TEAM WINS ALERT \uD83D\uDD25\n\nI\'ve got some incredible achievements to share. These folks are KILLING it:\n\n',
-        '\u2B50 CELEBRATION TIME \u2B50\n\nLook at what this team is doing! So proud of these performers:\n\n',
-        '\uD83C\uDFC6 TEAM SPOTLIGHT \uD83C\uDFC6\n\nLet me brag about some of our people for a minute:\n\n',
-        '\uD83D\uDCA5\uD83D\uDCA5 DROP EVERYTHING, WE\'RE CELEBRATING! \uD83D\uDCA5\uD83D\uDCA5\n\nThese performances deserve the spotlight:\n\n',
-        '\uD83D\uDCAA TEAM FLEXES \uD83D\uDCAA\n\nI love getting to share wins like these. Look what our team is doing:\n\n',
-        '\uD83C\uDF89 WHO\'S POPPING OFF?! \uD83C\uDF89\n\nSpoiler: these amazing people right here:\n\n',
-        '\uD83D\uDD25\uD83C\uDFC6 VICTORY LAP TIME \uD83C\uDFC6\uD83D\uDD25\n\nLet\'s give some well-deserved recognition to these standout performers:\n\n'
+        '🎉 SHOUT-OUT TIME!\n\nSome AMAZING performances from the team! Let\'s celebrate these wins:\n\n',
+        '🔥 TEAM WINS ALERT\n\nI\'ve got some incredible achievements to share. These folks are KILLING it:\n\n',
+        '⭐ CELEBRATION TIME\n\nLook at what this team is doing! So proud of these performers:\n\n',
+        '🏆 TEAM SPOTLIGHT\n\nLet me brag about some of our people for a minute:\n\n',
+        '💥 DROP EVERYTHING, WE\'RE CELEBRATING!\n\nThese performances deserve the spotlight:\n\n',
+        '💪 TEAM FLEXES\n\nI love getting to share wins like these. Look what our team is doing:\n\n',
+        '🎉 WHO\'S POPPING OFF?!\n\nSpoiler: these amazing people right here:\n\n'
+    ];
+    // A victory lap is run once the race is over, so it only opens a finished
+    // period. It used to open month-to-date posts with half the month still
+    // to run. Its twin says the same thing about a run still going.
+    var BATCH_INTRO_DONE = [
+        '🏆 VICTORY LAP TIME\n\nLet\'s give some well-deserved recognition to these standout performers:\n\n'
+    ];
+    var BATCH_INTRO_ONGOING = [
+        '🏆 STANDOUTS SO FAR\n\nLet\'s give some well-deserved recognition to these folks while the run is still going:\n\n'
     ];
 
     // Intros that take the tense: functions get handed whether the period is
     // still running. ROLL CALL used to say "went absolutely OFF" over a week in
     // progress; it now draws on the shared fifty sayings in either tense.
     var BATCH_INTRO_TENSED = [
-        function(ongoing) { return '\uD83D\uDE80 WINS WORTH SHARING \uD83D\uDE80\n\nYou want to see excellence? Here it is. These folks ' + (ongoing ? 'are showing up BIG' : 'showed up BIG') + ':\n\n'; },
-        function(ongoing) { return '\uD83C\uDF1F ROLL CALL OF GREATNESS \uD83C\uDF1F\n\n' + hypeLine('Some of our people', ongoing, true) + '. Check this out:\n\n'; },
-        function(ongoing) { return '\uD83D\uDD25 HEAT CHECK \uD83D\uDD25\n\n' + hypeLine('This team', ongoing) + '. The proof:\n\n'; },
-        function(ongoing) { return '\uD83D\uDCE3 BRAG BOARD \uD83D\uDCE3\n\n' + hypeLine('These folks', ongoing, true) + ', and here are the numbers:\n\n'; }
+        function(ongoing) { return '🚀 WINS WORTH SHARING\n\nYou want to see excellence? Here it is. These folks ' + (ongoing ? 'are showing up BIG' : 'showed up BIG') + ':\n\n'; },
+        function(ongoing) { return '🌟 ROLL CALL OF GREATNESS\n\n' + hypeLine('Some of our people', ongoing, true) + '. Check this out:\n\n'; },
+        function(ongoing) { return '🔥 HEAT CHECK\n\n' + hypeLine('This team', ongoing) + '. The proof:\n\n'; },
+        function(ongoing) { return '📣 BRAG BOARD\n\n' + hypeLine('These folks', ongoing, true) + ', and here are the numbers:\n\n'; }
     ];
     var BATCH_CLOSERS = [
-        '\n\uD83D\uDE4C Amazing work everyone! Let\'s keep this energy going!',
-        '\n\uD83D\uDCAF This team is something special. Proud of each and every one of you!',
-        '\n\uD83D\uDE80 The bar keeps rising and you all keep clearing it. Incredible!',
-        '\n\uD83D\uDD25 This is what happens when a great team shows up and shows out!',
-        '\n\uD83C\uDFC6 I could brag about this team all day. Outstanding work across the board!',
-        '\n\uD83D\uDCAA When you see your name up here, know that it means something. We see you!',
-        '\n\uD83C\uDF89 THIS is the energy! Let\'s carry this momentum forward!',
-        '\n\uD83D\uDE80 Proud doesn\'t even begin to cover it. This team is BUILT DIFFERENT!',
-        '\n\uD83D\uDD25 Keep bringing this fire! You all are incredible!'
+        '\n🙌 Amazing work everyone! Let\'s keep this energy going!',
+        '\n💯 This team is something special. Proud of each and every one of you!',
+        '\n🚀 The bar keeps rising and you all keep clearing it. Incredible!',
+        '\n🔥 This is what happens when a great team shows up and shows out!',
+        '\n🏆 I could brag about this team all day. Outstanding work across the board!',
+        '\n💪 When you see your name up here, know that it means something. We see you!',
+        '\n🎉 THIS is the energy! Let\'s carry this momentum forward!',
+        '\n🚀 Proud doesn\'t even begin to cover it. This team is BUILT DIFFERENT!',
+        '\n🔥 Keep bringing this fire! You all are incredible!'
     ];
 
     var BATCH_CLOSERS_DONE = [
-        '\n\u2B50 Every single one of these people made a difference here. Thank you!'
+        '\n⭐ Every single one of these people made a difference here. Thank you!'
     ];
     var BATCH_CLOSERS_ONGOING = [
-        '\n\u2B50 Every single one of these people is making a difference here. Thank you!'
+        '\n⭐ Every single one of these people is making a difference here. Thank you!'
     ];
 
     /**
@@ -1661,16 +1685,20 @@
      * not negotiable: the metric, the number and the placing are stated every
      * time. What varies is the frame built around them.
      *
-     * Every stem closes on its own punctuation, because the placing, the tier
-     * badge and the tie clause are appended after it and the block endings have
-     * to stay uniform whichever stem comes up.
+     * Every stem closes on its own punctuation, because the placing and the
+     * tier badge are appended after it and the block endings have to stay
+     * uniform whichever stem comes up.
+     *
+     * The third argument says which way the metric runs and what the period is
+     * called, for the two stems that need to know. ", and it holds up!" is gone:
+     * it read as though the number was in doubt. Scott, 2026-10-14.
      */
     var BATCH_METRIC_STEMS = [
         function(label, val) { return label + ': ' + val + '!'; },
         function(label, val) { return val + ' on ' + label + '!'; },
         function(label, val) { return 'Look at ' + label + ': ' + val + '!'; },
-        function(label, val) { return val + ' on ' + label + ', and it holds up!'; },
-        function(label, val) { return label + ' is at ' + val + '!'; },
+        function(label, val) { return 'Strong showing on ' + label + ': ' + val + '!'; },
+        function(label, val) { return label + ' at ' + val + '!'; }
         // No stem that leans on a sentence before it. "That is 83.8% on First
         // Call Resolution!" opens a bullet as though it were finishing one,
         // and every one of these has to stand on its own. Scott, 2026-09-21.
@@ -1679,12 +1707,20 @@
     // Only drawn from once the period has actually ended. "Finished the period
     // at 93.8%" under a month to date with ten days still to run is not a
     // wording problem, it is a false statement about the month.
+    //
+    // "Took Transfers to 4.5%" read as though transfers had gone up, so a
+    // lower-is-better metric is kept down instead. And the period is named:
+    // nobody on the floor says "the period". Scott, 2026-10-14.
     var BATCH_CLOSED_STEMS = [
         function(label, val) { return 'Put up ' + val + ' on ' + label + '!'; },
-        function(label, val) { return 'Took ' + label + ' to ' + val + '!'; },
+        function(label, val, ctx) {
+            return (ctx && ctx.reverse ? 'Kept ' + label + ' down to ' : 'Took ' + label + ' to ') + val + '!';
+        },
         function(label, val) { return 'Hit ' + val + ' on ' + label + '!'; },
         function(label, val) { return 'Posted ' + val + ' on ' + label + '!'; },
-        function(label, val) { return 'Finished the period at ' + val + ' on ' + label + '!'; },
+        function(label, val, ctx) {
+            return 'Finished the ' + ((ctx && ctx.noun) || 'week') + ' at ' + val + ' on ' + label + '!';
+        },
         function(label, val) { return label + ' came in at ' + val + '!'; },
         function(label, val) { return label + ' landed on ' + val + '!'; },
         function(label, val) { return 'Closed out at ' + val + ' on ' + label + '!'; }
@@ -1695,11 +1731,12 @@
         function(label, val) { return 'Running at ' + val + ' on ' + label + '!'; },
         function(label, val) { return 'Sitting at ' + val + ' on ' + label + '!'; },
         function(label, val) { return 'Tracking at ' + val + ' on ' + label + '!'; },
-        function(label, val) { return 'Holding ' + val + ' on ' + label + ' so far!'; }
+        function(label, val) { return 'Holding ' + val + ' on ' + label + ' so far!'; },
+        function(label, val) { return label + ' is at ' + val + '!'; }
     ];
     var BATCH_NO_VALUE_STEMS = [
         function(label) { return 'Outstanding ' + label + '!'; },
-        function(label) { return 'Big ' + label + ' period!'; },
+        function(label) { return 'Great ' + label + ' numbers!'; },
         function(label) { return label + ' is a standout!'; },
         function(label) { return 'Strong showing on ' + label + '!'; },
         function(label) { return label + ' is the story here!'; }
@@ -1722,18 +1759,12 @@
         function(label, val) { return val ? label + ' closed out on ' + val + '.' : label + '.'; }
     ];
 
-    // Kept off the emoji that already carry a meaning here: \uD83E\uDD47 is a solo top
-    // spot, \uD83D\uDCAF a flawless survey week, \uD83D\uDC51 and \uD83C\uDFC5 head a name.
-    var BATCH_LINE_ICONS = [
-        '\uD83C\uDF1F', '\u2B50', '\u2728', '\uD83D\uDCAB', '\uD83D\uDD25', '\uD83D\uDCAA', '\uD83D\uDCC8'
-    ];
-
     // Walked rather than drawn fresh each time, so regenerating twice in a row
     // cannot land on the same opening. A random pick out of ten repeats about
     // one time in ten, which is often enough to look like nothing changed.
     var nextBatchIntro = {
-        done: rotator(BATCH_INTRO.concat(BATCH_INTRO_TENSED)),
-        ongoing: rotator(BATCH_INTRO.concat(BATCH_INTRO_TENSED))
+        done: rotator(BATCH_INTRO.concat(BATCH_INTRO_DONE, BATCH_INTRO_TENSED)),
+        ongoing: rotator(BATCH_INTRO.concat(BATCH_INTRO_ONGOING, BATCH_INTRO_TENSED))
     };
     var nextBatchCloser = {
         done: rotator(BATCH_CLOSERS.concat(BATCH_CLOSERS_DONE)),
@@ -1749,14 +1780,19 @@
         return subject + (plural ? ' are' : ' is') + ' on FIRE';
     }
 
+    // A whole number reads without its ".0": "93%", "100%". One decimal stays
+    // wherever it says something, so 95.1% is still 95.1%. The same rule as
+    // formatMetricDisplay (Scott, 2026-10-14: "make sure the numbers are
+    // simplified"). Ties are still judged on this string, and dropping ".0"
+    // changes no two values into one, so no placing moves.
     function formatMetricValue(key, value) {
         if (value === null || value === undefined) return '';
         var registryKey = METRIC_RANK_LABELS[key]?.registry || key;
         var reg = window.METRICS_REGISTRY?.[registryKey];
         if (!reg) return String(value);
         if (reg.unit === 'sec') return Math.round(value) + 's';
-        if (reg.unit === 'hrs') return parseFloat(value).toFixed(1) + ' hrs';
-        if (reg.unit === '%') return parseFloat(value).toFixed(1) + '%';
+        if (reg.unit === 'hrs') return parseFloat(value).toFixed(1).replace(/\.0$/, '') + ' hrs';
+        if (reg.unit === '%') return parseFloat(value).toFixed(1).replace(/\.0$/, '') + '%';
         return String(value);
     }
 
@@ -1966,6 +2002,9 @@
         // rendered from four places and only detection knows the period.
         var when = (perfect && perfect.periodNoun) || 'this period';
         if (n === 1) return 'PERFECT survey. The one that came in ' + when + ' was flawless!';
+        // "All 2 of them" is how a template counts, not how a person does.
+        // Scott, 2026-10-14.
+        if (n === 2) return 'PERFECT surveys. Both of them ' + when + ', not one off the mark!';
         return 'PERFECT surveys. All ' + n + ' of them ' + when + ', not one off the mark!';
     }
 
@@ -1976,43 +2015,207 @@
         return c ? ' Better than ' + c.beat + ' of ' + c.pool + ' associates.' : '';
     }
 
+    // ==========================
+    // Wording shared by the three messages
+    // ==========================
+
+    /*
+     * The floor under the two-emoji rule. The pools above are trimmed to it
+     * at the source; this catches whatever a future pool line adds. Without
+     * message-voice loaded the text goes out as written, which the trimmed
+     * pools already keep inside the budget.
+     */
+    function _capEmojis(text) {
+        var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
+        if (voice && typeof voice.limitEmojis === 'function') return voice.limitEmojis(text, 2);
+        return text;
+    }
+
+    // One name per metric in every message. A label carried on an older
+    // object could differ from today's, and "Avoid Negative Words" beside
+    // "Avoiding Negative Words" in one post reads as two metrics.
+    function metricLabel(a) {
+        var meta = a && METRIC_RANK_LABELS[a.key];
+        return (meta && meta.label) || (a && a.label) || '';
+    }
+
+    function _valueText(a) {
+        return a && a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
+    }
+
+    function _surveyCount(n) {
+        return n + ' survey' + (n === 1 ? '' : 's');
+    }
+
+    // The period said as a noun on its own: "week", "month". For "Finished the
+    // week at", because nobody on the floor says "the period".
+    function _periodWord(periodKey) {
+        return periodNoun(periodKey).replace(/^(this|that) /, '');
+    }
+
+    var MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+        'August', 'September', 'October', 'November', 'December'];
+
+    function _isoParts(iso) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+        if (!m) return null;
+        var parts = { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) };
+        return parts.m >= 1 && parts.m <= 12 && parts.d >= 1 && parts.d <= 31 ? parts : null;
+    }
+
+    function _pad2(n) { return String(n).padStart(2, '0'); }
+
+    function friendlySpan(startIso, endIso) {
+        var s = _isoParts(startIso);
+        var e = _isoParts(endIso);
+        if (!s || !e) return '';
+        if (s.y === e.y && s.m === e.m) {
+            var lastDay = new Date(e.y, e.m, 0).getDate();
+            if (s.d === 1 && e.d === lastDay) return MONTH_LONG[e.m - 1];
+            if (s.d === e.d) return MONTH_SHORT[s.m - 1] + ' ' + s.d;
+            return MONTH_SHORT[s.m - 1] + ' ' + s.d + ' to ' + e.d;
+        }
+        return MONTH_SHORT[s.m - 1] + ' ' + s.d + ' to ' + MONTH_SHORT[e.m - 1] + ' ' + e.d;
+    }
+
+    var RANGE_TEXT = /^([A-Z][a-z]{2}) (\d{1,2})(?:, (\d{4}))? - ([A-Z][a-z]{2}) (\d{1,2}), (\d{4})$/;
+
+    /**
+     * The stretch a message covers, the way a person writes it.
+     *
+     * "Oct 5, 2026 - Oct 11, 2026" is a date stamp off a report. Said out
+     * loud it is "Oct 5 to 11", and a whole month is just "September".
+     * Scott, 2026-10-14: the numbers should be simple and easy to read, and
+     * the date line is the first number anybody reads.
+     *
+     * Read off the period key when it has one, since that is exact; otherwise
+     * off the range text the caller already formatted; otherwise the text as
+     * given, with its hyphen said as "to".
+     */
+    function friendlyRange(dateRange, periodKey) {
+        var keyParts = String(periodKey || '').split('|');
+        if (keyParts.length === 2) {
+            var fromKey = friendlySpan(keyParts[0], keyParts[1]);
+            if (fromKey) return fromKey;
+        }
+        var text = String(dateRange || '').trim();
+        if (_isoParts(text)) return friendlySpan(text, text);
+        var m = RANGE_TEXT.exec(text);
+        if (m) {
+            var sm = MONTH_SHORT.indexOf(m[1]) + 1;
+            var em = MONTH_SHORT.indexOf(m[4]) + 1;
+            if (sm && em) {
+                var spanned = friendlySpan((m[3] || m[6]) + '-' + _pad2(sm) + '-' + _pad2(m[2]),
+                    m[6] + '-' + _pad2(em) + '-' + _pad2(m[5]));
+                if (spanned) return spanned;
+            }
+        }
+        return text.replace(/ - /g, ' to ');
+    }
+
+    // How many lines one person gets in the channel post before the rest are
+    // summed up in one. A September post ran to 43 lines with one person on
+    // eleven of them; a list that long gets scrolled past, not read. The
+    // private message has room for one more. Scott, 2026-10-14.
+    var MAX_PUBLIC_LINES = 3;
+    var MAX_DM_LINES = 4;
+
+    // The wins that get a line of their own. A Rep Satisfaction placing that
+    // rests on fewer than three surveys stands down when a perfect-survey
+    // line is there: that line already names the count, and printing both
+    // celebrated one survey as two wins, the second as a #1. Scott, 2026-10-14.
+    function _linedAchievements(person) {
+        return (person.achievements || []).filter(function(a) {
+            return !(a.thin && person.perfectSurveys);
+        });
+    }
+
+    /*
+     * Whatever the cap left off, in one line: "Plus 4 more Top 15 finishes!"
+     * Named by the lowest placing among them, so it never claims a band the
+     * weakest of them did not reach. The wins are sorted best first, so what
+     * is left off is the lower end.
+     */
+    function moreLine(rest) {
+        var list = rest || [];
+        if (!list.length) return '';
+        var n = list.length;
+        var worst = Math.max.apply(null, list.map(function(a) {
+            var r = Number(a && a.rank);
+            return Number.isFinite(r) && r > 0 ? r : Infinity;
+        }));
+        if (worst === 1) return 'Plus ' + n + ' more #1 ' + (n === 1 ? 'spot' : 'spots') + ' in the Call Center!';
+        if (!isFinite(worst)) return 'Plus ' + n + ' more ' + (n === 1 ? 'win' : 'wins') + '!';
+        var band = getTierForRank(worst, getActiveTiers()).label;
+        return 'Plus ' + n + ' more ' + band + ' ' + (n === 1 ? 'finish' : 'finishes') + '!';
+    }
+
+    /**
+     * One win as a line in the channel post or the one-person shout-out.
+     *
+     * The tie clause is gone from here. "Tied for #1 in the Call Center. (one
+     * of 17 associates at 100.0%)" shrank a #1 in front of the whole team, and
+     * "Tied for 10th best... Top 10! (one of 2 associates at 95.8%)" said the
+     * tie twice. "Tied for" carries it on its own. Scott, 2026-10-14.
+     */
+    function publicLine(a, words, ctx) {
+        var label = metricLabel(a);
+        var val = _valueText(a);
+        var stemCtx = { reverse: _metricIsReverse(a.key), noun: ctx.noun };
+        var badge = tierBadge(a);
+        var tail = sentencePlacement(a) + (badge ? ' ' + badge : '');
+        // A placing on a survey or two says how many. Scott, 2026-10-13.
+        if (a.thin && a.surveys && val) {
+            return label + ' at ' + val + ' on ' + _surveyCount(a.surveys) + '!' + tail;
+        }
+        if (a.soloRank1) return words.solo(label, val);
+        if (val) return words.metric()(label, val, stemCtx) + tail;
+        return words.noValue()(label) + tail;
+    }
+
+    // A name's lines, the perfect-survey line first, capped, with the
+    // "plus N more" for anything left over.
+    function personLines(person, words, ctx, cap) {
+        var lines = [];
+        if (person.perfectSurveys) lines.push(perfectSurveyLine(person.perfectSurveys));
+        var wins = _linedAchievements(person);
+        var room = Math.max(0, cap - lines.length);
+        wins.slice(0, room).forEach(function(a) { lines.push(publicLine(a, words, ctx)); });
+        return { lines: lines, more: moreLine(wins.slice(room)) };
+    }
+
     function generateShoutOut(person, dateRange, periodKey) {
         var lines = [];
         // A period still running is talked about in the present. With no
         // period to judge by, it is treated as running, the safe way round.
         var closed = periodKey ? periodIsComplete(periodKey) : false;
+        var ctx = { closed: closed, noun: _periodWord(periodKey) };
         var openers = SHOUTOUT_OPENERS.concat(closed ? SHOUTOUT_OPENERS_DONE : SHOUTOUT_OPENERS_ONGOING, SHOUTOUT_OPENERS_HYPE);
         // Same reason as the batch post: this goes in the channel, so the name
         // is written the way a mention is written.
         lines.push(pick(openers)('@' + person.firstName, !closed));
-        if (dateRange) lines.push('📅 ' + dateRange);
+        var when = dateRange ? friendlyRange(dateRange, periodKey) : '';
+        if (when) lines.push(when);
         lines.push('');
-        if (person.perfectSurveys) {
-            lines.push('\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys));
-        }
-        person.achievements.forEach(function(a) {
-            var valStr = a.value !== null && a.value !== undefined ? ' ' + formatMetricValue(a.key, a.value) : '';
-            var placing = sentencePlacement(a);
-            var badge = tierBadge(a);
-            if (a.soloRank1) {
-                lines.push(valStr
-                    ? pick(ONLY_ONE_LINES.concat(closed ? ONLY_ONE_LINES_DONE_ONLY : ONLY_ONE_LINES_ONGOING))(a.label, valStr.trim())
-                    : pick(closed ? ONLY_ONE_NO_VALUE_LINES_DONE : ONLY_ONE_NO_VALUE_LINES_ONGOING)(a.label));
-            } else {
-                // Lead with the fact/value, then say where in the building it
-                // put them \u2014 that is the half people repeat to each other.
-                if (valStr) {
-                    lines.push('\uD83C\uDF1F ' + a.label + (closed ? ' hit ' : ' is at ') + valStr.trim() + '!' + placing
-                        + (badge ? ' ' + badge : '')
-                        + tieClause(describeTie(a, valStr.trim()), ' (', ')'));
-                } else {
-                    lines.push(pick(STANDOUT_LINES.concat(closed ? STANDOUT_LINES_DONE : STANDOUT_LINES_ONGOING))(a.label) + placing);
-                }
-            }
-        });
+
+        // Every line used to be "🌟 X hit Y!", one template stamped out per
+        // win. They draw on the batch post's stems now, walked so no two lines
+        // in one shout-out read alike. Scott, 2026-10-14.
+        var soloLine = rotator(ONLY_ONE_LINES.concat(closed ? ONLY_ONE_LINES_DONE : ONLY_ONE_LINES_ONGOING));
+        var soloNoValue = rotator(closed ? ONLY_ONE_NO_VALUE_LINES_DONE : ONLY_ONE_NO_VALUE_LINES_ONGOING);
+        var words = {
+            metric: rotator(BATCH_METRIC_STEMS.concat(closed ? BATCH_CLOSED_STEMS : BATCH_OPEN_STEMS)),
+            noValue: rotator(STANDOUT_LINES.concat(closed ? STANDOUT_LINES_DONE : STANDOUT_LINES_ONGOING)),
+            solo: function(label, val) { return val ? soloLine()(label, val) : soloNoValue()(label); }
+        };
+        var built = personLines(person, words, ctx, MAX_PUBLIC_LINES);
+        built.lines.forEach(function(line) { lines.push('• ' + line); });
+        if (built.more) lines.push(built.more);
+
         lines.push('');
         lines.push(pick(SHOUTOUT_CLOSERS.concat(closed ? SHOUTOUT_CLOSERS_DONE : SHOUTOUT_CLOSERS_ONGOING)));
-        return lines.join('\n');
+        return _capEmojis(lines.join('\n'));
     }
 
     function generateAllShoutOuts(celebrations, dateRange, periodKey) {
@@ -2020,93 +2223,86 @@
         // A period still running gets only the wordings that are true while it
         // is running, from the intro to the closer.
         var closed = periodIsComplete(periodKey);
+        var ctx = { closed: closed, noun: _periodWord(periodKey) };
         var intro = nextBatchIntro[closed ? 'done' : 'ongoing']();
-        var msg = typeof intro === 'function' ? intro(!closed) : intro;
-        // Fresh per post, so the lines inside one post read as separate
-        // sentences rather than one sentence with the nouns swapped.
-        var metricStem = rotator(BATCH_METRIC_STEMS.concat(closed ? BATCH_CLOSED_STEMS : BATCH_OPEN_STEMS));
-        var noValueStem = rotator(BATCH_NO_VALUE_STEMS);
+        var introText = typeof intro === 'function' ? intro(!closed) : intro;
+
+        // The date sits straight under the heading. At the foot of a
+        // nine-person post nobody ever reached it, so people were reading a
+        // week-old shout-out as if it were today's, and under the intro
+        // sentence it read as a stray line.
+        var split = introText.indexOf('\n\n');
+        var msg = (split > -1 ? introText.slice(0, split) : introText) + '\n';
+        var when = dateRange ? friendlyRange(dateRange, periodKey) : '';
+        if (when) msg += when + '\n';
+        msg += '\n' + (split > -1 ? introText.slice(split + 2) : '');
+
+        // One set of rotators for the whole post, so the lines inside it read
+        // as separate sentences rather than one sentence with the nouns
+        // swapped. The solo tails used to restart for every person, which
+        // handed two people the same tail in one post. Scott, 2026-10-14.
         var soloStem = rotator(BATCH_SOLO_STEMS.concat(closed ? BATCH_SOLO_CLOSED_STEMS : BATCH_SOLO_OPEN_STEMS));
-        var lineIcon = rotator(BATCH_LINE_ICONS);
-        // At the foot of a nine-person post nobody ever reached it, so people
-        // were reading a week-old shout-out as if it were today's.
-        if (dateRange) msg += '\uD83D\uDCC5 ' + dateRange + '\n\n';
+        var soloTail = rotator(SOLO_TOP_TAILS.concat(closed ? SOLO_TOP_TAILS_DONE : SOLO_TOP_TAILS_ONGOING));
+        var words = {
+            metric: rotator(BATCH_METRIC_STEMS.concat(closed ? BATCH_CLOSED_STEMS : BATCH_OPEN_STEMS)),
+            noValue: rotator(BATCH_NO_VALUE_STEMS),
+            solo: function(label, val) { return soloStem()(label, val) + ' ' + soloTail(); }
+        };
+
         celebrations.forEach(function(person, idx) {
             // One blank line between people, and nothing else. The rule used to
             // sit between them with a blank line either side, which is three
             // lines of separator for a list where the next name is already the
             // start of the next block.
             if (idx > 0) msg += '\n';
-            // \uD83D\uDCAF as a header emoji only ever sat above a \uD83D\uDCAF line, which read as
-            // a stutter. The header says whether they took a top spot; the
-            // lines underneath say what for.
-            var emoji = person.achievements.some(function(a) { return a.soloRank1; }) ? '\uD83D\uDC51' : '\uD83C\uDFC5';
             // Named with an @ so the post can go up as written and each name is
-            // picked up as a real mention instead of being retyped.
-            msg += emoji + ' @' + person.firstName + '\n';
-            // Leads, because there is no better thing on the board than a week
-            // where every customer who was asked came back with a top score.
-            if (person.perfectSurveys) {
-                msg += '\u2022 ' + '\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys) + '\n';
-            }
-            // Fresh per person, so four top spots read as four wins rather than
-            // one sentence stamped four times.
-            var soloTail = rotator(SOLO_TOP_TAILS.concat(closed ? SOLO_TOP_TAILS_DONE : SOLO_TOP_TAILS_ONGOING));
-            person.achievements.forEach(function(a) {
-                var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
-                var placing = sentencePlacement(a);
-                var badge = tierBadge(a);
-                if (a.soloRank1) {
-                    msg += '\u2022 ' + '\uD83E\uDD47 ' + soloStem()(a.label, valStr) + ' ' + soloTail() + '\n';
-                } else {
-                    if (valStr) {
-                        msg += '\u2022 ' + lineIcon() + ' ' + metricStem()(a.label, valStr) + placing
-                            + (badge ? ' ' + badge : '')
-                            + tieClause(describeTie(a, valStr), ' (', ')') + '\n';
-                    } else {
-                        msg += '\u2022 ' + lineIcon() + ' ' + noValueStem()(a.label) + placing
-                            + (badge ? ' ' + badge : '') + '\n';
-                    }
-                }
-            });
+            // picked up as a real mention instead of being retyped. No crown or
+            // medal in front of it: a name is a heading, and the emojis are
+            // spent on the opener and the sign-off.
+            msg += '@' + person.firstName + '\n';
+            var built = personLines(person, words, ctx, MAX_PUBLIC_LINES);
+            built.lines.forEach(function(line) { msg += '• ' + line + '\n'; });
+            if (built.more) msg += built.more + '\n';
         });
         msg += nextBatchCloser[closed ? 'done' : 'ongoing']();
-        return msg;
+        return _capEmojis(msg);
     }
 
     // --- Direct message ---
 
+    // None of these says "had to": the intros say it, and an opener and an
+    // intro both saying it read like the same sentence twice. Scott, 2026-10-14.
     var DM_OPENERS = [
-        function(name) { return 'Hey ' + name + '! \uD83C\uDF1F'; },
-        function(name) { return name + '! \uD83C\uDF89'; },
-        function(name) { return 'Hey ' + name + ', wanted to reach out real quick! \u2B50'; },
-        function(name) { return name + '! Got something great to share with you! \uD83D\uDE0A'; },
-        function(name) { return 'Hey ' + name + '! Hope your day is going well \uD83D\uDE4C'; },
-        function(name) { return name + ', I\'ve been wanting to send you this! \uD83C\uDF1F'; },
-        function(name) { return 'Hey ' + name + '! Got a sec? I have some good news for you \uD83D\uDE0A'; },
-        function(name) { return name + '! Quick message because I couldn\'t let this go unrecognized \uD83C\uDFC6'; },
-        function(name) { return 'Hi ' + name + '! Just had to drop you a note \u2B50'; },
-        function(name) { return name + '! You\'re going to like this one \uD83D\uDE04'; },
-        function(name) { return 'Hey ' + name + '! Something caught my eye and I had to tell you about it \uD83D\uDC40'; },
-        function(name) { return name + ', just dropping in with some well-deserved recognition! \uD83C\uDF89'; },
-        function(name) { return 'Hey ' + name + '! Glad I caught you, I\'ve got something great to share \uD83C\uDF1F'; },
-        function(name) { return name + '! Real talk, I had to reach out about this \uD83D\uDCAA'; }
+        function(name) { return 'Hey ' + name + '! 🌟'; },
+        function(name) { return name + '! 🎉'; },
+        function(name) { return 'Hey ' + name + ', wanted to reach out real quick! ⭐'; },
+        function(name) { return name + '! Got something great to share with you! 😊'; },
+        function(name) { return 'Hey ' + name + '! Hope your day is going well 🙌'; },
+        function(name) { return name + ', I\'ve been wanting to send you this! 🌟'; },
+        function(name) { return 'Hey ' + name + '! Got a sec? I have some good news for you 😊'; },
+        function(name) { return name + '! Quick message, because this deserves to be recognized 🏆'; },
+        function(name) { return 'Hi ' + name + '! Dropping you a quick note ⭐'; },
+        function(name) { return name + '! You\'re going to like this one 😄'; },
+        function(name) { return 'Hey ' + name + '! Something caught my eye and I wanted you to hear it from me 👀'; },
+        function(name) { return name + ', just dropping in with some well-deserved recognition! 🎉'; },
+        function(name) { return 'Hey ' + name + '! Glad I caught you, I\'ve got something great to share 🌟'; },
+        function(name) { return name + '! Real talk, this one is worth a message of its own 💪'; }
     ];
 
     var DM_CLOSERS = [
-        'Seriously, great work. I wanted to make sure you knew how much I appreciate what you\'re doing. \uD83D\uDE4F',
-        'Just wanted you to know I see the effort and the results. Keep being awesome! \uD83D\uDCAA',
-        'You should be really proud of this. I know I am! \uD83D\uDE0A',
-        'This is the kind of performance that stands out. Keep it up! \uD83D\uDE80',
-        'Wanted to make sure you heard this from me directly. Outstanding work! \uD83C\uDFC6',
-        'I don\'t take performances like this for granted. Thank you for what you do every day. \uD83D\uDE4F',
-        'Just genuinely proud of you. Keep doing exactly what you\'re doing. \uD83D\uDE0A',
-        'You earned every bit of this recognition. Enjoy the moment! \uD83C\uDF89',
-        'This is the stuff that makes my job easy, watching people like you succeed. \uD83D\uDCAA',
-        'Keep bringing this energy. It makes a bigger difference than you probably realize. \uD83C\uDF1F',
-        'I love getting to send messages like this. You made it easy! \u2B50',
-        'Your hard work is paying off in a real way. Don\'t stop now! \uD83D\uDE80',
-        'Moments like this are why I love this team. Great job, seriously. \uD83D\uDE4C'
+        'Seriously, great work. I wanted to make sure you knew how much I appreciate what you\'re doing. 🙏',
+        'Just wanted you to know I see the effort and the results. Keep being awesome! 💪',
+        'You should be really proud of this. I know I am! 😊',
+        'This is the kind of performance that stands out. Keep it up! 🚀',
+        'Wanted to make sure you heard this from me directly. Outstanding work! 🏆',
+        'I don\'t take performances like this for granted. Thank you for what you do every day. 🙏',
+        'Just genuinely proud of you. Keep doing exactly what you\'re doing. 😊',
+        'You earned every bit of this recognition. Enjoy the moment! 🎉',
+        'This is the stuff that makes my job easy, watching people like you succeed. 💪',
+        'Keep bringing this energy. It makes a bigger difference than you probably realize. 🌟',
+        'I love getting to send messages like this. You made it easy! ⭐',
+        'Your hard work is paying off in a real way. Don\'t stop now! 🚀',
+        'Moments like this are why I love this team. Great job, seriously. 🙌'
     ];
 
     var DM_INTROS = [
@@ -2118,44 +2314,104 @@
         'I was going through the numbers and couldn\'t let this slide without reaching out to you:',
         'Real quick, I saw your results and just had to give you your flowers:',
         'I noticed something really impressive when I was looking at the data:',
-        'I keep an eye on the numbers and yours are standing out in a big way:',
-        'Had to send this because what you\'re doing right now deserves to be recognized:',
-        'Just went through the results and I\'m genuinely impressed by what I\'m seeing from you:',
-        'You probably already know you had a great run, but I wanted to tell you just how great:'
+        'Just went through the results and I\'m genuinely impressed by what I\'m seeing from you:'
     ];
+    // "You had a great run" over a week still in progress told somebody their
+    // run was over. Each tense gets its own. Scott, 2026-10-14.
+    var DM_INTROS_DONE = [
+        'You probably already know you had a great run, but I wanted to tell you just how great:',
+        'Your numbers stood out in a big way, and I wanted you to hear it from me:'
+    ];
+    var DM_INTROS_ONGOING = [
+        'You probably already know you\'re on a great run, but I wanted to tell you just how great:',
+        'I keep an eye on the numbers and yours are standing out in a big way:',
+        'Had to send this because what you\'re doing right now deserves to be recognized:'
+    ];
+
+    // How a private line states the number, in the period's tense. "Your
+    // Avoiding Negative Words hit 96.4%" was the only shape there was, and it
+    // said "hit" over a month still running. Scott, 2026-10-14.
+    var DM_STEMS = [
+        function(label, val) { return label + ' at ' + val + '.'; },
+        function(label, val) { return val + ' on ' + label + '.'; }
+    ];
+    var DM_STEMS_DONE = [
+        function(label, val) { return label + ' came in at ' + val + '.'; },
+        function(label, val, ctx) { return 'You finished the ' + ((ctx && ctx.noun) || 'week') + ' at ' + val + ' on ' + label + '.'; },
+        function(label, val) { return label + ' landed at ' + val + '.'; }
+    ];
+    var DM_STEMS_ONGOING = [
+        function(label, val) { return label + ' is at ' + val + '.'; },
+        function(label, val) { return 'You\'re at ' + val + ' on ' + label + '.'; },
+        function(label, val) { return label + ' is sitting at ' + val + '.'; }
+    ];
+
+    /**
+     * One win as a line in the private message.
+     *
+     * One count per line. The tie count and the beaten-count used to sit side
+     * by side ("You are one of 3 associates at 100%... Better than 111 of
+     * 124"), two numbers answering the same question. The beaten-count is the
+     * one this message exists to give, so it is the one kept.
+     */
+    function dmLine(a, stem, ctx) {
+        var label = metricLabel(a);
+        var val = _valueText(a);
+        var placing = centerPlacement(a);
+        var placed = placing ? placing.charAt(0).toUpperCase() + placing.slice(1) : '';
+
+        // On a survey or two the survey count is the count, and a beaten-count
+        // off one survey is not a claim worth making.
+        if (a.thin && a.surveys && val) {
+            return label + ' at ' + val + ' on ' + _surveyCount(a.surveys) + '.' + (placed ? ' ' + placed + '!' : '');
+        }
+
+        if (a.soloRank1) {
+            var counts = fieldCounts(a);
+            var nobody = ctx.closed ? 'Nobody else in the Call Center matched your ' : 'Nobody else in the Call Center is matching your ';
+            var lead = val ? nobody + val + ' on ' + label + '!' : nobody + label + ' performance!';
+            return lead + (counts ? ' That\'s #1 out of ' + counts.pool + ' associates.' : '');
+        }
+
+        var field = describeField(a);
+        var head = val
+            ? stem()(label, val, { reverse: _metricIsReverse(a.key), noun: ctx.noun })
+            : 'Outstanding work on ' + label + '.';
+        if (!placed) return head + (field ? ' ' + field.charAt(0).toUpperCase() + field.slice(1) + '.' : '');
+        return head + ' ' + placed + (field ? ', ' + field : '') + '!';
+    }
 
     /**
      * The one-to-one version. This is the only celebration message that names
      * how many people they beat: it goes to one person, so it cannot turn into
      * a podium the way a channel post naming nine people would.
+     *
+     * Takes the period now, so its wording follows the tense of the window it
+     * was written over. Without it every message said "hit", including 120 of
+     * 132 written over windows still running. Scott, 2026-10-14.
      */
-    function generateDirectMessage(person, dateRange) {
+    function generateDirectMessage(person, dateRange, periodKey) {
+        var closed = periodKey ? periodIsComplete(periodKey) : false;
+        var ctx = { closed: closed, noun: _periodWord(periodKey) };
         var lines = [];
         lines.push(pick(DM_OPENERS)(person.firstName));
         lines.push('');
-        lines.push(pick(DM_INTROS));
+        lines.push(pick(DM_INTROS.concat(closed ? DM_INTROS_DONE : DM_INTROS_ONGOING)));
         // What "this" covers, said before the numbers rather than after them.
-        if (dateRange) lines.push('\uD83D\uDCC5 ' + dateRange);
+        var when = dateRange ? friendlyRange(dateRange, periodKey) : '';
+        if (when) lines.push(when);
         lines.push('');
-        if (person.perfectSurveys) {
-            lines.push('\uD83D\uDCAF ' + perfectSurveyLine(person.perfectSurveys));
-        }
-        person.achievements.forEach(function(a) {
-            var valStr = a.value !== null && a.value !== undefined ? formatMetricValue(a.key, a.value) : '';
-            var placing = sentencePlacement(a);
-            if (a.soloRank1) {
-                lines.push('\uD83E\uDD47 You\'re the only associate in the Call Center to hit this for ' + a.label + '!' + (valStr ? ' (' + valStr + ')' : '')
-                    + fieldSentence(a));
-            } else {
-                if (valStr) {
-                    lines.push('\uD83C\uDF1F Your ' + a.label + ' hit ' + valStr + '!' + placing
-                        + tieClause(describeTie(a, valStr), ' You are ', ', great company to be in.')
-                        + fieldSentence(a));
-                } else {
-                    lines.push('\uD83C\uDFC5 Your ' + a.label + ' is outstanding!' + placing + fieldSentence(a));
-                }
-            }
-        });
+
+        var stem = rotator(DM_STEMS.concat(closed ? DM_STEMS_DONE : DM_STEMS_ONGOING));
+        var items = [];
+        if (person.perfectSurveys) items.push(perfectSurveyLine(person.perfectSurveys));
+        var wins = _linedAchievements(person);
+        var room = Math.max(0, MAX_DM_LINES - items.length);
+        wins.slice(0, room).forEach(function(a) { items.push(dmLine(a, stem, ctx)); });
+        items.forEach(function(item) { lines.push('• ' + item); });
+        var more = moreLine(wins.slice(room));
+        if (more) lines.push(more);
+
         // The one just outside the bar, said only here. It is encouragement
         // addressed to one person; in a channel post naming the winners it
         // would read as marking somebody for not making it.
@@ -2166,7 +2422,7 @@
         }
         lines.push('');
         lines.push(pick(DM_CLOSERS));
-        return lines.join('\n');
+        return _capEmojis(lines.join('\n'));
     }
 
     // =====================
@@ -2339,6 +2595,9 @@
         rotator: rotator,
         perfectSurveyWeek: perfectSurveyWeek,
         perfectSurveyLine: perfectSurveyLine,
+        friendlyRange: friendlyRange,
+        moreLine: moreLine,
+        MAX_PUBLIC_LINES: MAX_PUBLIC_LINES,
         periodNoun: periodNoun,
         periodIsComplete: periodIsComplete,
         fieldSentence: fieldSentence,

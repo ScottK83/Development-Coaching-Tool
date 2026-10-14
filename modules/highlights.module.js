@@ -51,13 +51,36 @@
         const scored = surveyKeys.map(key => toNumber(row[key])).filter(v => v !== null);
         if (scored.length < 2 || !scored.every(v => v >= 100)) return null;
 
+        // Written to sit in a list of wins ("Marcus: all 6 surveys perfect,
+        // 409s Handle Time, and ..."), so it carries no comma of its own.
+        const detail = surveyCount === 1 ? '1 perfect survey'
+            : surveyCount === 2 ? 'both surveys perfect'
+                : `all ${surveyCount} surveys perfect`;
         return {
             kind: 'perfectSurveys',
             key: 'perfectSurveys',
             label: 'Perfect surveys',
             value: surveyCount,
-            detail: `${surveyCount} survey${surveyCount === 1 ? '' : 's'}, all perfect`
+            detail
         };
+    }
+
+    /*
+     * Rep Satisfaction, FCR and Overall Experience are three questions on the
+     * same surveys. One good survey cleared all three targets and came out as
+     * three wins in the post. They collapse into the one strongest item, which
+     * names how many surveys stand behind it. Scott, 2026-10-14.
+     */
+    function collapseSurveyItems(items, surveyKeys, surveyTotal) {
+        const keys = new Set(surveyKeys || []);
+        const survey = items.filter(item => keys.has(item.key));
+        if (survey.length === 0) return items;
+        // A beaten target outranks an improvement; then the bigger move.
+        const best = survey.slice().sort((a, b) =>
+            (KIND_ORDER[a.kind] - KIND_ORDER[b.kind]) || ((b.margin ?? b.gain ?? 0) - (a.margin ?? a.gain ?? 0)))[0];
+        const count = toNumber(surveyTotal);
+        if (Number.isFinite(count) && count > 0) best.surveys = count;
+        return items.filter(item => !keys.has(item.key) || item === best);
     }
 
     /**
@@ -66,7 +89,8 @@
      * options:
      *   metrics           [{ key, label, target, targetType, noise }]
      *   previousByName    { name: row } for the comparison period, optional
-     *   surveyMetricKeys  which metrics a "perfect surveys" callout covers
+     *   surveyMetricKeys  the survey metrics: what a "perfect surveys" callout covers,
+     *                     and what collapses into one item when it does not fire
      *   minSurveys        surveys needed before perfect counts (default 3)
      *   minCalls          call volume needed before a row is trusted (default 0)
      *   maxPerPerson      most callouts to keep per associate (default 3)
@@ -89,7 +113,7 @@
             const calls = toNumber(row.totalCalls);
             if (minCalls > 0 && (!Number.isFinite(calls) || calls < minCalls)) return;
 
-            const items = [];
+            let items = [];
             const perfect = findPerfectSurveys(row, opts);
             const coveredBySurveys = perfect ? new Set(opts.surveyMetricKeys || []) : new Set();
             if (perfect) items.push(perfect);
@@ -109,6 +133,7 @@
                         label: spec.label,
                         value,
                         target: spec.target,
+                        targetType: spec.targetType,
                         margin
                     });
                     return;
@@ -125,11 +150,13 @@
                         label: spec.label,
                         value,
                         previous: toNumber(priorRow[spec.key]),
+                        targetType: spec.targetType,
                         gain
                     });
                 }
             });
 
+            if (!perfect) items = collapseSurveyItems(items, opts.surveyMetricKeys, row.surveyTotal);
             if (!items.length) return;
 
             items.sort((a, b) => {
@@ -147,13 +174,26 @@
 
     // --- Wording ---
 
-    function describeItem(item, formatValue) {
+    /*
+     * The number first, then what it is: "409s Handle Time", "99.3% Avoiding
+     * Negative Words". The post used to read "Average Handle Time 409, Avoid
+     * Negative Words 99.3", which dropped the units and read like a column
+     * off a spreadsheet. A survey item says how many surveys stand behind it.
+     * An improvement is said in one range form, the move first: "up 3
+     * points from 85% to 88%", with no comma of its own, so two of them
+     * still read as two items in the list. Scott, 2026-10-14.
+     */
+    function describeItem(item, formatValue, formatDelta) {
         const format = typeof formatValue === 'function' ? formatValue : ((key, value) => String(value));
         if (item.kind === 'perfectSurveys') return item.detail;
+        const surveys = Number.isFinite(item.surveys)
+            ? ` on ${item.surveys} survey${item.surveys === 1 ? '' : 's'}` : '';
         if (item.kind === 'improved') {
-            return `${item.label} ${format(item.key, item.value)}, up from ${format(item.key, item.previous)}`;
+            const delta = typeof formatDelta === 'function' ? formatDelta(item.key, Math.abs(item.gain)) : '';
+            const move = (item.targetType === 'max' ? 'down' : 'up') + (delta ? ` ${delta}` : '');
+            return `${item.label} ${move} from ${format(item.key, item.previous)} to ${format(item.key, item.value)}${surveys}`;
         }
-        return `${item.label} ${format(item.key, item.value)}`;
+        return `${format(item.key, item.value)} ${item.label}${surveys}`;
     }
 
     function joinPhrases(list) {
@@ -163,19 +203,20 @@
     }
 
     /**
-     * One associate's line. Kept to a single sentence — this gets read in a
-     * list of forty, not on its own.
+     * One associate's line. Kept to a single sentence, because this gets read
+     * in a list of forty, not on its own: "Marcus: 409s Handle Time, 99.3%
+     * Avoiding Negative Words, and 95.8% Positive Word Usage."
      */
     function buildHighlightLine(entry, options) {
         const opts = options || {};
-        const phrases = entry.items.map(item => describeItem(item, opts.formatValue));
+        const phrases = entry.items.map(item => describeItem(item, opts.formatValue, opts.formatDelta));
         if (!phrases.length) return '';
 
         const firstName = typeof opts.preferredName === 'function'
             ? opts.preferredName(entry.name)
             : entry.name;
 
-        return `${firstName}, ${joinPhrases(phrases)}`;
+        return `${firstName}: ${joinPhrases(phrases)}.`;
     }
 
     function groupByTeam(entries, byEmployee, options) {
@@ -203,6 +244,9 @@
     /**
      * The whole post, grouped by team. When only one team is in play the group
      * headers are noise, so they're dropped.
+     *
+     * options.closer is a line of kudos for the foot of the post. A list of
+     * numbers with nothing said about them read as a report, not a shout-out.
      */
     function buildHighlightPost(groups, options) {
         const opts = options || {};
@@ -220,7 +264,8 @@
             return showTeamHeaders ? `${group.team}\n${lines}` : lines;
         }).join('\n\n');
 
-        return `${header}\n${body}`.trim();
+        const closer = opts.closer ? `\n\n${opts.closer}` : '';
+        return `${header}\n${body}${closer}`.trim();
     }
 
     function countPeople(groups) {

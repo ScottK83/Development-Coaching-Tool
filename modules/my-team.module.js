@@ -451,7 +451,11 @@
         if (!person) return null;
         const result = detectForWindow();
         const entry = (result?.celebrations || []).filter(c => c.name === person)[0];
-        return entry ? { entry, dateRange: result.dateRange || '' } : null;
+        // The period travels with it, so the placing message can speak in the
+        // window's tense ("is at" while it runs, "came in at" once it is
+        // over). It was handed only the date range and said "hit" over
+        // windows still running. Scott, 2026-10-14.
+        return entry ? { entry, dateRange: result.dateRange || '', periodKey: result.periodKey || '' } : null;
     }
 
     /**
@@ -514,11 +518,12 @@
         const writers = {
             celebrate: () => {
                 const c = celebrationFor(person);
-                return c && cel?.generateDirectMessage ? cel.generateDirectMessage(c.entry, c.dateRange) : '';
+                return c && cel?.generateDirectMessage
+                    ? cel.generateDirectMessage(c.entry, c.dateRange, c.periodKey || cmp?.latestKey) : '';
             },
             shoutout: () => {
                 const c = celebrationFor(person);
-                return c && cel?.generateShoutOut ? cel.generateShoutOut(c.entry, c.dateRange, cmp?.latestKey) : '';
+                return c && cel?.generateShoutOut ? cel.generateShoutOut(c.entry, c.dateRange, c.periodKey || cmp?.latestKey) : '';
             },
             cheer: () => mods().cheerleading?.cheerMessageFor?.(person, cmp) || '',
             checkin: () => pulse?.generateCheckinMessage?.(person, cmp?.latestKey, cmp?.baselineKey),

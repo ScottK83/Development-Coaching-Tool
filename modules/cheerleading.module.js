@@ -299,26 +299,70 @@
     // like a mail merge. Each cheer kind now draws from a pool that rotates.
     // `pw`/`cw` are the period words ("last week"/"this week", "in May"/"in
     // June") so the same templates serve both weekly and monthly cheers.
+    //
+    // `mv` is the move itself, said the way a person says it: "up 4.7
+    // points", "down 40 seconds". Every template states it in the one range
+    // form, "from A to B", rather than four different ways of putting two
+    // numbers side by side. Scott, 2026-10-14.
     var DELTA_TEMPLATES = [
-        function (l, p, c, pw, cw) { return 'Your ' + l + ' has gone from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
-        function (l, p, c, pw, cw) { return l + ' moved the right way, ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
-        function (l, p, c, pw, cw) { return 'Nice move on ' + l + ': ' + p + ' ' + pw + ', ' + c + ' ' + cw + '.'; },
-        function (l, p, c, pw, cw) { return 'Your ' + l + ' improved from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
-        function (l, p, c, pw, cw) { return l + ' is looking better, ' + p + ' ' + pw + ' and ' + c + ' ' + cw + '.'; },
-        function (l, p, c, pw, cw) { return 'Good jump on ' + l + ', ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; }
+        function (l, p, c, pw, cw, mv) { return 'Your ' + l + ' is ' + mv + ', from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw, mv) { return l + ' moved the right way, ' + mv + ' from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw, mv) { return 'Nice move on ' + l + ': ' + mv + ', from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw, mv) { return 'Your ' + l + ' improved, ' + mv + ' from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw, mv) { return l + ' is looking better: ' + mv + ', from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; },
+        function (l, p, c, pw, cw, mv) { return 'Good jump on ' + l + ', ' + mv + ' from ' + p + ' ' + pw + ' to ' + c + ' ' + cw + '.'; }
     ];
+    // These read the year's running number, so they say so. Under a "last
+    // week" window "past goal at 95%" read as last week's figure. Scott,
+    // 2026-10-14.
     var EXCEED_TEMPLATES = [
-        function (l, v) { return 'Your ' + l + ' is already past goal at ' + v + '. Keep doing what you\'re doing.'; },
-        function (l, v) { return l + ' is sitting above goal at ' + v + '. No notes there.'; },
-        function (l, v) { return 'You\'ve got ' + l + ' handled, ' + v + ' and past goal.'; },
-        function (l, v) { return l + ' at ' + v + ' is past goal. That one\'s locked in.'; },
-        function (l, v) { return 'Nothing to fix on ' + l + '. You\'re at ' + v + ', past goal.'; }
+        function (l, v) { return 'Your ' + l + ' is already past goal for the year at ' + v + '. Keep doing what you\'re doing.'; },
+        function (l, v) { return l + ' is sitting above goal for the year at ' + v + '. No notes there.'; },
+        function (l, v) { return 'You\'ve got ' + l + ' handled for the year, ' + v + ' and past goal.'; },
+        function (l, v) { return l + ' at ' + v + ' for the year is past goal. That one\'s locked in.'; },
+        function (l, v) { return 'Nothing to fix on ' + l + '. You\'re at ' + v + ' for the year, past goal.'; }
     ];
     var MEET_TEMPLATES = [
-        function (l, v, t) { return 'Your ' + l + ' is right at goal, ' + v + ' against the ' + t + ' target.'; },
-        function (l, v, t) { return l + ' is sitting on goal at ' + v + '.'; },
-        function (l, v, t) { return 'You\'re holding ' + l + ' at goal, ' + v + ' against ' + t + '.'; }
+        function (l, v, t) { return 'Your ' + l + ' for the year is right at goal, ' + v + ' against the ' + t + ' target.'; },
+        function (l, v, t) { return l + ' is sitting on goal for the year at ' + v + '.'; },
+        function (l, v, t) { return 'You\'re holding ' + l + ' at goal for the year, ' + v + ' against ' + t + '.'; }
     ];
+
+    function _unit(mk, sample) {
+        var reg = window.METRICS_REGISTRY && window.METRICS_REGISTRY[mk];
+        if (reg && reg.unit) return reg.unit;
+        // An entry with no unit on it: read it off the printed number.
+        return /%$/.test(String(sample || '')) ? '%' : '';
+    }
+
+    // "up 4.7 points", "down 40 seconds". A percentage move is in points:
+    // 73.4% to 88.2% is up 14.8 points, and "+14.8%" says something else.
+    // A metric where lower is better improves by going down, and says so.
+    function _moveText(mk, prev, cur) {
+        var diff = Math.abs(cur - prev);
+        var dir = cur < prev ? 'down' : 'up';
+        var unit = _unit(mk, _fmt(mk, cur));
+        if (unit === 'sec') {
+            var secs = Math.round(diff);
+            return dir + ' ' + secs + ' second' + (secs === 1 ? '' : 's');
+        }
+        if (unit === '%') {
+            var pts = diff.toFixed(1).replace(/\.0$/, '');
+            return dir + ' ' + pts + ' point' + (pts === '1' ? '' : 's');
+        }
+        return dir;
+    }
+
+    // Big enough to be a move rather than a wobble. The registry owns the
+    // floor, the same one Highlights and the check-ins judge movement by: one
+    // second of After Call Work (65s to 64s) was being cheered as a "nice
+    // move". Without the registry loaded, the relative floor below stands.
+    function _isRealMove(mk, prev, cur) {
+        if (typeof window.getMetricNoiseThreshold !== 'function') return true;
+        var floor = window.getMetricNoiseThreshold(mk);
+        if (!Number.isFinite(floor) || floor <= 0) return true;
+        return Math.abs(cur - prev) + 1e-9 >= floor;
+    }
 
     function _closeText(mk, m, weekInfo) {
         var label = _metricLabel(mk);
@@ -363,7 +407,7 @@
                 if (c !== null && p !== null && _isImprovement(mk, p, c)
                     && _sampleIsBigEnough(mk, emp.name, [periods.wowPrev], [periods.wowCur])) {
                     var rel = p !== 0 ? Math.abs(c - p) / Math.abs(p) : 0;
-                    if (rel >= MIN_DELTA_REL) wowByMetric[mk] = { prev: p, cur: c };
+                    if (rel >= MIN_DELTA_REL && _isRealMove(mk, p, c)) wowByMetric[mk] = { prev: p, cur: c };
                 }
             }
             if (periods.monCur && periods.monPrev) {
@@ -374,7 +418,7 @@
                 if (cm !== null && pm !== null && _isImprovement(mk, pm, cm)
                     && _sampleIsBigEnough(mk, emp.name, prevKeys, curKeys)) {
                     var relm = pm !== 0 ? Math.abs(cm - pm) / Math.abs(pm) : 0;
-                    if (relm >= MIN_DELTA_REL) monByMetric[mk] = { prev: pm, cur: cm };
+                    if (relm >= MIN_DELTA_REL && _isRealMove(mk, pm, cm)) monByMetric[mk] = { prev: pm, cur: cm };
                 }
             }
         });
@@ -410,7 +454,7 @@
                 if (gap > 0 && m.meetTarget && (gap / Math.abs(m.meetTarget)) <= CLOSE_REL) {
                     var text = _closeText(mk, m, weekInfo);
                     if (wowByMetric[mk]) {
-                        text += ' And it\'s already moving, ' + _fmt(mk, wowByMetric[mk].prev) +
+                        text += ' And it\'s already moving the right way, from ' + _fmt(mk, wowByMetric[mk].prev) +
                             ' ' + lastWeek + ' to ' + _fmt(mk, wowByMetric[mk].cur) + ' ' + thisWeek + '.';
                     }
                     cheers.push({ weight: 100, metricKey: mk, icon: _metricIcon(mk), kind: 'close', text: text });
@@ -422,7 +466,7 @@
                 cheers.push({
                     weight: 70, metricKey: mk, icon: _metricIcon(mk), kind: 'wow',
                     text: nextDelta()(label, _fmt(mk, wowByMetric[mk].prev), _fmt(mk, wowByMetric[mk].cur),
-                        lastWeek, thisWeek)
+                        lastWeek, thisWeek, _moveText(mk, wowByMetric[mk].prev, wowByMetric[mk].cur))
                 });
                 return;
             }
@@ -431,7 +475,7 @@
                 cheers.push({
                     weight: 55, metricKey: mk, icon: _metricIcon(mk), kind: 'month',
                     text: nextDelta()(label, _fmt(mk, monByMetric[mk].prev), _fmt(mk, monByMetric[mk].cur),
-                        periods.monPrevLabel, periods.monCurLabel)
+                        periods.monPrevLabel, periods.monCurLabel, _moveText(mk, monByMetric[mk].prev, monByMetric[mk].cur))
                 });
                 return;
             }
@@ -546,6 +590,19 @@
         }).sort();
         var monCur = usable.length >= 2 ? usable[usable.length - 1] : null;
         var monPrev = usable.length >= 2 ? usable[usable.length - 2] : null;
+
+        // The monthly move stays inside the window. A "last week" cheer was
+        // quoting "88.2% in September to 92.9% so far in October", a second
+        // stretch of time the page never named. So a week or a day window
+        // gets no monthly move at all, and a month window gets its own month
+        // against the one before it, or nothing. A year window holds every
+        // month in it, so the newest two stand. Scott, 2026-10-14.
+        if (cmp && cmp.unit !== 'year') {
+            var windowMonth = cmp.unit === 'month' && cmp.latestKey ? _endMonth(cmp.latestKey) : null;
+            var at = windowMonth ? usable.indexOf(windowMonth) : -1;
+            monCur = at > 0 ? usable[at] : null;
+            monPrev = at > 0 ? usable[at - 1] : null;
+        }
 
         // Name each week honestly. When the two points are adjacent and the
         // newest really is last week, "the week before" reads better than a
@@ -666,7 +723,11 @@
         }
         lines.push('');
         lines.push(pick(CLOSERS));
-        return lines.join('\n');
+        // Two emojis a message (Scott, 2026-10-13): the greeting's and the
+        // sign-off's. The pools already hold to it; this is the floor.
+        var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
+        var text = lines.join('\n');
+        return voice && typeof voice.limitEmojis === 'function' ? voice.limitEmojis(text, 2) : text;
     }
 
     /**

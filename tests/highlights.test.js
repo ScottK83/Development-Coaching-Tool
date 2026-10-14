@@ -104,7 +104,12 @@ suite('highlights: perfect surveys are one callout, and need a real sample', (t)
     // One perfect survey is not a perfect week.
     const thin = engine.findHighlights([rep('One Survey', { fcr: 100, cxRepOverall: 100, surveyTotal: 1 })], options);
     t.check('two surveys or fewer does not qualify as perfect', thin[0].items.every(item => item.kind !== 'perfectSurveys'));
-    t.check('but the individual metrics still count', thin[0].items.length === 2);
+    // FCR and Rep Sat off the same single survey are one win, not two, and the
+    // item says how many surveys stand behind it. Scott, 2026-10-14.
+    t.equal('but the survey metrics still count, as one win', thin[0].items.length, 1);
+    t.equal('which carries the survey count', thin[0].items[0].surveys, 1);
+    const thinLine = engine.buildHighlightLine(thin[0], { formatValue: (k, v) => `${v}%` });
+    t.check('and says it in the line', /on 1 survey\.$/.test(thinLine));
 
     const mixed = engine.findHighlights([rep('Mixed', { fcr: 100, cxRepOverall: 60, surveyTotal: 8 })], options);
     t.check('one survey metric short of 100 means no perfect callout', mixed[0].items.every(item => item.kind !== 'perfectSurveys'));
@@ -118,8 +123,11 @@ suite('highlights: the wording names the number, never a rank', (t) => {
     const entry = engine.findHighlights([rep('Alyssa Dimes', { scheduleAdherence: 98, aht: 380 })], { metrics: METRICS })[0];
     const line = engine.buildHighlightLine(entry, { formatValue: format, preferredName: (n) => n.split(' ')[0] });
 
-    t.equal('the line leads with the person', line.indexOf('Alyssa,'), 0);
-    t.check('and lists both wins', line.indexOf('AHT 380s') > -1 && line.indexOf('Adherence 98%') > -1);
+    // "Alyssa: 380s AHT and 98% Adherence." The number leads, with its unit,
+    // and the label says what it is. Scott, 2026-10-14.
+    t.equal('the line leads with the person', line.indexOf('Alyssa:'), 0);
+    t.check('and lists both wins, number first', line.indexOf('380s AHT') > -1 && line.indexOf('98% Adherence') > -1);
+    t.check('as one sentence', /\.$/.test(line));
     t.check('with no rank or tier language', !/\b(#\d|rank|tier|top \d|best|1st|2nd|3rd)\b/i.test(line));
 
     const three = engine.findHighlights([rep('Triple', { scheduleAdherence: 98, aht: 380, fcr: 90 })], { metrics: METRICS })[0];
