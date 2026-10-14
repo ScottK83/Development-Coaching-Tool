@@ -130,7 +130,10 @@ suite('celebrations: a winner with a near miss still gets told where the door is
     t.equal('at a number a week is measured in', pace.periodNoun, 'week');
 
     const dm = celebrations.generateDirectMessage(erica, result.dateRange);
-    t.check('the direct message names the placing', dm.indexOf('#17') > -1);
+    // Past the top 15 the placing is not said (Scott, 2026-10-14); how far
+    // the door is, is.
+    t.check('the direct message says how far the door is', dm.indexOf('2 spots away from the top 15') > -1 || dm.indexOf('2 spots off the top 15') > -1 || dm.indexOf('top 15 in the Call Center is 2 spots up') > -1);
+    t.check('without naming a placing past the bar', dm.indexOf('#17') === -1 && dm.indexOf('17th') === -1);
     t.check('and finishes the thought with the door', dm.indexOf(DOOR_SENTENCE) > -1);
 });
 

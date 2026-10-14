@@ -1064,8 +1064,9 @@ suite('celebrations: knocking on the door of the top 15', (t) => {
     t.check('it is written more than one way', lines.size >= 4);
     t.check('every one names the metric',
         Array.from(lines).every(l => l.indexOf('Avoiding Negative Words') > -1));
-    t.check('every one says the placing',
-        Array.from(lines).every(l => l.indexOf('#17') > -1));
+    // Past the top 15 the placing itself is not said (Scott, 2026-10-14).
+    t.check('none says the placing past the bar',
+        Array.from(lines).every(l => l.indexOf('#17') === -1 && l.indexOf('17th') === -1));
     t.check('every one says how far off the bar',
         Array.from(lines).every(l => l.indexOf('2 spots') > -1));
     t.check('and every one names the bar',

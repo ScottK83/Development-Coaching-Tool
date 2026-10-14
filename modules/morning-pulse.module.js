@@ -3159,6 +3159,19 @@
     const STANDINGS_MIN_FIELD = 5;
     const STANDINGS_MIN_TEAM = 3;
 
+    /* A Call Center placing is said only inside the top 15.
+     *
+     * Scott, 2026-10-14: "I only want them to see if they're top 15. But it's
+     * not the worst to say, xxx people above, and xxx amount of people below
+     * you." Fifteen is the shout-out bar, so the placing a private message
+     * names is one that could also be celebrated. Past it the bullet says how
+     * many are ahead and how many behind instead, counted off the values
+     * themselves so a tie is neither. Last on the board has nobody behind, and
+     * "29 people ahead of you" is the placing by another name, so that line is
+     * left off and the number and its next step speak for themselves.
+     */
+    const STANDINGS_PLACING_BAR = 15;
+
     // Never, whatever a caller or a later edit puts into PROJECTABLE_RANK_KEYS.
     const STANDINGS_NEVER = new Set(['reliability']);
 
@@ -3564,6 +3577,18 @@
                 ? !!isReverseMetric(registryKey)
                 : !!window.METRICS_REGISTRY?.[registryKey]?.isReverse;
 
+            // Who is ahead and who is behind, by value, for a placing past the
+            // bar. A tie with them is neither.
+            let ahead = 0;
+            let behind = 0;
+            measured.forEach(r => {
+                if (r === row || r.name === employeeName) return;
+                const v = valueOf(r);
+                if (v === current) return;
+                if (reverse ? v < current : v > current) ahead++;
+                else behind++;
+            });
+
             const teamMeasured = teamRows.filter(r => valueOf(r) !== null);
             const teamRank = teamMeasured.length >= STANDINGS_MIN_TEAM
                 ? rp.projectRank(teamRows, rankKey, employeeName, current)
@@ -3583,6 +3608,8 @@
                 label: window.METRICS_REGISTRY?.[registryKey]?.label || registryKey,
                 centerRank,
                 centerField: measured.length,
+                ahead,
+                behind,
                 teamRank: teamRank >= 1 ? teamRank : null,
                 teamField: teamMeasured.length,
                 milestone: standingsMilestone({
@@ -3641,12 +3668,16 @@
             // the center placing beside it is still there.
             const teamWorthSaying = c.teamRank
                 && !(c.teamField >= STANDINGS_MIN_TEAM && c.teamRank > (c.teamField * 2) / 3);
-            const where = teamWorthSaying
-                ? standingsOrdinal(c.centerRank) + ' in the Call Center, '
-                    + standingsOrdinal(c.teamRank) + ' on our team'
-                : standingsOrdinal(c.centerRank) + ' in the Call Center';
+            const people = n => (n === 1 ? '1 person' : n + ' people');
+            const center = c.centerRank <= STANDINGS_PLACING_BAR
+                ? standingsOrdinal(c.centerRank) + ' in the Call Center'
+                : (c.behind > 0
+                    ? people(c.ahead) + ' ahead of you and ' + c.behind + ' behind you in the Call Center'
+                    : '');
+            const team = teamWorthSaying ? standingsOrdinal(c.teamRank) + ' on our team' : '';
+            const where = [center, team].filter(Boolean).join(', ');
             const bullet = '  • ' + c.label + ': ' + fmtVal(c.registryKey, c.current)
-                + '\n      ' + where + '.';
+                + (where ? '\n      ' + where.charAt(0).toUpperCase() + where.slice(1) + '.' : '');
             return c.milestone ? bullet + '\n      ' + c.milestone.text : bullet;
         });
 

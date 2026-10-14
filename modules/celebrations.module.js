@@ -1127,30 +1127,34 @@
 
     // Said more than one way, because a sweep sends eighteen of these at once
     // and the same sentence eighteen times is a form letter.
+    //
+    // The placing itself is not said. A near miss is past the bar by
+    // definition, and Scott, 2026-10-14: "I only want them to see if they're
+    // top 15." How far the door is, is the part worth hearing.
     var NEAR_MISS_LINES = [
         function(m, v, rank, away, spots, bar) {
-            return 'One more thing: you are ' + away + ' ' + spots + ' away from top ' + bar
-                + ' in ' + m + '. ' + v + ' has you at #' + rank + ' in the Call Center.';
+            return 'One more thing: you are ' + away + ' ' + spots + ' away from the top ' + bar
+                + ' in the Call Center on ' + m + ', at ' + v + '.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'Worth knowing: ' + m + ' at ' + v + ' has you #' + rank
-                + ' in the Call Center, ' + away + ' ' + spots + ' away from top ' + bar + '.';
+            return 'Worth knowing: ' + m + ' at ' + v + ' is ' + away + ' ' + spots
+                + ' away from the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return m + ' is close. ' + v + ' puts you #' + rank + ' in the Call Center, '
-                + away + ' ' + spots + ' off the top ' + bar + '.';
+            return m + ' is close. At ' + v + ' you are ' + away + ' ' + spots
+                + ' off the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'You are knocking on the door in ' + m + ': #' + rank
-                + ' in the Call Center at ' + v + ', ' + away + ' ' + spots + ' away from top ' + bar + '.';
+            return 'You are knocking on the door in ' + m + ': ' + v + ' is ' + away + ' ' + spots
+                + ' away from the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'Keep an eye on ' + m + '. ' + v + ' has you #' + rank + ' in the Call Center, '
-                + away + ' ' + spots + ' away from top ' + bar + '.';
+            return 'Keep an eye on ' + m + '. At ' + v + ' you are ' + away + ' ' + spots
+                + ' away from the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'Almost there on ' + m + '. ' + v + ' is #' + rank + ' in the Call Center, and top '
-                + bar + ' is ' + away + ' ' + spots + ' up.';
+            return 'Almost there on ' + m + '. At ' + v + ', the top ' + bar
+                + ' in the Call Center is ' + away + ' ' + spots + ' up.';
         }
     ];
 
