@@ -97,7 +97,11 @@
         const dailyEntry = daily.byName.get(employeeName) || null;
 
         const period = periods?.latestKey ? pulse.getPeriodDataForKey?.(periods.latestKey) : null;
-        const inWeekly = Boolean((period?.employees || []).find(emp => String(emp?.name || '').trim() === employeeName));
+        const row = (period?.employees || []).find(emp => String(emp?.name || '').trim() === employeeName) || null;
+        const inWeekly = Boolean(row);
+        // No handle time is no calls (Scott, 2026-10-14), so there is no
+        // period to write about, the same answer the round gives.
+        const noCalls = inWeekly && typeof pulse.tookNoCalls === 'function' && pulse.tookNoCalls(row);
 
         // Two different questions, asked in order. Does the tool hold the period
         // at all, and does it hold this person inside it? Answering them
@@ -106,9 +110,11 @@
         const weekEnd = latestWeekEnd(periods?.latestKey, period);
         const periodCheck = checkWindow(periods, period);
 
-        const coverage = inWeekly
-            ? { ok: true, reason: '', warning: baselineWarning(periods) }
-            : { ok: false, reason: `Not in the ${periods?.latestLabel || 'selected'} upload.` };
+        const coverage = !inWeekly
+            ? { ok: false, reason: `Not in the ${periods?.latestLabel || 'selected'} upload.` }
+            : noCalls
+                ? { ok: false, reason: `No calls in ${periods?.latestLabel || 'this period'} (no handle time), so there is nothing to coach yet.` }
+                : { ok: true, reason: '', warning: baselineWarning(periods) };
 
         const sentEntry = outreach.getSentEntry(outreach.loadSentLog(), plan.id, stamp, employeeName);
 

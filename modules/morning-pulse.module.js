@@ -154,6 +154,24 @@
         return surveyResponsesFor(emp, metricKey) > 0;
     }
 
+    /* No handle time is no calls.
+     *
+     * Scott, 2026-10-14: "If they have 0 AHT, then they couldn't have taken
+     * calls." A 0s handle time is not a fast week. It sits under the 426s goal,
+     * so read as a number it was a win, and someone who was out all week got a
+     * message praising it. The weekly parser already blanks a 0, but dailies,
+     * month rebuilds and year rows can still carry one. With no handle time at
+     * all, a calls count of 0 says the same thing. Nothing about either period
+     * is written; the round sets the person aside and says why.
+     */
+    function tookNoCalls(emp) {
+        if (!emp) return true;
+        const aht = parseFloat(emp.aht);
+        if (Number.isFinite(aht)) return aht <= 0;
+        const calls = parseInt(emp.totalCalls, 10);
+        return Number.isFinite(calls) && calls <= 0;
+    }
+
     // The metrics a pulse message is allowed to talk about for one person: the
     // fixed exclusions, then the survey metrics nobody answered.
     function speakableMetrics(emp, analysis) {
@@ -2195,7 +2213,7 @@
     async function generateCheckinMessage(employeeName, latestKey, baselineKey, options) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
-        if (!emp) return null;
+        if (!emp || tookNoCalls(emp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -2395,7 +2413,7 @@
     async function generateHighFiveMessage(employeeName, latestKey, baselineKey, options) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
-        if (!emp) return null;
+        if (!emp || tookNoCalls(emp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -2553,7 +2571,7 @@
     async function generateMondayKickoffMessage(employeeName, latestKey, baselineKey, options) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
-        if (!emp) return null;
+        if (!emp || tookNoCalls(emp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -3686,7 +3704,7 @@
 
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
-        if (!emp) return null;
+        if (!emp || tookNoCalls(emp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -3787,7 +3805,7 @@
     async function generateMidweekCheckinMessage(employeeName, latestKey, baselineKey) {
         const period = getPeriodData(latestKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
-        if (!emp) return null;
+        if (!emp || tookNoCalls(emp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -3870,7 +3888,7 @@
     async function generatePeriodReviewMessage(employeeName, periodKey, prevPeriodKey, periodType) {
         const period = getPeriodData(periodKey);
         const emp = period?.employees?.find(e => e.name === employeeName);
-        if (!emp) return null;
+        if (!emp || tookNoCalls(emp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -4198,6 +4216,7 @@
         const latestEmp = getEmployeeFromAnyPeriod(ctx.latestKey, employeeName);
         const baselineEmp = getEmployeeFromAnyPeriod(ctx.baselineKey, employeeName);
         if (!latestEmp || !baselineEmp) return null;
+        if (tookNoCalls(latestEmp)) return null;
 
         const firstName = typeof getEmployeeNickname === 'function'
             ? getEmployeeNickname(employeeName)
@@ -5188,6 +5207,10 @@
                     weeklyCoversThisWeek
                 });
 
+            if (tookNoCalls(emp)) {
+                blocked.push({ name: emp.name, reason: 'No calls in this period (no handle time), so there is nothing to coach yet.' });
+                return;
+            }
             const analysis = analyzeCurrentSnapshot(emp, centerAvgs, latestKey);
             if (!analysis || !analysis.allMetrics?.length) {
                 blocked.push({ name: emp.name, reason: 'No scoreable metrics in this upload.' });
@@ -5519,6 +5542,8 @@
         DAILY_CHECKIN_METRICS,
         showRunMyDayModal,
         buildOutreachMessage,
+        // No handle time is no calls; both private surfaces set them aside.
+        tookNoCalls,
         // What a month or year window is called in the message's opener.
         windowFrame,
         // Exported for the standings tests rather than for any caller. What it
