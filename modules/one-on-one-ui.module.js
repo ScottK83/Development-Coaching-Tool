@@ -236,7 +236,21 @@
             `</details>`
             : '';
 
+        // What to open on, the same lines the copied sheet leads with, so the
+        // screen and the sheet start in the same place (Scott, 2026-10-14:
+        // positive feedback in every piece of feedback).
+        const working = oneOnOne.openingLines?.({
+            yearToDate: h.yearToDate,
+            sinceLast: h.sinceLast,
+            lastMonth: h.lastMonth,
+            recentWeeks: h.recentWeeks
+        }) || [];
+        const workingHtml = working.length
+            ? working.map(line => `<div style="padding:4px 0; font-size:0.9em;"><span style="color:var(--green-text); font-weight:700;">✓</span> ${escapeHtml(line)}</div>`).join('')
+            : '';
+
         body.innerHTML =
+            section('Start with what is working', workingHtml) +
             section('The year so far', ytdHtml, 'from the YTD upload') +
             section(`Since we last met`, sinceHtml, h.sinceLast ? formatDate(h.sinceLast.date) : '') +
             section('Last month', monthHtml) +

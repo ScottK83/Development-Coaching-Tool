@@ -1125,8 +1125,95 @@
         return { summary: out };
     }
 
+    // "an 86% goal", "a 95% goal". The prompt said "a 86% goal".
+    function sentimentGoalPhrase(goal) {
+        return (/^(8|11(?!\d)|18(?!\d))/.test(String(goal)) ? 'an ' : 'a ') + goal + '% goal';
+    }
+
+    /* What the note opens with.
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback ... make
+     * sure to provide positive feedback." The prompt only asked for
+     * recognition when all three were at goal, so somebody at goal on two of
+     * them got a note about the third and nothing else. Now there is always
+     * something to praise, best first:
+     *
+     *   every one at goal, by name; else a real move the right way since the
+     *   last report (options.prior, past the 1 point noise floor); else the
+     *   closest to goal, when it is not the focus; else the effort.
+     *
+     * messageVoice.truePositive makes the pick when it is loaded, so this
+     * agrees with every other message about what counts. The words are this
+     * module's, because they are an instruction to Copilot, not the note.
+     */
+    function sentimentPraiseLine(items, focus) {
+        const trim = function (n) { return String(Math.round(n * 10) / 10); };
+        const figure = function (c) { return c.label + ' (' + trim(c.value) + '%)'; };
+        const usable = items.filter(function (c) { return Number.isFinite(c.value) && Number.isFinite(c.goal) && c.goal > 0; });
+
+        const atGoal = usable.filter(function (c) { return c.value >= c.goal; });
+        if (atGoal.length === 3) return 'All three are at goal, so make this a recognition note rather than a correction.';
+        if (atGoal.length) {
+            const names = atGoal.map(figure);
+            return 'Praise first: ' + names.join(' and ') + (names.length > 1 ? ' are' : ' is')
+                + ' at goal. Open the note by recognizing that.';
+        }
+
+        // A move under a point is noise (the registry's floor for all three).
+        const NOISE = 1;
+        const rows = usable.map(function (c) {
+            const moved = Number.isFinite(c.prior) && Math.abs(c.value - c.prior) >= NOISE;
+            return { key: c.key, label: c.label, value: c.value, target: c.goal, prior: moved ? c.prior : undefined };
+        });
+        const pickBest = window.DevCoachModules?.messageVoice?.truePositive;
+        let best = typeof pickBest === 'function' ? pickBest(rows, { ongoing: false }) : null;
+        if (!best) {
+            // The same order, for a page without message-voice loaded.
+            const improved = rows.filter(function (r) { return r.prior !== undefined && r.value > r.prior; })
+                .sort(function (a, b) { return (b.value - b.prior) - (a.value - a.prior); })[0];
+            best = improved ? { kind: 'improved', key: improved.key } : { kind: 'closest' };
+        }
+
+        const chosen = usable.find(function (c) { return c.key === best.key; });
+        if (chosen && best.kind === 'improved') {
+            const up = Math.round((chosen.value - chosen.prior) * 10) / 10;
+            return 'Praise first: ' + chosen.label + ' moved the right way since the last report, up '
+                + trim(up) + (up === 1 ? ' point' : ' points') + ' (' + trim(chosen.prior) + '% to ' + trim(chosen.value)
+                + '%). Open the note by recognizing that progress.';
+        }
+
+        // Closest to goal, never the focus: praising the number the note is
+        // about to ask them to work on is praise and correction in one
+        // breath. "The closest" only when it is the closest of all three.
+        if (best.kind === 'closest' && usable.length > 1) {
+            const share = function (c) { return (c.goal - c.value) / c.goal; };
+            const byShare = usable.slice().sort(function (a, b) { return share(a) - share(b); });
+            const nearest = byShare.filter(function (c) { return !focus || c.label !== focus.label; })[0];
+            if (nearest) {
+                const gap = Math.round((nearest.goal - nearest.value) * 10) / 10;
+                const said = nearest === byShare[0]
+                    ? nearest.label + ' is the closest to goal, at ' + trim(nearest.value) + '% against ' + sentimentGoalPhrase(nearest.goal)
+                    : nearest.label + ' is within ' + trim(gap) + (gap === 1 ? ' point' : ' points') + ' of ' + sentimentGoalPhrase(nearest.goal)
+                        + ', at ' + trim(nearest.value) + '%';
+                return 'Praise first: ' + said + '. Open the note by recognizing that as a real strength to build on.';
+            }
+        }
+        return 'Praise first: thank them for the effort they bring to every call. Open the note with that, and mean it.';
+    }
+
+    function sentimentPriorFigure(prior, key) {
+        const value = prior && prior[key];
+        const n = Number(value && typeof value === 'object' ? value.percentage : value);
+        return value === null || value === undefined || value === '' || !Number.isFinite(n) ? null : n;
+    }
+
     /**
      * The CoPilot prompt. Same facts, asked as a question rather than stated.
+     *
+     * options.prior, when a caller has it, is the last report's three figures
+     * ({ positive, negative, emotions }, numbers or reports), so a real move
+     * can be the praise. The saved snapshots keep phrases only, so the upload
+     * window has none to pass today.
      */
     function buildSentimentCopilotPrompt(reports, options) {
         const o = options || {};
@@ -1138,26 +1225,31 @@
         const goals = sentimentGoalSet(o);
         const name = o.associateName || positive.associateName || 'the associate';
         const period = sentimentPeriodLine(positive);
-        const pct = function (r) { return Number(r.percentage).toFixed(1); };
+        // "80%", not "80.0%": a whole number reads without its ".0".
+        const pct = function (r) { return Number(r.percentage).toFixed(1).replace(/\.0$/, ''); };
 
         let out = '';
         out += 'Write a short, warm coaching note for ' + name + ' about how they speak on calls.\n\n';
         if (period) out += 'Period: ' + period + '\n';
-        out += 'Positive Language: ' + pct(positive) + '% against a ' + goals.POSITIVE_GOAL + '% goal\n';
-        out += 'Avoiding Negative Words: ' + pct(negative) + '% against a ' + goals.NEGATIVE_GOAL + '% goal\n';
-        out += 'Managing Emotions: ' + pct(emotions) + '% against a ' + goals.EMOTIONS_GOAL + '% goal\n\n';
+        out += 'Positive Language: ' + pct(positive) + '% against ' + sentimentGoalPhrase(goals.POSITIVE_GOAL) + '\n';
+        out += 'Avoiding Negative Words: ' + pct(negative) + '% against ' + sentimentGoalPhrase(goals.NEGATIVE_GOAL) + '\n';
+        out += 'Managing Emotions: ' + pct(emotions) + '% against ' + sentimentGoalPhrase(goals.EMOTIONS_GOAL) + '\n\n';
 
         const focus = sentimentFocusPick({ positive: positive, negative: negative, emotions: emotions }, goals);
+        out += sentimentPraiseLine([
+            { key: 'positiveWord', label: 'Positive Language', value: Number(positive.percentage), goal: goals.POSITIVE_GOAL, prior: sentimentPriorFigure(o.prior, 'positive') },
+            { key: 'negativeWord', label: 'Avoiding Negative Words', value: Number(negative.percentage), goal: goals.NEGATIVE_GOAL, prior: sentimentPriorFigure(o.prior, 'negative') },
+            { key: 'managingEmotions', label: 'Managing Emotions', value: Number(emotions.percentage), goal: goals.EMOTIONS_GOAL, prior: sentimentPriorFigure(o.prior, 'emotions') }
+        ], focus) + '\n';
         if (focus) {
             out += 'Focus on ' + focus.label + ', which is the widest gap.\n';
             const phrases = sentimentFocusPhrases(focus.report, { negative: focus.isNegative });
             if (phrases.lines.length) out += phrases.heading + ' ' + phrases.lines.join('; ') + '\n';
             if (phrases.secondLines.length) out += phrases.secondHeading + ' ' + phrases.secondLines.join('; ') + '\n';
-        } else {
-            out += 'All three are at goal, so make this a recognition note rather than a correction.\n';
         }
 
         out += '\nRules for the note:\n';
+        out += '- Open with the praise above, in your own words and meant, before anything to work on.\n';
         out += '- Plain words. No jargon, and do not read the scores back like a report.\n';
         out += '- Name one thing to try, not a list.\n';
         out += '- Do not promise any exception, allowance or adjustment.\n';

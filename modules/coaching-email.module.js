@@ -339,10 +339,78 @@
         return ahead / Math.abs(target);
     }
 
-    function collectCoachingPromptMetricData(employeeRecord) {
+    /*
+     * No handle time is no calls (Scott, 2026-10-14). A 0 second time sits
+     * under every "lower is better" goal, so read as a number it was the top
+     * win, and someone who was out all week was praised for it. The morning
+     * pulse owns the rule; this is its copy for when that module is not
+     * loaded.
+     */
+    function coachingTookNoCalls(employeeRecord) {
+        const pulse = window.DevCoachModules?.morningPulse;
+        if (typeof pulse?.tookNoCalls === 'function') return pulse.tookNoCalls(employeeRecord);
+        if (!employeeRecord) return true;
+        const aht = parseFloat(employeeRecord.aht);
+        if (Number.isFinite(aht)) return aht <= 0;
+        const calls = parseInt(employeeRecord.totalCalls, 10);
+        return Number.isFinite(calls) && calls <= 0;
+    }
+
+    function isZeroTime(key, value) {
+        return METRICS_REGISTRY[key]?.unit === 'sec' && Number(value) <= 0;
+    }
+
+    // The same associate's row in the week before this one, so a real move
+    // the right way can be praised when nothing is at goal yet.
+    function resolveCoachingPriorRecord(employeeName) {
+        if (!employeeName || !coachingLatestWeekKey) return null;
+        const current = weeklyData[coachingLatestWeekKey];
+        if (!current) return null;
+        const periodType = current.metadata?.periodType || 'week';
+        let priorKey = null;
+        if (typeof window.getPreviousPeriodData === 'function') {
+            try { priorKey = window.getPreviousPeriodData(coachingLatestWeekKey, periodType); } catch (e) { priorKey = null; }
+        }
+        if (!priorKey) {
+            const parts = String(coachingLatestWeekKey).split('|');
+            const start = current.metadata?.startDate || parts[0] || '';
+            let bestEnd = '';
+            Object.keys(weeklyData || {}).forEach(key => {
+                if (key === coachingLatestWeekKey) return;
+                const meta = weeklyData[key]?.metadata || {};
+                if ((meta.periodType || 'week') !== periodType) return;
+                const end = meta.endDate || String(key).split('|')[1] || '';
+                if (!end || !start || end >= start) return;
+                if (end > bestEnd) { bestEnd = end; priorKey = key; }
+            });
+        }
+        return (priorKey && weeklyData[priorKey]?.employees?.find(emp => emp.name === employeeName)) || null;
+    }
+
+    // The center average for this week, by registry key, when one was saved.
+    function resolveCoachingCenterAverages() {
+        if (typeof window.getCenterAverageForWeek !== 'function' || !coachingLatestWeekKey) return null;
+        try { return window.getCenterAverageForWeek(coachingLatestWeekKey) || null; } catch (e) { return null; }
+    }
+
+    function effortPositive(ongoing) {
+        return {
+            kind: 'effort', key: '', label: '',
+            text: ongoing ? 'I see the effort you\'re putting in, and it matters.' : 'I saw the effort you put in, and it matters.'
+        };
+    }
+
+    function collectCoachingPromptMetricData(employeeRecord, options = {}) {
         const wins = [];
         const opportunities = [];
         const usedTips = new Set();
+        const praiseRows = [];
+        const ongoing = options.ongoing !== undefined
+            ? !!options.ongoing
+            : weeklyData[coachingLatestWeekKey]?.metadata?.periodType === 'week-in-progress';
+        const noCalls = coachingTookNoCalls(employeeRecord);
+        const prior = resolveCoachingPriorRecord(employeeRecord?.name);
+        const center = resolveCoachingCenterAverages();
 
         getMetricOrder().map(m => m.key).forEach(key => {
             // Reliability is the year's running total and stays out of a
@@ -357,6 +425,8 @@
 
             const numValue = parseFloat(value);
             if (isNaN(numValue)) return;
+            // A 0 second handle, hold or wrap time is no calls, not a win.
+            if (isZeroTime(key, numValue)) return;
 
             const target = metricConfig.target?.value;
             if (target === undefined || target === null) return;
@@ -369,7 +439,21 @@
                 goal: goalPhrase(key, target),
                 margin: goalMargin(key, numValue, target)
             };
-            (isMetricMeetingTarget(key, numValue, target) ? wins : opportunities).push(entry);
+            const meets = isMetricMeetingTarget(key, numValue, target);
+            // With no calls behind the week, a number at goal is not praise.
+            if (meets && noCalls) return;
+            (meets ? wins : opportunities).push(entry);
+
+            const priorValue = prior && hasSurveysBehind(prior, key) ? parseFloat(prior[key]) : NaN;
+            const centerValue = center ? parseFloat(center[key]) : NaN;
+            praiseRows.push({
+                key,
+                label: metricConfig.label,
+                value: numValue,
+                target,
+                prior: Number.isFinite(priorValue) && !isZeroTime(key, priorValue) ? priorValue : null,
+                center: Number.isFinite(centerValue) && centerValue > 0 ? centerValue : null
+            });
         });
 
         const measured = wins.length + opportunities.length;
@@ -377,7 +461,16 @@
         const topFocus = opportunities.slice().sort((a, b) => a.margin - b.margin).slice(0, MAX_PROMPT_FOCUS)
             .map(entry => ({ ...entry, tip: chooseCoachingTip(METRICS_REGISTRY[entry.key], usedTips) }));
 
-        return { wins: topWins, opportunities: topFocus, metCount: wins.length, measuredCount: measured };
+        // Scott, 2026-10-14: "in every piece of feedback ... provide positive
+        // feedback." With nothing at goal, Copilot is handed the best true
+        // thing to praise instead of an instruction to praise anyway.
+        let positive = null;
+        if (!topWins.length) {
+            const find = window.DevCoachModules?.messageVoice?.truePositive;
+            positive = (typeof find === 'function' && find(praiseRows, { ongoing, tookNoCalls: noCalls })) || effortPositive(ongoing);
+        }
+
+        return { wins: topWins, opportunities: topFocus, metCount: wins.length, measuredCount: measured, positive };
     }
 
     // -- Prompt period resolution ----------------------------------------------
@@ -402,10 +495,12 @@
 
     // -- Prompt section builders -----------------------------------------------
 
-    function buildCoachingPromptMetricsText(wins, opportunities) {
+    // With no wins, the line is the real positive collectCoachingPromptMetricData
+    // found, so the data and the "lead with" instruction agree.
+    function buildCoachingPromptMetricsText(wins, opportunities, positive = null) {
         const winsText = wins.length
             ? wins.map(w => `- ${w.label}: ${w.value}, ${w.goal || `goal ${w.target}`}`).join('\n')
-            : '- None at goal this week. Open with real thanks for the effort they are putting in, without inventing a win.';
+            : `- ${(positive && positive.text) || 'I see the effort you\'re putting in, and it matters.'}`;
 
         const oppText = opportunities.length
             ? opportunities.map(o => `- ${o.label}: ${o.value}, ${o.goal || `goal ${o.target}`}\n  Tip: ${o.tip}`).join('\n')
@@ -451,16 +546,25 @@ Vary wording and structure naturally like a human would.`;
 - Write in natural paragraphs with clean, simple bullet points where appropriate`;
     }
 
-    function buildCoachingPromptFlowSection(preferredName) {
+    // options.positive is set when nothing is at goal: the email leads with
+    // that one real positive, and the flow says so instead of "the wins".
+    function buildCoachingPromptFlowSection(preferredName, options = {}) {
+        const positive = options.positive;
+        const praise = positive
+            ? `Open With Praise:
+- Lead with the positive listed below${positive.key ? ', with its number' : ''}, said warmly in your own words
+- Be specific, and say why it matters to customers or the team
+- Praise only what is listed. Do not invent a win and do not say that nothing is at goal`
+            : `Celebrate Wins:
+- Lead with the wins listed below, each with its number and its goal
+- Be specific and warm about each one, and say why it matters to customers or the team`;
         return `EMAIL FLOW (INTERNAL, DO NOT SHOW)
 
 Opening:
 - Greet ${preferredName} by name
 - Thank them and lead with appreciation
 
-Celebrate Wins:
-- Lead with the wins listed below, each with its number and its goal
-- Be specific and warm about each one, and say why it matters to customers or the team
+${praise}
 
 Coaching:
 - Only the focus areas listed below, and no others
@@ -473,11 +577,11 @@ Close:
 - Make it clear you are in their corner`;
     }
 
-    function buildCoachingPromptOutputRequirementsSection(preferredName) {
+    function buildCoachingPromptOutputRequirementsSection(preferredName, options = {}) {
         return `OUTPUT REQUIREMENTS
 
 - Address ${preferredName} by name in the opening
-- Use clean bullets for the wins and the focus areas
+- ${options.positive ? 'Open with the positive in a warm sentence, then use clean bullets for the focus areas' : 'Use clean bullets for the wins and the focus areas'}
 - Write each number the way it is given, with its goal ("goal 93% or better")
 - Exactly ONE tip per focus area, rewritten in natural language, never copied verbatim
 - Sound like a real supervisor: natural, human, and supportive
@@ -487,17 +591,19 @@ Close:
 
     function buildCoachingPromptDataSection(periodLabel, winsText, oppText, options = {}) {
         const label = /^Week (of|ending) /.test(String(periodLabel || '')) ? periodLabel : `Week of ${periodLabel}`;
-        const tally = options.measuredCount
+        // "At goal on 0 of 9" is not a thing to hand over for a warm email.
+        const tally = options.measuredCount && options.metCount
             ? `\nAt goal on ${options.metCount} of ${options.measuredCount} measures.\n`
             : '';
         const tense = options.ongoing
             ? '\nThe week is still going, so talk about it in the present tense.\n'
             : '\nThe week is over, so talk about it in the past tense.\n';
+        const heading = options.positive ? 'The positive to open with:' : 'Wins to celebrate:';
         return `DATA FOR THIS EMAIL
 
 ${label}
 ${tally}${tense}
-Wins to celebrate:
+${heading}
 ${winsText}
 
 Focus areas (at most two):
@@ -523,23 +629,26 @@ Generate the coaching email for ${preferredName} now.`;
     // -- Full prompt assembly --------------------------------------------------
 
     function buildCoachingPrompt(employeeRecord) {
-        const { wins, opportunities, metCount, measuredCount } = collectCoachingPromptMetricData(employeeRecord);
         const weekLabel = resolveCoachingPromptWeekLabel();
         const periodType = weeklyData[coachingLatestWeekKey]?.metadata?.periodType || 'week';
+        const ongoing = periodType === 'week-in-progress';
+        const { wins, opportunities, metCount, measuredCount, positive } = collectCoachingPromptMetricData(employeeRecord, { ongoing });
 
         const preferredName = getEmployeeNickname(employeeRecord.name) || String(employeeRecord.name || '').split(/\s+/)[0];
-        const { winsText, oppText } = buildCoachingPromptMetricsText(wins, opportunities);
+        const { winsText, oppText } = buildCoachingPromptMetricsText(wins, opportunities, positive);
+        const praiseOptions = wins.length ? {} : { positive };
 
         return [
             buildCoachingPromptRoleSection(employeeRecord.name),
             buildCoachingPromptVoiceToneSection(),
             buildCoachingPromptRulesSection(),
-            buildCoachingPromptFlowSection(preferredName),
-            buildCoachingPromptOutputRequirementsSection(preferredName),
+            buildCoachingPromptFlowSection(preferredName, praiseOptions),
+            buildCoachingPromptOutputRequirementsSection(preferredName, praiseOptions),
             buildCoachingPromptDataSection(weekLabel, winsText, oppText, {
                 metCount,
                 measuredCount,
-                ongoing: periodType === 'week-in-progress'
+                ongoing,
+                positive: praiseOptions.positive
             }),
             buildCoachingPromptDataRulesSection(),
             buildCoachingPromptFinalInstructionSection(preferredName)
@@ -834,6 +943,8 @@ Generate the coaching email for ${preferredName} now.`;
         setCoachingHistoryEmptyState,
         renderCoachingHistory,
         chooseCoachingTip,
+        coachingTookNoCalls,
+        resolveCoachingPriorRecord,
         collectCoachingPromptMetricData,
         resolveCoachingPromptPeriodEndDate,
         buildCoachingPromptMetricsText,

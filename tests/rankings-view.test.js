@@ -1431,8 +1431,11 @@ suite('rankings view: the monthly email says targets and nothing else', (t) => {
     t.check('there are metric lines', metricLines.length >= 1);
     metricLines.forEach((l) => {
         t.check('a metric line carries its goal: ' + l.slice(0, 30), l.indexOf('(goal:') !== -1);
+        // A miss says how far there is to go (Scott, 2026-10-14: every piece
+        // of feedback carries praise, so no wall of "Not there yet."); the
+        // hours, a year's total, keep the old words.
         t.check('and a verdict: ' + l.slice(0, 30),
-            l.indexOf('. Met.') !== -1 || l.indexOf('. Not there yet.') !== -1);
+            l.indexOf('. Met.') !== -1 || / from goal\.$/.test(l) || l.indexOf('. Not there yet.') !== -1);
     });
 
     // The count line must agree with the lines above it.

@@ -1445,10 +1445,19 @@
 
     /* Box 1 when nothing is at goal and nothing is rising: the measure
      * nearest its goal, said as the place to start. */
+    function _closestMetric(focus) {
+        var pool = (focus || []).filter(function (m) {
+            if (m.metricKey === RELIABILITY || !m.target || !Number.isFinite(m.latestValue)) return false;
+            // No handle time is no calls, not a place to build from.
+            return !((_registry()[m.metricKey] || {}).unit === 'sec' && m.latestValue <= 0);
+        });
+        if (!pool.length) return null;
+        return pool.slice().sort(function (a, b) { return _missSeverity(a) - _missSeverity(b); })[0];
+    }
+
     function _closestLine(focus, ctx) {
-        var pool = (focus || []).filter(function (m) { return m.target && Number.isFinite(m.latestValue); });
-        if (!pool.length) return '';
-        var closest = pool.slice().sort(function (a, b) { return _missSeverity(a) - _missSeverity(b); })[0];
+        var closest = _closestMetric(focus);
+        if (!closest) return '';
         return ctx.firstName + ' is closest to goal on ' + _shortLabel(closest.metricKey)
             + ', at ' + _display(closest.metricKey, closest.latestValue) + ' in ' + closest.latestQuarter
             + ' against the ' + _display(closest.metricKey, closest.target.value)
@@ -1611,6 +1620,66 @@
             + lines.join('\n');
     }
 
+    /* True things to praise, for a prompt built elsewhere.
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback ... make
+     * sure to provide positive feedback." The Mid-Year and Year-End prompts
+     * had nothing to hand Copilot for someone with no goal met. These are
+     * the same judgements the file note's first box makes, as fact lines:
+     *
+     *   progress  below goal and moving the right way (_progressFor)
+     *   closest   the measure nearest its goal, in the newest solid quarter
+     *   support   the coaching sessions and calls worked on together
+     *
+     * Hours are never in here: Mid-Year and Year-End keep them out entirely.
+     * options.ongoing false words a finished year in the past tense.
+     */
+    function praiseFacts(ctx, options) {
+        if (!ctx) return [];
+        var opts = options || {};
+        var ongoing = opts.ongoing !== false;
+        var split = splitForBoxes(ctx);
+        var out = [];
+        split.progress.slice(0, 2).forEach(function (m) {
+            var p = m.progress;
+            out.push({
+                kind: 'progress',
+                metricKey: m.metricKey,
+                label: m.label,
+                text: m.label + (ongoing ? ', moving the right way: ' : ', moved the right way: ')
+                    + _display(m.metricKey, p.from.value) + ' in ' + p.from.name + ' to '
+                    + _display(m.metricKey, p.to.value) + ' in ' + p.to.name
+                    + (p.kind === 'best' && p.ofYear ? ', the best quarter of the year' : '')
+            });
+        });
+        var closest = _closestMetric(split.focus);
+        if (closest) {
+            out.push({
+                kind: 'closest',
+                metricKey: closest.metricKey,
+                label: closest.label,
+                text: closest.label + ', the closest to goal: ' + _display(closest.metricKey, closest.latestValue)
+                    + ' in ' + closest.latestQuarter + ' against the '
+                    + _display(closest.metricKey, closest.target.value) + ' goal'
+            });
+        }
+        var together = _togetherLine(ctx);
+        if (together) {
+            out.push({
+                kind: 'support',
+                metricKey: '',
+                label: '',
+                text: 'The work ' + ctx.firstName + (ongoing ? ' has put in with me this year: ' : ' put in with me this year: ')
+                    + together.charAt(0).toLowerCase() + together.slice(1).replace(/\.$/, '')
+            });
+        }
+        return out;
+    }
+
+    function buildPraiseFacts(employeeName, year, options) {
+        return praiseFacts(buildContext(employeeName, year, options), options);
+    }
+
     /* ── Talking points for the meeting ──
      *
      * The document above is a file note: finished prose, third person, for
@@ -1653,9 +1722,16 @@
         // is not raised here at all; on pace it is still a win above.
         var focusItems = split.focus.slice(0, 2).map(function (m) { return _talkItem(m, ctx); });
 
+        // Nothing at goal and nothing rising outside the two to work on. The
+        // sheet still opens on something true: a rise inside one of the two,
+        // or the measure nearest its goal (Scott, 2026-10-14: "Make sure to
+        // provide positive feedback" in every piece of feedback). Hours on
+        // pace stay a win of their own, but they are not the only opener.
+        var workingLines = (!wins.length && !risingItems.length) ? _workingLines(split, ctx) : [];
+
         var sections = [];
-        if (winItems.length) {
-            sections.push({ id: 'wins', heading: 'Start with what is working', items: winItems });
+        if (winItems.length || workingLines.length) {
+            sections.push({ id: 'wins', heading: 'Start with what is working', items: winItems, lines: workingLines });
         }
         if (risingItems.length) {
             sections.push({ id: 'rising', heading: 'Moving the right way', items: risingItems });
@@ -1855,12 +1931,45 @@
         return _cap(parts.join(' and ')) + (named.length ? ', on ' + named.join(', ') : '') + '.';
     }
 
+    /* The opener when nothing is at goal and nothing outside the two focus
+     * metrics is rising: a rise inside one of them, else the measure nearest
+     * its goal, else the work put in. Third person, like the file note. */
+    function _workingLines(split, ctx) {
+        var lines = split.progress.slice(0, 2)
+            .map(function (m, i) { return progressSentence(m, ctx, i); })
+            .filter(Boolean);
+        if (!lines.length) {
+            var closest = _closestLine(split.focus, ctx);
+            if (closest) lines.push(closest);
+        }
+        if (!lines.length) {
+            var support = supportSentence(ctx);
+            if (support) lines.push(support);
+        }
+        if (!lines.length) {
+            var voice = (window.DevCoachModules || {}).messageVoice;
+            var effort = voice && typeof voice.truePositive === 'function'
+                ? voice.truePositive([], { ongoing: ctx.quarter < 4 }).text : '';
+            if (effort) lines.push(effort);
+        }
+        return lines;
+    }
+
     function _questions(wins, split, next, rising) {
         var out = [];
         // A question about something going well, even on a hard quarter:
-        // a metric on its way up is worth asking about as much as one at goal.
-        var good = wins.length ? wins[0] : (rising && rising.length ? rising[0] : null);
+        // a metric on its way up is worth asking about as much as one at goal,
+        // and with neither, the measure nearest its goal is still a place
+        // something is working.
+        var good = wins.length ? wins[0]
+            : (rising && rising.length ? rising[0]
+                : (split.progress && split.progress.length ? split.progress[0] : null));
+        var closest = good ? null : _closestMetric(split.focus);
         if (good) out.push('What has been working for you on ' + good.label.toLowerCase() + '?');
+        else if (closest) {
+            out.push('What has been working for you on ' + closest.label.toLowerCase()
+                + ', where you are closest to goal?');
+        }
         var firstRate = split.focus[0];
         if (firstRate) out.push('What gets in the way on ' + firstRate.label.toLowerCase() + '?');
         else if (split.watch.length) out.push('What has changed on ' + split.watch[0].label.toLowerCase() + ' lately?');
@@ -1932,7 +2041,15 @@
                 + ' in ' + p.from.name + ' to ' + _display(m.metricKey, p.to.value) + ' in ' + p.to.name);
         });
         if (support) recognised.push('- The work ' + name + ' has put in with me this year');
-        if (!recognised.length) recognised.push('- The effort ' + name + ' brings, and the measure closest to goal');
+        if (!recognised.length) {
+            // Named, so Copilot is handed a real measure to praise rather
+            // than told to find one.
+            var closest = _closestMetric(split.focus);
+            recognised.push(closest
+                ? '- The effort ' + name + ' brings, and ' + closest.label.toLowerCase() + ', the closest to goal at '
+                    + _display(closest.metricKey, closest.latestValue) + ' in ' + closest.latestQuarter
+                : '- The effort ' + name + ' brings');
+        }
         recognised.forEach(function (line) { out.push(line); });
 
         out.push('');
@@ -2001,6 +2118,8 @@
         buildPrompt: buildPrompt,
         buildTalkingPoints: buildTalkingPoints,
         factLines: factLines,
-        buildProgressionBlock: buildProgressionBlock
+        buildProgressionBlock: buildProgressionBlock,
+        praiseFacts: praiseFacts,
+        buildPraiseFacts: buildPraiseFacts
     };
 })();

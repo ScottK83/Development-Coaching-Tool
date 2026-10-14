@@ -212,20 +212,63 @@
         (label, val) => `The work on ${label} is showing, ${val} is proof.`,
         (label, val) => `${label} at ${val}? That tells me you're locked in.`,
     ];
+    /* Said only when nothing on target, no real move and no true positive
+     * in the numbers was found (see truePositiveFor). Every line is praise of
+     * the effort, never sympathy: "Not every week is going to be a highlight
+     * reel" and "Rough stretch" told somebody the week was bad and called it
+     * kindness (Scott, 2026-10-14: positive feedback in every message). No
+     * line names the period in hand or takes a tense, because the opener
+     * already has, and the Monday kickoff draws from here over a month or a
+     * year too.
+     */
     const NO_WINS = [
-        'I see you putting in the effort and I appreciate it!',
-        'Appreciate you showing up and grinding.',
-        'I know the numbers don\'t always show it, but the effort matters.',
-        'Keep pushing, I see the work you\'re putting in.',
-        'Some weeks the numbers don\'t cooperate. Doesn\'t change how I see your effort.',
-        'The grind doesn\'t always pay off immediately, but it will. Hang in there.',
-        'Not every week is going to be a highlight reel, and that\'s okay.',
-        'I\'d rather have someone who keeps fighting through a tough stretch, and that\'s you.',
-        'Rough stretch, but I\'ve seen what you can do. We\'ll get there.',
-        'The effort is there. The results are going to follow.',
-        'Listen, not every week lands perfectly. What matters is you keep showing up.',
-        'I appreciate the consistency in your effort even when the numbers are stubborn.',
+        'I see you putting in the effort, and I appreciate it!',
+        'Appreciate you showing up and putting in the work every day.',
+        'The effort you bring every day matters, and I see it.',
+        'I see the work you\'re putting in, and I appreciate it.',
+        'Thank you for the way you show up for our customers. It doesn\'t go unnoticed.',
+        'I appreciate how you keep showing up and giving it your best.',
+        'Your work ethic is something I really value on this team.',
+        'I value how hard you work on every call.',
+        'Thanks for the steady effort. It makes a difference to the team.',
+        'Some weeks the numbers get all the attention, so I want to say it plainly: I see your effort and I appreciate it.',
+        'Thank you for showing up and taking care of our customers.',
+        'I appreciate the consistency in your effort. That counts for a lot.',
     ];
+    /* The best true thing in the numbers, said first when nothing is on
+     * target (see truePositiveFor). One pool per kind, each with its twin in
+     * the present for a period still running. No line names the period: the
+     * opener in front of it already has. `gap` is a move in words ("4
+     * points", "14 seconds").
+     */
+    const TRUE_POSITIVE = {
+        atGoal: [
+            (label, val) => `Your ${label} was on target at ${val}. Nice work there.`,
+            (label, val) => `${label} at ${val} was right where it needs to be. Good stuff.`,
+        ],
+        aboveCenter: [
+            (label, val, center) => `Your ${label} at ${val} came in better than the center average of ${center}. That's a real strength.`,
+            (label, val, center) => `${label} at ${val} beat the center average of ${center}. Nice work there.`,
+        ],
+        closest: [
+            (label, val, target) => `${label} was your closest to goal, at ${val} against the ${target} goal, and that's a good place to build from.`,
+            (label, val, target, gap) => `Your ${label} at ${val} came within ${gap} of the ${target} goal, the closest of all your numbers. That's something to build on.`,
+        ]
+    };
+    const TRUE_POSITIVE_ONGOING = {
+        atGoal: [
+            (label, val) => `Your ${label} is on target at ${val}. Nice work there.`,
+            (label, val) => `${label} at ${val} is right where it needs to be. Good stuff.`,
+        ],
+        aboveCenter: [
+            (label, val, center) => `Your ${label} at ${val} is better than the center average of ${center}. That's a real strength.`,
+            (label, val, center) => `${label} at ${val} is beating the center average of ${center}. Nice work there.`,
+        ],
+        closest: [
+            (label, val, target) => `${label} is your closest to goal, at ${val} against the ${target} goal, and that's a good place to build from.`,
+            (label, val, target, gap) => `Your ${label} at ${val} is within ${gap} of the ${target} goal, the closest of all your numbers. That's something to build on.`,
+        ]
+    };
     // --- Focus framing pools, keyed by how the period vs YTD look together ---
     //
     // "persistent" — both the period AND YTD are missing target (real trend)
@@ -875,19 +918,20 @@
         (label, val) => `The work on ${label} is paying off, ${val} is great.`,
         (label, val, when) => `${label} at ${val} is one of the best numbers I saw${at(when)}.`,
     ];
+    // Only when the month has no win, no real move and no true positive in it
+    // (see truePositiveFor). Thanks for the effort, never sympathy: "Tough
+    // month" and "Not the month we wanted" were how these used to read.
     const MO_NO_WINS = [
-        (month) => `${month} was a grind, but I see the effort.`,
-        () => 'Not the month we wanted, but we\'re going to build on it.',
-        () => 'Tough month, but we\'ve got a clean slate now.',
-        () => 'Some months are like this. What matters is how we respond.',
-        (month) => `I know ${month} wasn't the month you were hoping for. Let's use it as fuel.`,
-        (month) => `The numbers were tough in ${month}, but I've seen what you're capable of.`,
+        (month) => `Thank you for the work you put in during ${month}. I saw the effort, and it matters.`,
+        () => 'I appreciate how you kept showing up and giving it your best. That effort counts.',
+        (month) => `I saw how hard you worked in ${month}, and I appreciate it.`,
+        () => 'Thank you for the effort you brought to every call. It doesn\'t go unnoticed.',
     ];
     const MO_NO_WINS_ONGOING = [
-        (month) => `${month} has been a grind so far, but I see the effort, and there's plenty of month left.`,
-        () => 'The month isn\'t over, and there\'s still time to turn it.',
-        (month) => `It's been a tough start to ${month}, but I've seen what you're capable of.`,
-        (month) => `Not the start we wanted, but there's a lot of ${month} left to work with.`,
+        (month) => `Thank you for the work you're putting in during ${month}. I see the effort, and it matters.`,
+        () => 'I appreciate how you keep showing up and giving it your best. That effort counts.',
+        (month) => `I see how hard you're working in ${month}, and I appreciate it.`,
+        () => 'Thank you for the effort you bring to every call. It doesn\'t go unnoticed.',
     ];
     // `ahead` is the stretch the focus is for: the month after a finished one
     // ("October"), or what is left of a running one ("the rest of October").
@@ -922,10 +966,14 @@
         'Here\'s to an even better month ahead. I\'m in your corner.',
     ];
     const MO_CLOSERS_TOUGH = [
-        'On to the next one. Reach out if you need anything.',
         'Thanks for the effort. Let\'s keep the conversation going.',
         'I\'m in your corner. Let me know what would help.',
         'We\'ll get there together. My door is always open.',
+    ];
+    // "On to the next one" says the month is over, so a month still running
+    // never hears it.
+    const MO_CLOSERS_TOUGH_DONE = [
+        'On to the next one. Reach out if you need anything.',
     ];
 
     /* ── Tense ──
@@ -2191,6 +2239,100 @@
         return { text: `${count} survey${count === 1 ? '' : 's'}`, keys: new Set(perfect.map(w => w.metricKey)) };
     }
 
+    /* THE BEST TRUE THING, WHEN NOTHING IS ON TARGET
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback ... make
+     * sure to provide positive feedback." With no win and no real move, the
+     * check-in, the Monday kickoff, the monthly review and the growth note
+     * all fell back on a line of sympathy ("Not every week is going to be a
+     * highlight reel", "Tough month", "Let's regroup"). There is nearly always
+     * something real to say, and messageVoice.truePositive finds it: on
+     * target, then better than the center average, then closest to goal.
+     *
+     * Moves are not handed over. getBiggestJump has already looked for one,
+     * past the metric's own noise floor and on enough calls, and found none,
+     * so a smaller move is not one to praise.
+     *
+     * Not the focus metric when another will do. Praising a number and then
+     * calling it the thing that needs real attention is what FOCUS_IMPROVING
+     * was written to stop. "Closest to goal" is only said when it is the
+     * closest of everything and near enough to read as close: five of its
+     * noise units, the gap goalNudge calls one strong week. A thin survey
+     * sample is left out, as it is from every win, and reliability never
+     * comes in (PULSE_EXCLUDED_METRICS).
+     *
+     * Returns { kind, row } or null, which means thank the effort instead.
+     */
+    function praiseRows(emp, metrics) {
+        return (metrics || [])
+            .filter(m => m && !PULSE_EXCLUDED_METRICS.includes(m.metricKey))
+            .filter(m => hasSurveyBehind(emp, m.metricKey))
+            .filter(m => !SURVEY_METRIC_KEYS.has(m.metricKey) || surveyResponsesFor(emp, m.metricKey) >= MIN_SURVEYS_TO_PRAISE)
+            .filter(m => Number.isFinite(m.employeeValue) && Number.isFinite(m.target))
+            .map(m => ({
+                key: m.metricKey,
+                label: m.label,
+                value: m.employeeValue,
+                target: m.target,
+                center: Number(m.centerValue) > 0 ? Number(m.centerValue) : undefined,
+                metric: m
+            }));
+    }
+
+    // `avoidKeys` are never praised: a metric the same message lists as
+    // slipped would be praised and scolded in one breath, the whiplash the
+    // 10/14 voice pass took out. "Closest" is still judged against every
+    // metric, so an avoided one can block the claim but never fake it.
+    function truePositiveFor(emp, metrics, focalKey, ongoing, avoidKeys) {
+        const avoid = new Set([focalKey].concat(avoidKeys || []).filter(Boolean));
+        const best = window.DevCoachModules?.messageVoice?.truePositive;
+        if (typeof best !== 'function' || tookNoCalls(emp)) return null;
+        const rows = praiseRows(emp, metrics);
+        const opts = { ongoing: !!ongoing };
+        // The nearest to goal of everything, as a share of its goal, the way
+        // truePositive measures it.
+        const margin = r => (isReverseKey(r.key) ? r.target - r.value : r.value - r.target) / (Math.abs(r.target) || 1);
+        const closestKey = rows.length ? rows.slice().sort((a, b) => margin(b) - margin(a))[0].key : null;
+        const accept = (found, pool) => {
+            if (!found || !found.key || !TRUE_POSITIVE[found.kind]) return null;
+            const row = pool.find(r => r.key === found.key);
+            if (!row) return null;
+            if (found.kind === 'closest') {
+                if (rows.length < 2 || avoid.has(row.key) || row.key !== closestKey) return null;
+                const noise = getGrowthNoiseThreshold(row.key);
+                const units = Math.abs(row.value - row.target) / (Number.isFinite(noise) && noise > 0 ? noise : 1);
+                if (units > 5) return null;
+            }
+            return { kind: found.kind, row };
+        };
+        const overall = best(rows, opts);
+        if (overall && !avoid.has(overall.key)) {
+            const got = accept(overall, rows);
+            if (got) return got;
+        }
+        if (!avoid.size) return null;
+        const rest = rows.filter(r => !avoid.has(r.key));
+        return accept(best(rest, opts), rest);
+    }
+
+    // The sentence for what truePositiveFor found, or '' for none.
+    function truePositiveLine(found, ongoing) {
+        if (!found) return '';
+        const pools = ongoing ? TRUE_POSITIVE_ONGOING : TRUE_POSITIVE;
+        const row = found.row;
+        const val = fmtVal(row.key, row.value);
+        if (found.kind === 'aboveCenter') return pick(pools.aboveCenter)(row.label, val, fmtVal(row.key, row.center));
+        if (found.kind === 'closest') {
+            const unit = window.METRICS_REGISTRY?.[row.key]?.unit || '';
+            const rawGap = Math.abs(row.value - row.target);
+            const gap = fmtAmount(row.key, unit === '%' && rawGap >= 2 ? Math.round(rawGap) : rawGap);
+            // "within 0 points" is not a sentence; the line without the gap is.
+            const lines = /^0( |$)/.test(gap) ? pools.closest.slice(0, 1) : pools.closest;
+            return pick(lines)(row.label, val, fmtTarget(row.metric), gap);
+        }
+        return pick(pools.atGoal)(row.label, val);
+    }
+
     // The words a jump is measured over. Under a year-to-date window the
     // baseline is an earlier report from the same year, and the jump used to
     // say "86.4% last year to 89.5% this year" under an opener that said
@@ -2256,7 +2398,10 @@
         } else if (wins.length === 1) {
             praiseText = pick(ONE_WIN)(wins[0].label, fmtVal(wins[0]));
         } else if (!perfect) {
-            praiseText = pick(NO_WINS);
+            // Nothing on target and nothing that really moved: the best true
+            // thing in the numbers, and the effort when there is none.
+            praiseText = truePositiveLine(truePositiveFor(emp, allMetrics, focalPoint?.metricKey, recency.ongoing), recency.ongoing)
+                || pick(NO_WINS);
         }
         // The two lines the kickoff always had and the check-in never did.
         if (perfect) praiseText = `${praiseText} ${pick(PERFECT_SURVEYS_SOLO)(perfect.text)}`.trim();
@@ -2665,7 +2810,14 @@
             praiseText = pick(ONE_WIN)(wins[0].label, fmtVal(wins[0]));
             namedWins.add(wins[0].metricKey);
         } else {
-            praiseText = pick(NO_WINS);
+            // Nothing on target and nothing that really moved: the best true
+            // thing in the numbers, and the effort when there is none. Not a
+            // win, so hadPraise below stays false and "With those wins in
+            // mind" is not said after it. A survey sample with a detractor in
+            // it is kept out here for the same reason it is kept out of wins.
+            const praisable = allMetrics.filter(m => !(kickoffHasDetractorSurveys && SURVEY_METRIC_KEYS.has(m.metricKey)));
+            praiseText = truePositiveLine(truePositiveFor(emp, praisable, focalPoint?.metricKey, recency.ongoing), recency.ongoing)
+                || pick(NO_WINS);
         }
         const hadPraise = !!(perfect || hasJump || wins.length);
 
@@ -3965,7 +4117,11 @@
         } else if (wins.length === 1) {
             praiseText = pick(MO_ONE_WIN)(wins[0].label, fmtVal(wins[0]), when);
         } else {
-            praiseText = pick(ongoing ? MO_NO_WINS_ONGOING : MO_NO_WINS)(month);
+            // No win and no real move: lead with the best true thing in the
+            // month (better than the center, closest to goal), and thank the
+            // effort only when there is nothing true to name.
+            praiseText = truePositiveLine(truePositiveFor(emp, allMetrics, focalPoint?.metricKey, ongoing), ongoing)
+                || pick(ongoing ? MO_NO_WINS_ONGOING : MO_NO_WINS)(month);
         }
 
         // The scorecard numbers only. "You hit target on 0 of 12 metrics" is
@@ -3989,7 +4145,9 @@
         // "Solid month overall" is for a month that was one. A tough month,
         // or one still running, gets a sign-off that is true either way.
         const tough = !wins.length || (core.length >= 2 && coreMet / core.length < 0.5);
-        const closers = tough ? MO_CLOSERS_TOUGH : (ongoing ? MO_CLOSERS : MO_CLOSERS.concat(MO_CLOSERS_DONE_GOOD));
+        const closers = tough
+            ? (ongoing ? MO_CLOSERS_TOUGH : MO_CLOSERS_TOUGH.concat(MO_CLOSERS_TOUGH_DONE))
+            : (ongoing ? MO_CLOSERS : MO_CLOSERS.concat(MO_CLOSERS_DONE_GOOD));
 
         let message = `${pick(ongoing ? MO_GREETINGS_ONGOING : MO_GREETINGS)(firstName, month)} ${praiseText}`;
         if (consistencyText) message += `\n\n${consistencyText}`;
@@ -4227,18 +4385,30 @@
     // Through the same survey gate as every other focus: "Focus area: Rep
     // Satisfaction sitting at 0.0% vs target 82.0%" went to somebody nobody
     // had surveyed (Scott, 2026-10-14).
-    function pickGrowthFocalPoint(latestEmp, analysisPeriodType, latestKey) {
+    function growthMetrics(latestEmp, analysisPeriodType, latestKey) {
         const analyzeFn = window.DevCoachModules?.metricTrends?.analyzeTrendMetrics
             || window.analyzeTrendMetrics;
-        if (!analyzeFn) return null;
+        if (!analyzeFn) return [];
         const centerAvgs = centerAveragesFor(latestKey);
         const analysis = analyzeFn(latestEmp, centerAvgs, null, null, {
             employeeName: latestEmp.name,
             weekKey: latestKey,
             periodType: analysisPeriodType
         });
-        return pickFocalPoint(speakableMetrics(latestEmp, analysis));
+        return speakableMetrics(latestEmp, analysis);
     }
+
+    // When nothing improved and nothing held at target, the growth note leads
+    // with this instead (Scott, 2026-10-14: positive feedback in every
+    // message). Thanks for the effort, in the period's tense.
+    const GROWTH_EFFORT = [
+        `I saw the effort you put in, and it matters.`,
+        `Thank you for the work you put in. It doesn't go unnoticed.`
+    ];
+    const GROWTH_EFFORT_ONGOING = [
+        `I see the effort you're putting in, and it matters.`,
+        `Thank you for the work you're putting in. It doesn't go unnoticed.`
+    ];
 
     async function generateGrowthMessage(employeeName, comparisonType) {
         const ctx = getGrowthComparisonContext(comparisonType);
@@ -4264,8 +4434,27 @@
             .filter(d => d.delta < 0 && !(meets && meets(d.metricKey, d.latestValue)))
             .sort((a, b) => jumpSize(a) - jumpSize(b)).slice(0, 2);
 
+        // What they held at target, and the metrics the focus is picked from.
+        const steady = improvements.length === 0 ? computeSteadyAtTarget(latestEmp, baselineEmp).slice(0, 3) : [];
+        const metrics = growthMetrics(latestEmp, ctx.analysisPeriodType, ctx.latestKey);
+        const focalPoint = pickFocalPoint(metrics);
+
         const greetings = improvements.length ? GROWTH_GREETINGS : GROWTH_GREETINGS_PLAIN;
         let message = `${pick(greetings)(firstName, labelInfo.long)}\n\n`;
+
+        // Nothing grew and nothing held at target. Everything slipping used
+        // to end on "Let's regroup" with no praise anywhere in it (Scott,
+        // 2026-10-14), so the best true thing comes first, kudos before the
+        // list: on target, better than the center, closest to goal, and the
+        // effort when the numbers have none of those.
+        if (improvements.length === 0 && steady.length === 0) {
+            const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+            const latestPeriod = getPeriodData(ctx.latestKey) || ytd[ctx.latestKey] || null;
+            const ongoing = !!describeWeekRecency(ctx.latestKey, latestPeriod).ongoing;
+            const brightSpot = truePositiveLine(truePositiveFor(latestEmp, metrics, focalPoint?.metricKey, ongoing, declines.map(d => d.metricKey)), ongoing)
+                || pick(ongoing ? GROWTH_EFFORT_ONGOING : GROWTH_EFFORT);
+            message += `${brightSpot}\n\n`;
+        }
         message += `${pick(GROWTH_RANGE_LINE)(ctx.currentLabel, ctx.priorLabel)}`;
 
         // Each move in words, with the two numbers it went between.
@@ -4285,17 +4474,13 @@
 
         // Nothing improved. Don't send an all-red message with no positive in
         // it: surface what they held at target so the note is honest but fair.
-        if (improvements.length === 0) {
-            const steady = computeSteadyAtTarget(latestEmp, baselineEmp).slice(0, 3);
-            if (steady.length) {
-                message += `\n\n${pick(GROWTH_HOLDING_INTRO)}`;
-                steady.forEach(s => {
-                    message += `\n• ${s.label}: still at ${fmtVal(s.metricKey, s.latestValue)}`;
-                });
-            }
+        if (steady.length) {
+            message += `\n\n${pick(GROWTH_HOLDING_INTRO)}`;
+            steady.forEach(s => {
+                message += `\n• ${s.label}: still at ${fmtVal(s.metricKey, s.latestValue)}`;
+            });
         }
 
-        const focalPoint = pickGrowthFocalPoint(latestEmp, ctx.analysisPeriodType, ctx.latestKey);
         if (focalPoint) {
             message += `\n\nFocus area: ${focalPoint.label} is at ${fmtVal(focalPoint)}, and the target is ${fmtTarget(focalPoint)}.`;
             const tip = await tipFor(employeeName, focalPoint.metricKey, 'medium');

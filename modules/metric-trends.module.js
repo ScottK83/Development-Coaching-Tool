@@ -1449,6 +1449,47 @@ function relativeLead(metric) {
     return ahead / Math.abs(target);
 }
 
+/*
+ * No handle time is no calls (Scott, 2026-10-14). A 0 second time sits under
+ * every "lower is better" goal, so read as a number it was the top win, and
+ * someone who was out all week was praised for it. These functions see the
+ * metric records rather than the row, so a 0 handle time stands in for the
+ * morning pulse's tookNoCalls.
+ */
+function isZeroTimeMetric(metric) {
+    return METRICS_REGISTRY[metric?.metricKey]?.unit === 'sec' && Number(metric?.employeeValue) <= 0;
+}
+
+function trendMetricsTookNoCalls(metrics) {
+    return (metrics || []).some(m => m?.metricKey === 'aht' && Number(m.employeeValue) <= 0);
+}
+
+/*
+ * The best true thing to praise when nothing is at goal, from
+ * messageVoice.truePositive: a real move the right way, better than the
+ * center, closest to goal, and only then the effort. Scott, 2026-10-14: "in
+ * every piece of feedback ... provide positive feedback."
+ */
+function trendTruePositive(metrics, ongoing) {
+    const list = (metrics || []).filter(m => m && m.metricKey !== 'reliability');
+    const noCalls = trendMetricsTookNoCalls(list);
+    const rows = list.filter(m => !isZeroTimeMetric(m)).map(m => ({
+        key: m.metricKey,
+        label: m.label,
+        value: m.employeeValue,
+        target: m.target,
+        prior: m.previousValue === null || m.previousValue === undefined || isZeroTimeMetric({ metricKey: m.metricKey, employeeValue: m.previousValue })
+            ? null : m.previousValue,
+        center: Number(m.centerValue) > 0 ? m.centerValue : null
+    }));
+    const find = window.DevCoachModules?.messageVoice?.truePositive;
+    const found = typeof find === 'function' ? find(rows, { ongoing, tookNoCalls: noCalls }) : null;
+    return found || {
+        kind: 'effort', key: '', label: '',
+        text: ongoing ? 'I see the effort you\'re putting in, and it matters.' : 'I saw the effort you put in, and it matters.'
+    };
+}
+
 // "up from 95.1% the week before", only when it moved the right way.
 function improvementClause(metric, periodWord) {
     if (metric?.previousValue === null || metric?.previousValue === undefined) return '';
@@ -1462,14 +1503,18 @@ function improvementClause(metric, periodWord) {
 
 function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta, options = {}) {
     const firstName = String(displayName || '').split(/[,\s]/)[0] || 'there';
-    const metrics = coachableTrendMetrics(allMetrics);
+    const coachable = coachableTrendMetrics(allMetrics);
+    const noCalls = trendMetricsTookNoCalls(coachable);
+    // A 0 second time is no calls: never a win, never a goal to hit.
+    const metrics = coachable.filter(m => !isZeroTimeMetric(m));
     const meta = periodMeta || {};
     const when = trendPeriodPhrase(meta, options.weekKey);
     const ongoing = trendPeriodIsOngoing(meta, options.weekKey);
     const periodWord = (meta.periodType === 'month') ? 'month' : (meta.periodType === 'quarter' ? 'quarter' : 'week');
     const was = ongoing ? 'is at' : 'came in at';
 
-    const wins = metrics.filter(m => m.meetsTarget)
+    // With no calls behind the period, a number at goal is not praise.
+    const wins = noCalls ? [] : metrics.filter(m => m.meetsTarget)
         .sort((a, b) => relativeLead(b) - relativeLead(a))
         .slice(0, 3);
 
@@ -1491,6 +1536,9 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
     });
 
     const lines = [`Hi ${firstName},`, ''];
+    // Nothing at goal still has something true to praise, and it goes first.
+    // The effort line is only for when there is nothing else.
+    const positive = wins.length ? null : trendTruePositive(coachable, ongoing);
 
     if (wins.length) {
         const metCount = metrics.filter(m => m.meetsTarget).length;
@@ -1505,7 +1553,9 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
             lines.push(`- ${m.label} ${was} ${value}${improvementClause(m, periodWord)} (${trendGoalPhrase(m.metricKey, m.target)}).${reason}`);
         });
     } else {
-        lines.push(`I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`);
+        lines.push(positive.kind === 'effort'
+            ? `I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`
+            : `I wanted to follow up on ${when}, and I want to start with something good. ${positive.text} Thank you for the work behind that.`);
     }
 
     if (focus.length) {
@@ -1517,7 +1567,9 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
             const moving = improvementClause(m, periodWord);
             const goal = trendGoalPhrase(m.metricKey, m.target).replace(/^goal /, 'goal is ');
             const tip = endWithPeriod((tipsFor(m) || [])[0]);
-            lines.push(`- ${m.label} ${was} ${value}${moving}, and the ${goal}.${moving ? ' It is already moving the right way.' : ''}${tip ? ` One thing to try: ${tip}` : ''}`);
+            // Said once: the opening already praised this move.
+            const saidAlready = positive?.kind === 'improved' && positive.key === m.metricKey;
+            lines.push(`- ${m.label} ${was} ${value}${moving}, and the ${goal}.${moving && !saidAlready ? ' It is already moving the right way.' : ''}${tip ? ` One thing to try: ${tip}` : ''}`);
         });
         lines.push('');
         lines.push('I know you can get there, and I am here to help however I can. Let me know if you want to sit down and talk any of it through.');
@@ -1894,7 +1946,8 @@ function attachTrendTipsModalHandlers(options) {
         copilotPrompt,
         focusAreas,
         employeeName,
-        periodLabel
+        periodLabel,
+        promptOptions
     } = options;
 
     document.getElementById('copyPromptBtn')?.addEventListener('click', () => {
@@ -1925,7 +1978,8 @@ function attachTrendTipsModalHandlers(options) {
                 secondaryFocusTips,
                 userNotesText,
                 sentimentSnapshot,
-                allMetrics
+                allMetrics,
+                promptOptions || {}
             )
             : copilotPrompt;
 
@@ -2063,6 +2117,8 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
 
     // Build the comprehensive Copilot prompt (NEW)
     const userNotes = ''; // Will be filled by user in textarea
+    // The period, so the praise is in its tense (running or finished).
+    const promptOptions = { periodMeta, weekKey };
     const copilotPrompt = buildTrendCoachingPrompt(
         displayName,
         primaryFocusMetric,
@@ -2071,7 +2127,8 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         secondaryFocusTips,
         userNotes,
         sentimentSnapshot,
-        allMetrics
+        allMetrics,
+        promptOptions
     );
 
     panel.innerHTML = buildTrendTipsModalHtml(
@@ -2099,7 +2156,8 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
         copilotPrompt,
         focusAreas,
         employeeName,
-        periodLabel
+        periodLabel,
+        promptOptions
     });
 }
 
@@ -2107,11 +2165,12 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  * Builds a natural language prompt for Microsoft Copilot to draft a coaching email.
  * Incorporates performance data, tips, and optional notes into guidance for AI.
  */
-function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
+function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null, options = {}) {
     // Reliability never reaches this prompt: a week's hours were listed as a
     // strength (Scott, 2026-10-14). The bundle already drops it and the
     // surveys nobody answered; this is the guard for any other caller.
     const metrics = coachableTrendMetrics(allTrendMetrics);
+    const ongoing = trendPeriodIsOngoing(options.periodMeta || {}, options.weekKey);
     if (weakestMetric?.metricKey === 'reliability') weakestMetric = null;
     if (trendingMetric?.metricKey === 'reliability') trendingMetric = null;
     // Wording comes from metric-movement: "rose by 45s vs previous, which is
@@ -2143,7 +2202,11 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         'Exceeding Expectation': 3
     };
 
-    const strengths = [...metrics]
+    // A 0 second time is no calls, never a strength (Scott, 2026-10-14).
+    const noCalls = trendMetricsTookNoCalls(metrics);
+    const praisable = noCalls ? [] : metrics.filter(m => !isZeroTimeMetric(m));
+
+    const strengths = [...praisable]
         .filter(m => m.classification === 'Exceeding Expectation' || (m.classification === 'On Track' && m.trendDirection === 'improving'))
         .sort((a, b) => (classificationOrder[b.classification] - classificationOrder[a.classification]) || ((b.trendDelta || 0) - (a.trendDelta || 0)))
         .slice(0, 4);
@@ -2156,6 +2219,17 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
             return scoreB - scoreA;
         })
         .slice(0, 4);
+
+    // There is always something to praise first. With no standout strength,
+    // a goal that is simply on target counts; with none of those, the best
+    // true positive (a real move, better than the center, closest to goal,
+    // then the effort). It used to say no strengths stood out and then ask
+    // for "specific praise for the strengths above".
+    const onTarget = strengths.length ? [] : praisable
+        .filter(m => m.meetsTarget && !priorities.includes(m))
+        .sort((a, b) => relativeLead(b) - relativeLead(a))
+        .slice(0, 4);
+    const positive = (strengths.length || onTarget.length) ? null : trendTruePositive(metrics, ongoing);
 
     const efficientSet = new Set(['aht', 'acw', 'holdTime', 'transfers']);
     const behaviorSet = new Set(['overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'overallExperience', 'cxRepOverall', 'fcr']);
@@ -2223,7 +2297,14 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
 
     const strengthLines = strengths.length > 0
         ? strengths.map(m => `- ${m.label}: demonstrates ${m.trendDirection === 'improving' ? 'building momentum and coachability' : 'reliable execution under normal call demand'}.`).join('\n')
-        : '- No clear strengths are separated enough from baseline this period; reinforce foundational consistency first.';
+        : onTarget.length > 0
+            ? onTarget.map(m => `- ${m.label}: on target at ${formatMetricDisplay(m.metricKey, m.employeeValue)} (${trendGoalPhrase(m.metricKey, m.target)}), steady work worth recognizing.`).join('\n')
+            : `- ${positive.text}`;
+    const praiseRequirement = positive
+        ? (positive.key
+            ? 'Warm and genuinely proud of them: open with specific praise for the positive under STRENGTHS TO LEVERAGE, with its number and why it matters to customers. Praise only that: do not invent a win and do not say that nothing is at goal'
+            : 'Warm and genuinely proud of them: open with real thanks for their effort, as under STRENGTHS TO LEVERAGE. Do not invent a win and do not say that nothing is at goal')
+        : 'Warm and genuinely proud of them: open with specific praise for the strengths above, each with its number and why it matters to customers';
 
     const priorityLines = priorities.length > 0
         ? priorities.map(m => `- ${m.label}: ${m.trendDirection === 'declining' ? 'moving away from goal' : 'below-target performance'} requires focused coaching to prevent broader impact.`).join('\n')
@@ -2317,7 +2398,7 @@ ${leadershipSection}
 Write a copy-ready coaching email directly to ${displayName}.
 
 Tone requirements:
-- Warm and genuinely proud of them: open with specific praise for the strengths above, each with its number and why it matters to customers
+- ${praiseRequirement}
 - Goal focused: at most two development areas, each with its number, its goal and one practical step, framed as the next goal to reach
 - Encouraging and confident they will get there
 - No filler phrases

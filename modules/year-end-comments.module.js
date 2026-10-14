@@ -324,14 +324,52 @@
         return delegated || `${entry.label}: ${entry.value} vs goal ${entry.target}`;
     }
 
+    /* Something true to praise in a year with no metric at goal.
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback ... make
+     * sure to provide positive feedback." The positives box used to fill
+     * with "Consistent effort and willingness to grow throughout the year."
+     * for anybody with nothing at goal, which could have been written about
+     * anyone. In order: a measure that moved the right way across the
+     * quarters (the check-in document's own judgement), else the measure
+     * closest to its goal on the year-end figures, then the work put in.
+     * Hours are never in it: they stay out of Year-End entirely.
+     */
+    function buildYearEndPraiseLines(employeeName, reviewYear, opportunities) {
+        const facts = window.DevCoachModules?.quarterReview
+            ?.buildPraiseFacts?.(employeeName, reviewYear, { reliability: false, ongoing: false }) || [];
+        const lines = facts
+            .filter(f => f.kind === 'progress' && f.metricKey !== 'reliability')
+            .slice(0, 2)
+            .map(f => f.text);
+
+        if (!lines.length) {
+            const pool = (opportunities || []).filter(o => o && o.key !== 'reliability');
+            const rows = pool
+                .map(o => ({ key: o.key, label: o.label, value: parseFloat(o.value), target: parseFloat(o.target) }))
+                .filter(r => Number.isFinite(r.value) && Number.isFinite(r.target));
+            const pick = window.DevCoachModules?.messageVoice?.truePositive?.(rows, { ongoing: false });
+            const entry = pick && pick.kind === 'closest' ? pool.find(o => o.key === pick.key) : null;
+            if (entry) lines.push(`Closest to goal: ${metricLine(entry)}`);
+        }
+
+        facts.filter(f => f.kind === 'support').forEach(f => lines.push(f.text));
+        return lines;
+    }
+
     // The snapshot already leaves out hours and thin surveys and puts the
     // four KPIs first, so the cap of six is spent on what a review is about.
-    function autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals) {
+    // With nothing at goal, the praise lines above lead; the generic effort
+    // line is the last resort, only when there is nothing true to name.
+    function autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals, praiseLines) {
         if (positivesInput && !positivesInput.value.trim()) {
             const metGoalLines = annualGoals.metGoals.slice(0, 4).map(goal => `Annual Goal Met: ${goal}`);
+            const praise = (praiseLines || []).filter(Boolean);
             positivesInput.value = wins.length
                 ? wins.slice(0, 6).map(metricLine).concat(metGoalLines).join('\n')
-                : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
+                : praise.length || metGoalLines.length
+                    ? praise.concat(metGoalLines).join('\n')
+                    : 'Consistent effort and willingness to grow throughout the year.';
         }
 
         if (improvementsInput && !improvementsInput.value.trim()) {
@@ -344,7 +382,7 @@
         }
     }
 
-    function buildYearEndDraftContext(employeeName, reviewYear, latestPeriod, endDateText, wins, opportunities, targetProfileYear, annualGoals) {
+    function buildYearEndDraftContext(employeeName, reviewYear, latestPeriod, endDateText, wins, opportunities, targetProfileYear, annualGoals, praiseLines) {
         return {
             employeeName,
             reviewYear,
@@ -354,7 +392,8 @@
             wins,
             opportunities,
             targetProfileYear,
-            annualGoals
+            annualGoals,
+            praiseLines: praiseLines || []
         };
     }
 
@@ -460,7 +499,9 @@
             trackSelect.value = onOffMirror.trackStatusValue;
         }
 
-        autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals);
+        // Only needed when nothing is at goal: a metric at goal is the praise.
+        const praiseLines = wins.length ? [] : buildYearEndPraiseLines(employeeName, reviewYear, opportunities);
+        autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals, praiseLines);
 
         _appendMissingYearEndImprovementFollowUps(employeeName, reviewYear);
 
@@ -472,7 +513,8 @@
             wins,
             opportunities,
             targetProfileYear,
-            annualGoals
+            annualGoals,
+            praiseLines
         );
 
         setYearEndSnapshotStatus(status, snapshotPanel, `Year-end facts loaded for ${employeeName} (${reviewYear}).`, true);
@@ -510,8 +552,12 @@
     }
 
     function buildYearEndPromptSupportData(employeeName, reviewYear) {
-        const fallbackPositives = (yearEndDraftContext?.wins || [])
-            .map(metricLine)
+        // The metrics at goal, or with none, the praise lines: a real
+        // measure to name rather than a sentence that fits anyone.
+        const wins = yearEndDraftContext?.wins || [];
+        const fallbackPositives = (wins.length
+            ? wins.map(metricLine)
+            : (yearEndDraftContext?.praiseLines || []))
             .join('\n');
         const fallbackImprovements = (yearEndDraftContext?.opportunities || [])
             .map(metricLine)
@@ -811,6 +857,7 @@
         clearYearEndDraftInputs,
         applyYearEndSavedDraft,
         buildYearEndSummaryLine,
+        buildYearEndPraiseLines,
         autoPopulateYearEndNarrativeInputs,
         buildYearEndDraftContext,
         getYearEndSnapshotElements,

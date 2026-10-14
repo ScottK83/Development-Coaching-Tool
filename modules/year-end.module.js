@@ -22,9 +22,14 @@
                 + ' sustained high performance, and frame the improvement areas as fine-tuning rather than gaps.';
         }
         if (label.indexOf('Off Track') !== -1) {
+            // Serious, and still fair: a year that fell short still had
+            // something in it worth naming (Scott, 2026-10-14: positive
+            // feedback in every piece of feedback). Naming it is honesty,
+            // not softening.
             return 'Tone for this review: this year fell short of what was expected. Be direct and specific about'
                 + ' what needs to change, name the shortfalls plainly, and stay professional, respectful and'
-                + ' supportive throughout. Do not soften it into a positive review.';
+                + ' supportive throughout. Do not soften it into a positive review, but do name at least one'
+                + ' genuine strength or real piece of progress from the positives below, with its number.';
         }
         return 'Tone for this review: this was a solid year. Write it as genuine recognition of steady'
             + ' performance, and frame the improvement areas as the next step up rather than as failures.';
@@ -117,7 +122,7 @@ ${toneFromStanding(headerData.trackLabel)}
 Metric targets to apply: ${headerData.targetProfileLabel}.
 ${progressionSection(supportData)}
 Positives to highlight:
-${inputData.positivesText || supportData.fallbackPositives || '- Positive impact and steady contribution to the team.'}
+${inputData.positivesText || supportData.fallbackPositives || '- The effort brought to the work this year.'}
 
 Improvement areas needed:
 ${inputData.improvementsText || supportData.fallbackImprovements || '- Continue improving consistency in key performance metrics.'}
@@ -147,6 +152,7 @@ Requirements:
 - Do not use present-tense timing words for performance statements (do not use "currently", "currently at", "now", or "today")
 - Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)
 - Box 1 should emphasize meaningful accomplishments and impact
+- Box 1 must name at least one specific, genuine strength or piece of progress from the positives above, with its number when it has one, whatever kind of year it was. Do not describe a missed goal as met
 - Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
 - Keep each box concise (about 3-6 sentences each)
 - Keep reliability, attendance and hours missed out of the review

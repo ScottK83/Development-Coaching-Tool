@@ -126,6 +126,41 @@
     const MAX_FOCUS = 2;
     const MAX_WINS = 3;
 
+    /*
+     * No handle time is no calls (Scott, 2026-10-14): a 0 second time sits
+     * under the goal, so read as a number it was a win for someone who was
+     * out all week. The morning pulse owns the rule; this is its copy for
+     * when that module is not loaded.
+     */
+    function tookNoCalls(employee) {
+        const pulse = window.DevCoachModules?.morningPulse;
+        if (typeof pulse?.tookNoCalls === 'function') return pulse.tookNoCalls(employee);
+        if (!employee) return true;
+        const aht = parseFloat(employee.aht);
+        if (Number.isFinite(aht)) return aht <= 0;
+        const calls = parseInt(employee.totalCalls, 10);
+        return Number.isFinite(calls) && calls <= 0;
+    }
+
+    function isZeroTime(context, metricKey, value) {
+        return context.metricsRegistry?.[metricKey]?.unit === 'sec' && Number(value) <= 0;
+    }
+
+    /*
+     * The best true thing to praise when nothing is at goal. Scott,
+     * 2026-10-14: "in every piece of feedback ... provide positive feedback."
+     * Every measured metric is offered, not only the two biggest misses, so
+     * a real move on a third one is not lost.
+     */
+    function findTruePositive(rows, ongoing, noCalls) {
+        const find = window.DevCoachModules?.messageVoice?.truePositive;
+        const found = typeof find === 'function' ? find(rows, { ongoing, tookNoCalls: noCalls }) : null;
+        return found || {
+            kind: 'effort', key: '', label: '',
+            text: ongoing ? 'I see the effort you\'re putting in, and it matters.' : 'I saw the effort you put in, and it matters.'
+        };
+    }
+
     async function generateIndividualCoachingEmail(context = {}) {
         const employeeName = context.employeeName;
         const { latestKey, previousKey, periodType } = pickComparisonKeys(context);
@@ -169,6 +204,12 @@
         const metricsToAnalyze = ['scheduleAdherence', 'overallExperience', 'fcr', 'transfers', 'aht', 'overallSentiment'];
         const wins = [];
         const opportunities = [];
+        const praiseRows = [];
+        const ongoing = periodType === 'week-in-progress';
+        const noCalls = tookNoCalls(currentEmp);
+        const centerAverages = (() => {
+            try { return context.getCenterAverageForWeek?.(latestKey) || null; } catch (e) { return null; }
+        })();
 
         metricsToAnalyze.forEach(metricKey => {
             const current = currentEmp[metricKey];
@@ -178,6 +219,8 @@
 
             const metric = context.metricsRegistry?.[metricKey] || {};
             const value = parseFloat(current);
+            // A 0 second handle time is no calls, not a win.
+            if (isZeroTime(context, metricKey, value)) return;
             const entry = {
                 metricKey,
                 metric: metric.label || metricKey,
@@ -187,15 +230,27 @@
             };
 
             const previous = previousEmp?.[metricKey];
-            if (hasValue(previous) && hasSurveysBehind(previousEmp, metricKey)) {
+            const hasPrior = hasValue(previous) && hasSurveysBehind(previousEmp, metricKey) && !isZeroTime(context, metricKey, previous);
+            if (hasPrior) {
                 // metricDelta is normalized to performance, so on AHT and
                 // Transfers a positive trend means the number came down.
                 entry.trend = context.metricDelta?.(metricKey, value, parseFloat(previous)) || 0;
                 entry.previous = show(context, metricKey, previous);
             }
 
+            const centerValue = parseFloat(centerAverages?.[metricKey]);
+            praiseRows.push({
+                key: metricKey,
+                label: metric.label || metricKey,
+                value,
+                target: metric.target?.value,
+                prior: hasPrior ? parseFloat(previous) : null,
+                center: Number.isFinite(centerValue) && centerValue > 0 ? centerValue : null
+            });
+
             if (context.metricMeetsTarget?.(metricKey, current)) {
-                wins.push(entry);
+                // With no calls behind the period, a number at goal is not praise.
+                if (!noCalls) wins.push(entry);
                 return;
             }
             const tips = allTips[metricKey] || [];
@@ -213,28 +268,36 @@
             return ` It moved from ${entry.previous} to ${entry.value} since last ${periodWord}, ${entry.trend > 0 ? 'an improvement' : 'a step back'}.`;
         };
 
+        // Nothing at goal: the email opens on the best true positive instead,
+        // and the instructions below say so rather than "the wins".
+        const positive = topWins.length ? null : findTruePositive(praiseRows, ongoing, noCalls);
+
         const winsText = topWins.length
             ? topWins.map(w => `- ${w.metric}: ${w.value}, ${w.goal}.${movement(w)}`).join('\n')
-            : '- None at goal this time. Open with real thanks for the effort, without inventing a win.';
+            : `- ${positive.text}`;
 
         const focusText = topFocus.length
             ? topFocus.map(o => `- ${o.metric}: ${o.value}, ${o.goal}.${movement(o)}${o.tip ? `\n  Tip to share: ${o.tip}` : ''}`).join('\n')
             : '- Nothing below goal. Make the whole email a thank you.';
 
         const preferredName = context.getEmployeeNickname?.(employeeName) || currentEmp.firstName || String(employeeName).split(' ')[0];
-        const ongoing = periodType === 'week-in-progress';
         const when = periodPhrase(latestKey, latestWeek, periodType);
+
+        const praiseHeading = positive ? 'THE POSITIVE TO OPEN WITH:' : 'WINS TO CELEBRATE:';
+        const praiseRule = positive
+            ? `Open by thanking ${preferredName}, then lead with the positive above${positive.key ? ', with its number,' : ''} said warmly in your own words and why it matters to customers or the team. Praise only what is listed: do not invent a win and do not say that nothing is at goal`
+            : `Open by thanking ${preferredName}, then celebrate the wins first and be specific: name the number and why it matters to customers or the team`;
 
         return `Write a short, warm coaching email to ${preferredName} about ${when}, from me, their supervisor.
 
-WINS TO CELEBRATE:
+${praiseHeading}
 ${winsText}
 
 FOCUS AREAS (at most two):
 ${focusText}
 
 HOW TO WRITE IT:
-- Open by thanking ${preferredName}, then celebrate the wins first and be specific: name the number and why it matters to customers or the team
+- ${praiseRule}
 - Then the focus areas, each with its number and its goal, framed as the next goal to reach, with the tip rewritten in your own words
 - Every metric states its own goal. On a "lower" goal such as Average Handle Time or Transfers, a number that fell is an improvement and a number that rose is a setback. Never describe a rise on one of those as progress
 - Write the numbers exactly as given

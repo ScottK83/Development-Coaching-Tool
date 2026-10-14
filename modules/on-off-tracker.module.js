@@ -687,6 +687,51 @@
         return Math.round(size * 2) / 2;
     }
 
+    /* Something true to praise, whatever the standing.
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback ... make
+     * sure to provide positive feedback." With no goal met, the Mid-Year
+     * prompt asked for "genuine strengths and forward momentum" and the
+     * check-in for "genuine, specific praise", and neither listed anything.
+     *
+     * Progress across the quarters and the work put in are the check-in
+     * document's own judgements (quarterReview.buildPraiseFacts). With no
+     * goal met and nothing rising, the measure closest to goal is read off
+     * the same figures the focus list quotes, through messageVoice. Hours
+     * are never in it: Mid-Year keeps them out entirely (Scott, 2026-10-13).
+     */
+    function _praiseLines(employeeName, reviewYear, firstName, strengths, belowGoal) {
+        var lines = [];
+        var metKeys = strengths.map(function(s) { return s.key; });
+        var facts = window.DevCoachModules?.quarterReview
+            ?.buildPraiseFacts?.(employeeName, reviewYear, { reliability: false }) || [];
+
+        facts.filter(function(f) {
+            return f.kind === 'progress' && f.metricKey !== 'reliability' && metKeys.indexOf(f.metricKey) < 0;
+        }).slice(0, 2).forEach(function(f) { lines.push(f.text); });
+
+        if (!strengths.length && !lines.length && belowGoal.length) {
+            var pick = window.DevCoachModules?.messageVoice?.truePositive?.(belowGoal.map(function(b) {
+                return { key: b.key, label: b.label, value: b.value, target: b.target };
+            }));
+            var row = pick && pick.kind === 'closest'
+                ? belowGoal.filter(function(b) { return b.key === pick.key; })[0] : null;
+            if (row) {
+                lines.push(row.label + ': ' + row.valText + ' against the ' + row.goalText + ' goal'
+                    + (belowGoal.length > 1 ? ', the closest of the core measures to goal' : '')
+                    + ', and a good place to build from');
+            }
+        }
+
+        facts.filter(function(f) { return f.kind === 'support'; })
+            .forEach(function(f) { lines.push(f.text); });
+
+        if (!strengths.length && !lines.length) {
+            lines.push('The effort ' + firstName + ' is putting in so far this year');
+        }
+        return lines;
+    }
+
 
     function _buildOnOffMetricContext(employeeName, reviewYear) {
         if (!employeeName || !reviewYear) {
@@ -724,6 +769,7 @@
 
         var focusAreas = [];
         var strengths = [];
+        var belowGoal = [];
         var metCount = 0;
         var totalScored = 0;
         var yearTargets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
@@ -752,8 +798,11 @@
             // A 424s handle time inside a 426s goal used to be listed under
             // "needs focused improvement" because it scored a 2.
             if (isMet) {
-                strengths.push({ label: m.label, val: m.val, valText: valText, goalText: goalText });
+                strengths.push({ key: m.key, label: m.label, val: m.val, valText: valText, goalText: goalText });
                 return;
+            }
+            if (target && m.val !== null) {
+                belowGoal.push({ key: m.key, label: m.label, value: m.val, target: target.value, valText: valText, goalText: goalText });
             }
 
             var gapText = '';
@@ -794,6 +843,7 @@
         return {
             firstName: firstName,
             strengths: strengths,
+            praise: _praiseLines(employeeName, reviewYear, firstName, strengths, belowGoal),
             focusAreas: focusAreas,
             reviewYear: reviewYear,
             metCount: metCount,
@@ -844,6 +894,17 @@
             });
         }
 
+        // Progress, the measure nearest its goal, the work put in. With no
+        // goal met this is the praise the message opens on, and it used to
+        // be nothing at all.
+        var praise = ctx.praise || [];
+        if (praise.length) {
+            prompt += strengths.length
+                ? '\nProgress I also want to recognize:\n'
+                : '\nWhat is going well that I want to acknowledge:\n';
+            praise.forEach(function(line) { prompt += '- ' + line + '\n'; });
+        }
+
         if (focusAreas.length) {
             prompt += '\nAreas I want to gently encourage them to build on:\n';
             focusAreas.forEach(function(f) {
@@ -862,7 +923,9 @@
 
         prompt += '\nPlease write the message so it:\n';
         if (focusAreas.length) {
-            prompt += '1. Starts with genuine, specific praise for what they are doing well\n';
+            prompt += strengths.length
+                ? '1. Starts with genuine, specific praise for what they are doing well\n'
+                : '1. Starts with genuine, specific praise for what is going well in my notes, by name. No goal is met yet, so it does not say one is\n';
             prompt += '2. Naturally transitions to the area(s) I want to encourage them to build on\n';
             prompt += '3. Names the specific goal and how close they are, using the numbers in my notes (e.g. "If you can shave about 60 seconds off your handle time..." or "Bring your adherence up 2.4 points...")\n';
             prompt += '4. Weaves in one specific, practical suggestion from the tips above, if there is one\n';
@@ -925,11 +988,18 @@
                 + ' quoting only where it stands today.\n';
         }
 
-        if (strengths.length) {
+        // Always there. With no goal met it used to be left out, while the
+        // requirements below still asked for "genuine strengths and forward
+        // momentum" (Scott, 2026-10-14: positive feedback in every piece of
+        // feedback). ctx.praise carries the progress, the measure closest to
+        // goal and the work put in.
+        var praise = ctx.praise || [];
+        if (strengths.length || praise.length) {
             prompt += '\nStrengths and progress to recognize:\n';
             strengths.forEach(function(s) {
                 prompt += '- ' + s.label + ': ' + s.valText + (s.goalText ? ', meeting the ' + s.goalText + ' goal' : ', meeting goal') + '\n';
             });
+            praise.forEach(function(line) { prompt += '- ' + line + '\n'; });
         }
 
         if (focusAreas.length) {
@@ -996,6 +1066,7 @@
             prompt += '- Make it clear that a significant, focused improvement push is needed across the areas of opportunity, and that meaningful, measurable progress is expected through the rest of the year.\n';
             prompt += '- Include a clear but professionally worded statement, not harsh or threatening, that if the needed improvement is not demonstrated over the coming period it could lead to formal performance management up to and including disciplinary action. Frame it as an outcome we want to work together to avoid, not a threat.\n';
             prompt += '- Balance the urgency with genuine support: reaffirm that I am invested in their success and will provide coaching and resources to help them close these gaps.\n';
+            prompt += '- Still name at least one genuine strength or real piece of progress from my notes, with its numbers. Being fair about what is working does not soften the urgency.\n';
         } else if (tier === 'firm') {
             prompt += '\nTONE FOR THIS REVIEW:\n';
             prompt += '- Be encouraging but clearly firm that focused improvement is needed in the areas of opportunity, and set a direct expectation that steady, visible progress should show through the rest of the year.\n';
@@ -1015,6 +1086,9 @@
         prompt += '- When referencing a metric, include the metric value and its goal, and how far away it is using the numbers above\n';
         prompt += '- Weave the coaching focus points in naturally as concrete next steps, do not just list them\n';
         prompt += '- The Progress and Strengths section should emphasize genuine strengths and forward momentum\n';
+        if (!strengths.length) {
+            prompt += '- No core goal is being met yet, so the Progress and Strengths section must not call any goal met. Build it from the strengths and progress I listed, named with their numbers\n';
+        }
         if (focusAreas.length) {
             prompt += '- The Areas of Focus section must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
         } else {

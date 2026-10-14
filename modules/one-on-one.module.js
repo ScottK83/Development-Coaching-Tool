@@ -301,6 +301,58 @@
             + (hasTarget ? ` against ${articleFor(target)} ${target} goal` : '');
     }
 
+    // At its goal, judged on the number as printed, so "93% against a 93%
+    // goal" is never read as a miss because the value behind it was 92.96.
+    // null when there is no goal to judge against.
+    function meetsGoal(entry) {
+        if (!entry || entry.target === null || entry.target === undefined) return null;
+        const value = toNumber(entry.value);
+        const target = toNumber(entry.target);
+        if (value === null || target === null) return null;
+        const shown = parseFloat(String(formatValue(entry.key, value)).replace(/[^0-9.]/g, ''));
+        const judged = Number.isFinite(shown) ? shown : value;
+        return isReverse(entry.key) ? judged <= target : judged >= target;
+    }
+
+    /**
+     * What to open the meeting on, always something true.
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback ... make
+     * sure to provide positive feedback." A sheet for someone with nothing
+     * at goal and nothing better opened on a list of misses and "Slipped".
+     * In order: at goal for the year, better on the nearest horizon, the
+     * measure closest to its goal, what held since the last meeting. Hours
+     * are never praise here (see NOT_A_CHANGE), and an empty sheet stays
+     * empty rather than praising numbers it does not have.
+     */
+    function workingLines(d, changes) {
+        // No handle time is no calls, never a handle time at goal.
+        const year = (d.yearToDate || []).filter(e => e && !NOT_A_CHANGE.has(e.key)
+            && !(registry()[e.key]?.unit === 'sec' && !(toNumber(e.value) > 0)));
+        const atGoal = year.filter(e => meetsGoal(e) === true);
+        if (atGoal.length) return atGoal.slice(0, 3).map(e => `At goal: ${describeStanding(e)}`);
+
+        const horizons = [
+            [d.sinceLast, 'since we last met'],
+            [d.lastMonth, 'last month'],
+            [d.recentWeeks, 'over the last few weeks']
+        ];
+        for (const [horizon, when] of horizons) {
+            const better = changes(horizon?.improved);
+            if (better.length) return [`Better ${when}: ${describeChange(better[0])}`];
+        }
+
+        const closest = year
+            .filter(e => meetsGoal(e) === false && toNumber(e.target))
+            .map(e => ({ e, share: Math.abs(e.value - e.target) / Math.abs(e.target) }))
+            .sort((a, b) => a.share - b.share)[0];
+        if (closest) return [`Closest to goal: ${describeStanding(closest.e)}, a good place to build from`];
+
+        const held = changes(d.sinceLast?.steady);
+        if (held.length) return [`Held steady since we last met: ${held.slice(0, 3).map(e => e.label).join(', ')}`];
+        return [];
+    }
+
     /**
      * The sheet you walk in with.
      *
@@ -315,13 +367,18 @@
 
         blocks.push(`One-to-one. ${d.employeeName || name}${d.date ? ` · ${formatDate(d.date)}` : ''}`);
 
-        if (d.yearToDate?.length) {
-            blocks.push('THE YEAR SO FAR\n' + d.yearToDate.map(e => `  • ${describeStanding(e)}`).join('\n'));
-        }
-
         // Hours are never a better or a slipped (see NOT_A_CHANGE), whatever
         // a caller hands in, including a meeting saved before that rule.
         const changes = list => (list || []).filter(e => !NOT_A_CHANGE.has(e?.key));
+
+        const working = workingLines(d, changes);
+        if (working.length) {
+            blocks.push('START WITH WHAT IS WORKING\n' + working.map(line => `  • ${line}`).join('\n'));
+        }
+
+        if (d.yearToDate?.length) {
+            blocks.push('THE YEAR SO FAR\n' + d.yearToDate.map(e => `  • ${describeStanding(e)}`).join('\n'));
+        }
 
         // One word for a move the wrong way, everywhere on the sheet. It was
         // "Slipped" in one section and "Worse" in the next, and "Worse" is
@@ -365,6 +422,11 @@
         return blocks.join('\n\n');
     }
 
+    // The opener on its own, for a screen that draws the sheet itself.
+    function openingLines(data) {
+        return workingLines(data || {}, list => (list || []).filter(e => !NOT_A_CHANGE.has(e?.key)));
+    }
+
     function indent(text) {
         return String(text || '').split('\n').map(line => `  ${line}`).join('\n');
     }
@@ -383,6 +445,7 @@
         saveMeeting,
         deleteMeeting,
         buildTalkingPoints,
+        openingLines,
         describeChange,
         describeStanding,
         yearToDateEntries,
