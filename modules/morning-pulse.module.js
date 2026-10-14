@@ -286,6 +286,52 @@
         (name) => `Hey ${name}! Circling back on your results and where I want us focused.`,
     ];
 
+    /*
+     * WHICH STRETCH, AGAINST WHICH
+     *
+     * Under a month or a year window every tone writes through the kickoff,
+     * and its openers were written for weeks. "Following up with your latest
+     * numbers" over October so far never said what the numbers were, or what
+     * they were being held up against. Scott, 2026-10-14, on a month to date
+     * round: it should say this is where your month is, and this is how it
+     * compares to last month.
+     *
+     * So under those windows the opener names both sides, and a short line
+     * under the praise shows what moved since the baseline, in the baseline's
+     * own name. A week window keeps the openers above; the week progress text
+     * it writes through already says "next to last week".
+     */
+    const FRAME_GREETINGS = [
+        (name) => `Hey ${name}!`,
+        (name) => `Morning ${name}!`,
+        (name) => `${name}!`,
+        (name, day) => `Happy ${day} ${name}!`,
+    ];
+    const FRAME_OPENERS = {
+        ongoing: [
+            (now, prior) => `Here's where ${now} stands so far, next to ${prior}.`,
+            (now, prior) => `Checking in on ${now} so far and how it compares to ${prior}.`,
+            (now, prior) => `📊 Here's ${now} so far, side by side with ${prior}.`,
+            (now, prior) => `Quick look at how ${now} is going so far against ${prior}.`,
+        ],
+        done: [
+            (now, prior) => `Here's how ${now} finished, next to ${prior}.`,
+            (now, prior) => `Looking back at ${now} and how it compares to ${prior}.`,
+            (now, prior) => `📊 Here's ${now}, side by side with ${prior}.`,
+            (now, prior) => `Quick look at how ${now} went against ${prior}.`,
+        ],
+        // Nothing to hold it against. The opener still names the stretch and
+        // says nothing about why there is no comparison.
+        ongoingAlone: [
+            (now) => `Here's where ${now} stands so far.`,
+            (now) => `Quick look at how ${now} is going so far.`,
+        ],
+        doneAlone: [
+            (now) => `Here's how ${now} finished.`,
+            (now) => `Quick look at how ${now} went.`,
+        ],
+    };
+
     const MK_TRANSITION = [
         'Now let\'s talk about where we can push this week.',
         'On the flip side, here\'s where I think we can make a move.',
@@ -1193,6 +1239,36 @@
         const improvements = deltas.filter(d => d.delta > 0);
         if (!improvements.length) return null;
         return improvements.reduce((best, d) => jumpSize(d) > jumpSize(best) ? d : best);
+    }
+
+    /**
+     * The line that holds a month (or a year) up against its baseline.
+     *
+     * Only metrics the message may already speak about, only moves past the
+     * registry's noise floor, and a survey metric only when the baseline had
+     * an answer behind it too: a month with no surveys reads as 0%, and
+     * "0.0% to 100.0%" is a missing month, not an improvement.
+     *
+     * `alreadySaid` is the jump the praise led with. It carries its own
+     * before and after, so it is not said twice. When that jump is the only
+     * thing that moved there is nothing to add, which is different from
+     * nothing moving at all.
+     */
+    function buildFrameComparison(frame, deltas, speakableKeys, baseEmp, alreadySaid) {
+        if (!frame?.prior || !deltas.length) return '';
+        const moved = deltas.filter(d => speakableKeys.has(d.metricKey)
+            && (!SURVEY_METRIC_KEYS.has(d.metricKey) || hasSurveyBehind(baseEmp, d.metricKey))
+            && d.absDelta >= getGrowthNoiseThreshold(d.metricKey));
+        const bySize = (a, b) => Math.abs(jumpSize(b)) - Math.abs(jumpSize(a));
+        const show = d => `${d.label} ${fmtVal(d.metricKey, d.baseValue)} → ${fmtVal(d.metricKey, d.latestValue)}`;
+        const better = moved.filter(d => d.delta > 0 && d.metricKey !== alreadySaid).sort(bySize).slice(0, 3);
+        const behind = moved.filter(d => d.delta < 0).sort(bySize).slice(0, 2);
+
+        const lines = [];
+        if (better.length) lines.push(`📈 ${frame.better}: ${better.map(show).join(', ')}.`);
+        if (behind.length) lines.push(`👀 ${frame.behind}: ${behind.map(show).join(', ')}.`);
+        if (!lines.length && !moved.length) lines.push(`📊 ${frame.steady}`);
+        return lines.join('\n');
     }
 
     // --- Analysis (reuses existing analyzeTrendMetrics for current snapshot) ---
@@ -2185,7 +2261,31 @@
         const pool = startsTheWeek ? MK_OPENERS_WEEK_START : MK_OPENERS_MIDWEEK;
         const openers = dayWord ? pool : pool.filter(line => line.length < 2);
 
-        let message = `${pick(openers)(firstName, dayWord)} ${praiseText}${focusText}`;
+        // A month or year window says which stretch this is and what it is
+        // held against, then shows the moves since. The comparison is only
+        // promised when there is one to show.
+        const frame = options?.frame?.now ? options.frame : null;
+        let opener;
+        let compareText = '';
+        if (frame) {
+            const compared = !!frame.prior && weekDeltas.length > 0;
+            const tense = recency.ongoing ? 'ongoing' : 'done';
+            const greetings = dayWord ? FRAME_GREETINGS : FRAME_GREETINGS.filter(line => line.length < 2);
+            const line = compared
+                ? pick(FRAME_OPENERS[tense])(frame.now, frame.prior)
+                : pick(FRAME_OPENERS[`${tense}Alone`])(frame.now);
+            opener = `${pick(greetings)(firstName, dayWord)} ${line}`;
+            if (compared) {
+                const baseEmp = getPeriodData(baselineKey)?.employees?.find(e => e.name === employeeName) || null;
+                const jumpSaid = !hasPerfectSurveys && biggestJump && biggestJump.delta > 0 ? biggestJump.metricKey : null;
+                const block = buildFrameComparison(frame, weekDeltas, new Set(allMetrics.map(m => m.metricKey)), baseEmp, jumpSaid);
+                if (block) compareText = `\n\n${block}`;
+            }
+        } else {
+            opener = pick(openers)(firstName, dayWord);
+        }
+
+        let message = `${opener} ${praiseText}${compareText}${focusText}`;
         if (yearBlock) message += `\n\n${yearBlock}`;
         message += `\n\n${pick(lookingAhead(MK_CLOSERS, ahead))}`;
         return message;
@@ -4259,6 +4359,49 @@
         if (status) status.textContent = text ? `(${text})` : '';
     }
 
+    /**
+     * What the kickoff calls the window's two sides, or null to keep its own
+     * openers. The names come off the labels the page header already shows
+     * ("October 2026 so far against September 2026"), less the year, which a
+     * message to one person does not need.
+     */
+    function windowFrame(comparison) {
+        if (!comparison?.latestKey) return null;
+        const id = comparison.windowId;
+        // A label with no letters in it is a raw "2026-10", which nobody says.
+        const bare = s => {
+            const name = String(s || '').replace(/\s+so far$/i, '').replace(/\s+\d{4}$/, '').trim();
+            return /[a-z]/i.test(name) ? name : '';
+        };
+        const hasBaseline = !!comparison.baselineKey;
+
+        if (id === 'mtd' || id === 'lastMonth') {
+            const month = bare(comparison.latestLabel);
+            if (!month) return null;
+            const prior = hasBaseline ? bare(comparison.baselineLabel) : '';
+            return {
+                now: `your ${month}`,
+                prior,
+                better: `Better than ${prior}`,
+                behind: `Behind ${prior}`,
+                steady: `Right in line with ${prior}, nothing moved much.`
+            };
+        }
+        if (id === 'ytd') {
+            const through = hasBaseline
+                ? String(comparison.baselineLabel || '').replace(/^the report through\s+/i, '').trim()
+                : '';
+            return {
+                now: 'your year',
+                prior: through ? `where it stood through ${through}` : '',
+                better: `Better since ${through}`,
+                behind: `Slipped since ${through}`,
+                steady: `Holding level since ${through}, nothing moved much.`
+            };
+        }
+        return null;
+    }
+
     // The one-to-one message as both private surfaces get it. The team note
     // goes on last, after the standings and near-miss tails: it is the
     // manager's own paragraph, and those are about this person's numbers.
@@ -4329,7 +4472,8 @@
                 startsTheWeek,
                 // Friday under a month or a year window lands here too, and on a
                 // Friday the week the plan is for is the next one.
-                ahead: plan.id === 'friday' ? 'next week' : 'this week'
+                ahead: plan.id === 'friday' ? 'next week' : 'this week',
+                frame: windowFrame(comparison)
             });
         }
 
@@ -4779,6 +4923,8 @@
         DAILY_CHECKIN_METRICS,
         showRunMyDayModal,
         buildOutreachMessage,
+        // What a month or year window is called in the message's opener.
+        windowFrame,
         // Exported for the standings tests rather than for any caller. What it
         // prints is a position, which is the one thing the rest of this file
         // spends its length withholding, so it has to be reachable without a

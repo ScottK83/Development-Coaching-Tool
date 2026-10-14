@@ -168,3 +168,119 @@ suite('private round: the lit tab is today\'s unless picked today', (t) => {
     localStorage.setItem(KEY, other);
     t.equal('and so does one saved before the date was kept', myTeam.activeDayId(), expected);
 });
+
+/**
+ * A MONTH WINDOW SAYS WHICH MONTH, AND AGAINST WHICH
+ *
+ * Wednesday 14 October 2026. Scott picked Month to date, the header read
+ * "October 2026 so far against September 2026", and the round opened with
+ * "Here's your latest snapshot" and "Following up with your latest numbers".
+ * Nothing said this was October so far, and nothing held it up against
+ * September unless a big jump happened to lead the praise.
+ */
+const OCT_MTD = '2026-10-01|2026-10-13';
+const WEDNESDAY = new Date(2026, 9, 14, 9);
+
+function loadMonthToDate(t) {
+    const pulse = loadPulse(t);
+    // The rule for whether a stretch is still running lives in message-voice.
+    t.loadModule('modules/message-voice.module.js');
+    const sept = global.weeklyData[SEPT].employees[0];
+    global.weeklyData = {
+        [SEPT]: {
+            metadata: { periodType: 'month', startDate: '2026-09-01', endDate: '2026-09-30' },
+            employees: [Object.assign({}, sept, { holdTime: 87, aht: 540, scheduleAdherence: 93.0 })]
+        },
+        [OCT_MTD]: {
+            metadata: { periodType: 'month-to-date', startDate: '2026-10-01', endDate: '2026-10-13' },
+            employees: [Object.assign({}, sept)]
+        }
+    };
+    return pulse;
+}
+
+const MTD_WINDOW = {
+    windowId: 'mtd', unit: 'month', latestKey: OCT_MTD, baselineKey: SEPT,
+    latestLabel: 'October 2026 so far', baselineLabel: 'September 2026'
+};
+
+async function drawWith(pulse, latestKey, baselineKey, options, times) {
+    const out = [];
+    for (let i = 0; i < (times || 120); i++) {
+        out.push(await pulse.generateMondayKickoffMessage('Alyssa Dimes', latestKey, baselineKey, Object.assign({ now: WEDNESDAY }, options)));
+    }
+    return out;
+}
+
+suite('private round: the window frame names both sides', (t) => {
+    const pulse = loadMonthToDate(t);
+    const mtd = pulse.windowFrame(MTD_WINDOW);
+    t.equal('month to date is your October', mtd.now, 'your October');
+    t.equal('held against September', mtd.prior, 'September');
+
+    const last = pulse.windowFrame(Object.assign({}, MTD_WINDOW, {
+        windowId: 'lastMonth', latestKey: SEPT, baselineKey: AUG,
+        latestLabel: 'September 2026', baselineLabel: 'August 2026'
+    }));
+    t.equal('last month is your September', last.now, 'your September');
+    t.equal('held against August', last.prior, 'August');
+
+    const alone = pulse.windowFrame(Object.assign({}, MTD_WINDOW, { baselineKey: null, baselineLabel: '' }));
+    t.equal('a month with nothing before it has no prior', alone.prior, '');
+
+    const ytd = pulse.windowFrame({ windowId: 'ytd', latestKey: 'y2', baselineKey: 'y1', latestLabel: 'the year so far', baselineLabel: 'the report through Sep 30' });
+    t.equal('the year is your year', ytd.now, 'your year');
+    t.equal('held against the last report', ytd.prior, 'where it stood through Sep 30');
+
+    t.equal('a week window keeps its own openers',
+        pulse.windowFrame({ windowId: 'thisWeek', latestKey: 'w', baselineKey: 'v', latestLabel: 'this week so far', baselineLabel: 'last week' }), null);
+    t.equal('a raw month key is never spoken',
+        pulse.windowFrame(Object.assign({}, MTD_WINDOW, { latestLabel: '2026-10 so far' })), null);
+});
+
+suite('private round: month to date opens on October against September', async (t) => {
+    const pulse = loadMonthToDate(t);
+    const frame = pulse.windowFrame(MTD_WINDOW);
+    const messages = await drawWith(pulse, OCT_MTD, SEPT, { dayWord: 'Wednesday', startsTheWeek: false, frame });
+
+    const firstLines = messages.map(m => m.split('\n')[0]);
+    t.check('every opener names October', firstLines.every(s => /your October/.test(s)));
+    t.check('and September beside it', firstLines.every(s => /September/.test(s)));
+    t.check('in the present, because October is still running', firstLines.every(s => /so far/.test(s)));
+    const generic = firstLines.filter(s => /latest (numbers|snapshot)/i.test(s));
+    t.equal(`no generic "latest numbers" opener (${generic[0] || 'clean'})`, generic.length, 0);
+
+    t.check('the gain shows both months\' numbers',
+        messages.every(m => m.indexOf('📈 Better than September: Schedule Adherence 93.0% \u2192 95.1%.') > -1));
+    t.check('and so does the slide',
+        messages.every(m => m.indexOf('👀 Behind September: Average Handle Time 540s \u2192 564s.') > -1));
+    t.check('the jump the praise led with is not said twice',
+        messages.every(m => !/Better than September:[^\n]*Hold Time/.test(m)));
+});
+
+suite('private round: last month is spoken of as finished', async (t) => {
+    const pulse = loadPulse(t);
+    const frame = pulse.windowFrame({
+        windowId: 'lastMonth', latestKey: SEPT, baselineKey: AUG,
+        latestLabel: 'September 2026', baselineLabel: 'August 2026'
+    });
+    const firstLines = (await drawWith(pulse, SEPT, AUG, { dayWord: 'Wednesday', startsTheWeek: false, frame }))
+        .map(m => m.split('\n')[0]);
+    t.check('every opener names September and August', firstLines.every(s => /your September/.test(s) && /August/.test(s)));
+    const running = firstLines.filter(s => /so far|is going/.test(s));
+    t.equal(`a finished month is not "so far" (${running[0] || 'clean'})`, running.length, 0);
+});
+
+suite('private round: no baseline, no promise of one', async (t) => {
+    const pulse = loadMonthToDate(t);
+    const frame = pulse.windowFrame(Object.assign({}, MTD_WINDOW, { baselineKey: null, baselineLabel: '' }));
+    const messages = await drawWith(pulse, OCT_MTD, null, { dayWord: 'Wednesday', startsTheWeek: false, frame });
+    t.check('the opener still names October', messages.every(m => /your October/.test(m.split('\n')[0])));
+    const promised = messages.filter(m => /compares to|next to|side by side|against|Better than|Behind/.test(m.split('\n')[0]));
+    t.equal(`nothing is compared against a month that is not there (${promised[0] ? promised[0].split('\n')[0] : 'clean'})`, promised.length, 0);
+});
+
+suite('private round: the round hands the kickoff its window frame', (t) => {
+    const source = fs.readFileSync(path.join(ROOT, 'modules/morning-pulse.module.js'), 'utf8');
+    t.check('writeOutreachMessage passes the frame', /frame: windowFrame\(comparison\)/.test(source));
+});
