@@ -18,9 +18,18 @@
         return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
+    // With units, the same as the copied sheet: the screen showed "96.2 vs
+    // 93.0 target" (Scott, 2026-10-14).
     function formatValue(key, value) {
-        if (typeof window.formatMetricValue === 'function') return window.formatMetricValue(key, value);
+        const shared = core()?.formatValue;
+        if (typeof shared === 'function') return shared(key, value);
+        if (typeof window.formatMetricDisplay === 'function') return window.formatMetricDisplay(key, value);
         return String(value);
+    }
+
+    function formatDate(dateText) {
+        const shared = core()?.formatDate;
+        return typeof shared === 'function' ? shared(dateText) : (dateText || '');
     }
 
     function todayIso() {
@@ -73,22 +82,12 @@
         // aggregate, so nothing here re-averages weekly numbers.
         const ytdKeys = sortedKeysByEnd(ytd);
         const ytdRow = ytdKeys.length ? rowFor(ytd[ytdKeys[ytdKeys.length - 1]], employeeName) : null;
-        const yearToDate = [];
-        if (ytdRow) {
-            const profiles = mods().metricProfiles;
-            const year = new Date().getFullYear();
-            oneOnOne.talkableMetricKeys().forEach(key => {
-                const value = parseFloat(ytdRow[key]);
-                if (!Number.isFinite(value)) return;
-                const target = profiles?.getYearTarget?.(key, year) || window.METRICS_REGISTRY?.[key]?.target;
-                yearToDate.push({
-                    key,
-                    label: window.METRICS_REGISTRY?.[key]?.label || key,
-                    value,
-                    target: target ? parseFloat(target.value) : null
-                });
-            });
-        }
+        // The four KPIs first, with a survey score left out when fewer than
+        // three people answered (one-on-one's yearToDateEntries).
+        const profiles = mods().metricProfiles;
+        const year = new Date().getFullYear();
+        const yearToDate = oneOnOne.yearToDateEntries(ytdRow,
+            key => profiles?.getYearTarget?.(key, year) || window.METRICS_REGISTRY?.[key]?.target || null);
 
         const monthKeys = sortedKeysByEnd(weekly, p => p?.metadata?.periodType === 'month');
         const lastMonth = monthKeys.length >= 2
@@ -205,9 +204,10 @@
                 const meets = e.target === null ? null
                     : (window.METRICS_REGISTRY?.[e.key]?.isReverse ? e.value <= e.target : e.value >= e.target);
                 const colour = meets === null ? 'var(--text-secondary)' : (meets ? 'var(--green-text)' : '#e65100');
+                const goalWord = e.key === 'reliability' ? 'allowance' : 'goal';
                 return `<div style="padding:4px 0; font-size:0.9em;"><span style="color:${colour}; font-weight:700;">${meets === null ? '·' : (meets ? '✓' : '•')}</span> ` +
                     `${escapeHtml(e.label)}: <strong>${escapeHtml(formatValue(e.key, e.value))}</strong>` +
-                    (e.target !== null ? ` <span style="color:var(--text-tertiary);">vs ${escapeHtml(formatValue(e.key, e.target))} target</span>` : '') + `</div>`;
+                    (e.target !== null ? ` <span style="color:var(--text-tertiary);">${goalWord} ${escapeHtml(formatValue(e.key, e.target))}</span>` : '') + `</div>`;
             }).join('')
             : '';
 
@@ -228,7 +228,7 @@
                 `<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Past meetings (${h.history.length})</summary>` +
                 h.history.slice().reverse().map(m => `<div style="padding:8px 0; border-bottom:1px solid var(--border);">` +
                     `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">` +
-                        `<strong style="color:var(--text-primary);">${escapeHtml(m.date)}</strong>` +
+                        `<strong style="color:var(--text-primary);">${escapeHtml(formatDate(m.date))}</strong>` +
                         `<button type="button" class="ooo-del" data-date="${escapeHtml(m.date)}" style="background:none; border:1px solid var(--border); border-radius:6px; padding:3px 10px; cursor:pointer; color:var(--text-secondary); font-size:0.82em;">Delete</button>` +
                     `</div>` +
                     (m.notes ? `<div style="white-space:pre-wrap; font-size:0.88em; color:var(--text-secondary); margin-top:4px;">${escapeHtml(m.notes)}</div>` : '') +
@@ -238,10 +238,10 @@
 
         body.innerHTML =
             section('The year so far', ytdHtml, 'from the YTD upload') +
-            section(`Since we last met`, sinceHtml, h.sinceLast ? h.sinceLast.date : '') +
+            section(`Since we last met`, sinceHtml, h.sinceLast ? formatDate(h.sinceLast.date) : '') +
             section('Last month', monthHtml) +
             section('The last few weeks', weeksHtml) +
-            section('What we said last time', priorNotes, h.prior ? h.prior.date : '') +
+            section('What we said last time', priorNotes, h.prior ? formatDate(h.prior.date) : '') +
             `<div style="margin-top:8px;">` +
                 `<label for="oneOnOneNotes" style="display:block; font-weight:700; color:#bf360c; margin-bottom:6px;">My notes for this one</label>` +
                 `<textarea id="oneOnOneNotes" placeholder="What I want to raise. Observations, things to watch, what I promised them…" style="width:100%; min-height:150px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(existing?.notes || '')}</textarea>` +

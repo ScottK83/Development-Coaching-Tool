@@ -155,9 +155,13 @@ suite('quarter review: a slipping metric is named plainly', (t) => {
     t.check('and it is not described as moving away from a goal it was meeting',
         !/further from goal/.test(sentence));
 
+    // The first quarter below goal after a run inside it is a dip, and the
+    // focus box says it as one, every number still on it (Scott, 2026-10-14:
+    // "slipped in each quarter" read as a slide for a first miss).
     const notes = qr.buildNotes(ctx);
-    t.check('and it lands in the focus box', /slipped/.test(notes.box2));
-    t.check('not in the strengths box', !/slipped/.test(notes.box1));
+    t.check('and it lands in the focus box, as a first dip',
+        /Rep satisfaction was inside the 82% goal in Q1 and Q2, at 86% and 83\.5%, and dipped to 81% in Q3\./.test(notes.box2));
+    t.check('not in the strengths box', !/slipped|dipped/.test(notes.box1));
 });
 
 /* ── A claim about every quarter needs every quarter behind it ──
@@ -674,7 +678,10 @@ suite('quarter review: the two boxes are separate and both filled', (t) => {
     t.check('they are not the same text', notes.box1 !== notes.box2);
     t.check('the full version carries both headings',
         notes.full.includes('PROGRESS AND STRENGTHS') && notes.full.includes('AREAS OF FOCUS'));
-    t.check('the focus box sets an expectation', /expectation/i.test(notes.box2));
+    // Named and fitted: a first dip gets "getting it back", not the old
+    // "expectation is visible movement over one quarter" every box shared.
+    t.check('the focus box sets a goal for next quarter',
+        /Getting rep satisfaction back above 82% in Q4 is the focus\./.test(notes.box2));
 });
 
 suite('quarter review: the focus box names at most two things', (t) => {

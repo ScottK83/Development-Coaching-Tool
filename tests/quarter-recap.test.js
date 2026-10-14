@@ -130,6 +130,12 @@ function lineFor(body, label) {
     return body.split('\n').filter((l) => l.indexOf(label + ':') > -1)[0] || '';
 }
 
+// The hours line, worded as a record since 10/14: "For your records, missed
+// time for 2026 through ... is ... (allowance ...)."
+function hoursLineOf(body) {
+    return body.split('\n').filter((l) => /^For your records, missed time/.test(l))[0] || '';
+}
+
 function renderInto(env, setup) {
     global.document._els.q1ReviewContent = { innerHTML: '' };
     if (setup) setup();
@@ -178,14 +184,16 @@ suite('recap email: where each KPI was in each quarter', (t) => {
     t.check('it thanks them for the meeting, and says where they were in Scott\'s words',
         mail.body.indexOf('Thanks for sitting down with me for your Q3 check-in. Here\'s where you were in Q1, Q2 and Q3:') > -1);
 
-    t.equal('handle time, every quarter, the move and the goal', lineFor(mail.body, 'Average Handle Time'),
-        '✅ Average Handle Time: Q1 451s, Q2 438s, Q3 421s, down 30 seconds (goal 426s or lower)');
-    t.equal('adherence, with the goal written the way it was set', lineFor(mail.body, 'Schedule Adherence'),
-        '✅ Schedule Adherence: Q1 92.1%, Q2 93.4%, Q3 94.0%, up 1.9 points (goal 93% or better)');
-    t.equal('sentiment, which slipped, says nothing about the slip', lineFor(mail.body, 'Overall Sentiment'),
-        '🔸 Overall Sentiment: Q1 89.0%, Q2 87.2%, Q3 86.5% (goal 88% or better)');
-    t.equal('rep satisfaction, climbing toward goal', lineFor(mail.body, 'Rep Satisfaction'),
-        '🔸 Rep Satisfaction: Q1 76.0%, Q2 79.0%, Q3 80.5%, up 4.5 points (goal 82% or better)');
+    // In words, not ✅ and 🔸: a mark per line put four or five emojis in a
+    // message allowed two (Scott, 2026-10-13 and 10-14).
+    t.equal('handle time, every quarter, the move, and at goal said in words', lineFor(mail.body, 'Average Handle Time'),
+        'Average Handle Time: Q1 451s, Q2 438s, Q3 421s, down 30 seconds (at goal)');
+    t.equal('adherence at goal says so', lineFor(mail.body, 'Schedule Adherence'),
+        'Schedule Adherence: Q1 92.1%, Q2 93.4%, Q3 94.0%, up 1.9 points (at goal)');
+    t.equal('sentiment, which slipped, says nothing about the slip and carries its goal', lineFor(mail.body, 'Overall Sentiment'),
+        'Overall Sentiment: Q1 89.0%, Q2 87.2%, Q3 86.5% (goal 88% or better)');
+    t.equal('rep satisfaction, climbing toward goal, with the goal written the way it was set', lineFor(mail.body, 'Rep Satisfaction'),
+        'Rep Satisfaction: Q1 76.0%, Q2 79.0%, Q3 80.5%, up 4.5 points (goal 82% or better)');
 
     const order = ['Average Handle Time', 'Schedule Adherence', 'Overall Sentiment', 'Rep Satisfaction']
         .map((label) => mail.body.indexOf(label + ':'));
@@ -194,22 +202,29 @@ suite('recap email: where each KPI was in each quarter', (t) => {
         t.check(`${label} is not one of the four`, mail.body.indexOf(label) === -1);
     });
 
-    t.check('a line on where Q3 left them', mail.body.indexOf('Some of these are already at goal, and Q4 is a full quarter to bring the rest along.') > -1);
-    t.check('the hours, dated', mail.body.indexOf('Reliability: 14.5 hrs missed in 2026 through September 30 (allowance 18 hrs).') > -1);
+    t.check('a line on where Q3 left them', mail.body.indexOf('Some of your KPIs are already at goal, and Q4 is a full quarter to bring the rest along.') > -1);
+    t.check('the hours, dated', mail.body.indexOf('For your records, missed time for 2026 through September 30 is 14.5 hrs (allowance 18 hrs).') > -1);
     t.check('and it signs off the way Scott\'s other emails do',
         mail.body.split('\n').pop() === 'Happy to walk through any of it.');
     t.check('no rising chart mark, which reads backwards on handle time', mail.body.indexOf('📈') === -1);
 });
 
-suite('recap email: the order keeps the hours away from anything forward looking', (t) => {
+/* The hours used to follow the closing line, so "Keep it going 💪" sat
+ * directly above them and read as being about them. They now sit with the
+ * numbers, above the closing line, worded as a record (Scott, 2026-10-14),
+ * and the closing line names the KPIs so it cannot take the hours in. */
+suite('recap email: the hours sit with the numbers, and the close is about the KPIs', (t) => {
     t.pinClock('2026-10-07');
     const env = load(t, YEAR);
     const lines = mailFor(env, 'Jordan Reyes').body.split('\n');
-    const hoursAt = lines.findIndex((l) => /^Reliability:/.test(l));
+    const lastKpiAt = lines.findIndex((l) => /^Rep Satisfaction:/.test(l));
+    const hoursAt = lines.findIndex((l) => /^For your records, missed time/.test(l));
     const countAt = lines.findIndex((l) => /Q4 is a full quarter/.test(l));
-    t.check('the KPI summary comes before the hours', countAt > -1 && countAt < hoursAt);
-    t.check('and nothing after the hours asks for a focus or looks to Q4',
-        !/focus|work on|Q4|thoughts\?/i.test(lines.slice(hoursAt + 1).join('\n')));
+    t.check('the hours come after the KPI lines', lastKpiAt > -1 && hoursAt > lastKpiAt);
+    t.check('and before the closing line', countAt > -1 && hoursAt < countAt);
+    t.check('the closing line names what it is about', /your KPIs/.test(lines[countAt]));
+    t.check('the hours line is a record, not something to work on',
+        !/focus|work on|improve|reduce|Q4|keep/i.test(lines[hoursAt]));
 });
 
 suite('recap email: an improvement is only claimed when the newest quarter held it', (t) => {
@@ -229,7 +244,7 @@ suite('recap email: an improvement is only claimed when the newest quarter held 
             ['Kamella Dash', { cxRepOverall: 76.5 }], ['Esperanza Palomera', { aht: 503 }]]))));
 
     t.equal('618, 510, 589 claims nothing', lineFor(mailFor(env, 'Kristin Villela').body, 'Average Handle Time'),
-        '🔸 Average Handle Time: Q1 618s, Q2 510s, Q3 589s (goal 426s or lower)');
+        'Average Handle Time: Q1 618s, Q2 510s, Q3 589s (goal 426s or lower)');
     t.check('655, 481, 540 claims nothing', !/down|up/.test(lineFor(mailFor(env, 'Angelina Fierro').body, 'Average Handle Time')));
     t.check('517, 432, 474 claims nothing', !/down|up/.test(lineFor(mailFor(env, 'Sabrina Gage').body, 'Average Handle Time')));
     t.check('75.0, 81.8, 76.5 claims nothing', !/down|up/.test(lineFor(mailFor(env, 'Kamella Dash').body, 'Rep Satisfaction')));
@@ -290,7 +305,7 @@ suite('recap email: one KPI at goal is "one of these", not "some"', (t) => {
             aht: 470, scheduleAdherence: 90, overallSentiment: 92, cxRepOverall: 70
         })])));
     t.check('one of these', mailFor(env, 'Jordan Reyes').body.indexOf(
-        'One of these is already at goal, and Q4 is a full quarter to bring the rest along.') > -1);
+        'One of your KPIs is already at goal, and Q4 is a full quarter to bring the rest along.') > -1);
 });
 
 suite('recap email: a survey quarter too thin to quote is left out, the same as the document', (t) => {
@@ -304,7 +319,7 @@ suite('recap email: a survey quarter too thin to quote is left out, the same as 
     const mail = mailFor(env, 'Jordan Reyes');
 
     t.equal('rep satisfaction skips Q2', lineFor(mail.body, 'Rep Satisfaction'),
-        '🔸 Rep Satisfaction: Q1 76.0%, Q3 80.5%, up 4.5 points (goal 82% or better)');
+        'Rep Satisfaction: Q1 76.0%, Q3 80.5%, up 4.5 points (goal 82% or better)');
     t.check('the two survey 100% is nowhere', mail.body.indexOf('100.0%') === -1);
     t.check('handle time still has all three', mail.body.indexOf('Q1 451s, Q2 438s, Q3 421s') > -1);
     const rep = mail.model.kpis.filter((k) => k.metricKey === 'cxRepOverall')[0];
@@ -326,7 +341,7 @@ suite('recap email: a check-in quarter too thin to judge gets no mark, and Scott
     // Judging it on Q2 would tell someone whose Q3 was poor that it was fine.
     t.equal('the line carries no mark at all', line, 'Rep Satisfaction: Q1 76.0%, Q2 79.0%, up 3 points (goal 82% or better)');
     t.check('the Q3 tile is empty', mail.model.kpis[3].points[2].shown === false);
-    t.check('the summary counts only what Q3 judged', mail.body.indexOf('Most of these are at goal in Q3. Keep it going 💪') > -1);
+    t.check('the summary counts only what Q3 judged', mail.body.indexOf('Most of your KPIs are at goal in Q3. Keep it going 💪') > -1);
     const notes = env.recap.buildRecapNotes(mail.model);
     t.check('the panel tells Scott why, and what the one reading was',
         notes.some((n) => n === 'Rep Satisfaction has no Q3 number in the email: one survey in Q3 (100.0%), too few to quote.'));
@@ -378,7 +393,7 @@ suite('recap email: a Q4 recap looks to next year and still fits a mailto', (t) 
     const mail = mailFor(env, longName, 4);
     t.equal('the subject says Q4', mail.subject, 'Your Q4 check-in recap');
     t.check('four quarters', mail.body.indexOf('in Q1, Q2, Q3 and Q4:') > -1);
-    t.check('the close looks to next year', /Next year is a fresh start on these/.test(mail.body));
+    t.check('the close looks to next year', /Next year is a fresh start on your KPIs/.test(mail.body));
     t.equal('the picture has four columns', mail.model.columns.length, 4);
     t.check(`the longest case still fits a mailto (${mail.href.length} chars)`, mail.href.length < 2000);
 });
@@ -389,11 +404,11 @@ suite('recap email: hours missed are the year total against the allowance', (t) 
     t.pinClock('2026-10-07');
     const env = load(t, YEAR);
     const mail = mailFor(env, 'Jordan Reyes');
-    const line = lineFor(mail.body, 'Reliability');
+    const line = hoursLineOf(mail.body);
 
     // 6 + 5 + 3.5. Never a quarter's own 3.5.
     t.equal('the total, dated, against the allowance', line,
-        'Reliability: 14.5 hrs missed in 2026 through September 30 (allowance 18 hrs).');
+        'For your records, missed time for 2026 through September 30 is 14.5 hrs (allowance 18 hrs).');
     t.check('no quarter\'s own hours appear', !/(^|[^\d.])3\.5 hrs/.test(mail.body) && !/(^|[^\d.])5\.0 hrs/.test(mail.body));
     t.check('and never as better or worse, or a verdict', !/better|worse|improv|over|inside|under/i.test(line));
     t.equal('the email says the hours line went in', mail.includedHours, true);
@@ -403,8 +418,8 @@ suite('recap email: the year to date upload is the year total, dated by its last
     t.pinClock('2026-10-07');
     const env = load(t, YEAR, period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', { reliability: 16.25 })]));
     const mail = mailFor(env, 'Jordan Reyes');
-    t.equal('the upload\'s figure, through the day it runs to', lineFor(mail.body, 'Reliability'),
-        'Reliability: 16.3 hrs missed in 2026 through October 5 (allowance 18 hrs).');
+    t.equal('the upload\'s figure, through the day it runs to', hoursLineOf(mail.body),
+        'For your records, missed time for 2026 through October 5 is 16.3 hrs (allowance 18 hrs).');
     t.check('the summed quarters are not in the email', mail.body.indexOf('14.5') === -1);
     const notes = env.recap.buildRecapNotes(mail.model);
     // October 1 to 5 are in the file and in no quarter, so the two differ
@@ -426,7 +441,7 @@ suite('recap email: hours that went down between two uploads were re-coded, and 
         period('ytd', '2026-01-01', '2026-09-22', [person('Jordan Reyes', { reliability: 22.8 })]),
         period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', { reliability: 17.8 })])));
     const mail = mailFor(env, 'Jordan Reyes');
-    t.check('the email uses the newest file', /Reliability: 17\.8 hrs missed in 2026 through October 5/.test(mail.body));
+    t.check('the email uses the newest file', /missed time for 2026 through October 5 is 17\.8 hrs/.test(mail.body));
     t.check('and the panel says it came down', env.recap.buildRecapNotes(mail.model).indexOf(
         'Jordan\'s hours went down from 22.8 hrs in the September 22 year to date file to 17.8 hrs in the October 5 one, so some were re-coded. Check the figure before sending.') > -1);
 
@@ -449,14 +464,14 @@ suite('recap email: only a year to date file Scott uploaded counts, never one th
     });
     const env = load(t, YEAR, Object.assign({}, YTD_REAL_OCT5, auto('2026-10-17', 18.3)));
     const mail = mailFor(env, 'Jordan Reyes');
-    t.check('the hours are the uploaded file\'s, dated by it', /Reliability: 16\.3 hrs missed in 2026 through October 5/.test(mail.body));
+    t.check('the hours are the uploaded file\'s, dated by it', /missed time for 2026 through October 5 is 16\.3 hrs/.test(mail.body));
     t.equal('the YTD column is the uploaded file\'s', mail.model.kpis[0].ytd.display, '444s');
     t.equal('and dated by it', mail.model.ytd.through, '2026-10-05');
 
     // With only an auto row, there is no year to date file at all.
     const only = load(t, YEAR, auto('2026-09-26', 12.5));
     const m2 = mailFor(only, 'Jordan Reyes');
-    t.check('the hours fall back to the quarters', /Reliability: 14\.5 hrs missed in 2026 through September 30/.test(m2.body));
+    t.check('the hours fall back to the quarters', /missed time for 2026 through September 30 is 14\.5 hrs/.test(m2.body));
     t.equal('and there is no YTD column', m2.model.ytd, null);
 });
 
@@ -471,8 +486,8 @@ suite('recap email: no hours missed is the counted 0, not a claim they were neve
     const env = load(t, none);
     // Time re-coded out of the count is still time away, so "no hours
     // missed" claims more than the figure does.
-    t.equal('the figure as counted', lineFor(mailFor(env, 'Jordan Reyes').body, 'Reliability'),
-        'Reliability: 0 hrs missed in 2026 through September 30 (allowance 18 hrs).');
+    t.equal('the figure as counted', hoursLineOf(mailFor(env, 'Jordan Reyes').body),
+        'For your records, missed time for 2026 through September 30 is 0 hrs (allowance 18 hrs).');
 });
 
 suite('recap email: hours past the allowance are stated, never set as something to work on', (t) => {
@@ -483,22 +498,22 @@ suite('recap email: hours past the allowance are stated, never set as something 
         period('quarter', '2026-07-01', '2026-09-30', [person('Jordan Reyes', { aht: 421, reliability: hours[2] })]));
     const env = load(t, over([10, 8, 6]));
     const mail = mailFor(env, 'Jordan Reyes');
-    t.equal('the line is the two facts', lineFor(mail.body, 'Reliability'),
-        'Reliability: 24 hrs missed in 2026 through September 30 (allowance 18 hrs).');
+    t.equal('the line is the two facts', hoursLineOf(mail.body),
+        'For your records, missed time for 2026 through September 30 is 24 hrs (allowance 18 hrs).');
     t.check('no focus wording anywhere near it',
-        !/focus|work on|improve|reduce|attendance policy|over the allowance/i.test(lineFor(mail.body, 'Reliability')));
+        !/focus|work on|improve|reduce|attendance policy|over the allowance/i.test(hoursLineOf(mail.body)));
     t.equal('24 against 18 needs no note about hours', env.recap.buildRecapNotes(mail.model).filter((n) => /hrs|hours/.test(n)).length, 0);
 
     // Far past it is often leave not yet coded, sometimes protected leave, so
     // the line stays out until Scott has checked and ticks it back in.
     const far = load(t, over([20, 12, 8]));
     const farMail = mailFor(far, 'Jordan Reyes');
-    t.check('40 hrs against 18 is left out by default', farMail.body.indexOf('Reliability') === -1);
+    t.check('40 hrs against 18 is left out by default', !/missed time|Reliability|hrs/.test(farMail.body));
     t.equal('and the email says so', farMail.includedHours, false);
     t.check('the panel says why, and how to put it back', far.recap.buildRecapNotes(farMail.model).indexOf(
         'Hours are left out of Jordan\'s email: 40 hrs is more than twice the 18 hrs allowance. Tick Include the hours line once you have checked none of it is protected leave.') > -1);
     const ticked = mailFor(far, 'Jordan Reyes', 3, { includeHours: true });
-    t.check('once ticked, it goes in', /Reliability: 40 hrs missed in 2026/.test(ticked.body));
+    t.check('once ticked, it goes in', /missed time for 2026 through September 30 is 40 hrs/.test(ticked.body));
     t.check('and the note stops asking', !far.recap.buildRecapNotes(ticked.model, { includeHours: true }).some((n) => /left out/.test(n)));
 });
 
@@ -506,7 +521,7 @@ suite('recap email: the hours line can be left out for one associate', (t) => {
     t.pinClock('2026-10-07');
     const env = load(t, YEAR);
     const mail = mailFor(env, 'Jordan Reyes', 3, { includeHours: false });
-    t.check('no hours in the text', mail.body.indexOf('Reliability') === -1 && !/hrs/.test(mail.body));
+    t.check('no hours in the text', !/missed time|Reliability/.test(mail.body) && !/hrs/.test(mail.body));
     t.equal('and the email says so', mail.includedHours, false);
     t.equal('nor a note about hours that are not going', env.recap.buildRecapNotes(mail.model, { includeHours: false }).filter((n) => /hrs|hours/.test(n)).length, 0);
 });
@@ -525,7 +540,7 @@ suite('recap email: a part year is not judged against a whole year allowance', (
     const mail = mailFor(env, 'Casey New');
     // A quarter nobody uploaded and a quarter before they started look the
     // same from here, so a total that may be short is not sent.
-    t.check('no hours line goes out', mail.body.indexOf('Reliability') === -1);
+    t.check('no hours line goes out', !/missed time|Reliability|hrs/.test(mail.body));
     t.equal('nothing claims the hours went in', mail.includedHours, false);
     const notes = env.recap.buildRecapNotes(mail.model);
     t.check('Scott is told why, in the panel', notes.some((n) =>
@@ -542,7 +557,7 @@ suite('recap email: no attendance column means no hours line, not zero', (t) => 
     });
     const env = load(t, blank);
     const mail = mailFor(env, 'Jordan Reyes');
-    t.check('nothing about hours', mail.body.indexOf('Reliability') === -1);
+    t.check('nothing about hours', !/missed time|Reliability|hrs/.test(mail.body));
     t.equal('and nothing to switch off', mail.model.hours, null);
 });
 
@@ -1161,12 +1176,12 @@ suite('quarterly tab: the hours switch takes the line out of the email', (t) => 
 
     press(els.quarterRecapIncludeHours, 'change', { target: { checked: false } });
     const off = global.document._els.q1ReviewContent.innerHTML;
-    t.check('the line is gone from the email text', !/Reliability:/.test(off));
+    t.check('the line is gone from the email text', !/missed time for 2026/.test(off));
     t.check('the switch shows off', /id="quarterRecapIncludeHours">/.test(off));
     t.equal('and it is remembered', env.recap.statusFor('Jordan Reyes', 2026, 3).includeHours, false);
 
     press(els.quarterRecapIncludeHours, 'change', { target: { checked: true } });
-    t.check('switched back on, it returns', /Reliability: 14\.5 hrs missed/.test(global.document._els.q1ReviewContent.innerHTML));
+    t.check('switched back on, it returns', /missed time for 2026 through September 30 is 14\.5 hrs/.test(global.document._els.q1ReviewContent.innerHTML));
 });
 
 suite('quarterly tab: a refused save says to reload, and changes nothing', (t) => {

@@ -7152,7 +7152,10 @@ async function generateTrendCoachingEmail() {
         metricsRegistry: METRICS_REGISTRY,
         metricMeetsTarget,
         metricDelta,
-        formatMetricValue,
+        // With units. The bare value formatter handed the prompt "Average
+        // Handle Time: 398" and "Schedule Adherence: 96.2", and Copilot has
+        // to guess whether 398 is seconds (Scott, 2026-10-14).
+        formatMetricValue: formatMetricDisplay,
         getCenterAverageForWeek,
         getEmployeeNickname,
         isAssociateIncludedByTeamFilter,
@@ -10159,7 +10162,15 @@ function isYearEndTargetConfigValid(targetConfig) {
     return Boolean(targetConfig && targetConfig.value !== undefined && targetConfig.value !== null);
 }
 
-function doesYearEndMetricMeetTarget(value, targetConfig) {
+function doesYearEndMetricMeetTarget(value, targetConfig, metricKey) {
+    // Judged on the number as printed, so the list never says "Schedule
+    // Adherence: 93% (goal 93% or better)" under improvement areas because
+    // the value behind the 93% was 92.96.
+    const profiles = getMetricProfilesModule();
+    if (metricKey && typeof profiles?.valueMeetsTarget === 'function') {
+        const judged = profiles.valueMeetsTarget(metricKey, value, targetConfig);
+        if (judged !== null && judged !== undefined) return judged;
+    }
     return targetConfig.type === 'min'
         ? value >= targetConfig.value
         : value <= targetConfig.value;
@@ -10171,6 +10182,7 @@ function buildYearEndMetricEntry(metricKey, metricLabel, value, targetConfig, me
         label: metricLabel,
         value: formatMetricDisplay(metricKey, value),
         target: formatMetricDisplay(metricKey, targetConfig.value),
+        targetType: targetConfig.type,
         meetsTarget
     };
 }
@@ -10179,10 +10191,20 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
     const wins = [];
     const opportunities = [];
     const profileYears = new Set();
+    const yearEnd = window.DevCoachModules?.yearEnd;
 
     getMetricOrder().forEach(({ key }) => {
         const metricConfig = METRICS_REGISTRY[key];
         if (!metricConfig) return;
+
+        // Hours stay out of Year-End entirely (Scott, 2026-10-13), and a
+        // survey metric needs three responses behind it before it is a
+        // score: a zero-survey associate read "Overall Experience: 0%" as a
+        // failure three times over (Scott, 2026-10-14). The rules live in
+        // the year-end module; the reliability check is repeated here so the
+        // hours stay out even if that module failed to load.
+        if (key === 'reliability') return;
+        if (yearEnd?.reviewExclusion?.(key, employeeRecord)) return;
 
         const value = parseYearEndMetricValue(employeeRecord, key);
         if (value === null) return;
@@ -10191,7 +10213,7 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
         if (!isYearEndTargetConfigValid(targetConfig)) return;
         if (targetConfig.profileYear) profileYears.add(targetConfig.profileYear);
 
-        const meetsTarget = doesYearEndMetricMeetTarget(value, targetConfig);
+        const meetsTarget = doesYearEndMetricMeetTarget(value, targetConfig, key);
         const entry = buildYearEndMetricEntry(key, metricConfig.label, value, targetConfig, meetsTarget);
 
         if (entry.meetsTarget) {
@@ -10201,9 +10223,12 @@ function buildYearEndMetricSnapshot(employeeRecord, reviewYear, periodMetadata =
         }
     });
 
+    // The four KPIs first, so a cap on the list never pushes rep
+    // satisfaction out behind hold time and after call work.
+    const order = (list) => (typeof yearEnd?.orderForReview === 'function' ? yearEnd.orderForReview(list) : list);
     return {
-        wins,
-        opportunities,
+        wins: order(wins),
+        opportunities: order(opportunities),
         targetProfileYear: profileYears.size ? Array.from(profileYears)[0] : null
     };
 }

@@ -258,18 +258,27 @@
         return `${latestPeriod.label} \u2022 Source: ${sourceLabel} \u2022 Targets: ${profileLabel} \u2022 ${wins.length} positives \u2022 ${opportunities.length} improvement areas`;
     }
 
+    // "Average Handle Time: 398s (goal 426s or lower)". The year-end module
+    // owns the wording; the old one is the fallback if it did not load.
+    function metricLine(entry) {
+        const delegated = window.DevCoachModules?.yearEnd?.metricLine?.(entry);
+        return delegated || `${entry.label}: ${entry.value} vs goal ${entry.target}`;
+    }
+
+    // The snapshot already leaves out hours and thin surveys and puts the
+    // four KPIs first, so the cap of six is spent on what a review is about.
     function autoPopulateYearEndNarrativeInputs(positivesInput, improvementsInput, wins, opportunities, annualGoals) {
         if (positivesInput && !positivesInput.value.trim()) {
             const metGoalLines = annualGoals.metGoals.slice(0, 4).map(goal => `Annual Goal Met: ${goal}`);
             positivesInput.value = wins.length
-                ? wins.slice(0, 6).map(w => `${w.label}: ${w.value} vs target ${w.target}`).concat(metGoalLines).join('\n')
+                ? wins.slice(0, 6).map(metricLine).concat(metGoalLines).join('\n')
                 : ['Consistent effort and willingness to grow throughout the year.', ...metGoalLines].join('\n');
         }
 
         if (improvementsInput && !improvementsInput.value.trim()) {
             const annualFollowUps = annualGoals.notMetGoals.map(goal => `Annual Goal Follow-up: ${goal}`);
             improvementsInput.value = opportunities.length
-                ? opportunities.slice(0, 6).map(o => `${o.label}: ${o.value} vs target ${o.target}`).concat(annualFollowUps).join('\n')
+                ? opportunities.slice(0, 6).map(metricLine).concat(annualFollowUps).join('\n')
                 : annualFollowUps.length
                     ? annualFollowUps.join('\n')
                     : 'Continue building consistency and sustaining current performance levels.';
@@ -301,15 +310,19 @@
     }
 
     function renderYearEndSnapshotMetricLists(winsList, improvementList, wins, opportunities) {
+        const escape = (text) => {
+            const fn = window.DevCoachModules?.sharedUtils?.escapeHtml;
+            return typeof fn === 'function' ? fn(text) : String(text);
+        };
         if (winsList) {
             winsList.innerHTML = wins.length
-                ? wins.map(w => `<li>${w.label}: ${w.value} vs target ${w.target}</li>`).join('')
+                ? wins.map(w => `<li>${escape(metricLine(w))}</li>`).join('')
                 : '<li>No metrics currently at goal in this period.</li>';
         }
 
         if (improvementList) {
             improvementList.innerHTML = opportunities.length
-                ? opportunities.map(o => `<li>${o.label}: ${o.value} vs target ${o.target}</li>`).join('')
+                ? opportunities.map(o => `<li>${escape(metricLine(o))}</li>`).join('')
                 : '<li>No below-target metrics detected in this period.</li>';
         }
     }
@@ -437,10 +450,10 @@
 
     function buildYearEndPromptSupportData(employeeName, reviewYear) {
         const fallbackPositives = (yearEndDraftContext?.wins || [])
-            .map(w => `${w.label}: ${w.value} vs target ${w.target}`)
+            .map(metricLine)
             .join('\n');
         const fallbackImprovements = (yearEndDraftContext?.opportunities || [])
-            .map(o => `${o.label}: ${o.value} vs target ${o.target}`)
+            .map(metricLine)
             .join('\n');
         const annualGoals = _collectYearEndAnnualGoals(employeeName, reviewYear);
         const annualMetText = annualGoals.metGoals.length
@@ -458,8 +471,12 @@
         // also cannot tell the difference between a year that started strong
         // and faded and one that climbed all year, which is most of what a
         // year-end review is for.
+        //
+        // Without the hours line. Hours stay out of Year-End tone and focus
+        // (Scott, 2026-10-13), and a fact line handed to Copilot is a fact it
+        // will build a sentence around.
         const progression = window.DevCoachModules?.quarterReview
-            ?.buildProgressionBlock?.(employeeName, reviewYear) || '';
+            ?.buildProgressionBlock?.(employeeName, reviewYear, { reliability: false }) || '';
 
         return {
             fallbackPositives,
@@ -650,9 +667,11 @@
     function generateYearEndVerbalSummary() {
         const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
         const reviewYear = document.getElementById('yearEndReviewYear')?.value;
-        const performanceRating = document.getElementById('yearEndPerformanceRatingInput')?.value.trim() || 'Not provided';
-        const meritDetails = document.getElementById('yearEndMeritDetailsInput')?.value.trim() || 'Not provided';
-        const bonusAmount = document.getElementById('yearEndBonusAmountInput')?.value.trim() || 'Not provided';
+        // Blank stays blank. "Not provided" went into a script that is read
+        // aloud to the associate (Scott, 2026-10-14).
+        const performanceRating = document.getElementById('yearEndPerformanceRatingInput')?.value.trim() || '';
+        const meritDetails = document.getElementById('yearEndMeritDetailsInput')?.value.trim() || '';
+        const bonusAmount = document.getElementById('yearEndBonusAmountInput')?.value.trim() || '';
         const output = document.getElementById('yearEndVerbalSummaryOutput');
 
         if (!employeeName) {
@@ -664,6 +683,17 @@
             return;
         }
         if (!output) return;
+        // The rating is what the conversation is for, so the summary is not
+        // built without one. Merit and bonus can be genuinely absent, so
+        // those lines are left out and Scott is told which.
+        if (!performanceRating) {
+            alert('Enter the overall performance rating first. The summary is read aloud, so it is not built with that line blank.');
+            return;
+        }
+        const leftOut = [
+            meritDetails ? '' : 'merit increase',
+            bonusAmount ? '' : 'incentive/bonus'
+        ].filter(Boolean);
 
         const preferredName = _getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
         const summary = window.DevCoachModules?.yearEnd?.buildVerbalSummary?.(
@@ -681,7 +711,9 @@
 
         output.value = summary;
         _persistYearEndDraftState(employeeName, reviewYear);
-        _showToast('Verbal summary generated.', 3000);
+        _showToast(leftOut.length
+            ? 'Verbal summary generated. The ' + leftOut.join(' and ') + ' line' + (leftOut.length > 1 ? 's were' : ' was') + ' left out because ' + (leftOut.length > 1 ? 'they are' : 'it is') + ' blank.'
+            : 'Verbal summary generated.', leftOut.length ? 5000 : 3000);
     }
 
     function copyYearEndVerbalSummary() {

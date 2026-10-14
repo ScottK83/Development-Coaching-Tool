@@ -760,6 +760,7 @@
 
     var TALK_TONES = {
         wins: '#16a34a',
+        rising: '#16a34a',
         focus: '#c2410c',
         moreFocus: '#c2410c',
         watch: '#d97706',

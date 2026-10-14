@@ -176,7 +176,10 @@ suite('check-ins: areas of focus never reference reliability', (t) => {
     const notes = qr.buildNotes(ctx);
     t.check('the box says nothing about hours', !/hrs|hours|allowance|reliab|attendance/i.test(notes.box2));
     t.check('nor does the strengths box', !/allowance/.test(notes.box1));
-    t.check('the lead rate still gets its expectation', /expectation is visible movement/.test(notes.box2));
+    // Named, so "This" can never point at the wrong sentence (Scott,
+    // 2026-10-14).
+    t.check('the lead rate still gets its expectation, by name',
+        /Handle time is the one to move first\. Sam and I will work on it together in our one to ones, and the goal for Q4 is to turn it back toward 426s\./.test(notes.box2));
 
     // Copilot is not handed the hours to put back in.
     const prompt = qr.buildPrompt(ctx);

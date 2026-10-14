@@ -117,9 +117,10 @@ suite('one-on-one: the sheet leaves out what it has nothing for', (t) => {
         notes: 'ask about the schedule change'
     });
 
-    t.check('it names the person and date', full.indexOf('Esperanza Palomera') > -1 && full.indexOf('2026-08-15') > -1);
+    // Dates the way the business writes them (Scott, 2026-10-14).
+    t.check('it names the person and date', full.indexOf('Esperanza Palomera') > -1 && full.indexOf('08/15/2026') > -1);
     t.check('the year section is there', full.indexOf('THE YEAR SO FAR') > -1);
-    t.check('and dates the last meeting', full.indexOf('SINCE WE LAST MET (2026-07-15)') > -1);
+    t.check('and dates the last meeting', full.indexOf('SINCE WE LAST MET (07/15/2026)') > -1);
     t.check('last month appears when something moved', full.indexOf('LAST MONTH') > -1);
     t.check('the weeks section is dropped when nothing moved', full.indexOf('THE LAST FEW WEEKS') === -1);
     t.check('what was said last time carries forward', full.indexOf('we agreed to work on holds') > -1);

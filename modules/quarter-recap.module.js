@@ -317,7 +317,16 @@
         var gap = function (a, b) { return Math.abs(_printed(metricKey, a - b)); };
 
         var overall = _betterBy(metricKey, last, first, isReverse);
-        if (!(overall > 0) || gap(last, first) <= band) return null;
+        // Better in every quarter is a move even inside the noise band, the
+        // same rule the check-in document now holds to: 446s, 442s, 439s came
+        // down every quarter, and the file note says so, so the email does
+        // too (Scott, 2026-10-14). Three quarters at least, and half the band
+        // overall, so two readings a second apart are still nothing.
+        var everyStep = values.length >= 3 && values.every(function (v, i) {
+            return i === 0 || _betterBy(metricKey, v, values[i - 1], isReverse) > 0;
+        });
+        var steadyClimb = everyStep && gap(last, first) >= band / 2;
+        if (!(overall > 0) || (gap(last, first) <= band && !steadyClimb)) return null;
         if (_betterBy(metricKey, last, prev, isReverse) < 0 && gap(last, prev) > band) return null;
 
         var better = false, worse = false;
@@ -398,23 +407,29 @@
 
     /* ── The email ── */
 
-    // ✅ at goal in the check-in quarter, 🔸 not yet, nothing when the check-in
-    // quarter has no number to judge. Two marks, matching the picture's two
-    // states. 📈 was tried and dropped: on handle time a rising chart reads
-    // as "went up".
+    // Said in words, not marks. A ✅ or 🔸 on every line put four or five
+    // emojis in a message that is allowed two (Scott, 2026-10-13: "2
+    // emojis"), and words read the same in every mail client. At goal in the
+    // check-in quarter says so; not yet carries the goal to aim at; a
+    // check-in quarter with no number to judge carries the goal alone.
     function _kpiLine(k) {
-        var mark = k.verdict === true ? '✅ ' : k.verdict === false ? '🔸 ' : '';
         var numbers = k.points.filter(function (p) { return p.shown; }).map(function (p) {
             return p.name + ' ' + p.display;
         }).join(', ');
-        return mark + k.label + ': ' + numbers
+        var tail = k.verdict === true ? ' (at goal)'
+            : (k.goalText ? ' (goal ' + k.goalText + ')' : '');
+        return k.label + ': ' + numbers
             + (k.improvement ? ', ' + k.improvement.words : '')
-            + (k.goalText ? ' (goal ' + k.goalText + ')' : '');
+            + tail;
     }
 
     /* One line on where the check-in quarter left them, in the same spirit as
      * the closes on the year to date email. Counted over the KPIs the
-     * check-in quarter actually judged, and never over hours. */
+     * check-in quarter actually judged, and never over hours.
+     *
+     * "Your KPIs" rather than "these": the hours line now sits between the
+     * list and this one, and "these" could be read as taking it in. At most
+     * one emoji, and only on a line that is good news. */
     function _countLine(model) {
         var judged = model.kpis.filter(function (k) { return k.verdict !== null; });
         if (!judged.length) return '';
@@ -422,28 +437,36 @@
         var last = model.quarter >= 4;
         var nextQ = 'Q' + (model.quarter + 1);
         if (met === judged.length && judged.length === model.kpis.length) {
-            return 'All of these are at goal in ' + model.quarterName + '. That is a great way to '
+            return 'All of your KPIs are at goal in ' + model.quarterName + '. That is a great way to '
                 + (last ? 'finish the year' : 'head into ' + nextQ) + ' 🌟';
         }
         if (met * 2 > judged.length) {
-            return 'Most of these are at goal in ' + model.quarterName + '. Keep it going 💪';
+            return 'Most of your KPIs are at goal in ' + model.quarterName + '. Keep it going 💪';
         }
         if (met > 0) {
-            return (met === 1 ? 'One of these is already at goal, and ' : 'Some of these are already at goal, and ')
+            return (met === 1 ? 'One of your KPIs is already at goal, and ' : 'Some of your KPIs are already at goal, and ')
                 + (last ? 'next year is a fresh start for the rest.' : nextQ + ' is a full quarter to bring the rest along.');
         }
-        return last
-            ? 'Next year is a fresh start on these, and I\'m here to help.'
-            : nextQ + ' is a full quarter to move these, and I\'m here to help.';
+        // Every one below goal. The email still ends on the person rather
+        // than the numbers: a quarter of work went into these, whatever they
+        // say (Scott, 2026-10-14: "Think of the way they would receive the
+        // info").
+        return (last
+            ? 'Next year is a fresh start on your KPIs, and I\'m here to help.'
+            : nextQ + ' is a full quarter to move your KPIs, and I\'m here to help.')
+            + ' Thanks for the work you put in this quarter.';
     }
 
-    // "Reliability: 14.5 hrs missed in 2026 through October 5 (allowance 18 hrs)."
+    // "For your records, missed time for 2026 through October 5 is 14.5 hrs
+    // (allowance 18 hrs)." Neutral on purpose: a record, not a verdict, and
+    // never something to work on.
     function _hoursLine(model) {
         var h = model.hours;
         if (!h || h.partialYear) return '';
         var through = h.through ? _monthDay(h.through) : '';
-        return 'Reliability: ' + (h.zero ? '0 hrs' : h.display) + ' missed in ' + model.year
+        return 'For your records, missed time for ' + model.year
             + (through ? ' through ' + through : '')
+            + ' is ' + (h.zero ? '0 hrs' : h.display)
             + (h.allowance !== null ? ' (allowance ' + h.allowanceDisplay + ')' : '') + '.';
     }
 
@@ -476,8 +499,9 @@
      *
      * One line per KPI rather than anything laid out: a mailto body is plain
      * text and Outlook collapses runs of spaces, so a spaced table arrives as
-     * a wall of words (center-ranking found that out twice). Nothing forward
-     * looking follows the hours line, so it cannot read as the thing to fix.
+     * a wall of words (center-ranking found that out twice). The hours line
+     * sits with the numbers, framed as a record, and the closing line names
+     * the KPIs, so the hours cannot read as the thing to fix.
      *
      * options.includeHours: Scott's switch, true or false, or null when he
      * has not touched it (see includeHoursFor for what that means).
@@ -494,20 +518,26 @@
             + 'Here\'s where you were in ' + _listNames(model.quartersShown) + ':');
         lines.push('');
         model.kpis.forEach(function (k) { lines.push(_kpiLine(k)); });
-        var count = _countLine(model);
-        if (count) {
-            lines.push('');
-            lines.push(count);
-        }
+        // The hours sit with the other numbers, above the closing line. Below
+        // it they followed "Keep it going 💪" and read as the thing to keep
+        // going (Scott, 2026-10-14).
         var hours = includeHoursFor(opts.includeHours, model) ? _hoursLine(model) : '';
         if (hours) {
             lines.push('');
             lines.push(hours);
         }
+        var count = _countLine(model);
+        if (count) {
+            lines.push('');
+            lines.push(count);
+        }
         lines.push('');
         lines.push('Happy to walk through any of it.');
 
+        // The floor under the budget of two, whatever a later line adds.
+        var voice = _mod('messageVoice');
         var body = lines.join('\n');
+        if (voice && typeof voice.limitEmojis === 'function') body = voice.limitEmojis(body, 2);
         var subject = 'Your ' + model.quarterName + ' check-in recap';
         var to = opts.to !== undefined ? opts.to : _recipient(model.name);
         var cc = opts.cc !== undefined ? opts.cc : _cc();

@@ -24,6 +24,21 @@
     // talking point.
     const SKIP_METRICS = new Set(['totalCalls', 'transfersCount', 'surveyTotal']);
 
+    // Not a better or worse. A period's own hours set side by side read
+    // "Reliability: 4 -> 2" under Better, which is a month's hours shown as
+    // the associate's reliability and an hours figure praised for going
+    // down, when hours are a running total for the year that only ever goes
+    // up (Scott, 2026-09-18 and 2026-10-13). The year's total still shows,
+    // once, in the year so far.
+    const NOT_A_CHANGE = new Set(['reliability']);
+
+    // The four a review is about, listed first in the year so far.
+    const CORE_ORDER = ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall'];
+
+    // A survey score on fewer responses than this is not a score. The floor
+    // the check-in document and the year-end review use.
+    const MIN_SURVEYS = 3;
+
     // How far a metric has to move before it is worth raising in a meeting.
     // The registry owns the floor so "improved" means the same thing here as
     // it does in a check-in message.
@@ -45,9 +60,64 @@
         return registry()[metricKey]?.label || metricKey;
     }
 
+    // With units: "96.2%", "430s", "11 hrs". The bare value formatter put
+    // "96.2 against a 93.0 target" on the sheet (Scott, 2026-10-14).
     function formatValue(metricKey, value) {
+        if (typeof window.formatMetricDisplay === 'function') return window.formatMetricDisplay(metricKey, value);
         if (typeof window.formatMetricValue === 'function') return window.formatMetricValue(metricKey, value);
         return String(value);
+    }
+
+    // "10/14/2026", the way the business writes a date.
+    function formatDate(dateText) {
+        const parts = String(dateText || '').split('-');
+        if (parts.length === 3 && parts[0].length === 4) return `${parts[1]}/${parts[2]}/${parts[0]}`;
+        return dateText || '';
+    }
+
+    // "a 93% goal", "an 88% goal", "an 18 hr allowance": the article follows
+    // how the number is said, and eight, eleven and eighteen open on a vowel.
+    function articleFor(shown) {
+        return /^8|^1[18](\D|$)/.test(String(shown || '')) ? 'an' : 'a';
+    }
+
+    /* Which metrics the year so far lists, in what order.
+     *
+     * The four KPIs first, then the rest in registry order. A survey metric
+     * with fewer than three responses behind it is left out: somebody nobody
+     * surveyed is not at 0% first call resolution. */
+    function yearToDateEntries(row, targetFor) {
+        if (!row) return [];
+        const out = [];
+        talkableMetricKeys().forEach(key => {
+            const value = toNumber(row[key]);
+            if (value === null) return;
+            const surveyed = typeof window.isSurveyWeightedMetric === 'function'
+                ? window.isSurveyWeightedMetric(key)
+                : !!(window.SURVEY_WEIGHT_FIELD || {})[key];
+            if (surveyed) {
+                const responses = typeof window.getSurveyWeight === 'function'
+                    ? window.getSurveyWeight(key, row)
+                    : parseInt(row.surveyTotal, 10);
+                if (!(Number.isFinite(responses) && responses >= MIN_SURVEYS)) return;
+            }
+            // No handle time is no calls, not a fast year.
+            if (registry()[key]?.unit === 'sec' && value <= 0) return;
+            const target = typeof targetFor === 'function' ? targetFor(key) : null;
+            out.push({
+                key,
+                label: labelFor(key),
+                value,
+                target: target && Number.isFinite(parseFloat(target.value)) ? parseFloat(target.value) : null
+            });
+        });
+        const rank = (key) => {
+            const i = CORE_ORDER.indexOf(key);
+            return i < 0 ? CORE_ORDER.length : i;
+        };
+        return out.map((e, i) => ({ e, i }))
+            .sort((a, b) => (rank(a.e.key) - rank(b.e.key)) || (a.i - b.i))
+            .map(x => x.e);
     }
 
     function toNumber(value) {
@@ -97,7 +167,9 @@
         const steady = [];
         const unmeasured = [];
 
-        const keys = Array.isArray(opts.keys) ? opts.keys : talkableMetricKeys();
+        const keys = Array.isArray(opts.keys)
+            ? opts.keys
+            : talkableMetricKeys().filter(key => !NOT_A_CHANGE.has(key));
         keys.forEach(key => {
             const before = toNumber(prev[key]);
             const after = toNumber(now[key]);
@@ -215,9 +287,18 @@
         return `${entry.label}: ${formatValue(entry.key, entry.before)} → ${formatValue(entry.key, entry.after)}`;
     }
 
+    // "Schedule Adherence: 96.2% against a 93% goal". Hours are the year's
+    // running total against its allowance, said as one.
     function describeStanding(entry) {
-        return `${entry.label}: ${formatValue(entry.key, entry.value)}${entry.target !== null && entry.target !== undefined
-            ? ` against a ${formatValue(entry.key, entry.target)} target` : ''}`;
+        const hasTarget = entry.target !== null && entry.target !== undefined;
+        const target = hasTarget ? formatValue(entry.key, entry.target) : '';
+        if (entry.key === 'reliability') {
+            const allowance = target.replace(/ hrs$/, ' hr');
+            return `${entry.label}: ${formatValue(entry.key, entry.value)} missed this year`
+                + (hasTarget ? `, against ${articleFor(allowance)} ${allowance} allowance` : '');
+        }
+        return `${entry.label}: ${formatValue(entry.key, entry.value)}`
+            + (hasTarget ? ` against ${articleFor(target)} ${target} goal` : '');
     }
 
     /**
@@ -232,41 +313,46 @@
         const blocks = [];
         const name = d.preferredName || d.employeeName || 'them';
 
-        blocks.push(`One-to-one. ${d.employeeName || name}${d.date ? ` · ${d.date}` : ''}`);
+        blocks.push(`One-to-one. ${d.employeeName || name}${d.date ? ` · ${formatDate(d.date)}` : ''}`);
 
         if (d.yearToDate?.length) {
             blocks.push('THE YEAR SO FAR\n' + d.yearToDate.map(e => `  • ${describeStanding(e)}`).join('\n'));
         }
 
+        // Hours are never a better or a slipped (see NOT_A_CHANGE), whatever
+        // a caller hands in, including a meeting saved before that rule.
+        const changes = list => (list || []).filter(e => !NOT_A_CHANGE.has(e?.key));
+
+        // One word for a move the wrong way, everywhere on the sheet. It was
+        // "Slipped" in one section and "Worse" in the next, and "Worse" is
+        // the harder of the two to hear across a desk (Scott, 2026-10-14).
         if (d.sinceLast) {
             const since = d.sinceLast;
-            const heading = `SINCE WE LAST MET${since.date ? ` (${since.date})` : ''}`;
+            const heading = `SINCE WE LAST MET${since.date ? ` (${formatDate(since.date)})` : ''}`;
             const lines = [];
-            if (since.improved?.length) {
+            if (changes(since.improved).length) {
                 lines.push('  Better:');
-                since.improved.slice(0, 5).forEach(e => lines.push(`    • ${describeChange(e)}`));
+                changes(since.improved).slice(0, 5).forEach(e => lines.push(`    • ${describeChange(e)}`));
             }
-            if (since.slipped?.length) {
+            if (changes(since.slipped).length) {
                 lines.push('  Slipped:');
-                since.slipped.slice(0, 5).forEach(e => lines.push(`    • ${describeChange(e)}`));
+                changes(since.slipped).slice(0, 5).forEach(e => lines.push(`    • ${describeChange(e)}`));
             }
             if (!lines.length) lines.push('  Holding roughly where they were.');
             blocks.push(`${heading}\n${lines.join('\n')}`);
         }
 
-        if (d.lastMonth?.improved?.length || d.lastMonth?.slipped?.length) {
+        const movedSection = (title, horizon) => {
+            const better = changes(horizon?.improved);
+            const slipped = changes(horizon?.slipped);
+            if (!better.length && !slipped.length) return;
             const lines = [];
-            (d.lastMonth.improved || []).slice(0, 4).forEach(e => lines.push(`  • Better: ${describeChange(e)}`));
-            (d.lastMonth.slipped || []).slice(0, 4).forEach(e => lines.push(`  • Worse: ${describeChange(e)}`));
-            blocks.push(`LAST MONTH\n${lines.join('\n')}`);
-        }
-
-        if (d.recentWeeks?.improved?.length || d.recentWeeks?.slipped?.length) {
-            const lines = [];
-            (d.recentWeeks.improved || []).slice(0, 4).forEach(e => lines.push(`  • Better: ${describeChange(e)}`));
-            (d.recentWeeks.slipped || []).slice(0, 4).forEach(e => lines.push(`  • Worse: ${describeChange(e)}`));
-            blocks.push(`THE LAST FEW WEEKS\n${lines.join('\n')}`);
-        }
+            better.slice(0, 4).forEach(e => lines.push(`  • Better: ${describeChange(e)}`));
+            slipped.slice(0, 4).forEach(e => lines.push(`  • Slipped: ${describeChange(e)}`));
+            blocks.push(`${title}\n${lines.join('\n')}`);
+        };
+        movedSection('LAST MONTH', d.lastMonth);
+        movedSection('THE LAST FEW WEEKS', d.recentWeeks);
 
         if (d.previousNotes) {
             blocks.push(`WHAT WE SAID LAST TIME\n${indent(d.previousNotes)}`);
@@ -298,6 +384,9 @@
         deleteMeeting,
         buildTalkingPoints,
         describeChange,
-        describeStanding
+        describeStanding,
+        yearToDateEntries,
+        formatValue,
+        formatDate
     };
 })();

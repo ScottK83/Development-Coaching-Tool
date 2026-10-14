@@ -117,14 +117,17 @@ suite('progression block: the year-end prompt asks for the quarters', (t) => {
         /say so with the quarters rather than quoting/.test(src));
 
     const support = fs.readFileSync(path.join(ROOT, 'modules/year-end-comments.module.js'), 'utf8');
-    t.check('and the support data builds one', /buildProgressionBlock\?\.\(employeeName, reviewYear\)/.test(support));
+    // Without hours: they stay out of Year-End tone and focus (Scott,
+    // 2026-10-13), the same as Mid-Year.
+    t.check('and the support data builds one, without hours',
+        /buildProgressionBlock\?\.\(employeeName, reviewYear, \{ reliability: false \}\)/.test(support));
     t.check('carried on the object the prompt reads', /progression\s*$/m.test(support));
 });
 
 suite('progression block: the mid-year prompt asks for the quarters', (t) => {
     const src = fs.readFileSync(path.join(ROOT, 'modules/on-off-tracker.module.js'), 'utf8');
 
-    t.check('the metric context builds one', /buildProgressionBlock\?\.\(employeeName, reviewYear\)/.test(src));
+    t.check('the metric context builds one, without hours', /buildProgressionBlock\?\.\(employeeName, reviewYear, \{ reliability: false \}\)/.test(src));
     t.check('it rides on the context', /progression: progression/.test(src));
     t.check('and the prompt prints it', /if \(ctx\.progression\)/.test(src));
 });

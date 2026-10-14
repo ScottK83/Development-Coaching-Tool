@@ -145,6 +145,44 @@
         return Math.round(n * 10) / 10;
     }
 
+    /* A stable pick from a few phrasings.
+     *
+     * Eighteen documents opening on the same sentence read as a form, so the
+     * recognition lines and closings come in a few wordings (Scott,
+     * 2026-10-14: "See if it comes off natural"). Chosen off the name and the
+     * quarter rather than at random, because a record must read the same
+     * every time it is built: regenerating a file note should never change
+     * its words.
+     */
+    function _pick(options, seed) {
+        var text = String(seed || '');
+        var h = 0;
+        for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 100003;
+        return options[h % options.length];
+    }
+
+    // The name a closing sentence uses for a metric the box has just named in
+    // full. "Bring handle time down toward 426s" reads as speech; "bring
+    // average handle time down toward 426s" reads as a report heading.
+    var SHORT_LABELS = {
+        aht: 'handle time',
+        scheduleAdherence: 'adherence',
+        overallSentiment: 'sentiment',
+        cxRepOverall: 'rep satisfaction',
+        fcr: 'first call resolution',
+        overallExperience: 'overall experience',
+        transfers: 'transfers'
+    };
+
+    function _shortLabel(metricKey) {
+        return SHORT_LABELS[metricKey] || _label(metricKey).toLowerCase();
+    }
+
+    // "Q4", or null when the check-in is the year's last quarter.
+    function _nextQuarterName(ctx) {
+        return ctx.quarter < 4 ? 'Q' + (ctx.quarter + 1) : null;
+    }
+
     /* ── Building the facts ── */
 
     /* One associate, one year, every quarter that has started.
@@ -532,7 +570,16 @@
         if (!parts.length) return '';
 
         var joined = parts.length === 1 ? parts[0] : parts.join(' and ');
-        var line = ctx.firstName + ' and I have had ' + joined + ' over this stretch';
+        // Said as the associate's effort, not the supervisor's activity log.
+        // "Carlos and I have had 3 coaching conversations" is a count; "Carlos
+        // has put real work in" is recognition, and on a hard quarter it may
+        // be the only praise the box can honestly carry (Scott, 2026-10-14:
+        // "Offer lots of kudos and praise"). One session is not "real work"
+        // yet, so a single one is still said plainly.
+        var total = (sup.coachingSessions || 0) + (sup.callsReviewed || 0);
+        var line = total >= 2
+            ? ctx.firstName + ' has put real work in, with ' + joined + ' over this stretch'
+            : ctx.firstName + ' and I have had ' + joined + ' over this stretch';
 
         // Naming what was worked on is the part that makes the count mean
         // something, but only the ones this document already discusses, so it
@@ -603,10 +650,25 @@
         // of focus do not reference reliability (Scott, on 2026-10-05). Hours
         // over the allowance used to lead the focus box; that is reversed, and
         // the focus box is the rates alone.
+        //
+        // Inside the allowance is only praise when the hours are also inside
+        // an even share of it, the rule the talking points already used. 16.5
+        // of 18 with a quarter still to go is inside, and the strengths box
+        // was praising it as "Eli has missed 16.5 hrs" (Scott, 2026-10-14).
         var rel = ctx.reliability;
-        if (rel.hasValue && rel.target && rel.meetsTarget === true) {
+        if (_hoursOnPace(rel, ctx)) {
             strengths.push({ metricKey: RELIABILITY, label: _label(RELIABILITY), why: 'met', reliability: rel });
         }
+
+        // Below goal and moving the right way. Still a focus, because it is
+        // still short, but also progress worth crediting. Carlos lifted rep
+        // satisfaction to its best quarter of the year, and the box that is
+        // meant to say so said "held the quarter steady" (Scott, 2026-10-14).
+        var progress = [];
+        focus.forEach(function (m) {
+            var p = _progressFor(m);
+            if (p) progress.push(Object.assign({}, m, { progress: p }));
+        });
 
         var focusRank = { 'missed-and-falling': 0, 'missed': 1, 'missed-but-rising': 2 };
         // A reading from an earlier quarter, because the check-in quarter had
@@ -634,10 +696,21 @@
         });
 
         var strengthRank = { 'improved-and-met': 0, 'met': 1, 'improved': 2 };
+        // A perfect score in every quarter leads: it is the headline, and in
+        // registry order it sat behind handle time and adherence. Then the
+        // four KPIs a review is about ahead of the rest at the same rank, so
+        // transfers never takes the lead sentence from adherence. Hours stay
+        // last whatever their rank: they are said in a line of their own.
+        var rankOf = function (m) {
+            if (m.metricKey === RELIABILITY) return 9;
+            if (_isPerfect(m)) return -1;
+            return strengthRank[m.why] === undefined ? 1 : strengthRank[m.why];
+        };
+        var coreOf = function (m) { return CORE_METRICS.indexOf(m.metricKey) >= 0 ? 0 : 1; };
         strengths.sort(function (a, b) {
-            var ra = strengthRank[a.why] === undefined ? 1 : strengthRank[a.why];
-            var rb = strengthRank[b.why] === undefined ? 1 : strengthRank[b.why];
-            return ra - rb;
+            var ra = rankOf(a), rb = rankOf(b);
+            if (ra !== rb) return ra - rb;
+            return coreOf(a) - coreOf(b);
         });
 
         // Biggest slide first: if only one is going to be raised, raise that.
@@ -647,7 +720,109 @@
             return sb - sa;
         });
 
-        return { strengths: strengths, focus: focus, watch: watch };
+        // The four KPIs first, so a rise in rep satisfaction is credited
+        // ahead of one in first call resolution; then the focus box's order.
+        var focusOrder = focus.map(function (m) { return m.metricKey; });
+        progress.sort(function (a, b) {
+            var ca = CORE_METRICS.indexOf(a.metricKey) >= 0 ? 0 : 1;
+            var cb = CORE_METRICS.indexOf(b.metricKey) >= 0 ? 0 : 1;
+            if (ca !== cb) return ca - cb;
+            return focusOrder.indexOf(a.metricKey) - focusOrder.indexOf(b.metricKey);
+        });
+
+        return { strengths: strengths, focus: focus, watch: watch, progress: progress };
+    }
+
+    /* Missed hours worth opening on: inside the allowance AND inside an even
+     * share of it for the quarters gone. */
+    function _hoursOnPace(rel, ctx) {
+        if (!rel || !rel.hasValue || rel.meetsTarget !== true || !rel.target) return false;
+        return rel.yearToDate <= rel.target.value * Math.min(ctx.quarter, 4) / 4 + 0.05;
+    }
+
+    /* A survey score of 100% in every quarter it was read. */
+    function _isPerfect(m) {
+        if (!m || m.isReverse || (_registry()[m.metricKey] || {}).unit !== '%') return false;
+        var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
+        return points.length > 0 && points.every(function (p) { return _display(m.metricKey, p.value) === '100%'; });
+    }
+
+    /* Whether a metric below goal is moving the right way, and how to say it.
+     *
+     * Three shapes count, each measured on the printed numbers:
+     *   every  improved in every quarter, three or more of them, by at least
+     *          half the noise band overall (446s, 442s, 439s);
+     *   best   the newest quarter is the best of the year and clearly better
+     *          than the one before (74.2%, 71.9%, 76.5%);
+     *   year   clearly better than where the year started, without the
+     *          newest quarter giving a clear amount of it back.
+     * Anything else is not credited. A rise that slipped back in the newest
+     * quarter is the same thing the recap email declines to call a move.
+     */
+    function _progressFor(m) {
+        if (!m || m.meetsTarget !== false) return null;
+        var points = m.usablePoints && m.usablePoints.length ? m.usablePoints : m.series.measured;
+        if (points.length < 2) return null;
+        var mm = (window.DevCoachModules || {}).metricMovement;
+        var better = function (a, b) {
+            var pa = printedValue(m.metricKey, a.value);
+            var pb = printedValue(m.metricKey, b.value);
+            var d = mm && typeof mm.performanceDelta === 'function'
+                ? mm.performanceDelta(m.metricKey, pa, pb)
+                : (m.isReverse ? pb - pa : pa - pb);
+            return Number.isFinite(d) ? d : 0;
+        };
+        var gapOf = function (a, b) {
+            return Math.abs(printedValue(m.metricKey, a.value) - printedValue(m.metricKey, b.value));
+        };
+        var band = _stableBand(m.metricKey);
+        var first = points[0];
+        var last = points[points.length - 1];
+        var prev = points[points.length - 2];
+
+        var path = _pathShape(m, points);
+        if (points.length >= 3 && path.kind === 'climbing' && gapOf(last, first) >= band / 2) {
+            return { kind: 'every', from: first, to: last };
+        }
+        var isBest = points.every(function (p) { return p === last || better(last, p) > 0; });
+        if (points.length >= 2 && better(last, prev) > 0 && gapOf(last, prev) > band && isBest) {
+            return { kind: 'best', from: prev, to: last, ofYear: points.length >= 3 };
+        }
+        var gaveBack = better(last, prev) < 0 && gapOf(last, prev) > band;
+        if (better(last, first) > 0 && gapOf(last, first) > band && !gaveBack) {
+            return { kind: 'year', from: first, to: last };
+        }
+        return null;
+    }
+
+    /* The progress, as box 1 credits it. Active voice, the associate as the
+     * subject: it is their work that moved it. A second one in the same box
+     * leads on the metric instead, so two sentences in a row do not both
+     * open "Carlos lifted". */
+    function progressSentence(m, ctx, index) {
+        var p = m.progress || _progressFor(m);
+        if (!p) return '';
+        var name = ctx.firstName;
+        var label = m.label.toLowerCase();
+        var from = _display(m.metricKey, p.from.value) + ' in ' + p.from.name;
+        var to = _display(m.metricKey, p.to.value) + ' in ' + p.to.name;
+        if (index > 0) {
+            var also = _cap(label) + (m.isReverse ? ' also came down' : ' also came up');
+            if (p.kind === 'every') return also + ' in every quarter, from ' + from + ' to ' + to + '.';
+            if (p.kind === 'best') return also + ', from ' + from + ' to ' + to + (p.ofYear ? ', its best quarter of the year.' : '.');
+            return also + ' over the year, from ' + from + ' to ' + to + '.';
+        }
+        if (p.kind === 'every') {
+            return m.isReverse
+                ? name + ' brought ' + label + ' down in every quarter this year, from ' + from + ' to ' + to + '.'
+                : name + ' lifted ' + label + ' in every quarter this year, from ' + from + ' to ' + to + '.';
+        }
+        var verb = m.isReverse ? ' brought ' + label + ' down from ' : ' lifted ' + label + ' from ';
+        if (p.kind === 'best') {
+            return name + verb + from + ' to ' + to + (p.ofYear ? ', the best quarter of the year.' : '.');
+        }
+        return name + (m.isReverse ? ' has brought ' + label + ' down from ' : ' has lifted ' + label + ' from ')
+            + from + ' to ' + to + '.';
     }
 
     /* ── The sentences ── */
@@ -740,7 +915,17 @@
 
         var values = points.map(function (p) { return p.value; });
         var spread = Math.max.apply(null, values) - Math.min.apply(null, values);
-        if (spread <= band) return { kind: 'steady', steps: steps, spread: spread };
+        if (spread <= band) {
+            // Every step the right way is a direction even inside the band.
+            // Handle time of 446s, 442s, 439s came down every quarter, and
+            // the record called it "held steady" because the whole run fit
+            // inside 8 seconds (Scott, 2026-10-14). Only the good direction
+            // is lifted out of the band: a 0.2 point wobble down while at goal
+            // is still noise, and is not written up as a slide.
+            var everyBetter = steps.length >= 2 && steps.every(function (s) { return s > 0; });
+            if (everyBetter) return { kind: 'climbing', steps: steps, spread: spread, insideBand: true };
+            return { kind: 'steady', steps: steps, spread: spread };
+        }
 
         // "Each quarter" only when every quarter moved. One that held makes
         // it a rise or a fall over the year, still one way, not every step.
@@ -802,6 +987,15 @@
         var story = _goalStory(m);
         var moved = m.movedAcross;
         var lines = [];
+
+        // A full score is said as one. "Rep satisfaction held steady across
+        // the year, 100% in Q3, inside the 82% goal" undersold three perfect
+        // quarters as a metric that merely did not move (Scott, 2026-10-14).
+        if (_isPerfect(m)) {
+            return points.length < 2
+                ? _cap(label) + ' for ' + points[0].name + ' was a perfect 100%.'
+                : _cap(label) + ' was a perfect 100% in every quarter this year.';
+        }
 
         if (points.length < 2) {
             lines.push(_cap(label) + ' for ' + points[0].name + ' was '
@@ -1071,12 +1265,6 @@
         return left === 1 ? 'one quarter' : left + ' quarters';
     }
 
-    // "over one quarter", or "going into next year" when the year is done.
-    function _overRemainingPhrase(ctx) {
-        var left = _quartersLeftPhrase(ctx);
-        return left ? 'over ' + left : 'going into next year';
-    }
-
     /* ── The finished notes ── */
 
     /* Two boxes of finished prose, plus the header a file note carries.
@@ -1088,7 +1276,7 @@
     function buildNotes(ctx, options) {
         var opts = options || {};
         var split = splitForBoxes(ctx);
-        var name = ctx.firstName;
+        var seed = ctx.name + '|' + ctx.year + '|' + ctx.quarter;
 
         // A metric raised as a slide in the focus box is not also given the
         // full treatment in the strengths box. Saying the same three
@@ -1096,27 +1284,62 @@
         var raisedAsSlide = (!split.focus.length && split.watch.length)
             ? split.watch[0].metricKey : null;
 
+        // Rates only. Hours inside an even share of the allowance get a line
+        // of their own below, worded as the praise it is.
+        var rated = split.strengths.filter(function (m) {
+            return m.metricKey !== raisedAsSlide && m.metricKey !== RELIABILITY;
+        });
+
         // Depth falls away down the list. The first strength is the one the
-        // supervisor would lead with in the room, and the fourth is a clause.
-        var strengthLines = split.strengths
-            .filter(function (m) { return m.metricKey !== raisedAsSlide; })
-            .slice(0, 4)
-            .map(function (m, i) {
-                return metricSentence(m, ctx, i === 0 ? 'lead' : i === 1 ? 'support' : 'brief');
-            })
-            .filter(Boolean);
-        var focusLines = split.focus.slice(0, 2)
-            .map(function (m, i) { return metricSentence(m, ctx, i === 0 ? 'lead' : 'support'); })
-            .filter(Boolean);
+        // supervisor would lead with in the room, the third is a clause, and
+        // the rest are named together at the end. Capped at four, the box
+        // used to drop the fifth outright, which is how a 96.5% adherence
+        // went unmentioned in a strengths box (Scott, 2026-10-14).
+        var strengthLines = rated.slice(0, 3).map(function (m, i) {
+            return metricSentence(m, ctx, i === 0 ? 'lead' : i === 1 ? 'support' : 'brief');
+        }).filter(Boolean);
+        var also = _alsoClause(rated.slice(3));
 
-        var box1 = strengthLines.length
-            ? strengthLines.join(' ')
-            : name + ' held the quarter steady with no metric moving far in either direction.';
+        // Only the progress box 1 actually credits counts as said, so box 2
+        // never shortens a metric whose rise was not mentioned.
+        var credited = split.progress.slice(0, 2);
+        var progressKeys = credited.map(function (m) { return m.metricKey; });
+        var progressLines = credited
+            .map(function (m, i) { return progressSentence(m, ctx, i); })
+            .filter(Boolean);
+        var hours = _hoursPraise(split.strengths, ctx);
+        var support = supportSentence(ctx);
 
+        // Box 1 opens on the person, then the numbers. Four sentences of
+        // figures with no recognition word in them read as a printout, not
+        // as a supervisor who noticed (Scott, 2026-10-14).
+        var box1Parts = [_openingLine(ctx, rated.length, split.focus.length, seed)]
+            .concat(strengthLines, [also], progressLines, [hours]);
+        // Nothing at goal and nothing rising. The box used to say "held the
+        // quarter steady with no metric moving far in either direction",
+        // which was false whenever something had moved, and was printed
+        // directly above "handle time climbed in each quarter". The measure
+        // nearest its goal is a true thing to build from instead.
+        if (!rated.length && !progressLines.length) box1Parts.push(_closestLine(split.focus, ctx));
+        // The work behind the numbers, ahead of the supervisor's own note.
+        box1Parts.push(support);
+        if (opts.notes) box1Parts.push(String(opts.notes).trim());
+        var box1 = box1Parts.filter(Boolean).join(' ');
+
+        var shown = split.focus.slice(0, 2);
+        var focusLines = shown.map(function (m, i) {
+            // Credited as progress in box 1 already, so box 2 says where it
+            // stands rather than walking the same quarters a second time.
+            if (progressKeys.indexOf(m.metricKey) >= 0) return _standingSentence(m);
+            if (_isFirstDip(m)) return _firstDipSentence(m);
+            return metricSentence(m, ctx, i === 0 ? 'lead' : 'support');
+        }).filter(Boolean);
+
+        var next = _nextQuarterName(ctx);
         var box2Parts = [];
         if (focusLines.length) {
             box2Parts.push(focusLines.join(' '));
-            box2Parts.push(_focusClose(split.focus, ctx));
+            box2Parts.push(_focusClose(shown, ctx, progressKeys, seed));
         } else if (split.watch.length) {
             // Nothing missed, but something is sliding toward a miss. That is
             // the conversation worth having now, and "everything is at goal"
@@ -1124,10 +1347,9 @@
             var slide = split.watch[0];
             box2Parts.push('Every performance metric is at goal for ' + ctx.quarterLabel + '.');
             box2Parts.push(metricSentence(slide, ctx, 'lead'));
-            box2Parts.push('It is still at goal, so this is one to watch rather than fix, and the aim is to stop the slide '
-                + _overRemainingPhrase(ctx) + '.');
+            box2Parts.push('It is still at goal, so this is one to watch rather than fix, and the aim '
+                + (next ? 'for ' + next : 'going into next year') + ' is to stop the slide.');
         } else {
-            var left = _quartersLeftPhrase(ctx);
             // Named rather than left generic. Every associate with a clean
             // quarter was getting a byte identical focus box, and a file note
             // that could have been written about anybody reads as one that was.
@@ -1137,20 +1359,16 @@
                 opening += ', ' + best.label.toLowerCase() + ' the furthest clear of it at '
                     + _display(best.metricKey, best.latestValue);
             }
-            box2Parts.push(opening + '. '
-                + (left
-                    ? 'The focus for the rest of the year is holding that through ' + left + '.'
-                    : 'The focus is holding that through next year.'));
+            // "The focus for the rest of the year is holding that through one
+            // quarter" went into every clean document word for word.
+            box2Parts.push(opening + '. ' + _pick(next
+                ? [next + ' is about keeping this going.',
+                    'The goal for ' + next + ' is more of the same.',
+                    next + ' is about holding this level through the end of the year.']
+                : ['The goal going into next year is to keep this going.',
+                    'Next year is about carrying this forward.'], seed));
         }
         var box2 = box2Parts.filter(Boolean).join(' ');
-
-        // The work behind the numbers, ahead of the supervisor's own note.
-        var support = supportSentence(ctx);
-        if (support) box1 = box1 + ' ' + support;
-
-        if (opts.notes) {
-            box1 = box1 + ' ' + String(opts.notes).trim();
-        }
 
         var header = buildHeader(ctx);
         return {
@@ -1159,28 +1377,166 @@
             box2: box2,
             strengths: split.strengths,
             focus: split.focus,
+            progress: split.progress,
             full: header + '\n\nPROGRESS AND STRENGTHS\n' + box1
                 + '\n\nAREAS OF FOCUS\n' + box2 + '\n'
         };
     }
 
-    /* The expectation line. Direct about what has to move, without naming a
-     * consequence the supervisor has not decided on. */
-    function _focusClose(focus, ctx) {
-        if (!focus.length) return '';
+    /* The first line of box 1: the person, recognised, before any number.
+     * Scaled to how much of the year is at goal, and never a grade. */
+    function _openingLine(ctx, ratedCount, focusCount, seed) {
+        if (!ratedCount) return '';
+        var n = ctx.firstName;
+        var done = ctx.quarter >= 4;
+        if (!focusCount) {
+            return _pick(done
+                ? [n + ' had a great year, and it shows in every measure.',
+                    'There is a lot to recognize in ' + n + '\'s year.']
+                : [n + ' is having a great year, and it shows in every measure.',
+                    'There is a lot to recognize in ' + n + '\'s year so far.'], seed);
+        }
+        if (ratedCount >= focusCount) {
+            return _pick([n + ' has a lot to be proud of this year.',
+                'There is plenty in ' + n + '\'s year to be proud of.'], seed);
+        }
+        return _pick([n + ' has real strengths to build on this year.',
+            n + ' has solid ground to build on this year.'], seed);
+    }
+
+    /* "Schedule adherence (96.5%), transfers (4%) and overall experience
+     * (80%) were also inside goal all year." The strengths past the third,
+     * named rather than dropped. */
+    function _alsoClause(rest) {
+        if (!rest || !rest.length) return '';
+        var parts = rest.map(function (m, i) {
+            var label = m.label.toLowerCase();
+            return (i === 0 ? _cap(label) : label) + ' (' + _display(m.metricKey, m.latestValue) + ')';
+        });
+        var list = parts.length === 1 ? parts[0]
+            : parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
+        var allYear = rest.every(function (m) { return _goalStory(m).shape === 'always'; });
+        var quarter = rest[0].latestQuarter;
+        var sameQuarter = rest.every(function (m) { return m.latestQuarter === quarter; });
+        var when = allYear ? ' all year' : (sameQuarter && quarter ? ' in ' + quarter : '');
+        return list + (rest.length === 1 ? ' was' : ' were') + ' also inside goal' + when + '.';
+    }
+
+    /* Missed hours as praise, only when they have earned it: inside an even
+     * share of the allowance (splitForBoxes decides). "Eli has missed 5 hrs
+     * for the year to date" sat in a strengths box as a bare fact; this says
+     * what it is. Still the year's running total, never a quarter's. */
+    function _hoursPraise(strengths, ctx) {
+        var has = (strengths || []).some(function (m) { return m.metricKey === RELIABILITY; });
+        var rel = ctx.reliability;
+        if (!has || !rel || !rel.target) return '';
+        var allowance = 'the ' + printedValue(RELIABILITY, rel.target.value) + ' hr allowance.';
+        var span = ctx.quarter < 4 ? ' so far this year' : ' for the year';
+        var inside = rel.yearToDate <= rel.target.value / 2 ? 'well inside ' : 'inside ';
+        // "Kept missed time to 0 hrs" reads oddly, and "no time missed"
+        // claims more than the counted figure does (time re-coded out of the
+        // count is still time away), so a zero is said as the figure.
+        if (Math.round(rel.yearToDate * 10) === 0) {
+            return ctx.firstName + '\'s missed time' + span + ' is 0 hrs, ' + inside + allowance;
+        }
+        return ctx.firstName + ' kept missed time to ' + _display(RELIABILITY, rel.yearToDate)
+            + span + ', ' + inside + allowance;
+    }
+
+    /* Box 1 when nothing is at goal and nothing is rising: the measure
+     * nearest its goal, said as the place to start. */
+    function _closestLine(focus, ctx) {
+        var pool = (focus || []).filter(function (m) { return m.target && Number.isFinite(m.latestValue); });
+        if (!pool.length) return '';
+        var closest = pool.slice().sort(function (a, b) { return _missSeverity(a) - _missSeverity(b); })[0];
+        return ctx.firstName + ' is closest to goal on ' + _shortLabel(closest.metricKey)
+            + ', at ' + _display(closest.metricKey, closest.latestValue) + ' in ' + closest.latestQuarter
+            + ' against the ' + _display(closest.metricKey, closest.target.value)
+            + ' goal, and that is a good place to build from.';
+    }
+
+    /* Where a metric box 1 already credited as progress stands now. */
+    function _standingSentence(m) {
+        if (!m.target || !m.gap || !Number.isFinite(m.latestValue)) return '';
+        return _cap(m.label.toLowerCase()) + ' was ' + _display(m.metricKey, m.latestValue)
+            + ' in ' + m.latestQuarter + ', ' + _movementAmount(m.metricKey, m.gap.size)
+            + (m.isReverse ? ' above the ' : ' short of the ') + _display(m.metricKey, m.target.value) + ' goal.';
+    }
+
+    /* At goal in every quarter but the newest. */
+    function _isFirstDip(m) {
+        if (!m || m.meetsTarget !== false || !m.target) return false;
+        var story = _goalStory(m);
+        if (story.shape !== 'crossed-down' || story.points.length < 2) return false;
+        return story.met.slice(0, -1).every(Boolean);
+    }
+
+    /* "Schedule adherence was inside the 93% goal in Q1 and Q2, at 94.5% and
+     * 94.1%, and dipped to 92.7% in Q3." A first miss after a run at goal is
+     * a dip, and "slipped in each quarter this year" read as a slide for a
+     * 0.3 point miss (Scott, 2026-10-14). Every number is still on it. */
+    function _firstDipSentence(m) {
+        var story = _goalStory(m);
+        var earlier = story.points.slice(0, -1);
+        var last = story.points[story.points.length - 1];
+        var join = function (items) {
+            return items.length === 1 ? items[0]
+                : items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+        };
+        return _cap(m.label.toLowerCase()) + ' was inside the ' + _display(m.metricKey, m.target.value)
+            + ' goal in ' + join(earlier.map(function (p) { return p.name; }))
+            + (earlier.length > 1 ? ', at ' : ' at ')
+            + join(earlier.map(function (p) { return _display(m.metricKey, p.value); }))
+            + ', and ' + (m.isReverse ? 'rose' : 'dipped') + ' to ' + _display(m.metricKey, last.value)
+            + ' in ' + last.name + '.';
+    }
+
+    /* The closing line of the focus box. Direct about what has to move,
+     * without naming a consequence the supervisor has not decided on.
+     *
+     * Fitted to the lead metric, and named. "This is the one to move first"
+     * used to follow whichever sentence came last, so in one document "This"
+     * sat under an adherence sentence and meant handle time. Three templates
+     * went out word for word across a whole team, and a first 0.3 point miss
+     * got the same "visible movement" line as a year long slide (Scott,
+     * 2026-10-14). */
+    function _focusClose(shown, ctx, progressKeys, seed) {
+        if (!shown || !shown.length) return '';
         var name = ctx.firstName;
-        var lead = focus[0];
-        var over = _overRemainingPhrase(ctx);
+        var lead = shown[0];
+        var short = _shortLabel(lead.metricKey);
+        var goal = lead.target ? _display(lead.metricKey, lead.target.value) : 'goal';
+        var next = _nextQuarterName(ctx);
+        var goalFor = next ? 'the goal for ' + next : 'the goal going into next year';
+
+        if (_isFirstDip(lead)) {
+            var back = function (m) {
+                return _shortLabel(m.metricKey) + ' back ' + (m.isReverse ? 'under ' : 'above ')
+                    + _display(m.metricKey, m.target.value);
+            };
+            // Two first dips side by side are one sentence, not a close that
+            // names only the first of them.
+            var both = shown.length > 1 && _isFirstDip(shown[1]);
+            return 'Getting ' + back(lead) + (both ? ' and ' + back(shown[1]) : '')
+                + (next ? ' in ' + next : ' going into next year') + ' is the focus.';
+        }
+        if ((progressKeys || []).indexOf(lead.metricKey) >= 0) {
+            return name + ' is already moving ' + short + ' the right way, and ' + goalFor
+                + ' is to keep it moving toward ' + goal + '.';
+        }
         if (lead.why === 'missed-and-falling') {
-            return 'This is the one to move first. ' + name
-                + ' and I will work it in our one to ones, and the expectation is visible movement '
-                + over + '.';
+            var together = name + ' and I will work on ' + (shown.length > 1 ? 'it' : short)
+                + ' together in our one to ones, and ' + goalFor + ' is to turn it back toward ' + goal + '.';
+            return shown.length > 1 ? _cap(short) + ' is the one to move first. ' + together : together;
         }
         if (lead.why === 'missed-but-rising') {
-            return name + ' is already moving this the right way, and the expectation is that it reaches goal '
-                + over + '.';
+            return name + ' has moved ' + short + ' the right way over the year, and ' + goalFor
+                + ' is to keep it moving toward ' + goal + '.';
         }
-        return 'The expectation is steady progress toward goal ' + over + '.';
+        var move = lead.isReverse ? 'bring ' + short + ' down toward ' + goal : 'lift ' + short + ' toward ' + goal;
+        var moving = lead.isReverse ? 'bringing ' + short + ' down toward ' + goal : 'lifting ' + short + ' toward ' + goal;
+        return _pick([_cap(goalFor) + ' is to ' + move + '.',
+            (next || 'Next year') + ' is about ' + moving + '.'], seed);
     }
 
     /* The two lines that make it a file note rather than a paragraph: who and
@@ -1249,7 +1605,7 @@
     function buildProgressionBlock(employeeName, year, options) {
         var ctx = buildContext(employeeName, year, options);
         if (!ctx) return '';
-        var lines = factLines(ctx);
+        var lines = factLines(ctx, options);
         if (!lines.length) return '';
         return 'How each measure moved across the quarters of ' + ctx.year + ':\n'
             + lines.join('\n');
@@ -1279,11 +1635,18 @@
         var winItems = wins.slice(0, 3).map(function (m) { return _talkItem(m, ctx); });
         // Inside the allowance is only something to open the meeting on when
         // the hours are also inside an even share of it. 16.5 of 18 with a
-        // quarter still to go is inside, and it is not a win.
-        var hoursInside = rel.hasValue && rel.meetsTarget === true;
-        var hoursOnPace = hoursInside && rel.target
-            && rel.yearToDate <= rel.target.value * Math.min(ctx.quarter, 4) / 4 + 0.05;
-        if (hoursOnPace) winItems.push(_reliabilityItem(rel, ctx));
+        // quarter still to go is inside, and it is not a win. The file note
+        // uses the same test, so the two never disagree about it.
+        if (_hoursOnPace(rel, ctx)) winItems.push(_reliabilityItem(rel, ctx));
+
+        // Below goal and moving the right way, unless it is already one of
+        // the two things to work on. A sheet for someone with nothing at goal
+        // opened straight on what to fix, then listed five more misses under
+        // it, and gave the supervisor no win to start the meeting with
+        // (Scott, 2026-10-14).
+        var focusKeys = split.focus.slice(0, 2).map(function (m) { return m.metricKey; });
+        var rising = split.progress.filter(function (m) { return focusKeys.indexOf(m.metricKey) < 0; });
+        var risingItems = rising.slice(0, 2).map(function (m) { return _talkItem(m, ctx); });
 
         // Rates only. Hours are never something to work on in these sheets
         // (Scott, 2026-10-05), so a total over the allowance, or close to it,
@@ -1294,6 +1657,9 @@
         if (winItems.length) {
             sections.push({ id: 'wins', heading: 'Start with what is working', items: winItems });
         }
+        if (risingItems.length) {
+            sections.push({ id: 'rising', heading: 'Moving the right way', items: risingItems });
+        }
         if (focusItems.length) {
             sections.push({ id: 'focus', heading: 'What to work on in ' + next, items: focusItems });
         } else {
@@ -1303,10 +1669,9 @@
                     + next + ' is to hold it.']
             });
         }
-        var moreFocus = split.focus.slice(2).map(function (m) { return _briefLine(m, ctx); }).filter(Boolean);
-        if (moreFocus.length) {
-            sections.push({ id: 'moreFocus', heading: 'Also below goal, if there is time', lines: moreFocus });
-        }
+        // No third list of misses. Two things to work on is the meeting; the
+        // rest under "also below goal, if there is time" read as a pile on to
+        // the associate it was about (Scott, 2026-10-14).
         var watchItems = split.watch.map(function (m) { return _talkItem(m, ctx); });
         if (watchItems.length) {
             sections.push({ id: 'watch', heading: 'Keep an eye on', items: watchItems });
@@ -1319,7 +1684,7 @@
         var together = _togetherLine(ctx);
         if (together) sections.push({ id: 'together', heading: 'Worked on together this year', lines: [together] });
 
-        sections.push({ id: 'ask', heading: 'Questions to ask', lines: _questions(wins, split, next) });
+        sections.push({ id: 'ask', heading: 'Questions to ask', lines: _questions(wins, split, next, rising) });
 
         if (opts.notes && String(opts.notes).trim()) {
             sections.push({ id: 'notes', heading: 'My notes', lines: [String(opts.notes).trim()] });
@@ -1344,7 +1709,15 @@
             : '';
 
         var said = [];
-        if (points.length >= 2) {
+        var progress = m.progress;
+        if (progress && progress.kind !== 'every') {
+            // A metric on its way up is said as one. 74.2%, 71.9%, 76.5% is
+            // "up and down" by its path, and under "Moving the right way"
+            // that undersold the best quarter of the year.
+            said.push((m.isReverse ? 'Down from ' : 'Up from ') + _display(m.metricKey, progress.from.value)
+                + ' in ' + progress.from.name
+                + (progress.kind === 'best' && progress.ofYear ? ', the best quarter of the year.' : '.'));
+        } else if (points.length >= 2) {
             var kind = _pathShape(m, points).kind;
             said.push(kind === 'steady' ? 'Held steady.'
                 : kind === 'climbing' ? 'Better each quarter.'
@@ -1482,9 +1855,12 @@
         return _cap(parts.join(' and ')) + (named.length ? ', on ' + named.join(', ') : '') + '.';
     }
 
-    function _questions(wins, split, next) {
+    function _questions(wins, split, next, rising) {
         var out = [];
-        if (wins.length) out.push('What has been working for you on ' + wins[0].label.toLowerCase() + '?');
+        // A question about something going well, even on a hard quarter:
+        // a metric on its way up is worth asking about as much as one at goal.
+        var good = wins.length ? wins[0] : (rising && rising.length ? rising[0] : null);
+        if (good) out.push('What has been working for you on ' + good.label.toLowerCase() + '?');
         var firstRate = split.focus[0];
         if (firstRate) out.push('What gets in the way on ' + firstRate.label.toLowerCase() + '?');
         else if (split.watch.length) out.push('What has changed on ' + split.watch[0].label.toLowerCase() + ' lately?');
@@ -1520,7 +1896,7 @@
     function buildPrompt(ctx, options) {
         var opts = options || {};
         var notes = buildNotes(ctx, opts);
-        var split = { strengths: notes.strengths, focus: notes.focus };
+        var split = { strengths: notes.strengths, focus: notes.focus, progress: notes.progress || [] };
         var name = ctx.firstName;
         var out = [];
 
@@ -1544,11 +1920,20 @@
 
         out.push('');
         out.push('What I want recognised:');
-        if (split.strengths.length) {
-            split.strengths.slice(0, 4).forEach(function (m) { out.push('- ' + m.label); });
-        } else {
-            out.push('- Steady performance with nothing moving far either way');
-        }
+        // Progress below goal and the work put in count as much as a metric
+        // at goal. With none of the second kind this used to hand Copilot
+        // "steady performance with nothing moving far either way" about an
+        // associate whose rep satisfaction had just had its best quarter
+        // (Scott, 2026-10-14).
+        var recognised = split.strengths.slice(0, 4).map(function (m) { return '- ' + m.label; });
+        split.progress.slice(0, 2).forEach(function (m) {
+            var p = m.progress;
+            recognised.push('- ' + m.label + ', moving the right way: ' + _display(m.metricKey, p.from.value)
+                + ' in ' + p.from.name + ' to ' + _display(m.metricKey, p.to.value) + ' in ' + p.to.name);
+        });
+        if (support) recognised.push('- The work ' + name + ' has put in with me this year');
+        if (!recognised.length) recognised.push('- The effort ' + name + ' brings, and the measure closest to goal');
+        recognised.forEach(function (line) { out.push(line); });
 
         out.push('');
         out.push('What I want them working on:');
@@ -1577,6 +1962,7 @@
         out.push('- Show the movement across the quarters, since that is the point of the document');
         out.push('- Present tense for where things stand, since the year is still running');
         out.push('- Plain, factual and specific, the way a supervisor writes a file note. Warm is fine, flowery is not');
+        out.push('- Open Progress and strengths by recognising ' + name + ' by name, and give real credit for every gain, including the ones still short of goal');
         out.push('- Be direct about what needs to improve, and say what is expected, without naming any consequence');
         out.push('- Use the % symbol rather than the word percent');
         out.push('- Do not use dashes of any kind. Use commas and full stops');

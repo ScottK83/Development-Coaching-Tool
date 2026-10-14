@@ -659,6 +659,35 @@
 
     /* ── Shared metric context for check-in / mid-year prompts ── */
 
+    // A value the way the rest of the app shows it: "604s", "91.3%", and a
+    // whole number without its ".0", so a goal reads "93%" rather than "93.0%".
+    function _fmtMetric(key, val) {
+        var text = typeof window.formatMetricDisplay === 'function'
+            ? window.formatMetricDisplay(key, val)
+            : String(Math.round(val * 10) / 10);
+        return String(text).replace(/(\d)\.0(?=\D|$)/, '$1');
+    }
+
+    // How far, as a movement: seconds for handle time, points for a rate.
+    // "Improve by 4.5%" reads as four and a half percent of the number.
+    function _fmtGap(key, size) {
+        var unit = (window.METRICS_REGISTRY || {})[key]?.unit;
+        if (unit === 'sec') {
+            var secs = Math.round(size);
+            return secs + (secs === 1 ? ' second' : ' seconds');
+        }
+        var n = Math.round(size * 10) / 10;
+        return n + (n === 1 ? ' point' : ' points');
+    }
+
+    // Half a gap, rounded to something a person would say out loud.
+    function _roundStep(key, size) {
+        var unit = (window.METRICS_REGISTRY || {})[key]?.unit;
+        if (unit === 'sec') return size >= 20 ? Math.round(size / 5) * 5 : Math.round(size);
+        return Math.round(size * 2) / 2;
+    }
+
+
     function _buildOnOffMetricContext(employeeName, reviewYear) {
         if (!employeeName || !reviewYear) {
             alert('Please select an associate first.');
@@ -676,19 +705,28 @@
         var registry = window.METRICS_REGISTRY || {};
         var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
 
-        // Build metrics context
+        // Build metrics context. Labels are the registry's, so the prompt names
+        // a measure the way every other screen does.
+        //
+        // Reliability is not here at all (Scott, 2026-10-13): hours stay out
+        // of the Mid-Year and Year-End tone and focus. It used to count toward
+        // the met tally, so 25 hours turned two misses into three and handed a
+        // solid associate the disciplinary paragraph, and hours inside the
+        // allowance in July were praised as "meeting goal" before the same
+        // person went over it in the fall.
+        var label = function(key, fallback) { return registry[key]?.label || fallback; };
         var metricMap = {
-            aht: { key: 'aht', label: 'AHT', val: result.values.aht, score: result.scores.aht, unit: 'seconds' },
-            adherence: { key: 'scheduleAdherence', label: 'Adherence', val: result.values.adherence, score: result.scores.adherence, unit: '%' },
-            sentiment: { key: 'overallSentiment', label: 'Overall Sentiment', val: result.values.sentiment, score: result.scores.sentiment, unit: '%' },
-            associateOverall: { key: 'cxRepOverall', label: 'Associate Overall (Surveys)', val: result.values.associateOverall, score: result.scores.associateOverall, unit: '%' },
-            reliability: { key: 'reliability', label: 'Reliability', val: result.values.reliability, score: result.scores.reliability, unit: 'hours' }
+            aht: { key: 'aht', label: label('aht', 'Average Handle Time'), val: result.values.aht, score: result.scores.aht },
+            adherence: { key: 'scheduleAdherence', label: label('scheduleAdherence', 'Schedule Adherence'), val: result.values.adherence, score: result.scores.adherence },
+            sentiment: { key: 'overallSentiment', label: label('overallSentiment', 'Overall Sentiment'), val: result.values.sentiment, score: result.scores.sentiment },
+            associateOverall: { key: 'cxRepOverall', label: label('cxRepOverall', 'Rep Satisfaction'), val: result.values.associateOverall, score: result.scores.associateOverall }
         };
 
         var focusAreas = [];
         var strengths = [];
         var metCount = 0;
         var totalScored = 0;
+        var yearTargets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
 
         Object.keys(metricMap).forEach(function(k) {
             var m = metricMap[k];
@@ -697,31 +735,44 @@
             // Count how many KPIs are meeting their company target. Used to set the
             // mid-year review tone. "Met" = value satisfies the target; when no
             // target is configured, fall back to on-track score (2 or better).
-            var yearTargets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
-            var metTargetDef = yearTargets[m.key];
+            var target = yearTargets[m.key];
             var isMet;
-            if (metTargetDef && m.val !== null) {
-                isMet = metTargetDef.type === 'min' ? (m.val >= metTargetDef.value) : (m.val <= metTargetDef.value);
+            if (target && m.val !== null) {
+                isMet = target.type === 'min' ? (m.val >= target.value) : (m.val <= target.value);
             } else {
                 isMet = m.score >= 2;
             }
             totalScored++;
             if (isMet) metCount++;
 
-            // Reliability never goes in the areas to work on (Scott,
-            // 2026-10-05). Hours inside the allowance can still be a
-            // strength; hours over it appear in neither list. It still counts
-            // toward metCount above, which sets the Mid-Year tone, because that
-            // is KPI scoring and stays as it is. This list feeds both the
-            // Mid-Year prompt and the Goal-Pace prompt.
-            if (k === 'reliability') {
-                if (isMet) strengths.push({ label: m.label, val: m.val, unit: m.unit });
+            var valText = m.val !== null ? _fmtMetric(m.key, m.val) : 'no data';
+            var goalText = target ? _fmtMetric(m.key, target.value) : '';
+
+            // At goal is a strength, whatever internal band it scores in.
+            // A 424s handle time inside a 426s goal used to be listed under
+            // "needs focused improvement" because it scored a 2.
+            if (isMet) {
+                strengths.push({ label: m.label, val: m.val, valText: valText, goalText: goalText });
                 return;
             }
 
+            var gapText = '';
+            var stepText = '';
+            if (target && m.val !== null) {
+                var gap = Math.abs(m.val - target.value);
+                var lower = target.type !== 'min';
+                gapText = _fmtGap(m.key, gap) + (lower ? ' above' : ' below') + ' the ' + goalText + ' goal';
+                // A first milestone is a share of the gap, not the internal
+                // rating cutoff, which sat almost on the goal and made the
+                // "first step" ninety percent of the distance.
+                var half = _roundStep(m.key, gap / 2);
+                if (half > 0 && m.score <= 1) {
+                    stepText = (lower ? 'bringing it down about ' : 'bringing it up about ') + _fmtGap(m.key, half) + ' over the next quarter';
+                }
+            }
+
+            var tips = [];
             if (m.score <= 1) {
-                // Get tips
-                var tips = [];
                 if (typeof window.getRandomTipsForMetric === 'function') {
                     tips = window.getRandomTipsForMetric(m.key, 2) || [];
                 }
@@ -729,62 +780,8 @@
                     var def = registry[m.key];
                     if (def?.defaultTip) tips = [def.defaultTip];
                 }
-                // Get target (from TARGETS_BY_YEAR) and rating band thresholds
-                var targets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
-                var actualTarget = targets[m.key];
-                var band = ratingBands[m.key];
-                var targetText = '';
-                var gapText = '';
-                if (actualTarget && m.val !== null) {
-                    var targetVal = actualTarget.value;
-                    var gapToTarget = Math.abs(m.val - targetVal);
-                    targetText = 'company target is ' + targetVal + ' ' + m.unit;
-                    if (actualTarget.type === 'min') {
-                        gapText = 'needs to improve by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
-                    } else {
-                        gapText = 'needs to reduce by ' + gapToTarget.toFixed(1) + ' ' + m.unit + ' to hit target';
-                    }
-                }
-                // Add band as stretch/stepping stone
-                var stretchText = '';
-                if (band && m.val !== null && k !== 'reliability') {
-                    var band2Val = band.type === 'min' ? band.score2.min : band.score2.max;
-                    var gapToBand2 = Math.abs(m.val - band2Val);
-                    if (band.type === 'min') {
-                        stretchText = 'even improving by just ' + gapToBand2.toFixed(1) + ' ' + m.unit + ' (to ' + band2Val + ') would be a great first step';
-                    } else {
-                        stretchText = 'even reducing by just ' + gapToBand2.toFixed(1) + ' ' + m.unit + ' (to ' + band2Val + ') would be a great first step';
-                    }
-                }
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: targetText, gapText: gapText, stretchText: stretchText, tips: tips });
-            } else if (m.score === 2) {
-                // At score 2 - show gap to score 3 (exceptional)
-                var band2 = ratingBands[m.key];
-                var targets2 = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
-                var actualTarget2 = targets2[m.key];
-                var gapText2 = '';
-                // Check if meeting actual target
-                if (actualTarget2 && m.val !== null) {
-                    var meetsTarget = actualTarget2.type === 'min' ? (m.val >= actualTarget2.value) : (m.val <= actualTarget2.value);
-                    if (!meetsTarget) {
-                        var gapT = Math.abs(m.val - actualTarget2.value);
-                        gapText2 = 'just ' + gapT.toFixed(1) + ' ' + m.unit + ' from company target of ' + actualTarget2.value;
-                    }
-                }
-                // Deliberately no stretch phrasing for a near-target metric.
-                //
-                // This used to read "only 1.5 hrs away from exceptional", which
-                // names the internal rating tier in text an associate reads, and
-                // is phrasing that has been ruled out of review copy anyway. The
-                // Mid-Year prompt suppressed it; the quick check-in prompt did
-                // not, and printed it. Rather than add the same guard in a second
-                // place, the sentence is no longer built. The isClose flag below
-                // already tells both prompts the metric only needs a nudge, which
-                // is the useful half.
-                focusAreas.push({ label: m.label, val: m.val, unit: m.unit, targetText: '', gapText: gapText2, stretchText: '', tips: [], isClose: true });
-            } else {
-                strengths.push({ label: m.label, val: m.val, unit: m.unit });
             }
+            focusAreas.push({ label: m.label, val: m.val, valText: valText, goalText: goalText, gapText: gapText, stretchText: stepText, tips: tips, isClose: m.score >= 2 });
         });
 
         // How the year has moved so far, quarter by quarter. A mid-year
@@ -792,7 +789,7 @@
         // who has climbed all year from someone who started there and stalled,
         // and those are different conversations.
         var progression = window.DevCoachModules?.quarterReview
-            ?.buildProgressionBlock?.(employeeName, reviewYear) || '';
+            ?.buildProgressionBlock?.(employeeName, reviewYear, { reliability: false }) || '';
 
         return {
             firstName: firstName,
@@ -843,17 +840,15 @@
         if (strengths.length) {
             prompt += '\nThings going really well that I want to acknowledge:\n';
             strengths.forEach(function(s) {
-                prompt += '- ' + s.label + ': ' + s.val + ' ' + s.unit + ' (excellent)\n';
+                prompt += '- ' + s.label + ': ' + s.valText + (s.goalText ? ', at goal (' + s.goalText + ')' : ', at goal') + '\n';
             });
         }
 
         if (focusAreas.length) {
             prompt += '\nAreas I want to gently encourage them to build on:\n';
             focusAreas.forEach(function(f) {
-                var valText = f.val !== null ? f.val + ' ' + f.unit : 'no data';
-                var line = '- ' + f.label + ': currently ' + valText;
-                if (f.targetText) line += ', ' + f.targetText;
-                if (f.gapText) line += ' (' + f.gapText + ')';
+                var line = '- ' + f.label + ': currently ' + f.valText;
+                if (f.gapText) line += ', ' + f.gapText;
                 prompt += line + '\n';
                 if (f.stretchText) prompt += '  A small first step: ' + f.stretchText + '\n';
                 if (f.isClose) prompt += '  (already close, just needs a nudge)\n';
@@ -866,12 +861,19 @@
         }
 
         prompt += '\nPlease write the message so it:\n';
-        prompt += '1. Starts with a brief, genuine acknowledgment of what they are doing well\n';
-        prompt += '2. Naturally transitions to the area(s) I want to encourage them to build on\n';
-        prompt += '3. Names the specific goal and how close they are, using the numbers in my notes (e.g. "If you can shave off 134 seconds on your handle time..." or "Bring your adherence up just 2.4%...")\n';
-        prompt += '4. Weaves in one specific, practical suggestion from the tips above\n';
-        prompt += '5. Ends with encouragement\n';
-        prompt += '6. Reads like a quick, friendly check-in, not a formal review\n';
+        if (focusAreas.length) {
+            prompt += '1. Starts with genuine, specific praise for what they are doing well\n';
+            prompt += '2. Naturally transitions to the area(s) I want to encourage them to build on\n';
+            prompt += '3. Names the specific goal and how close they are, using the numbers in my notes (e.g. "If you can shave about 60 seconds off your handle time..." or "Bring your adherence up 2.4 points...")\n';
+            prompt += '4. Weaves in one specific, practical suggestion from the tips above, if there is one\n';
+            prompt += '5. Ends with encouragement\n';
+            prompt += '6. Reads like a quick, friendly check-in, not a formal review\n';
+        } else {
+            prompt += '1. Is all celebration: every goal in my notes is being met, so name them and give real kudos\n';
+            prompt += '2. Does not invent anything to work on\n';
+            prompt += '3. Ends with encouragement to keep it going\n';
+            prompt += '4. Reads like a quick, friendly check-in, not a formal review\n';
+        }
 
         if (textEl) textEl.textContent = prompt;
         if (output) output.style.display = 'block';
@@ -926,18 +928,15 @@
         if (strengths.length) {
             prompt += '\nStrengths and progress to recognize:\n';
             strengths.forEach(function(s) {
-                var valText = s.val !== null ? s.val + ' ' + s.unit : 'no data';
-                prompt += '- ' + s.label + ': ' + valText + ' (meeting or exceeding goal)\n';
+                prompt += '- ' + s.label + ': ' + s.valText + (s.goalText ? ', meeting the ' + s.goalText + ' goal' : ', meeting goal') + '\n';
             });
         }
 
         if (focusAreas.length) {
             prompt += '\nAreas of opportunity that need focused improvement:\n';
             focusAreas.forEach(function(f) {
-                var valText = f.val !== null ? f.val + ' ' + f.unit : 'no data';
-                var line = '- ' + f.label + ': currently ' + valText;
-                if (f.targetText) line += ', ' + f.targetText;
-                if (f.gapText) line += ' (' + f.gapText + ')';
+                var line = '- ' + f.label + ': currently ' + f.valText;
+                if (f.gapText) line += ', ' + f.gapText;
                 prompt += line + '\n';
                 // Below-target items still get their "first step" milestone. The
                 // near-target phrasing that used to need skipping here is no
@@ -950,7 +949,7 @@
                 }
             });
         } else {
-            prompt += '\nAreas of opportunity: none are flagged this period. Encourage continued consistency and a stretch goal.\n';
+            prompt += '\nAreas of opportunity: none. Every core goal is being met. Recognize that fully, and suggest one stretch goal to keep growing rather than inventing a weakness.\n';
         }
 
         if (notes) {
@@ -958,7 +957,10 @@
             prompt += notes + '\n';
         }
 
-        prompt += '\nKPI standing: ' + firstName + ' is currently meeting ' + metCount + ' of ' + totalScored + ' key metrics.\n';
+        var standing = metCount === 0
+            ? firstName + ' is not yet meeting any of the ' + totalScored + ' core goals'
+            : firstName + ' is currently meeting ' + metCount + ' of ' + totalScored + ' core goals';
+        prompt += '\nKPI standing: ' + standing + '.\n';
 
         // Determine review tone. A manual status override wins; otherwise the tone
         // escalates with how many KPIs are being missed. The strong tier includes a
@@ -988,7 +990,7 @@
         if (tier === 'strong') {
             var strongIntro = statusOverride === 'off'
                 ? firstName + ' needs a real improvement push this period, so this review needs to be direct and carry real urgency while staying professional and respectful.'
-                : firstName + ' is meeting only ' + metCount + ' of ' + totalScored + ' key metrics, so this review needs to be direct and carry real urgency while staying professional and respectful.';
+                : standing + ', so this review needs to be direct and carry real urgency while staying professional and respectful.';
             prompt += '\nTONE FOR THIS REVIEW (important):\n';
             prompt += '- ' + strongIntro + '\n';
             prompt += '- Make it clear that a significant, focused improvement push is needed across the areas of opportunity, and that meaningful, measurable progress is expected through the rest of the year.\n';
@@ -1013,7 +1015,12 @@
         prompt += '- When referencing a metric, include the metric value and its goal, and how far away it is using the numbers above\n';
         prompt += '- Weave the coaching focus points in naturally as concrete next steps, do not just list them\n';
         prompt += '- The Progress and Strengths section should emphasize genuine strengths and forward momentum\n';
-        prompt += '- The Areas of Focus section must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
+        if (focusAreas.length) {
+            prompt += '- The Areas of Focus section must clearly identify 1 to 2 areas of opportunity, each specific, actionable, and tied to a goal, with firm but encouraging language about improving them\n';
+        } else {
+            prompt += '- The Areas of Focus section should set one stretch goal for the rest of the year. Do not describe any goal as missed\n';
+        }
+        prompt += '- Keep reliability, attendance and hours missed out of the review entirely\n';
         prompt += '- Keep each box concise, about 3 to 6 sentences each\n';
         prompt += '- Use the % symbol instead of writing out "percent" (example: 95%, not 95 percent)\n';
         prompt += '- Do NOT use em dashes, or hyphens with spaces around them. Use commas or periods instead.\n';

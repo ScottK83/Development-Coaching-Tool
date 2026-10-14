@@ -30,6 +30,71 @@
             + ' performance, and frame the improvement areas as the next step up rather than as failures.';
     }
 
+    /* ── Which metrics a year-end review talks about ──
+     *
+     * The snapshot is built in script.js off the year's newest upload. These
+     * are the rules for what it may hand to the review, kept here so they can
+     * be tested without standing up the whole app.
+     */
+
+    // The four a review is about, raised first. In registry order the six
+    // positives were filled with adherence, transfers, handle time, hold
+    // time and after call work, and rep satisfaction and sentiment, the two
+    // that matter most to how a year reads, fell off the end (Scott,
+    // 2026-10-14). quarter-review's CORE_METRICS, in its order.
+    var CORE_REVIEW_ORDER = ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall'];
+
+    // Fewer responses than this and a survey score is not a score. The floor
+    // the check-in document, the recap email and the Mid-Year scoring use.
+    var MIN_SURVEYS = 3;
+
+    /* Why a metric is left out of the year-end lists, or '' when it is not.
+     *
+     *   'hours'   Reliability. Hours stay out of Year-End tone and focus
+     *             entirely (Scott, 2026-10-13: "Leave hours out of it"). With
+     *             it in, an associate whose only miss was attendance had a
+     *             review built around "Reliability: 34.5 hrs vs target 18 hrs".
+     *   'surveys' A survey metric with fewer than three responses behind it.
+     *             Someone nobody surveyed read "Overall Experience: 0% vs
+     *             target 75%" three times over as failures. A survey nobody
+     *             answered is not a bad survey result.
+     */
+    function reviewExclusion(metricKey, employeeRecord) {
+        if (metricKey === 'reliability') return 'hours';
+        var surveyed = typeof window.isSurveyWeightedMetric === 'function'
+            ? window.isSurveyWeightedMetric(metricKey)
+            : !!(window.SURVEY_WEIGHT_FIELD || {})[metricKey];
+        if (surveyed) {
+            var responses = typeof window.getSurveyWeight === 'function'
+                ? window.getSurveyWeight(metricKey, employeeRecord)
+                : parseInt(employeeRecord && employeeRecord.surveyTotal, 10);
+            if (!(Number.isFinite(responses) && responses >= MIN_SURVEYS)) return 'surveys';
+        }
+        return '';
+    }
+
+    /* The four KPIs first, in the review's order, then the rest as given. */
+    function orderForReview(entries) {
+        var list = (entries || []).slice();
+        var rank = function (e) {
+            var i = CORE_REVIEW_ORDER.indexOf(e && e.key);
+            return i < 0 ? CORE_REVIEW_ORDER.length : i;
+        };
+        return list.map(function (e, i) { return { e: e, i: i }; })
+            .sort(function (a, b) { return (rank(a.e) - rank(b.e)) || (a.i - b.i); })
+            .map(function (x) { return x.e; });
+    }
+
+    /* "Average Handle Time: 398s (goal 426s or lower)". The direction is
+     * said, because a model told "398s vs target 426s" has to guess which
+     * side of the target is the good one, and on handle time it guessed
+     * wrong. */
+    function metricLine(entry) {
+        if (!entry) return '';
+        var dir = entry.targetType === 'max' ? ' or lower' : entry.targetType === 'min' ? ' or better' : '';
+        return entry.label + ': ' + entry.value + ' (goal ' + entry.target + dir + ')';
+    }
+
     /* The quarter by quarter block, when one could be built.
      *
      * Kept as its own paragraph with its own instruction, because a model
@@ -84,6 +149,7 @@ Requirements:
 - Box 1 should emphasize meaningful accomplishments and impact
 - Box 2 must include exactly 1 or 2 future improvement areas, each specific and actionable
 - Keep each box concise (about 3-6 sentences each)
+- Keep reliability, attendance and hours missed out of the review
 - Do NOT use em dashes; use commas or full stops
 - Return in this exact format only:
 Box 1 - Significant Accomplishments:
@@ -133,18 +199,33 @@ Box 2 - Future Improvement Areas:
         return extractSection(box2Index, lines.length);
     }
 
+    /* The speech read aloud at the year-end meeting.
+     *
+     * A blank field leaves its line out. This used to print "Your overall
+     * performance rating is: Not provided." into a script Scott reads to the
+     * associate (Scott, 2026-10-14). The caller refuses to build at all
+     * without a rating, so the only lines that can go are merit and bonus,
+     * which some years and some people simply do not have. The opening is
+     * Scott's own words and is not changed here.
+     */
     function buildVerbalSummary(preferredName, reviewYear, performanceRating, meritDetails, bonusAmount) {
+        var filled = function (v) { return String(v == null ? '' : v).trim(); };
+        var details = [];
+        if (filled(performanceRating)) details.push(`Your overall performance rating is: ${filled(performanceRating)}.`);
+        if (filled(meritDetails)) details.push(`Your merit increase details are: ${filled(meritDetails)}.`);
+        if (filled(bonusAmount)) details.push(`Your incentive/bonus amount is: ${filled(bonusAmount)}.`);
         return `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
 
-For this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.
-
-Your overall performance rating is: ${performanceRating}.
-Your merit increase details are: ${meritDetails}.
-Your incentive/bonus amount is: ${bonusAmount}.`;
+For this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.` + (details.length ? '\n\n' + details.join('\n') : '');
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.yearEnd = {
+        CORE_REVIEW_ORDER: CORE_REVIEW_ORDER.slice(),
+        MIN_SURVEYS: MIN_SURVEYS,
+        reviewExclusion,
+        orderForReview,
+        metricLine,
         buildCopilotPrompt,
         extractBoxText,
         buildVerbalSummary
