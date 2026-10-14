@@ -239,8 +239,164 @@
             .replace(/[ \t]+$/gm, '');
     }
 
+    /*
+     * THE BEST TRUE THING TO SAY
+     *
+     * Scott, 2026-10-14: "Make sure to, in every piece of feedback. From the
+     * calls, to the metrics ... make sure to provide positive feedback."
+     *
+     * Most messages praise the goals that are on target, and someone missing
+     * all of them got nothing, a "None at goal" handed to Copilot with an
+     * instruction to praise anyway, or a sympathy line. There is nearly always
+     * something real to say, so this finds it, best first:
+     *
+     *   on target, then moved the right way past the noise, then better than
+     *   the center average, then closest to goal, and only then the effort.
+     *
+     * rows: [{ key, label, value, target, prior, center }], numbers, any of
+     *   prior / center / target may be missing. Callers leave out metrics with
+     *   no surveys behind them (a 0% that is no surveys is never said).
+     * options.ongoing: the period is still running (present tense).
+     * options.tookNoCalls: nothing in the numbers is real, so only the effort.
+     *
+     * Reliability is never used: hours are not praise material outside the
+     * quarterly review. A 0 second time means no calls, never a win.
+     */
+    var NO_PRAISE_KEYS = { reliability: true };
+
+    function _registryDef(key) {
+        return (window.METRICS_REGISTRY && window.METRICS_REGISTRY[key]) || {};
+    }
+
+    function _fmtValue(key, value) {
+        if (typeof window.formatMetricDisplay === 'function') return window.formatMetricDisplay(key, value);
+        if (typeof formatMetricDisplay === 'function') return formatMetricDisplay(key, value); // eslint-disable-line no-undef
+        return String(value);
+    }
+
+    // A move in words: "24 seconds", "1.4 points". Never "+1.4%".
+    function _amount(key, size) {
+        var unit = _registryDef(key).unit;
+        var n = Math.round(Math.abs(size) * 10) / 10;
+        if (unit === 'sec') {
+            var s = Math.round(Math.abs(size));
+            return s + (s === 1 ? ' second' : ' seconds');
+        }
+        if (unit === '%') return n + (n === 1 ? ' point' : ' points');
+        return String(n);
+    }
+
+    function _usable(row) {
+        if (!row || !row.key || NO_PRAISE_KEYS[row.key]) return false;
+        var value = Number(row.value);
+        if (!Number.isFinite(value)) return false;
+        if (_registryDef(row.key).unit === 'sec' && value === 0) return false;
+        return true;
+    }
+
+    function _isReverse(key) {
+        var movement = window.DevCoachModules && window.DevCoachModules.metricMovement;
+        if (movement && typeof movement.isReverse === 'function') return movement.isReverse(key);
+        return !!_registryDef(key).isReverse;
+    }
+
+    // Positive = better, as a share of the goal, so seconds and percentages
+    // can be ranked against each other.
+    function _margin(row) {
+        var target = Number(row.target);
+        if (!Number.isFinite(target) || !target) return null;
+        var ahead = _isReverse(row.key) ? target - Number(row.value) : Number(row.value) - target;
+        return ahead / Math.abs(target);
+    }
+
+    function _better(key, a, b) {
+        var movement = window.DevCoachModules && window.DevCoachModules.metricMovement;
+        if (movement && typeof movement.resolveDirection === 'function') {
+            var read = movement.resolveDirection(key, a, b);
+            return read.direction === 'improving' ? read.delta : null;
+        }
+        var delta = _isReverse(key) ? Number(b) - Number(a) : Number(a) - Number(b);
+        return delta > 0 ? delta : null;
+    }
+
+    function truePositive(rows, options) {
+        var opts = options || {};
+        var ongoing = opts.ongoing !== false;
+        var is = ongoing ? 'is' : 'was';
+        var effort = {
+            kind: 'effort',
+            key: '',
+            label: '',
+            text: ongoing
+                ? 'I see the effort you\'re putting in, and it matters.'
+                : 'I saw the effort you put in, and it matters.'
+        };
+        if (opts.tookNoCalls) return effort;
+
+        var pool = (Array.isArray(rows) ? rows : []).filter(_usable);
+        var label = function (row) { return row.label || _registryDef(row.key).label || row.key; };
+
+        var atGoal = pool
+            .map(function (row) { return { row: row, margin: _margin(row) }; })
+            .filter(function (item) { return item.margin !== null && item.margin >= 0; })
+            .sort(function (a, b) { return b.margin - a.margin; })[0];
+        if (atGoal) {
+            return {
+                kind: 'atGoal', key: atGoal.row.key, label: label(atGoal.row),
+                text: 'Your ' + label(atGoal.row) + ' ' + is + ' on target at ' + _fmtValue(atGoal.row.key, Number(atGoal.row.value)) + '.'
+            };
+        }
+
+        var moved = pool
+            .filter(function (row) { return Number.isFinite(Number(row.prior)) && row.prior !== null && row.prior !== ''; })
+            .map(function (row) {
+                var delta = _better(row.key, Number(row.value), Number(row.prior));
+                var goal = Math.abs(Number(row.target)) || Math.abs(Number(row.prior)) || 1;
+                return { row: row, delta: delta, share: delta === null ? null : delta / goal };
+            })
+            .filter(function (item) { return item.delta !== null; })
+            .sort(function (a, b) { return b.share - a.share; })[0];
+        if (moved) {
+            var rose = Number(moved.row.value) > Number(moved.row.prior);
+            return {
+                kind: 'improved', key: moved.row.key, label: label(moved.row),
+                text: 'Your ' + label(moved.row) + (ongoing ? ' is moving' : ' moved') + ' the right way, '
+                    + (rose ? 'up ' : 'down ') + _amount(moved.row.key, moved.delta) + '.'
+            };
+        }
+
+        var ahead = pool
+            .filter(function (row) { return Number.isFinite(Number(row.center)) && row.center !== null && row.center !== ''; })
+            .map(function (row) { return { row: row, delta: _better(row.key, Number(row.value), Number(row.center)) }; })
+            .filter(function (item) { return item.delta !== null; })
+            .sort(function (a, b) { return b.delta - a.delta; })[0];
+        if (ahead) {
+            return {
+                kind: 'aboveCenter', key: ahead.row.key, label: label(ahead.row),
+                text: 'Your ' + label(ahead.row) + ' of ' + _fmtValue(ahead.row.key, Number(ahead.row.value)) + ' ' + is
+                    + ' better than the center average of ' + _fmtValue(ahead.row.key, Number(ahead.row.center)) + '.'
+            };
+        }
+
+        var closest = pool
+            .map(function (row) { return { row: row, margin: _margin(row) }; })
+            .filter(function (item) { return item.margin !== null; })
+            .sort(function (a, b) { return b.margin - a.margin; })[0];
+        if (closest) {
+            return {
+                kind: 'closest', key: closest.row.key, label: label(closest.row),
+                text: 'Your ' + label(closest.row) + ' ' + is + (pool.length > 1 ? ' the closest to goal, at ' : ' at ')
+                    + _fmtValue(closest.row.key, Number(closest.row.value)) + ' against the '
+                    + _fmtValue(closest.row.key, Number(closest.row.target)) + ' goal, and that is a good place to build from.'
+            };
+        }
+
+        return effort;
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.messageVoice = {
+        truePositive: truePositive,
         greeting: greeting,
         greetingPool: greetingPool,
         TONES: Object.keys(POOLS),
