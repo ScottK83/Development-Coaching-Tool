@@ -57,7 +57,15 @@
         nextSteps: 'setting next steps',
         courtesyClose: 'closing properly',
         customerReaction: 'customers saying thank you',
-        positiveExperience: 'Verint positive experience hits'
+        positiveExperience: 'Verint positive experience hits',
+        // The smaller things every call is checked for, so a hard week still
+        // shows what is going right (Scott, 2026-10-14).
+        scoredPhrase: 'wording off the Verint positive list',
+        resolved: 'telling the customer it is taken care of',
+        calmCustomer: 'keeping customers with a problem calm',
+        keptMoving: 'keeping the customer in the loop',
+        courtesy: 'a courteous, friendly tone',
+        explanationLanded: 'explaining things so they land'
     };
 
     function describe(item, labels) {

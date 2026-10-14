@@ -929,6 +929,34 @@
     const TRANSFER = /transfer(?:ring)? you|i(?:'?m| am) going to transfer|let me transfer|get you (?:over )?to (?:the|another)/i;
     const WARM_TRANSFER = /stay on the line|i(?:'?ll| will) (?:stay|introduce|walk them through)|let me (?:explain|brief|fill) (?:them|the)|warm transfer|i(?:'?ll| will) give them the (?:details|background)/i;
 
+    /*
+     * EVERY CALL GETS SOMETHING GOOD SAID ABOUT IT
+     *
+     * Scott, 2026-10-14: "in every piece of feedback. From the calls, to the
+     * metrics ... make sure to provide positive feedback." The rules above
+     * praise only the behaviours they recognise, so a hard call came back
+     * with five things to work on and an empty "what went well", and every
+     * message built from the notes inherited the gap.
+     *
+     * These are smaller things the call itself shows, tried in order until
+     * the call has two strengths. Each is true or it is not used. Only when
+     * none of them fit does the thank you go in, and it claims nothing.
+     *
+     * They never count toward the headline: a call rescued by the floor is
+     * not a "Solid call".
+     */
+    const PRAISE_FLOOR_TARGET = 2;
+    const FLOOR_PRAISE = 2;
+
+    // "You're all set", "that's been updated", "I've gone ahead and
+    // submitted it". The thing the customer called for, done and said so.
+    const RESOLVED = /you(?:'?re| are) (?:all )?set\b|(?:it'?s|that'?s|that is|it is|everything'?s|everything is) (?:all )?(?:taken care of|been (?:taken care of|updated|processed|submitted|scheduled|set up|applied|removed|added))|i(?:'?ve| have) (?:gone ahead and |already |now )?(?:updated|processed|submitted|scheduled|set (?:that |it |you |this )?up|applied|added|removed|changed|put in|credited|waived|reversed)/i;
+    // Courtesy beyond the greeting, which every call has.
+    const COURTESY = /\bthank(?:s| you)\b|\bplease\b|you(?:'?re| are) (?:very |so )?welcome|my pleasure|happy to (?:help|assist)|glad (?:i|to) (?:could )?help/gi;
+    const GREETING_THANKS = /thank(?:s| you) for (?:calling|being a valued customer)/gi;
+
+    const GENERIC_PRAISE = 'Thanks for the effort you put in with this customer.';
+
     function strengthPattern(key) {
         const rule = STRENGTH_RULES.find(item => item.key === key);
         return rule ? rule.pattern : /$^/;
@@ -988,6 +1016,87 @@
 
     function bullet(text, quote) {
         return quote ? `- ${text} ("${quote}")` : `- ${text}`;
+    }
+
+    /**
+     * Tops a call up to two strengths from what it shows. See EVERY CALL GETS
+     * SOMETHING GOOD SAID ABOUT IT above for the why; this is the how.
+     *
+     * Mutates `strengths`, appending after the earned ones so a real strength
+     * always leads.
+     */
+    function addFloorPraise(strengths, call) {
+        if (strengths.length >= PRAISE_FLOOR_TARGET) return;
+
+        const has = (key) => strengths.some(item => item.key === key);
+        const add = (item) => {
+            if (strengths.length >= PRAISE_FLOOR_TARGET || has(item.key)) return;
+            strengths.push({ praise: FLOOR_PRAISE, floor: true, quote: '', ...item });
+        };
+
+        // A phrase off Scott's own Verint positive list, in her words. The
+        // greeting's "how can I help" is on that list, and a call already
+        // praised for its open does not need the same line praised twice.
+        const scan = window.DevCoachModules?.callWordChoice?.scanTranscript?.(call.transcript, {
+            associateName: call.associateName
+        });
+        const greeting = strengthPattern('greeting');
+        const phrase = (scan?.ok ? scan.positiveA : [])
+            .find(hit => hit.said && !(has('greeting') && greeting.test(hit.quote || '')));
+        if (phrase) {
+            add({
+                key: 'scoredPhrase',
+                text: `You said "${String(phrase.said).replace(/\bi\b/g, 'I')}", and that is exactly the kind of wording customers remember.`
+            });
+        }
+
+        if (RESOLVED.test(call.agentText)) {
+            add({
+                key: 'resolved',
+                text: 'You got it done for the customer and told them plainly that it was taken care of.',
+                quote: findQuote(call.turns, RESOLVED)
+            });
+        }
+
+        // A customer with a real problem who never got heated. A trimmed
+        // transcript cannot say "the whole way", and "how you handled it" is
+        // not true of a call with a flat no or a lost customer in it.
+        if (!call.truncated && !call.frustrated && TROUBLE.test(call.customerText)
+            && !(scan?.ok && scan.emotions?.cues?.length)
+            && !call.improvements.some(item => (item.weight || 0) >= 8)) {
+            add({
+                key: 'calmCustomer',
+                text: 'The customer called with a real problem and stayed calm with you the whole way, which says a lot about how you handled it.'
+            });
+        }
+
+        // Only a timed call can show there was no long quiet, and only a
+        // whole one can show it for the full call.
+        const timedTurns = call.turns.filter(turn => typeof turn.at === 'number').length;
+        if (call.parsed.timed && !call.truncated && timedTurns >= 8
+            && !call.gaps.some(gap => !gap.announced || gap.silence >= LONG_HOLD_SECONDS)) {
+            add({
+                key: 'keptMoving',
+                text: 'You kept the customer in the loop, with no long quiet stretches for them to sit through.'
+            });
+        }
+
+        const courtesy = countMatches(call.agentText, COURTESY) - countMatches(call.agentText, GREETING_THANKS);
+        if (courtesy >= 2) {
+            const plain = new RegExp(COURTESY.source, 'i');
+            const line = call.turns.find(turn => turn.role !== 'customer'
+                && plain.test(String(turn.text || '').replace(GREETING_THANKS, '')));
+            add({
+                key: 'courtesy',
+                text: 'You kept a courteous, friendly tone with the customer.',
+                quote: line ? clipQuote(line.text, plain) : ''
+            });
+        }
+
+        // Nothing above fit. Still something good said, and nothing claimed.
+        if (!strengths.length) {
+            strengths.push({ key: 'thanks', praise: 1, floor: true, generic: true, text: GENERIC_PRAISE, quote: '' });
+        }
     }
 
     /**
@@ -1296,6 +1405,15 @@
         }
 
         strengths.sort((a, b) => b.praise - a.praise);
+
+        // Counted before the floor goes in, so the headline still only
+        // fires on a call the rules themselves rate.
+        const earnedStrengths = strengths.length;
+        addFloorPraise(strengths, {
+            transcript, parsed, turns, agentText, customerText, truncated, gaps, frustrated, improvements,
+            associateName: options.associateName
+        });
+
         // The measured silence and the "one moment" filler count are the same
         // event described twice. When the timestamps have already put a number
         // and a time on it, the vaguer bullet adds nothing.
@@ -1324,7 +1442,7 @@
             redFlags,
             // A call that gave an account away does not open with "Solid
             // call", however much else went well on it.
-            headline: redFlag ? '' : buildHeadline(strengths.length, heavyIssues, meta),
+            headline: redFlag ? '' : buildHeadline(earnedStrengths, heavyIssues, meta),
             // The drafts are capped so the email stays focused; the full lists
             // stay on the result so nothing is dropped without a trace.
             strengths: strengths.slice(0, MAX_STRENGTH_BULLETS),
@@ -1614,6 +1732,7 @@
         buildStrengthsDraft,
         buildImprovementsDraft,
         DRAFT_HINTS,
+        GENERIC_PRAISE,
         isDraftHint,
         stripDraftHints,
         tidyQuote,

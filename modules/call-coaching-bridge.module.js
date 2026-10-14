@@ -538,6 +538,9 @@
             });
 
             (analysis.allStrengths || []).forEach(item => {
+                // The thank you a call gets when nothing else fits. It is not
+                // a habit to report, and the message has its own for that.
+                if (item.generic) return;
                 const row = strengthRows[item.key] || (strengthRows[item.key] = { label: item.key, count: 0, dates: [] });
                 row.count += 1;
                 if (date) row.dates.push(date);

@@ -151,6 +151,30 @@ ${transcript}
         return text ? `${text}\n\n` : '';
     }
 
+    /*
+     * PRAISE IS NEVER OPTIONAL
+     *
+     * Scott, 2026-10-14: "in every piece of feedback. From the calls, to the
+     * metrics ... make sure to provide positive feedback." Notes with nothing
+     * under what went well went to Copilot as "- None", beside a rule to use
+     * only the notes, so a message could come back with no praise in it at
+     * all. Every prompt now says praise is required, and says where to find it
+     * when the notes have none: the call itself, or failing that a sincere
+     * thank you, which claims nothing.
+     */
+    function praiseNotes(text) {
+        return cleanNotes(text) || '- Nothing written yet. See the requirement about praise below';
+    }
+
+    // `withTranscript` is whether this prompt carries the call, since only
+    // then can Copilot be pointed at it.
+    function praiseRule(withTranscript, where, notes = 'my notes on what went well are empty') {
+        const fallback = withTranscript
+            ? 'pick one or two genuine, specific things the associate did well that the transcript shows, and if there is truly nothing, thank them sincerely for the effort they put in with the customer'
+            : 'thank them sincerely for the effort they put in with the customer';
+        return `- ${where} always has praise in it, however much there is to work on. If ${notes}, ${fallback}. That is the one thing you may add beyond my notes`;
+    }
+
     function buildPrompt(entry, preferredName) {
         const transcriptSection = buildTranscriptSection(entry);
         const transcriptRules = transcriptSection
@@ -177,7 +201,7 @@ ${buildCallDetailLines(entry)}
 
 ${transcriptSection}${buildQaSection(entry)}${buildWordChoiceSection(entry)}Feedback notes:
 What went well:
-${cleanNotes(entry.whatWentWell) || '- None provided'}
+${praiseNotes(entry.whatWentWell)}
 
 What to work on next time:
 ${cleanNotes(entry.improvementAreas) || '- None provided'}
@@ -197,6 +221,7 @@ Requirements:
 - Use only my notes above. Do not add observations of your own, do not rate the call, and do not introduce anything I have not said
 - Professional, supportive, and specific
 - Open with genuine, specific recognition. Where the notes show the call went well, say so plainly and warmly rather than rushing past it to the coaching. Praise the behavior and why it mattered to the customer, not just "good job"
+${praiseRule(Boolean(transcriptSection), 'The message')}
 - Match the tone to the call: if the strengths clearly outweigh the coaching points, this should read as a well earned pat on the back with a couple of refinements, not a correction
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
@@ -405,7 +430,7 @@ Requirements:
             lines.push(...extras.redFlag, '');
         }
 
-        lines.push('My notes on what went well:', correct(cleanNotes(entry.whatWentWell)) || '- None', '');
+        lines.push('My notes on what went well:', correct(praiseNotes(entry.whatWentWell)), '');
         lines.push('My notes on what to work on:', correct(cleanNotes(entry.improvementAreas)) || '- None', '');
 
         if (lost.length) {
@@ -438,6 +463,7 @@ Requirements:
         }
         lines.push('- Open with one or two sentences on what the call was about and how it ended');
         lines.push('- Then "What went well:" with two to four short bullets, and "What to work on:" with two or three bullets, each saying exactly what to do differently');
+        lines.push(praiseRule(Boolean(transcript), '"What went well:"').replace('always has praise in it', 'is never left empty'));
         lines.push('- Then "Tips to try:" with three to five practical tips or tricks, each with an example of what to say or do on the next call. Draw them from my notes and the tips above');
         if (extras.oscarSteps) {
             lines.push('- Then "Oscar steps:" with the steps that apply, short and in order, saying which step to focus on next time. Use the steps as given and do not add to them');
@@ -533,7 +559,7 @@ Requirements:
         if (summary) {
             lines.push('My coaching write-up:', '"""', summary, '"""', '');
         } else {
-            lines.push('What went well:', correct(cleanNotes(entry.whatWentWell)) || '- None', '');
+            lines.push('What went well:', correct(praiseNotes(entry.whatWentWell)), '');
             lines.push('What to work on:', correct(cleanNotes(entry.improvementAreas)) || '- None', '');
         }
 
@@ -557,7 +583,10 @@ Requirements:
         if (extras.redFlag.length) {
             lines.push('- Straight after the opening line, set out the confirmed issue in full: what happened, in order, with the times; why it matters, which is protecting the customer and their account; and exactly what has to happen on every call from now on. Plain and respectful, but not softened, not turned into a tip, and not put after the praise. Do not use the words "red flag"');
         }
-        lines.push('- Say what went well, specifically, and why it mattered to the customer');
+        lines.push('- Say what went well, specifically, and why it mattered to the customer. Every email has this, however much there is to work on');
+        lines.push(praiseRule(false, 'The email', summary
+            ? 'my write-up names nothing that went well'
+            : 'my notes on what went well are empty'));
         lines.push('- Then what to do better: for each point, say exactly what to do differently and give the words or the steps to use');
         lines.push('- Then a short list headed "A few things to try:" with three to five practical tips or tricks, each with an example of what to say or do. Draw them from my write-up and the tips above');
         if (extras.oscarSteps) {
@@ -735,6 +764,8 @@ Requirements:
         return 'a few things';
     }
 
+    const NO_NOTES_THANKS = 'Thank you for the effort you put in with this customer.';
+
     function openerFor(tone, workCount) {
         const things = thingsWord(workCount);
         const are = workCount === 1 ? 'is' : 'are';
@@ -743,7 +774,9 @@ Requirements:
             case 'strong': return `It was a strong call, and there ${are} ${things} worth tightening.`;
             case 'even': return `There was a lot in it I liked, and ${things} I want to go through with you.`;
             case 'mixed': return `There are things in there that worked, and ${things} I want to go through with you.`;
-            default: return `There ${are} ${things} I want to go through with you.`;
+            // No praise in the notes, and still never an email without
+            // any (Scott, 2026-10-14: positive feedback in every piece).
+            default: return `${NO_NOTES_THANKS} There ${are} ${things} I want to go through with you.`;
         }
     }
 
