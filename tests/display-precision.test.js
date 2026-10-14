@@ -75,7 +75,7 @@ suite('display precision: every metric is judged as it is printed', (t) => {
         { key: 'acw', raw: 60.4, target: 60, dir: 'max' },
         { key: 'holdTime', raw: 30.4, target: 30, dir: 'max' },
         { key: 'transfers', raw: 6.04, target: 6, dir: 'max' },
-        { key: 'reliability', raw: 18.04, target: 18, dir: 'max' }
+        { key: 'reliability', raw: 17.94, target: 17.9, dir: 'max' }
     ];
 
     const wrong = [];

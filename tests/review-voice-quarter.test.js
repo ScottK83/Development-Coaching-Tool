@@ -224,7 +224,7 @@ suite('review voice: hours inside an even share are praise, worded as praise', (
     const { qr, ctx } = ctxFor(t, ELI, 'Eli Brooks');
     const box1 = qr.buildNotes(ctx).box1;
     t.check('5 of 18 through Q3 is said as kept inside the allowance',
-        /Eli kept missed time to 5 hrs so far this year, well inside the 18 hr allowance\./.test(box1));
+        /Eli kept missed time to 5 hrs so far this year, well inside the 17.9 hr allowance\./.test(box1));
     t.check('not as a bare fact', !/has missed 5 hrs/.test(box1));
 
     // 16.5 of 18 with a quarter to go is inside the allowance and not on pace.
@@ -236,7 +236,7 @@ suite('review voice: hours inside an even share are praise, worded as praise', (
 
     const zero = ctxFor(t, year('Zero Hours', { reliability: 0 }, { reliability: 0 }, { reliability: 0 }), 'Zero Hours');
     t.check('a counted zero is said as the figure',
-        /Zero's missed time so far this year is 0 hrs, well inside the 18 hr allowance\./.test(zero.qr.buildNotes(zero.ctx).box1));
+        /Zero's missed time so far this year is 0 hrs, well inside the 17.9 hr allowance\./.test(zero.qr.buildNotes(zero.ctx).box1));
 });
 
 /* ── Goal focused when not meeting, and kind about a first miss ── */

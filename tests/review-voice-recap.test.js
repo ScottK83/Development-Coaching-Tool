@@ -129,7 +129,7 @@ suite('review voice: the hours sit with the numbers, above a close about the KPI
     t.pinClock('2026-10-14');
     const env = load(t, MOSTLY);
     const lines = mailFor(env, 'Eli Brooks').body.split('\n');
-    const hoursAt = lines.findIndex((l) => /^For your records, missed time for 2026 through September 30 is 5 hrs \(allowance 18 hrs\)\.$/.test(l));
+    const hoursAt = lines.findIndex((l) => /^For your records, missed time for 2026 through September 30 is 5 hrs \(allowance 17\.9 hrs\)\.$/.test(l));
     const closeAt = lines.findIndex((l) => /^Most of your KPIs are at goal in Q3\. Keep it going 💪$/.test(l));
     t.check('the hours line is there, worded as a record', hoursAt > -1);
     t.check('and comes before the closing line, not under it', closeAt > hoursAt);

@@ -186,7 +186,7 @@
             // 2026 value, matching metric-profiles. This was left at the 2025
             // figure of 16, so any path taking the fallback instead of the
             // year-aware target judged reliability two points too harshly.
-            target: { type: 'max', value: 18 },
+            target: { type: 'max', value: 17.9 },
             isReverse: true,
             unit: 'hrs',
             columnIndex: 22,

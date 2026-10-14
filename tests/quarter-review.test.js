@@ -602,10 +602,10 @@ suite('quarter review: being over the allowance is said directly', (t) => {
 
     t.equal('twenty three hours for the year', rel.yearToDate, 23);
     t.equal('which is over the allowance', rel.meetsTarget, false);
-    t.equal('by five hours', rel.overBy, 5);
+    t.check('by 5.1 hours, against the 17.9 target', Math.abs(rel.overBy - 5.1) < 1e-9);
 
     const sentence = qr.reliabilitySentence(rel, ctx);
-    t.check('the overage is stated', /5 hrs over the allowance/.test(sentence));
+    t.check('the overage is stated', /5\.1 hrs over the allowance/.test(sentence));
     t.check('with the time left in the year', /one quarter to go/.test(sentence));
 
     // Said directly where the hours are stated, and kept out of the focus

@@ -126,7 +126,7 @@ suite('team figures: the trend prompt compares like with like', (t) => {
     if (!rel) return;
 
     t.equal('the figure is per person', rel.employeeValue, 4);
-    t.equal('measured against the per-person budget', rel.target, 18);
+    t.equal('measured against the per-person budget', rel.target, 17.9);
     t.check('so a team well inside budget MEETS it', rel.meetsTarget === true);
     t.equal('with no gap to close', rel.gapFromTarget, 0);
 });
@@ -140,5 +140,5 @@ suite('team figures: a team genuinely over budget still fails', (t) => {
 
     t.equal('twenty-two hours each is twenty-two per person', rel.employeeValue, 22);
     t.check('which does not meet an eighteen hour budget', rel.meetsTarget === false);
-    t.equal('and the gap is four hours, not four hundred', rel.gapFromTarget, 4);
+    t.check('and the gap is about four hours, not four hundred', Math.abs(rel.gapFromTarget - 4.1) < 1e-9);
 });

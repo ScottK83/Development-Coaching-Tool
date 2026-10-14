@@ -203,7 +203,7 @@ suite('recap email: where each KPI was in each quarter', (t) => {
     });
 
     t.check('a line on where Q3 left them', mail.body.indexOf('Some of your KPIs are already at goal, and Q4 is a full quarter to bring the rest along.') > -1);
-    t.check('the hours, dated', mail.body.indexOf('For your records, missed time for 2026 through September 30 is 14.5 hrs (allowance 18 hrs).') > -1);
+    t.check('the hours, dated', mail.body.indexOf('For your records, missed time for 2026 through September 30 is 14.5 hrs (allowance 17.9 hrs).') > -1);
     t.check('and it signs off the way Scott\'s other emails do',
         mail.body.split('\n').pop() === 'Happy to walk through any of it.');
     t.check('no rising chart mark, which reads backwards on handle time', mail.body.indexOf('📈') === -1);
@@ -408,7 +408,7 @@ suite('recap email: hours missed are the year total against the allowance', (t) 
 
     // 6 + 5 + 3.5. Never a quarter's own 3.5.
     t.equal('the total, dated, against the allowance', line,
-        'For your records, missed time for 2026 through September 30 is 14.5 hrs (allowance 18 hrs).');
+        'For your records, missed time for 2026 through September 30 is 14.5 hrs (allowance 17.9 hrs).');
     t.check('no quarter\'s own hours appear', !/(^|[^\d.])3\.5 hrs/.test(mail.body) && !/(^|[^\d.])5\.0 hrs/.test(mail.body));
     t.check('and never as better or worse, or a verdict', !/better|worse|improv|over|inside|under/i.test(line));
     t.equal('the email says the hours line went in', mail.includedHours, true);
@@ -419,7 +419,7 @@ suite('recap email: the year to date upload is the year total, dated by its last
     const env = load(t, YEAR, period('ytd', '2026-01-01', '2026-10-05', [person('Jordan Reyes', { reliability: 16.25 })]));
     const mail = mailFor(env, 'Jordan Reyes');
     t.equal('the upload\'s figure, through the day it runs to', hoursLineOf(mail.body),
-        'For your records, missed time for 2026 through October 5 is 16.3 hrs (allowance 18 hrs).');
+        'For your records, missed time for 2026 through October 5 is 16.3 hrs (allowance 17.9 hrs).');
     t.check('the summed quarters are not in the email', mail.body.indexOf('14.5') === -1);
     const notes = env.recap.buildRecapNotes(mail.model);
     // October 1 to 5 are in the file and in no quarter, so the two differ
@@ -487,7 +487,7 @@ suite('recap email: no hours missed is the counted 0, not a claim they were neve
     // Time re-coded out of the count is still time away, so "no hours
     // missed" claims more than the figure does.
     t.equal('the figure as counted', hoursLineOf(mailFor(env, 'Jordan Reyes').body),
-        'For your records, missed time for 2026 through September 30 is 0 hrs (allowance 18 hrs).');
+        'For your records, missed time for 2026 through September 30 is 0 hrs (allowance 17.9 hrs).');
 });
 
 suite('recap email: hours past the allowance are stated, never set as something to work on', (t) => {
@@ -499,7 +499,7 @@ suite('recap email: hours past the allowance are stated, never set as something 
     const env = load(t, over([10, 8, 6]));
     const mail = mailFor(env, 'Jordan Reyes');
     t.equal('the line is the two facts', hoursLineOf(mail.body),
-        'For your records, missed time for 2026 through September 30 is 24 hrs (allowance 18 hrs).');
+        'For your records, missed time for 2026 through September 30 is 24 hrs (allowance 17.9 hrs).');
     t.check('no focus wording anywhere near it',
         !/focus|work on|improve|reduce|attendance policy|over the allowance/i.test(hoursLineOf(mail.body)));
     t.equal('24 against 18 needs no note about hours', env.recap.buildRecapNotes(mail.model).filter((n) => /hrs|hours/.test(n)).length, 0);
@@ -511,7 +511,7 @@ suite('recap email: hours past the allowance are stated, never set as something 
     t.check('40 hrs against 18 is left out by default', !/missed time|Reliability|hrs/.test(farMail.body));
     t.equal('and the email says so', farMail.includedHours, false);
     t.check('the panel says why, and how to put it back', far.recap.buildRecapNotes(farMail.model).indexOf(
-        'Hours are left out of Jordan\'s email: 40 hrs is more than twice the 18 hrs allowance. Tick Include the hours line once you have checked none of it is protected leave.') > -1);
+        'Hours are left out of Jordan\'s email: 40 hrs is more than twice the 17.9 hrs allowance. Tick Include the hours line once you have checked none of it is protected leave.') > -1);
     const ticked = mailFor(far, 'Jordan Reyes', 3, { includeHours: true });
     t.check('once ticked, it goes in', /missed time for 2026 through September 30 is 40 hrs/.test(ticked.body));
     t.check('and the note stops asking', !far.recap.buildRecapNotes(ticked.model, { includeHours: true }).some((n) => /left out/.test(n)));
@@ -1204,7 +1204,7 @@ suite('quarterly tab: notes for Scott stay in the panel', (t) => {
         period('quarter', '2026-07-01', '2026-09-30', [person('Jordan Reyes', { reliability: 8 })])));
     const html = renderInto(env, () => { env.ui.state.employee = 'Jordan Reyes'; env.ui.state.showRecap = true; });
     t.check('a before you send box', /Before you send \(only you see this\)/.test(html));
-    t.check('with the check on the hours', /40 hrs is more than twice the 18 hrs allowance/.test(html));
+    t.check('with the check on the hours', /40 hrs is more than twice the 17.9 hrs allowance/.test(html));
     t.check('which is not in the email text', !/twice/.test(mailFor(env, 'Jordan Reyes').body));
 });
 

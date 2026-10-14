@@ -32,7 +32,9 @@
             aht: { type: 'max', value: 426 },
             acw: { type: 'max', value: 60 },
             holdTime: { type: 'max', value: 30 },
-            reliability: { type: 'max', value: 18 }
+            // Less than 18 hours for the year (Scott, 2026-10-14: "17.9 is the
+            // target"). It was 18 here, so exactly 18.0 counted as inside.
+            reliability: { type: 'max', value: 17.9 }
         }
     };
 
@@ -88,7 +90,7 @@
             },
             reliability: {
                 type: 'max',
-                score3: { max: 18 },
+                score3: { max: 17.9 },
                 score2: { max: 24 }
             },
             aht: {

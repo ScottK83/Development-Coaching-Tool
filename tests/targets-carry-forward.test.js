@@ -25,7 +25,7 @@ function load(t) {
 suite('targets: a year with no entry uses the newest one before it', (t) => {
     const mp = load(t);
     t.equal('2027 adherence target is 2026\'s', mp.getYearTarget('scheduleAdherence', 2027).value, 93);
-    t.equal('2027 reliability budget is 2026\'s', mp.getYearTarget('reliability', 2027).value, 18);
+    t.equal('2027 reliability budget is 2026\'s', mp.getYearTarget('reliability', 2027).value, 17.9);
     t.equal('2027 still meets and misses', mp.meetsYearTarget('scheduleAdherence', 95, 2027), true);
     t.equal('2027 still rates', mp.getRatingScore('scheduleAdherence', 95, 2027), 3);
     t.equal('and has bands', mp.hasRatingBand('aht', 2027), true);

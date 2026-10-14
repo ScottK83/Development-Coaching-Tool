@@ -98,7 +98,7 @@
             return value >= 84 ? 3 : (value >= 81.5 ? 2 : 1);
         }
         if (metricKey === 'reliability') {
-            return value <= 18 ? 3 : (value <= 24 ? 2 : 1);
+            return value <= 17.9 ? 3 : (value <= 24 ? 2 : 1);
         }
 
         return null;
