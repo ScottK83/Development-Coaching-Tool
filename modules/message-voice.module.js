@@ -180,6 +180,65 @@
         return (POOLS[tone] || NEUTRAL).slice();
     }
 
+    /*
+     * THE EMOJI BUDGET
+     *
+     * Scott, 2026-10-13: "2 emojis." Per message, everywhere, the team post
+     * included. The 10/14 smoke test counted a median of 30 in the team post
+     * and 4 or 5 in a private message, because every section marker, bullet
+     * and name carried its own.
+     *
+     * The pools are being trimmed at the source, and this is the floor under
+     * them: the first emoji (the opener's) and the last (the sign-off's) stay,
+     * everything between goes. ©, ® and ™ and the arrows count as pictographs
+     * to Unicode but not to a reader, so they are left alone.
+     */
+    var EMOJI = /\p{Extended_Pictographic}️?[\u{1F3FB}-\u{1F3FF}]?(?:‍\p{Extended_Pictographic}️?[\u{1F3FB}-\u{1F3FF}]?)*/gu;
+    var NOT_EMOJI = /^[©®™↔-↙↩↪]$/;
+
+    function _emojiMatches(text) {
+        var out = [];
+        String(text || '').replace(EMOJI, function (m, at) {
+            if (!NOT_EMOJI.test(m)) out.push({ text: m, at: at });
+            return m;
+        });
+        return out;
+    }
+
+    function countEmojis(text) {
+        return _emojiMatches(text).length;
+    }
+
+    function limitEmojis(text, max) {
+        var cap = Number.isFinite(max) ? max : 2;
+        var src = String(text || '');
+        var found = _emojiMatches(src);
+        if (found.length <= cap) return src;
+        var keep = new Set();
+        for (var i = 0; i < Math.max(0, cap - 1); i++) keep.add(found[i].at);
+        if (cap > 0) keep.add(found[found.length - 1].at);
+        var out = '';
+        var last = 0;
+        found.forEach(function (f) {
+            out += src.slice(last, f.at);
+            last = f.at + f.text.length;
+            if (keep.has(f.at)) {
+                out += f.text;
+                return;
+            }
+            // Take the space the emoji was standing in, so "🎯 Let's" leaves
+            // "Let's" and "here. 💡 Tip" leaves "here. Tip". Indentation in
+            // front of it is kept, which keeps a bullet list lined up.
+            var before = out.charAt(out.length - 1);
+            if (src.charAt(last) === ' ' && (before === '' || before === ' ' || before === '\n' || before === '\t' || before === '•')) last++;
+        });
+        out += src.slice(last);
+        return out
+            .replace(/(\S) {2,}/g, '$1 ')
+            .replace(/ +([.,!?:])/g, '$1')
+            .replace(/[ \t]+$/gm, '');
+    }
+
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.messageVoice = {
         greeting: greeting,
@@ -188,6 +247,8 @@
         isOngoingPeriod: isOngoingPeriod,
         hype: hype,
         hypeRotator: hypeRotator,
-        HYPE: HYPE
+        HYPE: HYPE,
+        countEmojis: countEmojis,
+        limitEmojis: limitEmojis
     };
 })();

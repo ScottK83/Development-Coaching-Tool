@@ -1051,15 +1051,28 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, pr
         allMetrics.push(metricRecord);
     });
 
-    const weakest = allMetrics.length > 0
-        ? [...allMetrics].sort((a, b) => {
+    const { weakest, trendingDown } = pickWeakestAndTrending(allMetrics);
+
+    return {
+        weakest,
+        trendingDown,
+        allMetrics
+    };
+}
+
+// The riskiest metric, and the riskiest other one that is slipping. Split out
+// of analyzeTrendMetrics so a filtered list can be ranked the same way.
+function pickWeakestAndTrending(allMetrics) {
+    const list = Array.isArray(allMetrics) ? allMetrics : [];
+    const weakest = list.length > 0
+        ? [...list].sort((a, b) => {
             const riskA = (a.gapFromTarget || 0) + (a.trendDirection === 'declining' ? getMetricBandByUnit(a.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 }) : 0);
             const riskB = (b.gapFromTarget || 0) + (b.trendDirection === 'declining' ? getMetricBandByUnit(b.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 }) : 0);
             return riskB - riskA;
         })[0]
         : null;
 
-    const decliningCandidates = allMetrics
+    const decliningCandidates = list
         .filter(m => m.metricKey !== weakest?.metricKey)
         .filter(m => m.trendDirection === 'declining' || m.classification === 'Watch Area' || m.classification === 'Needs Focus')
         .sort((a, b) => {
@@ -1068,13 +1081,78 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, pr
             return riskB - riskA;
         });
 
-    const trendingDown = decliningCandidates.length > 0 ? decliningCandidates[0] : null;
-
     return {
         weakest,
-        trendingDown,
-        allMetrics
+        trendingDown: decliningCandidates.length > 0 ? decliningCandidates[0] : null
     };
+}
+
+/*
+ * WHAT A TREND MESSAGE MAY TALK ABOUT
+ *
+ * Scott, 2026-10-14. Two kinds of number reached associates that should not
+ * have:
+ *
+ *   A survey metric nobody answered. It arrives as 0, and a zero-survey
+ *   associate was told "Rep Satisfaction: Currently 0, target is >= 82".
+ *   The count is the metric's own (rep sat and FCR are answered separately
+ *   from Overall Experience), the same map the team figures weigh by.
+ *
+ *   Reliability. A weekly row holds that week's hours, and "Reliability: 8
+ *   (target met)" went out as a win. Reliability is the year's running total
+ *   and is kept out of strengths and focus areas on every associate surface.
+ *
+ * analyzeTrendMetrics itself is left whole, because the morning pulse reads
+ * it and gates its own way. The coaching paths filter here.
+ */
+const TREND_SURVEY_COUNT_FALLBACK = { cxRepOverall: 'repSurveyTotal', fcr: 'fcrSurveyTotal', overallExperience: 'surveyTotal' };
+
+function trendHasSurveysBehind(employee, metricKey) {
+    const weigh = window.DevCoachModules?.metricsRegistryHelpers?.getSurveyWeight || window.getSurveyWeight;
+    if (typeof weigh === 'function') {
+        const count = weigh(metricKey, employee);
+        return count === null || count > 0;
+    }
+    const field = TREND_SURVEY_COUNT_FALLBACK[metricKey];
+    if (!field) return true;
+    const own = parseInt(employee?.[field], 10);
+    const count = Number.isInteger(own) ? own : parseInt(employee?.surveyTotal, 10);
+    return Number.isInteger(count) && count > 0;
+}
+
+function coachableTrendMetrics(allMetrics, employee, previousEmployee = null) {
+    return (Array.isArray(allMetrics) ? allMetrics : [])
+        .filter(m => m && m.metricKey !== 'reliability')
+        .filter(m => !employee || trendHasSurveysBehind(employee, m.metricKey))
+        .map(m => {
+            // A previous period nobody answered is no baseline: "up 80 pts"
+            // from an empty column is not a move.
+            if (!previousEmployee || trendHasSurveysBehind(previousEmployee, m.metricKey)) return m;
+            const quiet = { ...m, previousValue: null, trendDelta: null, trendDirection: 'stable' };
+            quiet.classification = classifyTrendMetric(quiet);
+            return quiet;
+        });
+}
+
+// A change in the metric's own unit, spelled out: "1.1 points", "18
+// seconds", "0.5 hours". A rate that moved from 95.1% to 96.2% moved 1.1
+// points, not 1.1%, and "+1.1%" on the picture read as a percentage of
+// something (Scott, 2026-10-14).
+function formatTrendChange(metricKey, amount) {
+    const size = Math.abs(Number(amount) || 0);
+    const unit = METRICS_REGISTRY[metricKey]?.unit;
+    const oneDecimal = size.toFixed(1).replace(/\.0$/, '');
+    const plural = (count, word) => `${count} ${word}${count === '1' ? '' : 's'}`;
+    if (unit === 'sec') return plural(String(Math.round(size)), 'second');
+    if (unit === 'hrs') return plural(oneDecimal, 'hour');
+    if (unit === '%') return plural(oneDecimal, 'point');
+    return oneDecimal;
+}
+
+// "goal 93% or better", "goal 426s or lower".
+function trendGoalPhrase(metricKey, target) {
+    const lower = getMetricTrendTargetType(metricKey) === 'max';
+    return `goal ${formatMetricDisplay(metricKey, target)} or ${lower ? 'lower' : 'better'}`;
 }
 
 function getShuffledCopy(items) {
@@ -1219,9 +1297,10 @@ function buildTrendEmailAnalysisBundle(employee, weekKey, period) {
         weekKey,
         periodType: period?.metadata?.periodType || 'week'
     });
-    const weakestMetric = trendAnalysis.weakest;
-    const trendingMetric = trendAnalysis.trendingDown;
-    const allMetrics = trendAnalysis.allMetrics || [];
+    // Only what an associate message may talk about, ranked again among
+    // themselves so a dropped metric cannot still be the "weakest".
+    const allMetrics = coachableTrendMetrics(trendAnalysis.allMetrics, employee, previousEmployee);
+    const { weakest: weakestMetric, trendingDown: trendingMetric } = pickWeakestAndTrending(allMetrics);
     const { tipsForWeakest, tipsForTrending } = getTrendTipsForMetrics(weakestMetric, trendingMetric);
 
     return {
@@ -1273,62 +1352,191 @@ function generateTrendEmail() {
     });
 }
 
-function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta) {
-    const firstName = displayName.split(/[,\s]/)[0];
-    const lines = [];
+/*
+ * THE COACHING FOLLOW-UP EMAIL
+ *
+ * Goes straight into an Outlook draft, so this is the text the associate
+ * reads. Scott, 2026-10-14, on the version this replaces: it read as a cold
+ * report. ALL-CAPS headers, raw values ("96.24", "604.2", no units), ">= 93",
+ * a week's reliability hours listed as a win, "Thanks," with no name, and the
+ * weakest metric put in focus even when it was at goal, so Maria was told to
+ * work on 96.2% adherence against a 93% goal.
+ *
+ * Now: specific praise first, only what is below goal in focus (two at most,
+ * one tip each), every number with its unit and its goal in words, nothing
+ * about reliability, and a warm close.
+ */
+const TREND_SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const TREND_LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-    lines.push(`Hi ${firstName},`);
-    lines.push('');
-    lines.push('Following up on your metrics for this period. Here are some areas I wanted to highlight:');
-    lines.push('');
+function trendShortDate(iso) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    const month = match ? TREND_SHORT_MONTHS[parseInt(match[2], 10) - 1] : '';
+    return month ? `${month} ${parseInt(match[3], 10)}` : '';
+}
 
-    // Strengths
-    const strengths = Array.isArray(allMetrics)
-        ? allMetrics.filter(m => m && m.meetsTarget)
-        : [];
-    if (strengths.length > 0) {
-        lines.push('WHAT IS GOING WELL:');
-        for (let i = 0; i < Math.min(strengths.length, 4); i++) {
-            const s = strengths[i];
-            lines.push(`  - ${s.label}: ${s.displayValue || s.employeeValue} (target met)`);
-        }
+function trendWeekStartIso(periodMeta, weekKey) {
+    const meta = periodMeta || {};
+    if (/^\d{4}-\d{2}-\d{2}/.test(meta.startDate || '')) return meta.startDate.slice(0, 10);
+    const parts = String(weekKey || '').split('|');
+    if (parts.length > 1 && /^\d{4}-\d{2}-\d{2}/.test(parts[0])) return parts[0].slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(meta.endDate || parts[1] || '');
+    if (!match) return '';
+    const end = new Date(Date.UTC(+match[1], +match[2] - 1, +match[3]));
+    const back = (end.getUTCDay() + 6) % 7;
+    return new Date(end.getTime() - back * 86400000).toISOString().slice(0, 10);
+}
+
+// "the week of Oct 5", "September", "the year so far".
+function trendPeriodPhrase(periodMeta, weekKey) {
+    const meta = periodMeta || {};
+    const type = meta.periodType || 'week';
+    const endIso = meta.endDate || String(weekKey || '').split('|')[1] || '';
+    if (type === 'month') {
+        const month = /^\d{4}-(\d{2})/.exec(trendWeekStartIso(meta, weekKey) || endIso);
+        return month ? TREND_LONG_MONTHS[parseInt(month[1], 10) - 1] : 'this month';
+    }
+    if (type === 'ytd') return 'the year so far';
+    if (type === 'quarter') return trendShortDate(endIso) ? `the quarter ending ${trendShortDate(endIso)}` : 'this quarter';
+    const start = trendShortDate(trendWeekStartIso(meta, weekKey));
+    if (start) return `the week of ${start}`;
+    return trendShortDate(endIso) ? `the week ending ${trendShortDate(endIso)}` : 'this week';
+}
+
+function trendPeriodIsOngoing(periodMeta, weekKey) {
+    const meta = periodMeta || {};
+    const endIso = meta.endDate || String(weekKey || '').split('|')[1] || '';
+    const voice = window.DevCoachModules?.messageVoice;
+    if (typeof voice?.isOngoingPeriod === 'function') return voice.isOngoingPeriod(meta.periodType || 'week', endIso);
+    return !['week', 'month', 'quarter', 'daily'].includes(meta.periodType || 'week');
+}
+
+// Why a win matters, in a line, so the praise is about the customer and not
+// only the number.
+const WIN_REASONS = {
+    scheduleAdherence: 'Being there when the calls come in keeps the wait down for every customer.',
+    overallExperience: 'That is customers telling us, in their own words, that the call went well.',
+    cxRepOverall: 'That one is about you personally, and customers like what they hear.',
+    fcr: 'Getting it done the first time saves customers a second call.',
+    transfers: 'Customers get their answer from you instead of being passed along.',
+    aht: 'You are getting customers what they need without keeping them on the line.',
+    acw: 'Your wrap up is quick, so you are ready for the next customer.',
+    holdTime: 'Customers are not left sitting on hold.',
+    overallSentiment: 'Your calls come across warm and positive.',
+    positiveWord: 'Your word choice is landing well with customers.',
+    negativeWord: 'You are steering clear of the wording that puts customers off.',
+    managingEmotions: 'You keep calls calm, even the tough ones.'
+};
+
+function endWithPeriod(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed) return '';
+    return /[.!?]['"]?$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+// How far the number sits from the goal, as a share of it, so a gap in
+// seconds and one in percentage points can be ranked together.
+function relativeGap(metric) {
+    const target = Math.abs(Number(metric?.target) || 0);
+    return target ? (Number(metric?.gapFromTarget) || 0) / target : (Number(metric?.gapFromTarget) || 0);
+}
+
+function relativeLead(metric) {
+    const target = Number(metric?.target);
+    const value = Number(metric?.employeeValue);
+    if (!Number.isFinite(target) || !Number.isFinite(value) || target === 0) return 0;
+    const ahead = metric.targetType === 'max' ? target - value : value - target;
+    return ahead / Math.abs(target);
+}
+
+// "up from 95.1% the week before", only when it moved the right way.
+function improvementClause(metric, periodWord) {
+    if (metric?.previousValue === null || metric?.previousValue === undefined) return '';
+    if (metric.trendDirection !== 'improving') return '';
+    const before = formatMetricDisplay(metric.metricKey, metric.previousValue);
+    const now = formatMetricDisplay(metric.metricKey, metric.employeeValue);
+    if (before === now) return '';
+    const rose = Number(metric.employeeValue) > Number(metric.previousValue);
+    return `, ${rose ? 'up' : 'down'} from ${before} the ${periodWord} before`;
+}
+
+function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta, options = {}) {
+    const firstName = String(displayName || '').split(/[,\s]/)[0] || 'there';
+    const metrics = coachableTrendMetrics(allMetrics);
+    const meta = periodMeta || {};
+    const when = trendPeriodPhrase(meta, options.weekKey);
+    const ongoing = trendPeriodIsOngoing(meta, options.weekKey);
+    const periodWord = (meta.periodType === 'month') ? 'month' : (meta.periodType === 'quarter' ? 'quarter' : 'week');
+    const was = ongoing ? 'is at' : 'came in at';
+
+    const wins = metrics.filter(m => m.meetsTarget)
+        .sort((a, b) => relativeLead(b) - relativeLead(a))
+        .slice(0, 3);
+
+    // Only what is actually below goal. The weakest and the slipping metric
+    // lead when they are below it, because their tips were chosen for them.
+    const below = metrics.filter(m => !m.meetsTarget);
+    const tipsFor = (metric) => {
+        if (metric.metricKey === weakestMetric?.metricKey && tipsForWeakest?.length) return tipsForWeakest;
+        if (metric.metricKey === trendingMetric?.metricKey && tipsForTrending?.length) return tipsForTrending;
+        return getRandomTipsForMetric(metric.metricKey, 1);
+    };
+    const preferred = [weakestMetric, trendingMetric]
+        .map(m => m && below.find(b => b.metricKey === m.metricKey))
+        .filter(Boolean);
+    const focus = [];
+    preferred.concat(below.slice().sort((a, b) => relativeGap(b) - relativeGap(a))).forEach(metric => {
+        if (focus.length >= 2 || focus.some(f => f.metricKey === metric.metricKey)) return;
+        focus.push(metric);
+    });
+
+    const lines = [`Hi ${firstName},`, ''];
+
+    if (wins.length) {
+        const metCount = metrics.filter(m => m.meetsTarget).length;
+        const tally = metrics.length > 1
+            ? ` You ${ongoing ? 'are hitting' : 'hit'} ${metCount} of your ${metrics.length} goals.`
+            : '';
+        lines.push(`I wanted to follow up on ${when}, and first, nice work.${tally} Here is what stood out:`);
         lines.push('');
+        wins.forEach(m => {
+            const value = formatMetricDisplay(m.metricKey, m.employeeValue);
+            const reason = WIN_REASONS[m.metricKey] ? ` ${WIN_REASONS[m.metricKey]}` : '';
+            lines.push(`- ${m.label} ${was} ${value}${improvementClause(m, periodWord)} (${trendGoalPhrase(m.metricKey, m.target)}).${reason}`);
+        });
+    } else {
+        lines.push(`I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`);
     }
 
-    // Focus areas
-    const focusAreas = [];
-    if (weakestMetric) focusAreas.push({ metric: weakestMetric, tips: tipsForWeakest || [] });
-    if (trendingMetric && trendingMetric.metricKey !== weakestMetric?.metricKey) {
-        focusAreas.push({ metric: trendingMetric, tips: tipsForTrending || [] });
-    }
-    const belowTarget = Array.isArray(allMetrics)
-        ? allMetrics.filter(m => m && !m.meetsTarget)
-        : [];
-    for (const m of belowTarget) {
-        if (focusAreas.length >= 3) break;
-        if (!focusAreas.some(f => f.metric?.metricKey === m.metricKey)) {
-            focusAreas.push({ metric: m, tips: [] });
-        }
-    }
-
-    if (focusAreas.length > 0) {
-        lines.push('AREAS TO FOCUS ON:');
-        for (const area of focusAreas) {
-            const m = area.metric;
-            const targetPrefix = m.targetType === 'min' ? '>=' : '<=';
-            lines.push(`  - ${m.label}: Currently ${m.displayValue || m.employeeValue}, target is ${targetPrefix} ${m.target}`);
-            if (area.tips.length > 0) {
-                lines.push(`    Tip: ${area.tips[0]}`);
-            }
-        }
+    if (focus.length) {
         lines.push('');
+        lines.push(focus.length === 1 ? 'Here is the one thing I want us to work on next:' : 'Here are the two things I want us to work on next:');
+        lines.push('');
+        focus.forEach(m => {
+            const value = formatMetricDisplay(m.metricKey, m.employeeValue);
+            const moving = improvementClause(m, periodWord);
+            const goal = trendGoalPhrase(m.metricKey, m.target).replace(/^goal /, 'goal is ');
+            const tip = endWithPeriod((tipsFor(m) || [])[0]);
+            lines.push(`- ${m.label} ${was} ${value}${moving}, and the ${goal}.${moving ? ' It is already moving the right way.' : ''}${tip ? ` One thing to try: ${tip}` : ''}`);
+        });
+        lines.push('');
+        lines.push('I know you can get there, and I am here to help however I can. Let me know if you want to sit down and talk any of it through.');
+    } else if (wins.length) {
+        lines.push('');
+        lines.push(`Everything I looked at ${ongoing ? 'is' : 'was'} at or better than goal. Keep doing exactly what you are doing, and thank you.`);
+    } else {
+        lines.push('');
+        lines.push('Let me know if you want to sit down and talk any of it through.');
     }
-
-    lines.push('Let me know if you have any questions or want to discuss any of these further.');
-    lines.push('');
-    lines.push('Thanks,');
 
     return lines.join('\n');
+}
+
+// "Following up on the week of Oct 5". The old "Coaching Follow-up: Maria"
+// put the associate's own name in her subject line and no period at all.
+function buildCoachingFollowupSubject(displayName, periodMeta, weekKey) {
+    const when = trendPeriodPhrase(periodMeta, weekKey);
+    return `Following up on ${when}`;
 }
 
 function openCoachingFollowupEmail(emailSubject, employeeName, emailBody) {
@@ -1364,8 +1572,8 @@ function generateCoachingFollowup() {
     } = buildTrendEmailAnalysisBundle(employee, weekKey, period);
     const sentimentSnapshot = getSelectedTrendSentimentSnapshot(employeeName);
 
-    const emailSubject = `Coaching Follow-up: ${displayName}`;
-    const emailBody = buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta);
+    const emailSubject = buildCoachingFollowupSubject(displayName, periodMeta, weekKey);
+    const emailBody = buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, periodMeta, { weekKey });
     openCoachingFollowupEmail(emailSubject, employeeName, emailBody);
 
     if (weakestMetric || trendingMetric || (allMetrics && allMetrics.length > 0)) {
@@ -1433,10 +1641,17 @@ function getTrendPeriodDisplay(periodType = 'week') {
     return { periodTypeText, periodTypeTitle, periodLabel };
 }
 
+// "Weekly metrics for Maria, week of Oct 5". It was "Weekly Trend Email:
+// Maria (Week Ending 2026-10-09)", a raw date and a label for the tool rather
+// than for her (Scott, 2026-10-14).
 function buildTrendEmailSubject(periodMeta, displayName) {
-    const { periodTypeTitle } = getTrendPeriodDisplay(periodMeta?.periodType);
-    const endDate = periodMeta?.endDate || '';
-    return `${periodTypeTitle} Trend Email: ${displayName} (Week Ending ${endDate})`;
+    const meta = periodMeta || {};
+    const type = String(meta.periodType || 'week').toLowerCase();
+    const end = trendShortDate(meta.endDate);
+    if (type === 'ytd') return `Year to date metrics for ${displayName}${end ? `, through ${end}` : ''}`;
+    if (type === 'daily') return `Daily metrics for ${displayName}${end ? `, ${end}` : ''}`;
+    const { periodTypeTitle } = getTrendPeriodDisplay(type);
+    return `${periodTypeTitle} metrics for ${displayName}, ${trendPeriodPhrase(meta).replace(/^the /, '')}`;
 }
 
 function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tipsForTrending, allMetrics) {
@@ -1513,8 +1728,8 @@ function renderTrendFocusAreasHtml(focusAreas) {
             <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
                 <h4 style="color: ${focusArea.titleColor}; margin-top: 0;">${heading}</h4>
                 <p style="margin: 5px 0 15px 0; color: var(--text-primary);">
-                    Currently at <strong>${focusArea.metric.employeeValue.toFixed(1)}</strong>,
-                    target is <strong>${focusArea.metric.targetType === 'min' ? '≥' : '≤'} ${focusArea.metric.target.toFixed(1)}</strong>
+                    Currently at <strong>${escapeHtml(formatMetricDisplay(focusArea.metric.metricKey, focusArea.metric.employeeValue))}</strong>,
+                    <strong>${escapeHtml(trendGoalPhrase(focusArea.metric.metricKey, focusArea.metric.target))}</strong>
                 </p>
                 ${tipsHtml}
             </div>
@@ -1893,7 +2108,12 @@ function showTrendsWithTipsPanel(employeeName, displayName, weakestMetric, trend
  * Incorporates performance data, tips, and optional notes into guidance for AI.
  */
 function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, tipsForWeakest, tipsForTrending, userNotes, sentimentSnapshot = null, allTrendMetrics = null) {
-    const metrics = Array.isArray(allTrendMetrics) ? allTrendMetrics : [];
+    // Reliability never reaches this prompt: a week's hours were listed as a
+    // strength (Scott, 2026-10-14). The bundle already drops it and the
+    // surveys nobody answered; this is the guard for any other caller.
+    const metrics = coachableTrendMetrics(allTrendMetrics);
+    if (weakestMetric?.metricKey === 'reliability') weakestMetric = null;
+    if (trendingMetric?.metricKey === 'reliability') trendingMetric = null;
     // Wording comes from metric-movement: "rose by 45s vs previous, which is
     // worse" rather than a bare "declining" the model has to reconcile
     // against figures that went the other way.
@@ -1902,11 +2122,12 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         if (!metric) return 'no prior period to compare';
         const hasPrior = metric.trendDelta !== null && metric.trendDelta !== undefined;
         if (!movement) return hasPrior ? String(metric.trendDirection) : 'no prior period to compare';
-        return movement.sentence(
-            metric.metricKey,
-            hasPrior ? metric.trendDirection : 'stable',
-            hasPrior ? metric.trendDelta : null
-        );
+        // Polarity from metric-movement, the amount in the metric's own unit:
+        // a rate that moved 1.1 points is "1.1 pts", not "1.1%".
+        const d = movement.describe(metric.metricKey, hasPrior ? metric.trendDirection : 'stable', hasPrior ? metric.trendDelta : null);
+        if (d.direction === 'stable') return d.hasPrior ? 'held steady vs previous' : 'no prior period to compare';
+        const amount = d.amount === null ? '' : ` by ${formatTrendChange(metric.metricKey, d.amount)}`;
+        return `${d.movementWord}${amount} vs previous, which is ${d.verdict}`;
     };
 
     // Spelling out the polarity per row means the model never has to work out
@@ -1990,7 +2211,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         .sort((a, b) => (classificationOrder[a.classification] - classificationOrder[b.classification]) || (b.gapFromTarget - a.gapFromTarget))
         .map(metric => {
             const current = formatMetricDisplay(metric.metricKey, metric.employeeValue);
-            const target = formatMetricDisplay(metric.metricKey, metric.target);
+            const target = trendGoalPhrase(metric.metricKey, metric.target).replace(/^goal /, '');
             const previous = metric.previousValue !== null && metric.previousValue !== undefined
                 ? formatMetricDisplay(metric.metricKey, metric.previousValue)
                 : 'N/A';
@@ -2016,7 +2237,7 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         if (['overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'overallExperience', 'cxRepOverall'].includes(m.metricKey)) {
             leadershipLinks.push(`- ${m.label} → Communication clarity, Customer focus, Emotional regulation`);
         }
-        if (['scheduleAdherence', 'reliability'].includes(m.metricKey)) {
+        if (m.metricKey === 'scheduleAdherence') {
             leadershipLinks.push(`- ${m.label} → Accountability, Collaboration, Continuous improvement`);
         }
     });
@@ -2096,18 +2317,20 @@ ${leadershipSection}
 Write a copy-ready coaching email directly to ${displayName}.
 
 Tone requirements:
-- Supportive but direct
-- Accountability-focused
-- Growth-oriented
-- Professional
+- Warm and genuinely proud of them: open with specific praise for the strengths above, each with its number and why it matters to customers
+- Goal focused: at most two development areas, each with its number, its goal and one practical step, framed as the next goal to reach
+- Encouraging and confident they will get there
 - No filler phrases
 - No mention of AI
+- Do not mention attendance, reliability or hours missed
 
 Formatting requirements:
 - Outlook-ready plain text
-- Clean headings and bullets
+- Short paragraphs and clean bullets
+- Under 250 words
+- At most 2 emojis
 - No technical commentary
-- No em dash characters.`;
+- No em dash characters, and no hyphens with spaces around them.`;
 }
 
 
@@ -2154,16 +2377,17 @@ function resolveTrendMetricYtdDisplay(metric, isSurveyMetric, ytdValue, ytdSurve
     const ytdValueNum = parseFloat(ytdValue);
     const ytdHasValue = ytdValue !== undefined && ytdValue !== null && ytdValue !== '' && !isNaN(ytdValueNum);
 
+    // With its unit, like every other cell: "604s", not "604".
     if (isSurveyMetric) {
         if (ytdSurveyTotal > 0 && ytdHasValue) {
-            formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+            formattedYtd = formatMetricDisplay(metric.key, ytdValueNum);
         } else if (ytdSurveyTotal === 0) {
             formattedYtd = 'N/A';
         } else {
             formattedYtd = 'N/A';
         }
     } else if (ytdHasValue) {
-        formattedYtd = formatMetricValue(metric.key, ytdValueNum);
+        formattedYtd = formatMetricDisplay(metric.key, ytdValueNum);
     }
 
     return formattedYtd;
@@ -2183,8 +2407,9 @@ function resolveTrendCenterComparisonDisplay(associateValue, centerAvg, isAboveC
         };
     }
 
+    // In the metric's own unit, and points for a rate: "+1.1 pts", "-12s".
     const difference = associateValue - centerAvg;
-    let text = formatMetricValue(metricKey, Math.abs(difference));
+    let text = formatTrendChange(metricKey, difference);
     if (difference > 0) text = `+${text}`;
     else if (difference < 0) text = `-${text}`;
 
@@ -2212,18 +2437,19 @@ function resolveTrendDirectionDisplay(associateValue, previousValue, isReverse, 
     if (absDiff < 0.1) {
         return {
             color: '#666666',
-            text: '➡️ No change'
+            text: 'No change'
         };
     }
 
-    const changeValue = formatMetricValue(metricKey, absDiff);
-    const periodLabel = periodType === 'daily' ? 'day' : periodType === 'month' ? 'month' : periodType === 'quarter' ? 'quarter' : 'week';
-    const sign = trendDiff > 0 ? '+' : '-';
-    const directionEmoji = trendDiff > 0 ? '📈' : '📉';
+    // Words and colour, judged by which way is good for this metric. It was
+    // a 📈 or 📉 by the raw number on every row, so handle time coming down,
+    // an improvement, carried a falling chart (Scott, 2026-10-14). The column
+    // header already says "vs last week".
+    const changeValue = formatTrendChange(metricKey, absDiff);
 
     return {
         color: isImprovement ? '#28a745' : '#dc3545',
-        text: `${directionEmoji} ${sign}${changeValue} vs last ${periodLabel}`
+        text: `${isImprovement ? 'Improved' : 'Slipped'} ${changeValue}`
     };
 }
 
@@ -2246,13 +2472,13 @@ function drawTrendMetricBaseCells(ctx, x, y, metric, target, noSurveys, associat
     ctx.fillStyle = noSurveys ? '#999999' : '#333333';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
-    const formattedValue = noSurveys ? 'N/A' : formatMetricValue(metric.key, associateValue);
+    const formattedValue = noSurveys ? 'N/A' : formatMetricDisplay(metric.key, associateValue);
     ctx.fillText(formattedValue, x + 240, y + 24);
 
     ctx.fillStyle = '#333333';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    const formattedCenter = centerExists ? formatMetricValue(metric.key, centerAvg) : 'N/A';
+    const formattedCenter = centerExists ? formatMetricDisplay(metric.key, centerAvg) : 'N/A';
     ctx.fillText(formattedCenter, x + 340, y + 24);
 }
 
@@ -2306,6 +2532,13 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     const isSurveyMetric = SURVEY_METRICS.includes(metricKey);
     const noSurveys = isSurveyMetric && surveyTotal === 0;
 
+    // Reliability is shown as the year's running total, so it has no week to
+    // compare with and no center figure that means the same thing.
+    if (metricKey === 'reliability') {
+        drawTrendReliabilityRow(ctx, x, y, width, height, metric, associateValue, target);
+        return;
+    }
+
     const meetsGoal = isMetricMeetingTarget(metric.key, associateValue, target);
     const isReverse = isReverseMetric(metric.key);
 
@@ -2343,6 +2576,35 @@ function renderMetricRow(ctx, x, y, width, height, metric, associateValue, cente
     ctx.textAlign = 'center';
     ctx.fillText(formattedYtd, x + 730, y + 24);
     ctx.textAlign = 'left'; // Reset to default
+}
+
+function drawTrendReliabilityRow(ctx, x, y, width, height, metric, yearTotal, target) {
+    drawTrendMetricRowShell(ctx, x, y, width, height, resolveTrendRowBackgroundColor(false, isMetricMeetingTarget(metric.key, yearTotal, target)));
+    ctx.fillStyle = '#333333';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${metric.label} (${formatMetricDisplay(metric.key, target)} a year)`, x + 10, y + 24);
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(formatMetricDisplay(metric.key, yearTotal), x + 240, y + 24);
+    ctx.fillStyle = '#666666';
+    ctx.font = '13px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('So far this year', x + 570, y + 24);
+}
+
+/**
+ * The year's hours missed for the trend picture, from the newest
+ * year-to-date upload as of the period's month. NaN when there is none, and
+ * the row is then left off rather than showing a week's own hours.
+ */
+function resolveTrendReliabilityYearTotal(employeeName, metadata) {
+    const pc = window.DevCoachModules?.periodCompare;
+    const endDate = String(metadata?.endDate || '');
+    if (!employeeName || typeof pc?.latestYtdReliability !== 'function' || !/^\d{4}-\d{2}/.test(endDate)) return NaN;
+    const map = pc.latestYtdReliability(parseInt(endDate.slice(0, 4), 10), { asOfMonth: endDate.slice(0, 7) }) || {};
+    const value = parseFloat(map[employeeName]);
+    return Number.isFinite(value) ? value : NaN;
 }
 
 function createTrendEmailImage(empName, weekKey, period, current, previous, onClipboardReady) {
@@ -2400,7 +2662,7 @@ function drawTrendEmailCanvasSections(ctx, empName, current, previous, trendCont
         improvedSub
     });
 
-    y = drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear);
+    y = drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear, previous);
     y = drawTrendMetricsSectionHeader(ctx, y, periodLabel);
 
     const tableOptions = buildTrendMetricsTableOptions(trendContext, periodLabel);
@@ -2410,7 +2672,7 @@ function drawTrendEmailCanvasSections(ctx, empName, current, previous, trendCont
         ctx,
         y,
         metricOrder,
-        metrics,
+        trendContext.speakMetrics || metrics,
         prevMetrics,
         centerAvg,
         previous,
@@ -2438,6 +2700,15 @@ function buildTrendEmailContext(weekKey, period, current, previous) {
     const metricOrder = getMetricOrder();
     const { metrics, prevMetrics } = buildTrendMetricMaps(metricOrder, current, previous);
 
+    // Reliability is the year's running total on anything the associate
+    // sees. The weekly row holds the week's own hours, so it is swapped for
+    // the year-to-date figure, or left off when there is none. Never compared
+    // with last week: totals only go up.
+    delete prevMetrics.reliability;
+    const reliabilityYearTotal = current?.isTeamAggregate ? NaN : resolveTrendReliabilityYearTotal(current?.name, metadata);
+    if (Number.isFinite(reliabilityYearTotal)) metrics.reliability = reliabilityYearTotal;
+    else delete metrics.reliability;
+
     const callCenterAverages = loadCallCenterAverages();
     const centerAvg = callCenterAverages[weekKey] || {};
 
@@ -2448,6 +2719,18 @@ function buildTrendEmailContext(weekKey, period, current, previous) {
     const { surveyTotal, ytdSurveyTotal } = calculateTrendSurveyTotals(current, metadata);
     const hasSurveys = surveyTotal > 0;
 
+    // Each survey metric by its own count: rep sat and FCR are answered
+    // separately, and an associate with Overall Experience surveys and no
+    // rep sat ones showed "0%" rep sat. Unanswered rows read N/A, and they
+    // never count as a miss, a win or a move.
+    const surveyCounts = {};
+    ['overallExperience', 'cxRepOverall', 'fcr'].forEach(key => {
+        surveyCounts[key] = (hasSurveys && trendHasSurveysBehind(current, key)) ? surveyTotal : 0;
+    });
+    const speakMetrics = { ...metrics };
+    Object.keys(surveyCounts).forEach(key => { if (!surveyCounts[key]) delete speakMetrics[key]; });
+    delete speakMetrics.reliability;
+
     const {
         meetingGoals,
         improved,
@@ -2455,7 +2738,7 @@ function buildTrendEmailContext(weekKey, period, current, previous) {
         totalMetrics,
         successRate,
         improvedText
-    } = calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg, previous, hasSurveys);
+    } = calculateTrendSummaryStats(metricOrder, speakMetrics, prevMetrics, centerAvg, previous, hasSurveys);
 
     const periodDisplay = getTrendPeriodDisplay(metadata.periodType);
     const periodTypeText = periodDisplay.periodTypeText;
@@ -2472,6 +2755,8 @@ function buildTrendEmailContext(weekKey, period, current, previous) {
         ytdAvailable,
         surveyTotal,
         ytdSurveyTotal,
+        surveyCounts,
+        speakMetrics,
         hasSurveys,
         meetingGoals,
         improved,
@@ -2494,6 +2779,7 @@ function buildTrendMetricsTableOptions(trendContext, periodLabel) {
         ytdEmployee: trendContext.ytdEmployee,
         hasSurveys: trendContext.hasSurveys,
         surveyTotal: trendContext.surveyTotal,
+        surveyCounts: trendContext.surveyCounts,
         ytdSurveyTotal: trendContext.ytdSurveyTotal,
         reviewYear: trendContext.reviewYear,
         metadata: trendContext.metadata,
@@ -2514,7 +2800,9 @@ function drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine) {
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px Arial';
-    ctx.fillText('📊 Performance Summary', 50, 45);
+    // Two emojis per message (Scott, 2026-10-13). The picture had nine or
+    // more; the two it keeps are on the wins.
+    ctx.fillText('Performance Summary', 50, 45);
     ctx.font = '14px Arial';
     ctx.fillText(subjectLine, 50, 75);
 
@@ -2526,7 +2814,7 @@ function drawTrendEmailCanvasLayoutStart(ctx, empName, subjectLine) {
 
     ctx.font = '15px Arial';
     ctx.fillStyle = '#666666';
-    ctx.fillText(`Here's your performance summary and how you compare to call center averages.`, 50, y);
+    ctx.fillText(`Here's a look at your numbers and how they compare to the call center. Thank you for the work behind them.`, 50, y);
 
     return y + 50;
 }
@@ -2540,7 +2828,7 @@ function drawTrendSummaryCardsRow(ctx, y, stats) {
         110,
         '#ffffff',
         '#28a745',
-        '✅ Meeting Goals',
+        'Meeting Goals',
         `${stats.meetingGoals}/${stats.totalMetrics}`,
         `${stats.successRate}% Success Rate`
     );
@@ -2552,9 +2840,9 @@ function drawTrendSummaryCardsRow(ctx, y, stats) {
         110,
         '#ffffff',
         '#2196F3',
-        '📈 Above Average',
+        'Above Average',
         `${stats.beatingCenter}/${stats.totalMetrics}`,
-        'Better than Call Center'
+        'Better than the Call Center'
     );
     drawEmailCard(
         ctx,
@@ -2564,7 +2852,7 @@ function drawTrendSummaryCardsRow(ctx, y, stats) {
         110,
         '#ffffff',
         '#ff9800',
-        '📈 Improved',
+        'Improved',
         stats.improvedText,
         stats.improvedSub
     );
@@ -2572,9 +2860,10 @@ function drawTrendSummaryCardsRow(ctx, y, stats) {
     return y + 140;
 }
 
-function drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear) {
+function drawTrendSummaryBoxesSection(ctx, y, current, centerAvg, reviewYear, previous = null) {
     const trendAnalysisForSummary = analyzeTrendMetrics(current, centerAvg, reviewYear);
-    const trendSummary = buildTrendHighlightsAndImprovements(trendAnalysisForSummary.allMetrics || []);
+    // Without the week's reliability hours and the surveys nobody answered.
+    const trendSummary = buildTrendHighlightsAndImprovements(coachableTrendMetrics(trendAnalysisForSummary.allMetrics, current, previous));
     const summaryBoxesHeight = drawTrendSummaryBoxesOnCanvas(
         ctx,
         40,
@@ -2609,11 +2898,10 @@ function drawTrendInsightsLegendAndReliabilitySection(ctx, y, metricOrder, metri
         includeUnavailableState: hasUnavailableCenterOrTrend
     });
 
-    const reliabilityHours = parseFloat(metrics.reliability) || 0;
-    if (reliabilityHours > 0) {
-        nextY += drawTrendReliabilityNoteOnCanvas(ctx, nextY);
-    }
-
+    // The reliability note that used to follow is gone. It told the
+    // associate to check Verint "if you believe this is an error" and said
+    // policy starts at 16 hours against an 18 hour allowance (Scott,
+    // 2026-10-14): a disclaimer, and a wrong one.
     return nextY;
 }
 
@@ -2622,7 +2910,7 @@ function drawTrendMetricsSectionHeader(ctx, y, periodLabel) {
     ctx.fillRect(40, y, 820, 50);
     ctx.fillStyle = '#003DA5';
     ctx.font = 'bold 20px Arial';
-    ctx.fillText('📊 Your Metrics', 50, y + 32);
+    ctx.fillText('Your Metrics', 50, y + 32);
     y += 70;
 
     ctx.fillStyle = '#003DA5';
@@ -2653,19 +2941,16 @@ function drawTrendMetricsTableBody(ctx, y, options) {
         ytdEmployee,
         hasSurveys,
         surveyTotal,
+        surveyCounts,
         ytdSurveyTotal,
         reviewYear,
         metadata,
-        periodLabel,
-        ytdAvailable
+        periodLabel
     } = options;
 
-    if (!ytdAvailable) {
-        ctx.fillStyle = '#666666';
-        ctx.font = '12px Arial';
-        ctx.fillText('YTD not available. Source data not provided.', 50, y + 18);
-        y += 28;
-    }
+    // No note when there is no year-to-date file: the column is simply
+    // blank. A "source data not provided" line is a caveat about our data,
+    // and those stay off what the associate reads.
 
     let currentGroup = null;
     let rowIdx = 0;
@@ -2688,21 +2973,12 @@ function drawTrendMetricsTableBody(ctx, y, options) {
             ctx.fillStyle = headerTextColor;
             ctx.font = 'bold 16px Arial, "Segoe UI Emoji", "Apple Color Emoji"';
 
-            let groupEmoji = '📊';
-            if (group === 'Core Performance') groupEmoji = '🎯';
-            else if (group === 'Survey') groupEmoji = '📋';
-            else if (group === 'Sentiment') groupEmoji = '💬';
-            else if (group === 'Reliability') groupEmoji = '⏰';
-
             let groupLabel;
             if (group === 'Survey') {
-                if (metadata.periodType === 'week' || metadata.periodType === 'week-in-progress') {
-                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this week | ${ytdSurveyTotal} YTD)`;
-                } else {
-                    groupLabel = `${groupEmoji} ${group} (${surveyTotal} this ${periodLabel.toLowerCase()} | ${ytdSurveyTotal} YTD)`;
-                }
+                const scope = (metadata.periodType === 'week' || metadata.periodType === 'week-in-progress') ? 'week' : periodLabel.toLowerCase();
+                groupLabel = `Surveys: ${surveyTotal} this ${scope}, ${ytdSurveyTotal} so far this year`;
             } else {
-                groupLabel = `${groupEmoji} ${group}`;
+                groupLabel = group;
             }
 
             ctx.fillText(groupLabel, 50, y + 26);
@@ -2715,8 +2991,9 @@ function drawTrendMetricsTableBody(ctx, y, options) {
         const center = getCenterAverageForMetric(centerAvg, key);
         const target = getMetricTrendTarget(key);
         const ytdValue = ytdEmployee ? ytdEmployee[key] : undefined;
+        const rowSurveys = surveyCounts && Object.prototype.hasOwnProperty.call(surveyCounts, key) ? surveyCounts[key] : surveyTotal;
 
-        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', surveyTotal, key, metadata.periodType, ytdSurveyTotal, reviewYear);
+        renderMetricRow(ctx, 40, y, 820, 38, metric, curr, center, ytdValue, target, prev, rowIdx, '', rowSurveys, key, metadata.periodType, ytdSurveyTotal, reviewYear);
         y += 38;
         rowIdx++;
     });
@@ -2732,7 +3009,7 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#1b5e20';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('🏆 Key Wins (Meeting Target & Beating Center)', 50, y + 26);
+        ctx.fillText('🏆 Key Wins (at goal and ahead of the center)', 50, y + 26);
         y += 50;
 
         keyWins.slice(0, 5).forEach(item => {
@@ -2740,7 +3017,7 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
             ctx.font = 'bold 14px Arial';
             ctx.fillText(`- ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
-            ctx.fillText(`${item.curr} (Target: ${item.target}, Center: ${item.center})`, 220, y + 20);
+            ctx.fillText(`${item.curr} (goal ${item.target}, center ${item.center})`, 220, y + 20);
             y += 35;
         });
     }
@@ -2751,14 +3028,13 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#0d47a1';
         ctx.font = 'bold 18px Arial';
-        const periodCapitalized = periodTypeText.charAt(0).toUpperCase() + periodTypeText.slice(1);
-        ctx.fillText(`⭐ Highlights (Improved from Last ${periodCapitalized})`, 50, y + 26);
+        ctx.fillText(`⭐ Highlights (better than last ${periodTypeText})`, 50, y + 26);
         y += 50;
 
         if (improvedMetrics.length === 0 && previous) {
             ctx.fillStyle = '#666666';
             ctx.font = '14px Arial';
-            ctx.fillText(`- No improvements detected this ${periodTypeText}`, 60, y + 20);
+            ctx.fillText(`- No gains on last ${periodTypeText} this time. Next ${periodTypeText} is a fresh start.`, 60, y + 20);
             y += 40;
         } else {
             improvedMetrics.slice(0, 5).forEach(item => {
@@ -2766,7 +3042,7 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
                 ctx.font = 'bold 14px Arial';
                 ctx.fillText(`- ${item.label}:`, 60, y + 20);
                 ctx.font = '14px Arial';
-                ctx.fillText(`${item.curr} ${item.arrow} ${item.change} vs last ${periodTypeText}`, 220, y + 20);
+                ctx.fillText(`${item.curr}, improved ${item.change} on last ${periodTypeText}`, 220, y + 20);
                 y += 35;
             });
         }
@@ -2778,7 +3054,7 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
         ctx.fillRect(40, y, 820, 40);
         ctx.fillStyle = '#e65100';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('⚠️ Focus Areas (Below Center Average)', 50, y + 26);
+        ctx.fillText('Focus Areas (behind the center average)', 50, y + 26);
         y += 50;
 
         focusMetrics.slice(0, 5).forEach(item => {
@@ -2786,7 +3062,7 @@ function drawTrendHighlightsSection(ctx, y, keyWins, improvedMetrics, focusMetri
             ctx.font = 'bold 14px Arial';
             ctx.fillText(`- ${item.label}:`, 60, y + 20);
             ctx.font = '14px Arial';
-            ctx.fillText(`${item.curr} (Center: ${item.center}, Target: ${item.target})`, 220, y + 20);
+            ctx.fillText(`${item.curr} (center ${item.center}, goal ${item.target})`, 220, y + 20);
             y += 35;
         });
     }
@@ -2805,9 +3081,9 @@ function drawTrendLegendOnCanvas(ctx, y, periodTypeText, options = {}) {
         { color: '#fff3cd', label: 'Below goal' },
         { color: '#0056B3', label: 'Above center average' },
         { color: '#DAA520', label: 'Below center average' },
-        { color: '#28a745', symbol: '📈', label: `Improved from last ${periodTypeText}` },
-        { color: '#dc3545', symbol: '📉', label: `Declined from last ${periodTypeText}` },
-        { color: '#6c757d', symbol: '➡️', label: `No change from last ${periodTypeText}` }
+        { color: '#28a745', label: `Improved on last ${periodTypeText}` },
+        { color: '#dc3545', label: `Slipped from last ${periodTypeText}` },
+        { color: '#6c757d', label: `No change from last ${periodTypeText}` }
     ];
 
     if (includeNoSurveyData) {
@@ -2836,7 +3112,7 @@ function drawTrendLegendOnCanvas(ctx, y, periodTypeText, options = {}) {
 
     ctx.fillStyle = '#003DA5';
     ctx.font = 'bold 18px Arial';
-    ctx.fillText('📋 Legend', 50, y + legendTopPadding + 10);
+    ctx.fillText('Legend', 50, y + legendTopPadding + 10);
 
     legendItems.forEach((item, idx) => {
         const col = idx % legendColumns;
@@ -2866,33 +3142,6 @@ function drawTrendLegendOnCanvas(ctx, y, periodTypeText, options = {}) {
     });
 
     return legendBoxHeight + 10;
-}
-
-function drawTrendReliabilityNoteOnCanvas(ctx, y) {
-    const noteY = y + 20;
-    ctx.fillStyle = '#fff3cd';
-    ctx.fillRect(40, noteY, 820, 120);
-    ctx.strokeStyle = '#ff9800';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(40, noteY, 820, 120);
-
-    ctx.fillStyle = '#856404';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText('🎯 Reliability Note', 50, noteY + 25);
-
-    ctx.fillStyle = '#333333';
-    ctx.font = '13px Arial';
-    const note1 = 'Reliability reflects unplanned absences not covered by PTO/ST or pre-scheduled in Verint. If you called in';
-    const note2 = 'or were late without using protected time, those hours count against reliability. If you believe this is an';
-    const note3 = 'error, check Verint for "Same Day" entries. If you have PTO/ST available and want to apply it, reply to let';
-    const note4 = 'me know. Note: Once you reach 16 hours, APS attendance policy takes effect.';
-
-    ctx.fillText(note1, 50, noteY + 50);
-    ctx.fillText(note2, 50, noteY + 68);
-    ctx.fillText(note3, 50, noteY + 86);
-    ctx.fillText(note4, 50, noteY + 104);
-
-    return 150;
 }
 
 function buildTrendMetricMaps(metricOrder, current, previous) {
@@ -3020,9 +3269,11 @@ function calculateTrendSummaryStats(metricOrder, metrics, prevMetrics, centerAvg
             }
         }
 
+        // Better by the metric's own direction: handle time coming down is
+        // an improvement, and it used to be counted the other way.
         if (previous && prevMetrics[key] !== undefined) {
             const prev = parseFloat(prevMetrics[key]) || 0;
-            if (curr > prev) improved++;
+            if (isReverseMetric(key) ? curr < prev : curr > prev) improved++;
         }
     });
 
@@ -3061,13 +3312,11 @@ function buildTrendHighlightsData(metricOrder, metrics, prevMetrics, centerAvg, 
             const hasImproved = isReverse ? change < 0 : change > 0;
 
             if (hasImproved && Math.abs(change) > 0.1) {
-                const arrow = change > 0 ? '📈' : '📉';
-                const changeText = formatMetricDisplay(key, Math.abs(change));
                 improvedMetrics.push({
                     label: metric.label,
                     curr: formatMetricDisplay(key, curr),
-                    change: changeText,
-                    arrow: arrow
+                    // Points for a rate, seconds for a time.
+                    change: formatTrendChange(key, change)
                 });
             }
         }
@@ -3182,10 +3431,8 @@ function drawTrendSummaryBoxesOnCanvas(ctx, x, y, totalWidth, positiveHighlights
     ctx.strokeRect(leftX, y, boxWidth, boxHeight);
 
     ctx.fillStyle = '#2e7d32';
-    ctx.font = 'bold 18px Arial';
-    ctx.fillText('✅', leftX + padding, y + padding + 18);
     ctx.font = 'bold 24px Arial';
-    ctx.fillText('Positive Highlights', leftX + padding + 34, y + padding + 18);
+    ctx.fillText('Positive Highlights', leftX + padding, y + padding + 18);
 
     ctx.fillStyle = '#1b5e20';
     ctx.font = '12px Arial';
@@ -3201,10 +3448,8 @@ function drawTrendSummaryBoxesOnCanvas(ctx, x, y, totalWidth, positiveHighlights
     ctx.strokeRect(rightX, y, boxWidth, boxHeight);
 
     ctx.fillStyle = '#c62828';
-    ctx.font = 'bold 18px Arial';
-    ctx.fillText('⚠️', rightX + padding, y + padding + 18);
     ctx.font = 'bold 24px Arial';
-    ctx.fillText('Improvement Areas', rightX + padding + 34, y + padding + 18);
+    ctx.fillText('Next Goals', rightX + padding, y + padding + 18);
 
     ctx.fillStyle = '#b71c1c';
     ctx.font = '12px Arial';
@@ -3272,7 +3517,10 @@ function formatMetricDisplay(key, value) {
     const metric = METRICS_REGISTRY[key];
     if (!metric) return value.toString();
 
-    const formatted = formatMetricValue(key, value);
+    // A whole number reads without its ".0": "93%", "100%", "18 hrs". Scott,
+    // 2026-10-14: the numbers associates read should be simple. One decimal
+    // stays wherever it says something, so 95.1% is still 95.1%.
+    const formatted = formatMetricValue(key, value).replace(/\.0$/, '');
 
     if (metric.unit === 'sec') {
         return `${formatted}s`;
@@ -3642,9 +3890,10 @@ function buildTrendHighlightsAndImprovements(allTrendMetrics) {
             return;
         }
 
+        // "Transfers: 7.5% (goal 6% or lower)" rather than "vs target 6%",
+        // which never said which way the goal runs.
         const currentDisplay = formatMetricDisplay(metric.metricKey, metric.employeeValue);
-        const targetDisplay = formatMetricDisplay(metric.metricKey, metric.target);
-        const line = `${metric.label}: ${currentDisplay} vs target ${targetDisplay}`;
+        const line = `${metric.label}: ${currentDisplay} (${trendGoalPhrase(metric.metricKey, metric.target)})`;
 
         if (metric.meetsTarget) {
             positiveHighlights.push(line);
@@ -3682,7 +3931,9 @@ function renderTrendSummaryBoxesHtml(positiveHighlights, improvementAreas, posit
 }
 
 function buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, teamSize) {
-    const { positiveHighlights, improvementAreas } = buildTrendHighlightsAndImprovements(teamMetrics);
+    // A team's weekly hours set against the year's 18 hour allowance can only
+    // ever read as a win, so reliability is left out of the team message.
+    const { positiveHighlights, improvementAreas } = buildTrendHighlightsAndImprovements(coachableTrendMetrics(teamMetrics));
     let prompt = `Draft a concise team coaching update for ${periodLabel}.\n`;
     prompt += `Audience: the full team (${teamSize} associates in this data set).\n\n`;
 
@@ -3706,7 +3957,7 @@ function buildTeamTrendCoachingPrompt(periodLabel, teamMetrics, teamSize) {
     }
     prompt += `\n`;
 
-    prompt += `Write in a warm, motivational tone. Keep it factual, avoid fluff, and end with 2-3 team actions for next period.`;
+    prompt += `Write in a warm, motivational tone. Lead with the wins and celebrate them, keep it factual, avoid fluff, and end with 2-3 team actions for next period. At most 2 emojis, no em dashes, and do not mention attendance or reliability.`;
     return prompt;
 }
 
@@ -4042,6 +4293,15 @@ function generateTeamTrendSummary(weekKeyArg) {
         getMetricVolatilityDetails,
         classifyTrendMetric,
         analyzeTrendMetrics,
+        pickWeakestAndTrending,
+        trendHasSurveysBehind,
+        coachableTrendMetrics,
+        formatTrendChange,
+        trendGoalPhrase,
+        trendPeriodPhrase,
+        buildCoachingEmailBody,
+        buildCoachingFollowupSubject,
+        resolveTrendReliabilityYearTotal,
         getShuffledCopy,
         pickRandomItem,
         pickRandomItems,
@@ -4092,7 +4352,6 @@ function generateTeamTrendSummary(weekKeyArg) {
         drawTrendMetricsTableBody,
         drawTrendHighlightsSection,
         drawTrendLegendOnCanvas,
-        drawTrendReliabilityNoteOnCanvas,
         buildTrendMetricMaps,
         copyTrendImageToClipboard,
         calculateTrendSurveyTotals,
@@ -4199,7 +4458,6 @@ function generateTeamTrendSummary(weekKeyArg) {
     window.drawTrendMetricsTableBody = drawTrendMetricsTableBody;
     window.drawTrendHighlightsSection = drawTrendHighlightsSection;
     window.drawTrendLegendOnCanvas = drawTrendLegendOnCanvas;
-    window.drawTrendReliabilityNoteOnCanvas = drawTrendReliabilityNoteOnCanvas;
     window.buildTrendMetricMaps = buildTrendMetricMaps;
     window.copyTrendImageToClipboard = copyTrendImageToClipboard;
     window.calculateTrendSurveyTotals = calculateTrendSurveyTotals;

@@ -35,6 +35,9 @@
     const MAX_METRICS = 4;
     // Two of anything is a coincidence worth noticing; one is just a call.
     const MIN_REPEAT_OCCURRENCES = 2;
+    // Things that went well, named at the top of the message. Two is praise
+    // that lands; six is a list she skims.
+    const MAX_PRAISE_LINES = 2;
 
     /* ── Short words that are specific anyway ──
      *
@@ -507,6 +510,10 @@
         // twice and two tallies that only agree while both are maintained.
         const strengthRows = {};
         const opportunityRows = {};
+        // What went well, in the words the drafts use, for the message to
+        // open on. Scott, 2026-10-14: the metric message never named
+        // anything that went well.
+        const praiseRows = {};
         // Calls where account information went to somebody not shown to be
         // entitled to it. Counted from one, not two: a single one is not a
         // coincidence worth waiting for a second of.
@@ -534,6 +541,10 @@
                 const row = strengthRows[item.key] || (strengthRows[item.key] = { label: item.key, count: 0, dates: [] });
                 row.count += 1;
                 if (date) row.dates.push(date);
+                if (item.text && !setAside) {
+                    const said = praiseRows[item.key] || (praiseRows[item.key] = { text: item.text, count: 0, weight: item.praise || 5 });
+                    said.count += 1;
+                }
             });
 
             const noteOpportunity = (label) => {
@@ -652,9 +663,29 @@
             .filter(row => row.kind === 'behaviour' && row.key !== 'verification')
             .forEach(row => { coachingRows[row.key] = { label: row.key, count: row.count, dates: row.dates }; });
 
+        // The two things done best, most often first. Carried on the
+        // findings list too, because that is what the page hands to
+        // metricsInFocus, so the praise reaches the brief without the page
+        // having to pass anything new.
+        const praise = Object.values(praiseRows)
+            .sort((a, b) => b.count - a.count || b.weight - a.weight)
+            .slice(0, MAX_PRAISE_LINES)
+            .map(row => row.text);
+        const findings = Object.values(rows).map(row => ({
+            ...row,
+            weight: row.weight || 5,
+            callsTotal: total,
+            appearsOn: callLabel(row.count, total),
+            // Which calls, in words. "On the September 3 call you did X"
+            // is checkable in a way "this came up twice" is not.
+            moments: row.dates.map(date => momentFor[date]).filter(Boolean)
+        }));
+        Object.defineProperty(findings, 'praise', { value: praise, enumerable: false });
+
         return {
             ok: total > 0,
             callsReviewed: total,
+            praise,
             callsWithoutTranscript: Math.max(0, (Array.isArray(options.history) ? options.history : [])
                 .filter(entry => !entry?.transcript).length),
             callMoments,
@@ -664,15 +695,7 @@
             repeatOpportunities: repeating(opportunityRows),
             repeatCoaching: repeating(coachingRows),
             securityFlags: securityRow.count ? [securityRow] : [],
-            findings: Object.values(rows).map(row => ({
-                ...row,
-                weight: row.weight || 5,
-                callsTotal: total,
-                appearsOn: callLabel(row.count, total),
-                // Which calls, in words. "On the September 3 call you did X"
-                // is checkable in a way "this came up twice" is not.
-                moments: row.dates.map(date => momentFor[date]).filter(Boolean)
-            }))
+            findings
         };
     }
 
@@ -686,7 +709,8 @@
      * that opens on "nothing found in the calls" is worse than no button,
      * because it teaches you not to press them.
      */
-    function metricsInFocus(allMetrics, findings) {
+    function metricsInFocus(allMetrics, findings, options = {}) {
+        const praise = Array.isArray(options.praise) ? options.praise : (Array.isArray(findings?.praise) ? findings.praise : []);
         const evidenceFor = {};
         (findings || []).forEach(finding => {
             (EVIDENCE_MAP[finding.key] || []).forEach(metricKey => {
@@ -698,6 +722,7 @@
             .filter(metric => !metric.meetsTarget)
             .map(metric => ({
                 ...metric,
+                praise,
                 evidence: (evidenceFor[metric.metricKey] || [])
                     .slice()
                     .sort((a, b) => (b.count - a.count) || (b.weight - a.weight))
@@ -974,6 +999,7 @@
             classification: metric.classification,
             evidence,
             tips,
+            praise: (Array.isArray(options.praise) ? options.praise : (metric.praise || [])).slice(0, MAX_PRAISE_LINES),
             // Where the call's time went. Only ever on handle time, and only
             // when the transcript was stamped well enough to measure it.
             timeLedger: (metric.metricKey === LEDGER_METRIC && options.timeLedger?.ok)
@@ -1014,7 +1040,7 @@
         acw: { self: 'the time you spend wrapping up after a call', other: 'the time they spend wrapping up after a call' },
         holdTime: { self: 'how long customers wait on hold', other: 'how long customers wait on hold' },
         transfers: { self: 'how often calls get passed to another team', other: 'how often calls get passed to another team' },
-        fcr: { self: 'getting things sorted on the first call', other: 'getting things sorted on the first call' },
+        fcr: { self: 'getting things resolved on the first call', other: 'getting things resolved on the first call' },
         negativeWord: { self: 'some of the wording that comes up on your calls', other: 'some of the wording that comes up on their calls' },
         positiveWord: { self: 'the wording that lands well with customers', other: 'the wording that lands well with customers' },
         managingEmotions: { self: 'handling calls where the customer is upset', other: 'handling calls where the customer is upset' },
@@ -1058,6 +1084,11 @@
         const tips = brief.tips.length
             ? brief.tips.map(tip => `- ${tip.text}`).join('\n')
             : '- Nothing to suggest yet.';
+
+        const praiseList = (Array.isArray(options.praise) ? options.praise : (brief.praise || [])).filter(Boolean);
+        const praiseSection = praiseList.length
+            ? `\nWhat they did well, in my words:\n${praiseList.map(text => `- ${text}`).join('\n')}\n`
+            : '';
 
         const proven = brief.tips.filter(tip => tip.effectiveness && tip.effectiveness.rate !== null);
         const provenNote = proven.length
@@ -1103,6 +1134,7 @@ What I need is the wording: turn my notes into a short, friendly message in my v
 
 The subject is ${topicFor(brief, 'other')}.
 ${asked}${callsSection}
+${praiseSection}
 What I noticed, in my words:
 ${evidence}
 ${scaleSection}
@@ -1114,12 +1146,13 @@ Write the message.
 
 Requirements:
 - Use only the notes above. Do not add observations of your own, do not judge or rate anything, and do not introduce anything I have not said
-- Open by answering their question directly, leading with what to change
+- ${praiseList.length ? 'Open with one warm, specific line about what they did well, then answer' : 'Open with a line of genuine thanks for their effort, then answer'} their question directly, leading with what to change
 - Quote the short phrase from a call where it helps, so they can hear the moment I mean
 - Keep the suggestions concrete and practical, in the words I used
 - Where something came up on several calls, say so plainly. That is more useful than one example and it is the honest framing
 - Warm and matter of fact. They asked me for help, so this is help
 - 1 short opening, 2 to 3 suggestions, 1 friendly closing line
+- At most 2 emojis
 - Do NOT use em dashes${momentRule}
 - No jargon. Talk about calls and customers, not scores, targets or word counts. The call length line above is the exception: it is mine and it goes in as written${scaleRule}
 - Return ONLY the message body text.`;
@@ -1242,6 +1275,25 @@ Requirements:
      * because rewording it here would put a second voice next to the one the
      * drafts and the QA notes already use.
      */
+    /**
+     * A line from her call, fit to quote back to her: Verint's " - " break
+     * marks become commas, a lone "i" is "I", the borrowed full stop goes,
+     * and a single word is dropped, because "okay" quoted back is not a moment
+     * she can find. Scott, 2026-10-14: raw speech to text was going out as is.
+     */
+    function tidyHeard(value) {
+        const text = String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/^["'“”]+|["'“”]+$/g, '')
+            .replace(/\s+-+\s+/g, ', ')
+            .replace(/,\s*,+/g, ',')
+            .replace(/\bi(?=\b(?:'|’|\s|,|\.|\?|!|$))/g, 'I')
+            .replace(/\s*\.+$/, '');
+        const words = text.split(/\s+/).filter(word => /[a-z0-9]/i.test(word));
+        return words.length >= 2 ? text : '';
+    }
+
     function humanizeFinding(text) {
         const WORDS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 
@@ -1296,7 +1348,7 @@ Requirements:
         const listened = !moments.length
             // No dates known, so the count is not known either. "A few" would
             // be a guess about how many calls this is.
-            ? `I had a proper listen to your recent calls`
+            ? `I took some time to listen to your recent calls`
             : moments.length === 1
                 ? `I listened back to the ${label} you took on ${moments[0]}`
                 : `I have listened to ${moments.length} of your calls over the past few days`;
@@ -1399,7 +1451,7 @@ Requirements:
 
             // The quote earns its place when there are several calls: it is
             // what lets them find the moment being described.
-            const quoted = moments.length > 1 ? String(finding.quote || '').replace(/\s*\.+$/, '') : '';
+            const quoted = moments.length > 1 ? tidyHeard(finding.quote) : '';
             const heard = quoted ? `\n  I heard you say "${quoted}"` : '';
             return `- ${sentence}${heard}`;
         });
@@ -1414,13 +1466,27 @@ Requirements:
             ? 'One thing worth trying:'
             : `${actions.length === 2 ? 'Two' : 'A few'} things worth trying:`;
 
-        const closing = 'Give those a go and I will listen again soon to see how it is landing. Come find me if you want to talk any of it through.';
+        const closing = 'Try those out, and I will listen again soon to see how it is going. Come find me if you want to talk any of it through.';
+
+        // What went well, before any of the coaching. A message that only
+        // ever says what to fix teaches people that the good calls go
+        // unnoticed (Scott, 2026-10-14).
+        const praise = (Array.isArray(options.praise) ? options.praise : (brief.praise || []))
+            .map(text => String(text || '').trim())
+            .filter(Boolean)
+            .slice(0, MAX_PRAISE_LINES);
+        const praiseBlock = praise.length
+            ? [praise.length === 1 ? 'First, something you did really well:' : 'First, what you did really well:',
+                praise.map(text => `- ${text}`).join('\n')].join('\n')
+            : 'Thank you for the care you put into your calls.';
 
         return [
             name ? `Hi ${name},` : 'Hi,',
             '',
             opening,
             ...(callList ? ['', callList] : []),
+            '',
+            praiseBlock,
             ...(patternLine ? ['', patternLine] : []),
             ...(ledgerSentence ? ['', ledgerSentence] : []),
             '',
@@ -1452,7 +1518,7 @@ Requirements:
 
         if (outcome.verdict === 'moved') {
             const beat = outcome.beatTeam === true
-                ? ' That was better than the centre managed over the same week, so it was you rather than the week.'
+                ? ' That was better than the center did over the same week, so it was you and not just the week.'
                 : '';
             return `Last time we talked about ${topic}, it moved the right way the following week.${move}${beat} Worth knowing the change you made registered.`;
         }
@@ -1540,6 +1606,8 @@ Requirements:
         buildMetricPrompt,
         buildMetricMessage,
         humanizeFinding,
+        tidyHeard,
+        MAX_PRAISE_LINES,
         describePattern,
         describePriorCoaching,
         shortMoment,

@@ -927,14 +927,15 @@ suite('coaching bridge: saying whether the last coaching worked', (t) => {
         { verdict: 'moved', beatTeam: true, beforeLabel: '8:32', afterLabel: '7:40' }, topic);
     t.check('a win is credited', /moved the right way the following week/.test(moved));
     t.check('with the numbers', /from 8:32 to 7:40/.test(moved));
+    // American spelling: the team is in Phoenix (Scott, 2026-10-14).
     t.check('and the team comparison when there is one',
-        /better than the centre managed over the same week/.test(moved));
+        /better than the center did over the same week/.test(moved));
     t.check('and it tells them the effort registered', /the change you made registered/.test(moved));
 
     // A week where the whole centre improved is not evidence they did anything.
     const movedWithTeam = bridge.describePriorCoaching(
         { verdict: 'moved', beatTeam: false, beforeLabel: '8:32', afterLabel: '7:40' }, topic);
-    t.check('no team claim when the team did better', !/better than the centre/.test(movedWithTeam));
+    t.check('no team claim when the team did better', !/better than the cent(er|re)/.test(movedWithTeam));
 
     const backwards = bridge.describePriorCoaching(
         { verdict: 'went backwards', beatTeam: null, beforeLabel: '7:40', afterLabel: '8:10' }, topic);

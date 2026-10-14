@@ -85,10 +85,43 @@
         return nickname || selectedEmployee;
     }
 
+    const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function shortDate(iso) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+        const month = match ? SHORT_MONTHS[parseInt(match[2], 10) - 1] : '';
+        return month ? `${month} ${parseInt(match[3], 10)}` : '';
+    }
+
+    /**
+     * The day the coaching week started, as ISO: the upload's own start date,
+     * then the key's, then the Monday of the end date's week.
+     */
+    function resolveOutlookWeekStartIso(periodMeta = {}, periodKey = '') {
+        const meta = periodMeta || {};
+        if (/^\d{4}-\d{2}-\d{2}/.test(meta.startDate || '')) return meta.startDate.slice(0, 10);
+        const parts = String(periodKey || '').split('|');
+        if (parts.length > 1 && /^\d{4}-\d{2}-\d{2}/.test(parts[0])) return parts[0].slice(0, 10);
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(meta.endDate || parts[1] || '');
+        if (!match) return '';
+        const end = new Date(Date.UTC(+match[1], +match[2] - 1, +match[3]));
+        const back = (end.getUTCDay() + 6) % 7;
+        return new Date(end.getTime() - back * 86400000).toISOString().slice(0, 10);
+    }
+
+    /**
+     * "Weekly coaching check-in for Derek, week of Oct 5".
+     *
+     * Scott, 2026-10-14: it read "Weekly Coaching Check-In - Derek - Week of
+     * 10/09/2026". "Week of" was followed by the Friday the week ended on, and
+     * the hyphens between the parts read as dashes in a subject line.
+     */
     function buildOutlookSubject(options = {}) {
         const preferredName = resolveOutlookPreferredName(options.selectedEmployee, options.getEmployeeNickname);
-        const endDate = resolveOutlookEndDate(options.periodMeta, options.periodKey, options.formatDate);
-        return `Weekly Coaching Check-In - ${preferredName} - Week of ${endDate}`;
+        const start = shortDate(resolveOutlookWeekStartIso(options.periodMeta, options.periodKey));
+        return start
+            ? `Weekly coaching check-in for ${preferredName}, week of ${start}`
+            : `Weekly coaching check-in for ${preferredName}`;
     }
 
     function generateOutlookDraftFromCopilot(options = {}) {
@@ -138,6 +171,7 @@
         renderHistoryView,
         resolveOutlookEndDate,
         resolveOutlookPreferredName,
+        resolveOutlookWeekStartIso,
         buildOutlookSubject,
         generateOutlookDraftFromCopilot
     };

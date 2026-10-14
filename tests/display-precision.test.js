@@ -44,7 +44,9 @@ suite('display precision: a percentage is judged as it is printed', (t) => {
     const { mp, metrics } = loadProfiles(t);
 
     // The reported case.
-    t.equal('92.96 prints as 93.0%', metrics.formatMetricDisplay('scheduleAdherence', 92.96), '93.0%');
+    t.equal('92.96 prints as 93%', metrics.formatMetricDisplay('scheduleAdherence', 92.96), '93%');
+    t.equal('a decimal that says something stays', metrics.formatMetricDisplay('scheduleAdherence', 95.12), '95.1%');
+    t.equal('a whole goal drops its .0', metrics.formatMetricDisplay('reliability', 18), '18 hrs');
     t.equal('and meets a 93 target', mp.meetsYearTarget('scheduleAdherence', 92.96, 2026), true);
 
     // Still honest below the rounding boundary.

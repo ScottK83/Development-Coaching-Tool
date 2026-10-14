@@ -78,12 +78,63 @@
         return String(value || '').replace(/\s+/g, ' ').trim();
     }
 
-    function clipQuote(value) {
-        const text = collapse(value).replace(/^["']+|["']+$/g, '');
-        if (text.length <= MAX_QUOTE_CHARS) return text;
-        const cut = text.slice(0, MAX_QUOTE_CHARS);
-        const lastSpace = cut.lastIndexOf(' ');
-        return `${(lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim()}...`;
+    /*
+     * A line from the call, made fit to quote back to the associate.
+     *
+     * Scott, 2026-10-14: the quotes went out as raw speech to text, cut off
+     * mid thought and full of " - ", which is where Verint marks a stretch it
+     * could not hear ("i sign - lease today"). So a quote is the piece of the
+     * turn that holds the moment: split at those breaks and at sentence ends,
+     * kept to the piece the rule matched, and only cut with "..." when one
+     * piece is still too long. Fewer than MIN_QUOTE_WORDS words is not a
+     * quote, it is a fragment, and the point reads fine without it.
+     */
+    const MIN_QUOTE_WORDS = 3;
+    const STT_BREAK = /\s+-+\s+/;
+
+    function nonGlobal(pattern) {
+        if (!(pattern instanceof RegExp)) return null;
+        return new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ''));
+    }
+
+    // Spelling only: a lone "i" is "I", the first letter is a capital, and a
+    // break mark between two pieces becomes a comma.
+    function tidyQuote(value) {
+        let text = collapse(value).replace(/^["'“”]+|["'“”]+$/g, '');
+        if (!text) return '';
+        text = text
+            .replace(new RegExp(STT_BREAK.source, 'g'), ', ')
+            .replace(/,\s*,+/g, ',')
+            .replace(/\bi(?=\b(?:'|’|\s|,|\.|\?|!|$))/g, 'I');
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
+    function clipQuote(value, pattern) {
+        const raw = collapse(value).replace(/^["'“”]+|["'“”]+$/g, '');
+        if (!raw) return '';
+
+        const matcher = nonGlobal(pattern);
+        const pieces = raw.split(/\s+-+\s+|(?<=[.!?])\s+/).map((piece) => piece.trim()).filter(Boolean);
+        let text = (matcher && pieces.find((piece) => matcher.test(piece)))
+            || (pieces.length === 1 ? pieces[0] : raw);
+
+        if (text.length > MAX_QUOTE_CHARS) {
+            // Still too long: a window of words starting just before the
+            // moment, marked where it was cut.
+            const at = matcher ? Math.max(0, text.search(matcher)) : 0;
+            let start = at > 30 ? text.lastIndexOf(' ', at - 20) + 1 : 0;
+            if (start < 0) start = 0;
+            let end = Math.min(text.length, start + MAX_QUOTE_CHARS);
+            if (end < text.length) {
+                const lastSpace = text.lastIndexOf(' ', end);
+                if (lastSpace > start + 40) end = lastSpace;
+            }
+            text = `${start > 0 ? '...' : ''}${text.slice(start, end).trim()}${end < text.length ? '...' : ''}`;
+        }
+
+        const words = text.replace(/\.\.\./g, ' ').split(/\s+/).filter((word) => /[a-z0-9]/i.test(word));
+        if (words.length < MIN_QUOTE_WORDS) return '';
+        return text.startsWith('...') ? `...${tidyQuote(text.slice(3))}` : tidyQuote(text);
     }
 
     function countMatches(text, pattern) {
@@ -843,7 +894,7 @@
             weight: 4,
             threshold: 5,
             pattern: /i(?:'?m| am) (?:so |very |really )?sorry|i apologi[sz]e/i,
-            text: 'You apologised a lot. One you mean is plenty, then move to what you are doing about it.'
+            text: 'You apologized a lot. One you mean is plenty, then move to what you are doing about it.'
         },
         {
             key: 'filler',
@@ -881,7 +932,7 @@
             ? turns.filter(turn => turn.role === 'customer')
             : turns.filter(turn => turn.role !== 'customer');
         const match = pool.find(turn => pattern.test(turn.text));
-        return match ? clipQuote(match.text) : '';
+        return match ? clipQuote(match.text, pattern) : '';
     }
 
     /**
@@ -1031,7 +1082,7 @@
         lines.push('Write it for someone who has not heard the call. No headings in title case, no scores, '
             + 'no ratings, no bullet lists inside the numbered points. Do not name the agent and do not '
             + 'comment on how well they did their job. If the transcript does not show something, say it '
-            + 'does not show, rather than filling it in.');
+            + 'does not show, rather than filling it in. No emojis and no em dashes.');
         lines.push('');
         lines.push('Transcript:');
         lines.push('');
@@ -1284,7 +1335,7 @@
         const lengthNote = meta && meta.durationLabel ? ` across ${meta.durationLabel} on the phone` : '';
 
         if (strengthCount >= 7 && !heavyIssues) {
-            return `Outstanding call. You hit nearly every behaviour we coach to${lengthNote}, and the notes below are polish rather than problems. This is the call I would use to show someone else what good looks like.`;
+            return `Outstanding call. You hit nearly every behavior we coach to${lengthNote}, and the notes below are polish rather than problems. This is the call I would use to show someone else what good looks like.`;
         }
         if (strengthCount >= 5 && !heavyIssues) {
             return `Really strong call${lengthNote}. You had all the basics covered and nothing went sideways, nice work.`;
@@ -1302,19 +1353,53 @@
         return items.map(item => bullet(item.text, item.quote)).join('\n');
     }
 
+    /*
+     * EMPTY DRAFTS ARE EMPTY
+     *
+     * Scott, 2026-10-14. With nothing found, these used to return a hint
+     * written to Scott ("Add the one thing you would want repeated on the next
+     * call") or a line that contradicted the rest of the email ("Nothing here
+     * needs fixing"). Both landed in the notes, the email counted them as real
+     * points, and the associate read "Here is what stood out: - Nothing stood
+     * out clearly in the transcript", or "a couple of things worth tightening"
+     * followed by nothing to tighten.
+     *
+     * An empty list is now an empty draft. The hints are kept here for the
+     * page to show as placeholders, where only Scott sees them, and
+     * LEGACY_DRAFT_FALLBACKS lets the email drop them from notes saved before.
+     */
+    const DRAFT_HINTS = {
+        strengths: 'Nothing stood out clearly in the transcript. Add the one thing you would want repeated on the next call.',
+        improvements: 'Nothing here needs fixing. Leave this empty, or add one thing to push on next call.'
+    };
+
+    const LEGACY_DRAFT_FALLBACKS = [
+        'Nothing stood out clearly in the transcript. Add the one thing you would want repeated on the next call.',
+        'Nothing here needs fixing, so keep doing what you did and we will pick one thing to push on next call.'
+    ];
+
+    function isDraftHint(line) {
+        const text = String(line || '').replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').trim();
+        return Boolean(text) && LEGACY_DRAFT_FALLBACKS.concat(Object.values(DRAFT_HINTS)).includes(text);
+    }
+
+    // A note with the old fallback lines taken out, everything else as typed.
+    function stripDraftHints(text) {
+        return String(text || '')
+            .split(/\r?\n/)
+            .filter((line) => !isDraftHint(line))
+            .join('\n')
+            .trim();
+    }
+
     function buildStrengthsDraft(analysis) {
-        const bullets = toBulletText(
-            analysis?.strengths,
-            '- Nothing stood out clearly in the transcript. Add the one thing you would want repeated on the next call.'
-        );
+        const bullets = toBulletText(analysis?.strengths, '');
+        if (!bullets) return analysis?.headline || '';
         return analysis?.headline ? `${analysis.headline}\n\n${bullets}` : bullets;
     }
 
     function buildImprovementsDraft(analysis) {
-        return toBulletText(
-            analysis?.improvements,
-            '- Nothing here needs fixing, so keep doing what you did and we will pick one thing to push on next call.'
-        );
+        return toBulletText(analysis?.improvements, '');
     }
 
     function buildAnalysisSummary(analysis) {
@@ -1507,6 +1592,11 @@
         strengthPattern,
         buildStrengthsDraft,
         buildImprovementsDraft,
+        DRAFT_HINTS,
+        isDraftHint,
+        stripDraftHints,
+        tidyQuote,
+        clipQuote,
         buildAnalysisSummary,
         buildCallContextLines,
         tidyCallTime,

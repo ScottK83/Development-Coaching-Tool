@@ -1,6 +1,28 @@
 (function() {
     'use strict';
 
+    /*
+     * The notes as Scott meant them, without the hint lines Analyze used to
+     * write when it found nothing ("Nothing stood out clearly in the
+     * transcript. Add the one thing..."). Notes saved before 2026-10-14 can
+     * still hold them, and both the email and the prompts counted them as
+     * real points (Scott, 2026-10-14).
+     */
+    const LEGACY_HINT_LINES = [
+        'Nothing stood out clearly in the transcript. Add the one thing you would want repeated on the next call.',
+        'Nothing here needs fixing, so keep doing what you did and we will pick one thing to push on next call.'
+    ];
+
+    function cleanNotes(text) {
+        const strip = window.DevCoachModules?.callTranscript?.stripDraftHints;
+        if (typeof strip === 'function') return strip(text);
+        return String(text || '')
+            .split(/\r?\n/)
+            .filter((line) => !LEGACY_HINT_LINES.includes(line.replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, '').trim()))
+            .join('\n')
+            .trim();
+    }
+
     function buildTranscriptSection(entry) {
         const prepare = window.DevCoachModules?.callTranscript?.prepareForPrompt
             || ((value) => String(value || '').trim());
@@ -115,10 +137,10 @@ ${buildCallDetailLines(entry)}
 
 ${transcriptSection}${buildQaSection(entry)}${buildWordChoiceSection(entry)}Feedback notes:
 What went well:
-${entry.whatWentWell || '- None provided'}
+${cleanNotes(entry.whatWentWell) || '- None provided'}
 
 What to work on next time:
-${entry.improvementAreas || '- None provided'}
+${cleanNotes(entry.improvementAreas) || '- None provided'}
 
 Oscar / Knowledge Base URL:
 ${entry.oscarUrl || '- Not provided'}
@@ -134,11 +156,13 @@ Write the message.
 Requirements:
 - Use only my notes above. Do not add observations of your own, do not rate the call, and do not introduce anything I have not said
 - Professional, supportive, and specific
-- Open with genuine, specific recognition. Where the notes show the call went well, say so plainly and warmly rather than rushing past it to the coaching. Praise the behaviour and why it mattered to the customer, not just "good job"
+- Open with genuine, specific recognition. Where the notes show the call went well, say so plainly and warmly rather than rushing past it to the coaching. Praise the behavior and why it mattered to the customer, not just "good job"
 - Match the tone to the call: if the strengths clearly outweigh the coaching points, this should read as a well earned pat on the back with a couple of refinements, not a correction
 - Include clear improvement actions with practical next steps
 - If Oscar URL or relevant guidance is provided, naturally reference it as a resource
 - Keep concise: 1 short intro paragraph + 3-5 bullet points + 1 closing line
+- If there is nothing to work on, do not invent anything: make it a thank you
+- At most 2 emojis
 - Do NOT use em dashes, or hyphens with spaces around them${momentRule}${transcriptRules}
 - The QA read is background for you, not content for the associate. Do not paste the checklist or the words "opportunity" and "cannot tell" into the email; turn what matters into normal coaching language
 - Where the language read shows a scored phrase, be concrete: name the phrase they said and give them the phrase that would have scored instead. "You said 'unfortunately' twice, and 'what I can do is' lands the same news without costing you" is coaching. "Use more positive language" is not
@@ -166,7 +190,7 @@ Requirements:
     function tipsForEntry(entry, analysis) {
         const bridge = window.DevCoachModules?.callCoachingBridge;
         if (!bridge?.tipsForCall || !analysis) return [];
-        const notes = String(entry?.improvementAreas || '');
+        const notes = cleanNotes(entry?.improvementAreas);
         // Never for a red flag. A confirmed one carries its own record and
         // its rule, and the library's "verify" tips are mostly about other
         // things: on the first real run, "Verify contact info at end of call"
@@ -335,8 +359,8 @@ Requirements:
             lines.push(...extras.redFlag, '');
         }
 
-        lines.push('My notes on what went well:', correct(entry.whatWentWell) || '- None', '');
-        lines.push('My notes on what to work on:', correct(entry.improvementAreas) || '- None', '');
+        lines.push('My notes on what went well:', correct(cleanNotes(entry.whatWentWell)) || '- None', '');
+        lines.push('My notes on what to work on:', correct(cleanNotes(entry.improvementAreas)) || '- None', '');
 
         if (lost.length) {
             const first = lost[0];
@@ -376,7 +400,7 @@ Requirements:
         lines.push('- Write to the associate as "you" and do not use their name. Do not use the words "red flag"');
         lines.push('- Our company is APS. If the transcript names another company in the greeting, that is the speech to text mishearing APS');
         lines.push('- Quote the call only where a short phrase makes a point clearer');
-        lines.push(`- Keep it under ${extras.redFlag.length ? 400 : 300} words. Do not use em dashes, or hyphens with spaces around them`);
+        lines.push(`- Keep it under ${extras.redFlag.length ? 400 : 300} words, with at most 2 emojis. Do not use em dashes, or hyphens with spaces around them`);
 
         return lines.join('\n');
     }
@@ -416,10 +440,14 @@ Requirements:
      * doing call listening to help Coach you all. I reviewed a call on this
      * day and wanted to provide all the feedback." Used by the Copilot email
      * prompt and the email the app writes itself, so both open the same way.
+     *
+     * Scott, 2026-10-14, asked how it reads on the other end: "you all" in an
+     * email to one person reads as a group email with her name pasted in, so
+     * it now speaks to her alone.
      */
     function callEmailOpening(moment) {
         const which = moment ? `a call you took on ${moment}` : 'one of your recent calls';
-        return `I was doing call listening to help coach you all. I reviewed ${which} and wanted to give you all the feedback.`;
+        return `I was doing some call listening for coaching, and I reviewed ${which}. I wanted to share my feedback with you.`;
     }
 
     /**
@@ -459,8 +487,8 @@ Requirements:
         if (summary) {
             lines.push('My coaching write-up:', '"""', summary, '"""', '');
         } else {
-            lines.push('What went well:', correct(entry.whatWentWell) || '- None', '');
-            lines.push('What to work on:', correct(entry.improvementAreas) || '- None', '');
+            lines.push('What went well:', correct(cleanNotes(entry.whatWentWell)) || '- None', '');
+            lines.push('What to work on:', correct(cleanNotes(entry.improvementAreas)) || '- None', '');
         }
 
         if (extras.tips.length) {
@@ -491,7 +519,7 @@ Requirements:
         }
         lines.push('- Use only my write-up, the tips and the steps above. Do not add findings of your own, and do not rate or score the call');
         lines.push(`- Keep it under ${extras.redFlag.length ? 400 : 300} words, with a one line close`);
-        lines.push('- Plain text: no subject line, no bold. Do not use em dashes, or hyphens with spaces around them');
+        lines.push('- Plain text: no subject line, no bold, at most 2 emojis. Do not use em dashes, or hyphens with spaces around them');
         lines.push('- Our company is APS. If another company name appears, that is speech to text mishearing APS');
         lines.push('- Return only the email body');
 
@@ -528,9 +556,23 @@ Requirements:
             && (entry.callReference || '') === (draft.callReference || '')) || null;
     }
 
+    const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // "Oct 9" from the date field's "2026-10-09"; anything else as typed.
+    function shortCallDate(value) {
+        const text = String(value || '').trim();
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+        const month = match ? SHORT_MONTHS[parseInt(match[2], 10) - 1] : '';
+        return month ? `${month} ${parseInt(match[3], 10)}` : text;
+    }
+
+    // "Call feedback for Derek, Oct 9". It was "Call Listening Feedback -
+    // Derek - 2026-10-09": hyphens that read as dashes and a raw date
+    // (Scott, 2026-10-14).
     function buildOutlookSubject(employeeName, callDate, getEmployeeNickname) {
         const preferredName = employeeName ? (typeof getEmployeeNickname === 'function' ? (getEmployeeNickname(employeeName) || employeeName) : employeeName) : 'Associate';
-        return `Call Listening Feedback - ${preferredName}${callDate ? ` - ${callDate}` : ''}`;
+        const when = shortCallDate(callDate);
+        return `Call feedback for ${preferredName}${when ? `, ${when}` : ''}`;
     }
 
     // ============================================
@@ -569,7 +611,7 @@ Requirements:
      * belongs to that bullet rather than starting a new one.
      */
     function splitNote(text) {
-        const lines = String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        const lines = cleanNotes(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
         const lead = [];
         const bullets = [];
 
@@ -638,20 +680,35 @@ Requirements:
     // promise about an outcome, in the words call-red-flags writes them.
     const SERIOUS_NOTE = /\breported as an emergency\b|\blands as blame\b|\bpromise about how\b|\bguarantee(?:d|ing)?\b/i;
 
-    const OPENERS = {
-        clean: 'It was a good listen and there is nothing I need you to change.',
-        strong: 'It was a strong call, and there are a couple of things worth tightening.',
-        even: 'There was a lot in it I liked, and a couple of things I want to go through with you.',
-        mixed: 'There are things in there that worked, and a few I want to go through with you.',
-        work: 'There are a few things I want to go through with you.'
-    };
+    // "one thing", "a couple of things", "a few things". The openers used to
+    // say "a couple of things" whatever the count, including on a call with
+    // one point to work on, or none (Scott, 2026-10-14).
+    function thingsWord(count) {
+        if (count === 1) return 'one thing';
+        if (count === 2) return 'a couple of things';
+        return 'a few things';
+    }
 
+    function openerFor(tone, workCount) {
+        const things = thingsWord(workCount);
+        const are = workCount === 1 ? 'is' : 'are';
+        switch (tone) {
+            case 'clean': return 'It was a great listen, and there is nothing I need you to change.';
+            case 'strong': return `It was a strong call, and there ${are} ${things} worth tightening.`;
+            case 'even': return `There was a lot in it I liked, and ${things} I want to go through with you.`;
+            case 'mixed': return `There are things in there that worked, and ${things} I want to go through with you.`;
+            default: return `There ${are} ${things} I want to go through with you.`;
+        }
+    }
+
+    // American, and warm on the way out. "Have a think" and "come and find
+    // me" read as British to a team in Phoenix (Scott, 2026-10-14).
     const CLOSERS = {
-        clean: 'Keep doing what you did on this one.',
-        strong: 'Nothing here is a concern. Keep going.',
-        even: 'Have a think about those and come and find me if you want to talk any of it through.',
-        mixed: 'Have a think about those and come and find me if you want to talk any of it through.',
-        work: 'Come and find me if you want to talk any of it through.'
+        clean: 'Really nice work. Keep doing what you did on this one.',
+        strong: 'Nothing here is a concern. Keep going, you are doing great.',
+        even: 'Take a look at those, and come find me if you want to talk any of it through.',
+        mixed: 'Take a look at those, and come find me if you want to talk any of it through.',
+        work: 'Come find me if you want to talk any of it through. I am here to help.'
     };
 
     /**
@@ -686,7 +743,7 @@ Requirements:
         // Scott's own opening, which says why the email is coming and which
         // call it is about. She takes dozens a week, so feedback that does
         // not say which one is feedback she cannot check.
-        lines.push(`${callEmailOpening(moment)} ${OPENERS[tone]}`);
+        lines.push(`${callEmailOpening(moment)} ${openerFor(tone, workCount)}`);
 
         if (wellCount) {
             lines.push('');
@@ -866,6 +923,8 @@ Requirements:
         buildCallFeedbackMessage,
         describeCallFeedbackMessage,
         splitNote,
+        cleanNotes,
+        callEmailOpening,
         buildHistorySummaryText,
         buildHistoryItemHtml,
         hasVerificationRedFlag,

@@ -106,6 +106,31 @@
         return employeeRecord[key];
     }
 
+    /**
+     * Did anybody answer the survey this metric is built from?
+     *
+     * Scott, 2026-10-14: an associate with no surveys was coached on
+     * "Overall Experience: 0.0% vs target 75.0%", Rep Sat and FCR the same,
+     * each with a tip. Nobody was asked, so that 0 is an empty column, not a
+     * score. The count is the metric's own (rep sat and FCR are answered
+     * separately from Overall Experience), the same field map the team
+     * figures and the morning pulse weigh by.
+     */
+    const SURVEY_COUNT_FALLBACK = { cxRepOverall: 'repSurveyTotal', fcr: 'fcrSurveyTotal', overallExperience: 'surveyTotal' };
+
+    function hasSurveysBehind(employeeRecord, key) {
+        const weigh = window.DevCoachModules?.metricsRegistryHelpers?.getSurveyWeight || window.getSurveyWeight;
+        if (typeof weigh === 'function') {
+            const count = weigh(key, employeeRecord);
+            return count === null || count > 0;
+        }
+        const field = SURVEY_COUNT_FALLBACK[key];
+        if (!field) return true;
+        const own = parseInt(employeeRecord?.[field], 10);
+        const count = Number.isInteger(own) ? own : parseInt(employeeRecord?.surveyTotal, 10);
+        return Number.isInteger(count) && count > 0;
+    }
+
     function buildCoachingDisplayMetricData(employeeRecord) {
         const wins = [];
         const opportunities = [];
@@ -115,6 +140,7 @@
             const metricConfig = METRICS_REGISTRY[key];
             const value = coachingMetricValue(employeeRecord, key);
             if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
+            if (!hasSurveysBehind(employeeRecord, key)) return;
 
             const numValue = parseFloat(value);
             if (isNaN(numValue)) return;
@@ -138,6 +164,38 @@
         });
 
         return { wins, opportunities };
+    }
+
+    // "Oct 5". Written out here rather than through toLocaleDateString, so it
+    // reads the same on every machine and in the tests.
+    const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function shortDate(iso) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+        if (!match) return '';
+        const month = SHORT_MONTHS[parseInt(match[2], 10) - 1];
+        return month ? `${month} ${parseInt(match[3], 10)}` : '';
+    }
+
+    /**
+     * The week as the associate would say it: "Week of Oct 5".
+     *
+     * Scott, 2026-10-14: the subject read "Week of 10/09/2026", which is the
+     * Friday the week ended on. "Week of" means the day it started. The start
+     * comes from the upload, then the key, then the Monday of the end date's
+     * week.
+     */
+    function resolveCoachingWeekStartIso(periodKey, periodMeta) {
+        const meta = periodMeta || {};
+        if (/^\d{4}-\d{2}-\d{2}/.test(meta.startDate || '')) return meta.startDate.slice(0, 10);
+        const parts = String(periodKey || '').split('|');
+        if (parts.length > 1 && /^\d{4}-\d{2}-\d{2}/.test(parts[0])) return parts[0].slice(0, 10);
+        const end = meta.endDate || parts[1] || '';
+        const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(end);
+        if (!match) return '';
+        const endDay = new Date(Date.UTC(+match[1], +match[2] - 1, +match[3]));
+        const back = (endDay.getUTCDay() + 6) % 7;
+        return new Date(endDay.getTime() - back * 86400000).toISOString().slice(0, 10);
     }
 
     function resolveCoachingDisplayEndDate() {
@@ -181,9 +239,8 @@
         }
 
         const { wins, opportunities } = buildCoachingDisplayMetricData(employeeRecord);
-        const endDate = resolveCoachingDisplayEndDate();
 
-        elements.summary.textContent = `Week of ${endDate} \u2022 ${wins.length} wins \u2022 ${opportunities.length} focus areas`;
+        elements.summary.textContent = `${resolveCoachingPromptWeekLabel()} \u2022 ${wins.length} wins \u2022 ${opportunities.length} focus areas`;
         renderCoachingMetricLists(elements.winsList, elements.oppList, wins, opportunities);
 
         elements.panel.style.display = 'block';
@@ -257,15 +314,46 @@
 
     // -- Prompt metric data collection -----------------------------------------
 
+    // Scott, 2026-10-14: the prompt handed Copilot 13 strengths or 13 focus
+    // areas, each with a tip, and asked for all of them. What came back was a
+    // long report. Three wins to celebrate and two things to work on is what a
+    // person can take in from one email.
+    const MAX_PROMPT_WINS = 3;
+    const MAX_PROMPT_FOCUS = 2;
+
+    function isLowerBetter(key) {
+        return METRICS_REGISTRY[key]?.target?.type === 'max';
+    }
+
+    // "goal 93% or better", "goal 426s or lower". The ">= 93" it replaces is
+    // a formula, and the associate reads whatever the prompt hands over.
+    function goalPhrase(key, target) {
+        return `goal ${formatMetricDisplay(key, target)} or ${isLowerBetter(key) ? 'lower' : 'better'}`;
+    }
+
+    // How far past the goal (positive) or short of it (negative), as a share
+    // of the goal, so seconds and percentages can be ranked together.
+    function goalMargin(key, value, target) {
+        if (!target) return 0;
+        const ahead = isLowerBetter(key) ? target - value : value - target;
+        return ahead / Math.abs(target);
+    }
+
     function collectCoachingPromptMetricData(employeeRecord) {
         const wins = [];
         const opportunities = [];
         const usedTips = new Set();
 
         getMetricOrder().map(m => m.key).forEach(key => {
+            // Reliability is the year's running total and stays out of a
+            // weekly email's wins and focus areas. Scott, 2026-10-05 and
+            // again 2026-10-14: "Reliability: 26.5 hrs vs target 18.0 hrs"
+            // went out as a focus area with an attendance tip.
+            if (key === 'reliability') return;
             const metricConfig = METRICS_REGISTRY[key];
             const value = coachingMetricValue(employeeRecord, key);
             if (!metricConfig || value === null || value === undefined || value === '' || value === 'N/A') return;
+            if (!hasSurveysBehind(employeeRecord, key)) return;
 
             const numValue = parseFloat(value);
             if (isNaN(numValue)) return;
@@ -273,24 +361,23 @@
             const target = metricConfig.target?.value;
             if (target === undefined || target === null) return;
 
-            const meetsTarget = isMetricMeetingTarget(key, numValue, target);
-            const displayValue = formatMetricDisplay(key, numValue);
-            const displayTarget = formatMetricDisplay(key, target);
-
-            if (meetsTarget) {
-                wins.push({ label: metricConfig.label, value: displayValue, target: displayTarget });
-                return;
-            }
-
-            opportunities.push({
+            const entry = {
+                key,
                 label: metricConfig.label,
-                value: displayValue,
-                target: displayTarget,
-                tip: chooseCoachingTip(metricConfig, usedTips)
-            });
+                value: formatMetricDisplay(key, numValue),
+                target: formatMetricDisplay(key, target),
+                goal: goalPhrase(key, target),
+                margin: goalMargin(key, numValue, target)
+            };
+            (isMetricMeetingTarget(key, numValue, target) ? wins : opportunities).push(entry);
         });
 
-        return { wins, opportunities };
+        const measured = wins.length + opportunities.length;
+        const topWins = wins.slice().sort((a, b) => b.margin - a.margin).slice(0, MAX_PROMPT_WINS);
+        const topFocus = opportunities.slice().sort((a, b) => a.margin - b.margin).slice(0, MAX_PROMPT_FOCUS)
+            .map(entry => ({ ...entry, tip: chooseCoachingTip(METRICS_REGISTRY[entry.key], usedTips) }));
+
+        return { wins: topWins, opportunities: topFocus, metCount: wins.length, measuredCount: measured };
     }
 
     // -- Prompt period resolution ----------------------------------------------
@@ -305,16 +392,24 @@
             : coachingLatestWeekKey;
     }
 
+    // "Week of Oct 5", from the day the week started. Falls back to the old
+    // end date wording only when no date can be read at all.
+    function resolveCoachingPromptWeekLabel() {
+        const meta = weeklyData[coachingLatestWeekKey]?.metadata || {};
+        const start = shortDate(resolveCoachingWeekStartIso(coachingLatestWeekKey, meta));
+        return start ? `Week of ${start}` : `Week ending ${resolveCoachingPromptPeriodEndDate()}`;
+    }
+
     // -- Prompt section builders -----------------------------------------------
 
     function buildCoachingPromptMetricsText(wins, opportunities) {
         const winsText = wins.length
-            ? wins.map(w => `- ${w.label}: ${w.value} vs target ${w.target}`).join('\n')
-            : '- No metrics meeting goal in this period.';
+            ? wins.map(w => `- ${w.label}: ${w.value}, ${w.goal || `goal ${w.target}`}`).join('\n')
+            : '- None at goal this week. Open with real thanks for the effort they are putting in, without inventing a win.';
 
         const oppText = opportunities.length
-            ? opportunities.map(o => `- ${o.label}: ${o.value} vs target ${o.target}\n  Coaching tip: ${o.tip}`).join('\n')
-            : '- No metrics below target in this period.';
+            ? opportunities.map(o => `- ${o.label}: ${o.value}, ${o.goal || `goal ${o.target}`}\n  Tip: ${o.tip}`).join('\n')
+            : '- Nothing below goal this week. Make the whole email a thank you.';
 
         return { winsText, oppText };
     }
@@ -332,13 +427,11 @@ Vary wording and structure naturally like a human would.`;
     function buildCoachingPromptVoiceToneSection() {
         return `VOICE & TONE (CRITICAL)
 
-- Warm and empathetic
-- Friendly and conversational
-- Confident and assured
-- Encouraging and forward-looking
-- Clear and direct expectations
-- Supportive and invested in success
-- Authentic supervisor-to-associate connection
+- Warm, upbeat and genuinely proud of them
+- Friendly and conversational, the way you would talk to them at their desk
+- Specific praise first and plenty of it, not a quick "good job" on the way to the coaching
+- Encouraging and forward looking: every goal is within reach
+- Supportive and invested in their success
 - Cheerleading first, coaching second`;
     }
 
@@ -352,7 +445,9 @@ Vary wording and structure naturally like a human would.`;
 - Do NOT repeat phrasing across bullets
 - Do NOT use HR clich\u00e9s or jargon
 - Do NOT use the phrase "This is an opportunity to"
-- Do NOT use dashes of any kind. Use commas or full stops
+- Do NOT use em dashes or dashes of any kind. Use commas or periods
+- At most 2 emojis in the whole email
+- Under 200 words
 - Write in natural paragraphs with clean, simple bullet points where appropriate`;
     }
 
@@ -360,55 +455,52 @@ Vary wording and structure naturally like a human would.`;
         return `EMAIL FLOW (INTERNAL, DO NOT SHOW)
 
 Opening:
-- Start by greeting ${preferredName} by name
-- Lead with confidence and appreciation
-- Set a positive, supportive tone
+- Greet ${preferredName} by name
+- Thank them and lead with appreciation
 
 Celebrate Wins:
-- Call out strong metrics first with current performance and target
-- Explain briefly why those wins matter
-- Use bullets where helpful, but keep them clean and natural
+- Lead with the wins listed below, each with its number and its goal
+- Be specific and warm about each one, and say why it matters to customers or the team
 
 Coaching:
-- Discuss only metrics below target
-- Include current performance and target for each metric
-- Pull exactly ONE relevant coaching tip per metric
-- Rewrite the tip naturally in your own words
-- Make guidance actionable but conversational
-- Frame as refinement and focus, not correction
-
-Expectations:
-- Clearly state that improvement is expected where metrics are off
-- Balance accountability with belief in the associate
-- Emphasize progress, consistency, and confidence
+- Only the focus areas listed below, and no others
+- Give each one its number and its goal, plainly, as the next goal to reach
+- Use the one tip given for it, rewritten naturally in your own words
+- Frame it as a next step you are confident they can take, not a correction
 
 Close:
 - End on encouragement and confidence
-- Reinforce momentum and support
-- Tie focus areas to growth and future readiness`;
+- Make it clear you are in their corner`;
     }
 
     function buildCoachingPromptOutputRequirementsSection(preferredName) {
         return `OUTPUT REQUIREMENTS
 
 - Address ${preferredName} by name in the opening
-- Use clean bullets for metrics (wins and opportunities)
-- Show current performance vs target in each bullet
-- Pull exactly ONE tip per opportunity metric
-- Rewrite tips in natural language, never copy verbatim
+- Use clean bullets for the wins and the focus areas
+- Write each number the way it is given, with its goal ("goal 93% or better")
+- Exactly ONE tip per focus area, rewritten in natural language, never copied verbatim
 - Sound like a real supervisor: natural, human, and supportive
+- At most 2 emojis, under 200 words, no em dashes
 - No numbered sections or labels`;
     }
 
-    function buildCoachingPromptDataSection(endDate, winsText, oppText) {
+    function buildCoachingPromptDataSection(periodLabel, winsText, oppText, options = {}) {
+        const label = /^Week (of|ending) /.test(String(periodLabel || '')) ? periodLabel : `Week of ${periodLabel}`;
+        const tally = options.measuredCount
+            ? `\nAt goal on ${options.metCount} of ${options.measuredCount} measures.\n`
+            : '';
+        const tense = options.ongoing
+            ? '\nThe week is still going, so talk about it in the present tense.\n'
+            : '\nThe week is over, so talk about it in the past tense.\n';
         return `DATA FOR THIS EMAIL
 
-Week of ${endDate}
-
-Strengths:
+${label}
+${tally}${tense}
+Wins to celebrate:
 ${winsText}
 
-Focus Areas:
+Focus areas (at most two):
 ${oppText}`;
     }
 
@@ -417,6 +509,7 @@ ${oppText}`;
 
 - Only reference metrics and data provided above
 - Do not invent feedback or metrics
+- Do not mention attendance, reliability or hours missed
 - Do not assume external factors
 - Every tip must relate directly to the data provided`;
     }
@@ -430,10 +523,11 @@ Generate the coaching email for ${preferredName} now.`;
     // -- Full prompt assembly --------------------------------------------------
 
     function buildCoachingPrompt(employeeRecord) {
-        const { wins, opportunities } = collectCoachingPromptMetricData(employeeRecord);
-        const endDate = resolveCoachingPromptPeriodEndDate();
+        const { wins, opportunities, metCount, measuredCount } = collectCoachingPromptMetricData(employeeRecord);
+        const weekLabel = resolveCoachingPromptWeekLabel();
+        const periodType = weeklyData[coachingLatestWeekKey]?.metadata?.periodType || 'week';
 
-        const preferredName = getEmployeeNickname(employeeRecord.name);
+        const preferredName = getEmployeeNickname(employeeRecord.name) || String(employeeRecord.name || '').split(/\s+/)[0];
         const { winsText, oppText } = buildCoachingPromptMetricsText(wins, opportunities);
 
         return [
@@ -442,7 +536,11 @@ Generate the coaching email for ${preferredName} now.`;
             buildCoachingPromptRulesSection(),
             buildCoachingPromptFlowSection(preferredName),
             buildCoachingPromptOutputRequirementsSection(preferredName),
-            buildCoachingPromptDataSection(endDate, winsText, oppText),
+            buildCoachingPromptDataSection(weekLabel, winsText, oppText, {
+                metCount,
+                measuredCount,
+                ongoing: periodType === 'week-in-progress'
+            }),
             buildCoachingPromptDataRulesSection(),
             buildCoachingPromptFinalInstructionSection(preferredName)
         ].join('\n\n');
@@ -470,8 +568,9 @@ Generate the coaching email for ${preferredName} now.`;
         const weekEnding = periodMeta.endDate || (coachingLatestWeekKey.split('|')[1] || '');
         const periodLabel = periodMeta.label || (weekEnding ? `Week ending ${formatDateMMDDYYYY(weekEnding)}` : 'this period');
         const preferredName = getEmployeeNickname(employeeRecord.name) || employeeRecord.firstName || employeeRecord.name;
+        // The year's running total, never the week's own hours.
         const reliabilityHours = (() => {
-            const parsed = parseFloat(employeeRecord.reliability);
+            const parsed = resolveReliabilityYearTotal(employeeRecord.name);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
         })();
         const { celebrate, needsCoaching, coachedMetricKeys } = evaluateMetricsForCoaching(employeeRecord);
@@ -722,6 +821,11 @@ Generate the coaching email for ${preferredName} now.`;
         getCoachingEmailDisplayElements,
         resetCoachingEmailDisplayState,
         resolveCoachingEmployeeRecord,
+        hasSurveysBehind,
+        shortDate,
+        resolveCoachingWeekStartIso,
+        resolveCoachingPromptWeekLabel,
+        goalPhrase,
         buildCoachingDisplayMetricData,
         resolveCoachingDisplayEndDate,
         renderCoachingMetricLists,

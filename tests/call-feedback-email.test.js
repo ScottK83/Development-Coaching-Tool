@@ -78,9 +78,11 @@ suite('call feedback email: it says which call', (t) => {
 
     // Scott's own opening (2026-09-30): "Hey I was doing call listening to
     // help Coach you all. I reviewed a call on this day and wanted to provide
-    // all the feedback."
+    // all the feedback." Without the "you all" (2026-10-14): this goes to one
+    // person.
     t.check('it opens the way Scott does',
-        /^Hey Alyssa,\n\nI was doing call listening to help coach you all\. I reviewed a call you took on .+ and wanted to give you all the feedback\./.test(message));
+        /^Hey Alyssa,\n\nI was doing some call listening for coaching, and I reviewed a call you took on .+\. I wanted to share my feedback with you\./.test(message));
+    t.check('and talks to one person, not a group', !/you all/.test(message));
 
     // With no date on the entry it says less rather than saying something
     // wrong.
