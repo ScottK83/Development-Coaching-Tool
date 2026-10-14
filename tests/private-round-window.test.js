@@ -106,7 +106,8 @@ suite('private round: a finished month is called by its name', (t) => {
 
 suite('private round: last month under the Monday tone', async (t) => {
     const pulse = loadPulse(t);
-    const lines = sentences(await draw(pulse, { dayWord: 'Monday', startsTheWeek: true }));
+    const messages = await draw(pulse, { dayWord: 'Monday', startsTheWeek: true });
+    const lines = sentences(messages);
 
     const numbered = lines.filter(s => /\d+(\.\d+)?(s|%)/.test(s));
     const weekNumbers = numbered.filter(s => /\bweek\b/i.test(s));
@@ -115,10 +116,15 @@ suite('private round: last month under the Monday tone', async (t) => {
     const lateMonths = lines.filter(s => /\b(this|last) month\b/i.test(s));
     t.equal(`September is not "this month" in October (${lateMonths[0] || 'clean'})`, lateMonths.length, 0);
 
-    t.check('the comparison names both months',
-        lines.some(s => s.indexOf('down from 87s in August to 63s in September') > -1));
-    t.check('the jump is September\'s',
-        lines.some(s => /Hold Time.*in September, -24s/.test(s)));
+    // The move in words and the two numbers it went between, with the
+    // month named once (Scott, 2026-10-14: "-24s" read as a number of its
+    // own, and "87s last month to 63s this month" said the month twice).
+    t.check('the comparison carries both months\' numbers',
+        messages.some(m => m.indexOf('(87s to 63s)') > -1));
+    t.check('the jump is September\'s, said in words',
+        messages.some(m => /Hold Time[^\n]*in September/.test(m) && /down 24 seconds/i.test(m)));
+    t.equal('no move is written with a minus sign',
+        messages.filter(m => /-\d+s\b/.test(m)).length, 0);
     t.check('the focus number is September\'s',
         lines.some(s => /564s in September/.test(s)));
 
@@ -251,9 +257,9 @@ suite('private round: month to date opens on October against September', async (
     t.equal(`no generic "latest numbers" opener (${generic[0] || 'clean'})`, generic.length, 0);
 
     t.check('the gain shows both months\' numbers',
-        messages.every(m => m.indexOf('Better than September: Schedule Adherence 93.0% \u2192 95.1%.') > -1));
+        messages.every(m => m.indexOf('Better than September: Schedule Adherence up from 93% to 95.1%.') > -1));
     t.check('and so does the slide',
-        messages.every(m => m.indexOf('Behind September: Average Handle Time 540s \u2192 564s.') > -1));
+        messages.every(m => m.indexOf('Behind September: Average Handle Time up from 540s to 564s.') > -1));
     t.check('the jump the praise led with is not said twice',
         messages.every(m => !/Better than September:[^\n]*Hold Time/.test(m)));
 });

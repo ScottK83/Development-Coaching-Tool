@@ -100,9 +100,20 @@ suite('daily outreach: the daily recap reads like a sentence', (t) => {
     t.check('midweek says week to date', wtd.indexOf('Week to date (3 days in)') > -1);
     t.check('and drops the metric with no value', wtd.indexOf('Adherence') === -1);
 
+    // A heading in words, no chart emoji: the message keeps its two emojis
+    // for the opener and the sign-off (Scott, 2026-10-14).
     t.equal('one day reads singular', outreach.buildDailyRecap(
         outreach.PLANS.wednesday, { totalCalls: 40 }, { metrics, formatValue, dayCount: 1 }
-    ), '📊 Week to date (1 day in): Volume 40.');
+    ), 'Week to date (1 day in): Volume 40.');
+
+    // A metric that can say itself in plain words does.
+    const spoken = [
+        { key: 'totalCalls', label: 'Calls', say: v => `${v} calls` },
+        { key: 'aht', label: 'Handle time', say: v => `handle time ${v}` }
+    ];
+    t.equal('plain words, not column labels', outreach.buildDailyRecap(
+        outreach.PLANS.tuesday, { totalCalls: 88, aht: 471 }, { metrics: spoken, formatValue: (k, v) => (k === 'aht' ? `${v}s` : String(v)) }
+    ), 'Monday looked like this: 88 calls, handle time 471s.');
 
     t.equal('a plan with no daily half returns nothing', outreach.buildDailyRecap(
         outreach.PLANS.monday, { totalCalls: 40 }, { metrics, formatValue }

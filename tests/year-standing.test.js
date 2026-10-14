@@ -98,7 +98,21 @@ suite('year standing: the urgency is real, not invented', (t) => {
     t.equal('December leaves none', ys.monthsLeftInYear(new Date(2026, 11, 31)), 0);
 
     t.check('mid-year says there is time', ys.urgencyLine(new Date(2026, 7, 15)).indexOf('time to move this') > -1);
-    t.check('the run-in says it decides things', ys.urgencyLine(new Date(2026, 9, 1)).indexOf('decides it') > -1);
-    t.check('one month reads singular', ys.urgencyLine(new Date(2026, 10, 1)).indexOf('One month') > -1);
+
+    // Scott, 2026-10-14: "2 months left in the year. This is the stretch that
+    // decides it." went out on October 14, with eleven weeks still to work.
+    // The run-in counts the weeks that are really there, and says they are
+    // enough, which they are.
+    t.equal('October 14 has eleven weeks left', ys.weeksLeftInYear(new Date(2026, 9, 14)), 11);
+    t.check('and says so', ys.urgencyLine(new Date(2026, 9, 14)).indexOf('About 11 weeks left in the year') === 0);
+    t.check('October 1 is thirteen', ys.urgencyLine(new Date(2026, 9, 1)).indexOf('About 13 weeks left') === 0);
+    t.check('November 1 is nine', ys.urgencyLine(new Date(2026, 10, 1)).indexOf('About 9 weeks left') === 0);
+    t.check('nothing ominous in the run-in', !/decides it|stretch that decides/i.test(ys.urgencyLine(new Date(2026, 9, 14))));
+    t.check('it is encouraging instead', /real time to move/.test(ys.urgencyLine(new Date(2026, 9, 14))));
     t.check('and December does not promise time that is gone', ys.urgencyLine(new Date(2026, 11, 20)).indexOf('left') === -1);
+
+    // The article: "against a 82% target" read like nobody proofread it.
+    const an = ys.buildYearStandingText([{ label: 'Rep Satisfaction', valueText: '88.5%', targetText: '82%', movement: 'gaining' }]);
+    t.check('an 82% target', an.indexOf('against an 82% target') > -1);
+    t.check('no emoji on the heading', an.indexOf('Where the year stands') === 0);
 });

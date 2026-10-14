@@ -22,8 +22,10 @@ const REGISTRY = {
 
 // The rendering of an entry with nothing extra on it, spelled out rather than
 // regenerated, so a change to the bullet has to be made here on purpose.
+// The heading is words with no calendar emoji in front (Scott, 2026-10-14:
+// two emojis a message, the opener's and the sign-off's).
 const PLAIN =
-    '📅 Where the year stands\n'
+    'Where the year stands\n'
     + '  • Schedule Adherence 91.2% against a 93% target: the floor has been passing you here.';
 
 function load(t, withProjection) {

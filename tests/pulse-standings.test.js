@@ -147,22 +147,26 @@ function load(t, options) {
 // it is checked separately below; this is here so a change to a single word of
 // copy has to be made on purpose.
 //
+// Scott, 2026-10-14: the heading is words with no chart emoji in front, the
+// date reads "Aug 21", "Call Center" is capitalised the way every other
+// placing in the app writes it, and a whole number drops its ".0".
+//
 // Three lines per metric rather than one and a half. The value leads, because a
 // placing with no number behind it is a position in a league table the reader
 // cannot check, and it is also the number the milestone then asks them to move.
 const EXPECTED =
-    '📊 Where you stood for the week ending 08/21/2026\n'
+    'Where you stood for the week ending Aug 21\n'
     + '\n'
     + '  • Schedule Adherence: 93.9%\n'
-    + '      10th in the call center, 3rd on our team.\n'
+    + '      10th in the Call Center, 3rd on our team.\n'
     + '      Add 1 point. At 94.9% you would have finished about 4 places higher.\n'
     + '\n'
-    + '  • Rep Satisfaction: 88.0%\n'
-    + '      15th in the call center, 4th on our team.\n'
-    + '      Add 2 points. At 90.0% you would have finished about 7 places higher.\n'
+    + '  • Rep Satisfaction: 88%\n'
+    + '      15th in the Call Center, 4th on our team.\n'
+    + '      Add 2 points. At 90% you would have finished about 7 places higher.\n'
     + '\n'
     + '  • Average Handle Time: 422s\n'
-    + '      12th in the call center, 4th on our team.\n'
+    + '      12th in the Call Center, 4th on our team.\n'
     + '      Take 15 seconds off. At 407s you would have finished about 8 places higher.';
 
 suite('pulse standings: both placings and a milestone, for a named period', (t) => {
@@ -170,12 +174,12 @@ suite('pulse standings: both placings and a milestone, for a named period', (t) 
     const block = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY);
 
     t.check('something was written', block.length > 0);
-    t.check('the period is named rather than assumed', block.indexOf('the week ending 08/21/2026') > -1);
+    t.check('the period is named rather than assumed', block.indexOf('the week ending Aug 21') > -1);
 
     // Dana sits eleven peers back on handle time and four back inside the team,
-    // and both halves have to be said: "12th in the call center" and "4th on our team" are answers
+    // and both halves have to be said: "12th in the Call Center" and "4th on our team" are answers
     // to two different questions and neither stands in for the other.
-    t.check('the call center placing is there', block.indexOf('12th in the call center') > -1);
+    t.check('the call center placing is there', block.indexOf('12th in the Call Center') > -1);
     t.check('and the team placing beside it', block.indexOf('4th on our team') > -1);
 
     // Fifteen seconds off 422 is 407, which clears the peers at 401, 403 and
@@ -211,7 +215,7 @@ suite('pulse standings: the block is a block, not a spreadsheet', (t) => {
     t.check('the best placing leads', bullets[0].indexOf('Schedule Adherence') === 4);
     t.check('and the bullet carries their own number', bullets[0].indexOf('93.9%') > -1);
     t.check('and it is the tenth place one',
-        block.indexOf('Schedule Adherence: 93.9%\n      10th in the call center') > -1);
+        block.indexOf('Schedule Adherence: 93.9%\n      10th in the Call Center') > -1);
 
     // Sentiment is Dana's worst placing by a distance and is the line left out,
     // because the two slots after the lead go to the metrics a step moves most.
@@ -241,14 +245,18 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
     const bullets = block.split('\n').filter(line => line.indexOf('  • ') === 0);
 
     t.check('rep satisfaction is placed',
-        block.indexOf('Rep Satisfaction: 70.0%\n      30th in the call center') > -1);
+        block.indexOf('Rep Satisfaction: 70%\n      30th in the Call Center') > -1);
     t.check('and it takes the slot straight after the lead', bullets[1].indexOf('Rep Satisfaction') === 4);
 
     // Nothing was invented to justify the slot. Bottom of a field that tight
     // has no step worth naming, and the placing stands without one.
     // Its group is the label line and the placing line, and nothing after.
+    // 8th of an eight-person team is the bottom third, so the team half is
+    // left off (Scott, 2026-10-14): it tells somebody already at the bottom
+    // nothing they can use, and the center placing still stands.
     t.check('with no milestone attached to it',
-        block.indexOf('30th in the call center, 8th on our team.\n\n') > -1);
+        block.indexOf('30th in the Call Center.\n\n') > -1);
+    t.check('and no bottom-of-the-team placing beside it', block.indexOf('8th on our team') === -1);
     t.check('the metric it displaced is gone', block.indexOf('Overall Sentiment') === -1);
     t.equal('and the block is still three metrics', bullets.length, 3);
 
@@ -262,7 +270,7 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
         })])
     }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('it really did have a milestone to lose',
-        withoutSurveys.indexOf('Overall Sentiment: 90.1%\n      26th in the call center') > -1
+        withoutSurveys.indexOf('Overall Sentiment: 90.1%\n      26th in the Call Center') > -1
         && withoutSurveys.indexOf('Add 1 point. At 91.1% you would have finished about 5 places higher.') > -1);
 
     // The pin is a slot, not a lower bar. Three surveys is still the floor, and
@@ -280,7 +288,7 @@ suite('pulse standings: the milestones carry no caveat', (t) => {
     t.check('the milestones are still worded as a what-if', block.indexOf('you would have finished') > -1);
 
     const flat = load(t, { noise: 999 }).buildStandingsBlock('Dana Reed', WEEK_KEY);
-    t.check('and the placings still stand without a milestone', flat.indexOf('12th in the call center') > -1);
+    t.check('and the placings still stand without a milestone', flat.indexOf('12th in the Call Center') > -1);
 });
 
 suite('pulse standings: a step the app calls churn is not a milestone', (t) => {
@@ -290,7 +298,7 @@ suite('pulse standings: a step the app calls churn is not a milestone', (t) => {
     const pulse = load(t, { noise: 999 });
     const block = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY);
 
-    t.check('the placings are still printed', block.indexOf('in the call center') > -1);
+    t.check('the placings are still printed', block.indexOf('in the Call Center') > -1);
     t.check('and no milestone is', block.indexOf('places higher') === -1);
     t.check('nothing offers a step at all',
         block.indexOf('Take ') === -1 && block.indexOf('Add ') === -1);
@@ -325,7 +333,7 @@ suite('pulse standings: a gain of one place is not worth a sentence', (t) => {
     const pulse = load(t, { rows, teamNames: [] });
     const block = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY);
 
-    t.check('the placing is still stated', block.indexOf('7th in the call center') > -1);
+    t.check('the placing is still stated', block.indexOf('7th in the Call Center') > -1);
     t.check('and no milestone is offered', block.indexOf('places higher') === -1);
 
     // Sixty seconds is the largest rung there is, and it still only clears the
@@ -397,8 +405,12 @@ suite('pulse standings: private message only', async (t) => {
         {}, { base: 'kickoff', dailyMode: 'none' }, 'Dana Reed', WEEK_KEY, null, null
     );
 
-    t.check('the private message carries the block', dm.indexOf('📊 Where you stood for') > -1);
-    t.check('with the placings in it', dm.indexOf('12th in the call center') > -1);
+    t.check('the private message carries the block', dm.indexOf('Where you stood for') > -1);
+    t.check('with the placings in it', dm.indexOf('12th in the Call Center') > -1);
+    // Above the sign-off, which is the last thing the message says.
+    const paragraphs = dm.split('\n\n');
+    t.check('and the sign-off still closes the message', paragraphs[paragraphs.length - 1].indexOf('Call Center') === -1
+        && paragraphs[paragraphs.length - 1].indexOf('Where you') === -1);
     t.check('and no caveat with them', dm.indexOf('assume everybody else') === -1);
     t.check('the message it was appended to is still there', dm.indexOf('Dana') > -1);
 
@@ -406,7 +418,12 @@ suite('pulse standings: private message only', async (t) => {
     // and it is the one that gets pasted somewhere other people can read it.
     const highFive = await pulse.generateHighFiveMessage('Dana Reed', WEEK_KEY, null, { now: new Date(2026, 7, 24) });
     t.check('a high five was written', typeof highFive === 'string' && highFive.length > 0);
-    t.check('and it carries no placing', !/\d+(st|nd|rd|th) in the call center/.test(highFive));
+    // Any placing, however it is written: "12th in the call center", "6th
+    // in the Call Center", or the near-miss line's "#17 in the Call Center",
+    // which used to ride along on more than a third of high fives.
+    t.check('and it carries no placing', !/\d+(st|nd|rd|th) in the call center/i.test(highFive));
+    t.check('nor a numbered one', !/#\d+ in the call center/i.test(highFive));
+    t.check('nor a top-N bar', !/\btop \d+\b/i.test(highFive));
     t.check('nor the block header', highFive.indexOf('Where you stood for') === -1);
     t.check('nor a milestone', highFive.indexOf('places higher') === -1);
 });
@@ -455,31 +472,41 @@ suite('pulse standings: the copy an associate reads', (t) => {
 });
 
 suite('pulse standings: the period is named for what it actually was', (t) => {
+    // Inside the week of Aug 17, so the partial files below are this week's.
+    t.pinClock('2026-08-18');
+
     // 2026-08-21 is a Friday, which is where this team's week stops, so a file
     // that runs to it really is a week that ended.
     const full = load(t).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a Friday file is a week that ended',
-        full.indexOf('Where you stood for the week ending 08/21/2026') > -1);
+        full.indexOf('Where you stood for the week ending Aug 21') > -1);
 
     // 2026-08-20 is the Thursday before it. The file stops there because that
-    // is as far as the week had got, not because the week finished.
+    // is as far as the week had got, not because the week finished, and on
+    // the 18th the week is still running, so it is where they stand.
     const partial = load(t, { weekMeta: { periodType: 'week-in-progress', endDate: '2026-08-20' } })
         .buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a Thursday file says how far it got',
-        partial.indexOf('Where you stood for the week so far, through Thursday 08/20/2026') > -1);
+        partial.indexOf('Where you stand this week so far, through Thursday, Aug 20') > -1);
     t.check('and does not claim the week ended on a Thursday',
-        partial.indexOf('the week ending 08/20/2026') === -1);
+        partial.indexOf('the week ending Aug 20') === -1);
 
     // Monday is the same claim at its most obviously wrong.
     const monday = load(t, { weekMeta: { periodType: 'week-in-progress', endDate: '2026-08-17' } })
         .buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('one day into the week reads as one day in',
-        monday.indexOf('the week so far, through Monday 08/17/2026') > -1);
+        monday.indexOf('this week so far, through Monday, Aug 17') > -1);
+
+    // A four-day file from a week gone by is finished, and is not "so far".
+    const stale = load(t, { weekMeta: { periodType: 'week-in-progress', startDate: '2026-07-27', endDate: '2026-07-30' } })
+        .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    t.check('a past partial week is named in the past',
+        stale.indexOf('Where you stood for the week through Thursday, Jul 30') > -1);
 
     // A daily upload is a day. Week words on top of one were never right.
     const day = load(t, { weekMeta: { periodType: 'daily', startDate: '2026-08-20', endDate: '2026-08-20' } })
         .buildStandingsBlock('Dana Reed', WEEK_KEY);
-    t.check('a single day is named as that day', day.indexOf('Where you stood for Thursday 08/20/2026') > -1);
+    t.check('a single day is named as that day', day.indexOf('Where you stood on Thursday, Aug 20') > -1);
     t.check('with no week claimed around it', day.indexOf('the week') === -1);
 });
 

@@ -283,8 +283,15 @@
 
     /**
      * The daily numbers appended under the base message. `rollup` is a
-     * metric-keyed object the caller has already weighted — this module does
+     * metric-keyed object the caller has already weighted; this module does
      * not do metric math, so there's only one place that owns it.
+     *
+     * A metric may carry `say(valueText)` to put itself in plain words:
+     * "88 calls, handle time 471s, adherence 91.8%" rather than "Volume 88,
+     * AHT 471s, +Word 84.8%" (Scott, 2026-10-14). One without it is written
+     * as label and value, the way it always was. The heading is words too,
+     * not a chart emoji: a message keeps two emojis, the opener's and the
+     * sign-off's.
      */
     function buildDailyRecap(plan, rollup, options) {
         if (!plan || plan.dailyMode === 'none' || !rollup) return '';
@@ -295,17 +302,19 @@
 
         const parts = metrics
             .filter(m => Number.isFinite(rollup[m.key]))
-            .map(m => `${m.label} ${format(m.key, rollup[m.key])}`);
+            .map(m => (typeof m.say === 'function'
+                ? m.say(format(m.key, rollup[m.key]))
+                : `${m.label} ${format(m.key, rollup[m.key])}`));
 
         if (!parts.length) return '';
 
         if (plan.dailyMode === 'monday') {
-            return `📊 Monday looked like this: ${parts.join(', ')}.`;
+            return `Monday looked like this: ${parts.join(', ')}.`;
         }
 
         const days = Number.isFinite(opts.dayCount) ? opts.dayCount : 0;
         const dayText = days > 0 ? ` (${days} day${days === 1 ? '' : 's'} in)` : '';
-        return `📊 Week to date${dayText}: ${parts.join(', ')}.`;
+        return `Week to date${dayText}: ${parts.join(', ')}.`;
     }
 
     function joinList(items) {
@@ -314,24 +323,84 @@
         return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
     }
 
+    // "an 82% target", "a 93% target". Eight, eleven and eighteen are said
+    // with a vowel sound up front, and "a 82.0% target" read unproofed.
+    function withArticle(text) {
+        const s = String(text || '').trim();
+        return (/^(8|11(?!\d)|18(?!\d))/.test(s) ? 'an ' : 'a ') + s;
+    }
+
+    function pickOne(list) {
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    /* The praise the message leads with.
+     *
+     * The old text had none: the #1 person in the center got the same rows of
+     * numbers as somebody having a rough week (Scott, 2026-10-14: "Offer lots
+     * of kudos and praise"). A clean sweep is said as one; otherwise two wins
+     * by name and the rest as a count; with nothing on target, real movement
+     * gets the credit; and with neither, the effort does.
+     */
+    function praiseLine(d, ongoing) {
+        const wins = Array.isArray(d.wins) ? d.wins : [];
+        const goals = Number(d.goalCount) || 0;
+        if (d.allOnTarget && goals > 1) {
+            return ongoing
+                ? pickOne([
+                    `Every one of your ${goals} goals is on target so far. That's a clean sweep, and it doesn't happen by accident. 🙌`,
+                    `On target on all ${goals} of your goals so far. That's as good as it gets. 🙌`
+                ])
+                : pickOne([
+                    `Every one of your ${goals} goals landed on target. That's a clean sweep. 🙌`,
+                    `On target on all ${goals} of your goals. That's as good as it gets. 🙌`
+                ]);
+        }
+        if (wins.length) {
+            const named = wins.slice(0, 2).map(w => `${w.label} at ${w.valueText}`);
+            const rest = wins.length - named.length;
+            const list = rest
+                ? `${named.join(', ')}, and ${rest} more ${rest === 1 ? 'goal' : 'goals'} on target`
+                : joinList(named);
+            return pickOne([
+                `Love what I'm seeing: ${list}. 🙌`,
+                `Big kudos on ${list}. 🙌`,
+                `You're doing great work: ${list}. 🙌`
+            ]);
+        }
+        if ((d.improved || []).length) {
+            return 'I can see the work paying off, a few numbers are moving the right way.';
+        }
+        return pickOne([
+            'I see the effort you\'re putting in, and it matters.',
+            'Appreciate you showing up and putting in the work.'
+        ]);
+    }
+
     /**
      * The midweek and end-of-week message: where this week stands against last
      * week, and what actually moved.
      *
      * The old midweek note just recalled Monday's focus and said keep going,
      * which reads as filler when the numbers to compare are sitting right
-     * there. This one leads with the comparison.
+     * there. This one leads with praise, then the comparison.
      *
      * data:
      *   firstName    who it's addressed to
      *   tone         'midweek' (Wed/Thu) or 'closing' (Fri)
-     *   sourceLabel  what "this week" is built from, for the standings line
      *   daysIn       days of data behind it, 0 if unknown
+     *   thisWeek     false when the numbers are not this week's
+     *   nowName      what the numbers are called when not this week's
+     *                ("last week"); priorName what they are held against
      *   weekOpen     true when the week described still has a day left to work
-     *   standings    [{ label, latestText, baseText }] — current vs last week
-     *   improved     [{ label, deltaText }] — moved the right way past noise
-     *   slipped      [{ label, deltaText }] — moved the wrong way past noise
-     *   focus        { label, valueText, targetText } or null
+     *   standings    [{ label, latestText, baseText }]: where they are now
+     *   improved     [{ label, deltaText }]: moved the right way past noise
+     *   slipped      [{ label, deltaText }]: moved the wrong way past noise,
+     *                on a metric short of target
+     *   wins         [{ label, valueText }]: on target, best first
+     *   goalCount    how many goals the message can speak to
+     *   allOnTarget  every one of them on target
+     *   focus        { label, valueText, targetText, yearText } or null
      *   hasBaseline  whether last week was available to compare against
      */
     function buildWeekProgressText(data) {
@@ -344,8 +413,12 @@
 
         // Only say "this week" when the numbers really are this week's. With
         // no week-in-progress file the newest weekly upload is last week, and
-        // calling that "this week" would be a plain misstatement.
+        // calling that "this week" would be a plain misstatement. It is named
+        // plainly instead: no remark about files or uploads in a message to
+        // an associate (Scott's no-disclaimers rule).
         const thisWeek = d.thisWeek !== false;
+        const nowName = thisWeek ? 'this week' : (d.nowName || 'last week');
+        const priorName = thisWeek ? 'last week' : (d.priorName || 'the week before');
         /* Whether the week being described still has a day left in it.
          *
          * The Friday message is written off whatever file is on hand, and that
@@ -360,48 +433,48 @@
                 ? (open
                     ? `Hey ${name}! Closing out the week, so here is how it is going next to last week.`
                     : `Hey ${name}! Closing out the week, so here is how it went next to last week.`)
-                : `Hey ${name}! Closing out the week. Your newest full week is still the one before this, so here it is against the week before that.`)
+                : `Hey ${name}! Closing out the week with a look at how ${nowName} went, next to ${priorName}.`)
             : (thisWeek
                 ? `Hey ${name}! Quick look at where this week stands next to last week.`
-                : `Hey ${name}! This week has not landed in a file yet, so here is your most recent full week against the one before it.`);
+                : `Hey ${name}! Here's how ${nowName} went, next to ${priorName}.`);
 
         const blocks = [opener];
+        blocks.push(praiseLine(d, thisWeek && (!closing || open)));
 
         if (standings.length) {
-            const dayText = d.daysIn > 0 ? ` (${d.daysIn} day${d.daysIn === 1 ? '' : 's'} in)` : '';
+            const dayText = thisWeek && d.daysIn > 0 ? ` (${d.daysIn} day${d.daysIn === 1 ? '' : 's'} in)` : '';
             const heading = closing
                 ? (open ? 'Where you stand' : 'Where you landed')
-                : (thisWeek ? 'Where you are' : 'Most recent full week');
-            const parts = standings.map(s => (d.hasBaseline && s.baseText
-                ? `${s.label} ${s.latestText}, was ${s.baseText}`
-                : `${s.label} ${s.latestText}`));
-            blocks.push(`📊 ${heading}${dayText}: ${parts.join('. ')}.`);
+                : (thisWeek ? 'Where you are' : nowName.charAt(0).toUpperCase() + nowName.slice(1));
+            const parts = standings.map(s => `${s.label} ${s.latestText}`);
+            blocks.push(`${heading}${dayText}: ${joinList(parts)}.`);
         }
 
         if (improved.length) {
-            blocks.push(`✅ Up from last week: ${joinList(improved.map(i => `${i.label} ${i.deltaText}`))}.`);
+            blocks.push(`Better than ${priorName}: ${joinList(improved.map(i => `${i.label} ${i.deltaText}`))}.`);
         } else if (d.hasBaseline && standings.length && !slipped.length) {
-            blocks.push('✅ Holding steady against last week, no real slippage anywhere.');
+            blocks.push(`Holding steady against ${priorName}, no real slippage anywhere.`);
         }
 
         if (slipped.length) {
-            blocks.push(`👀 Slid a little: ${joinList(slipped.map(s => `${s.label} ${s.deltaText}`))}.`);
+            blocks.push(`Slid a little: ${joinList(slipped.map(s => `${s.label} ${s.deltaText}`))}.`);
         }
 
         if (d.focus) {
             // Next week, unless there is still a day of this one to spend on it.
             const push = closing && !open ? 'Worth a push next week' : 'Worth a push';
-            blocks.push(`🎯 ${push}: ${d.focus.label} is ${d.focus.valueText} against a ${d.focus.targetText} target.`);
+            const f = d.focus;
+            if (f.yearText) {
+                const whose = nowName === 'this week' ? 'this week\'s' : nowName === 'last week' ? 'last week\'s' : 'that week\'s';
+                blocks.push(`${push}: ${f.label} for the year is ${f.yearText} against ${withArticle(f.targetText)} target, and ${whose} ${f.valueText} is exactly how we close that.`);
+            } else {
+                blocks.push(`${push}: ${f.label} is ${f.valueText} against ${withArticle(f.targetText)} target.`);
+            }
         }
 
-        if (!standings.length) {
-            blocks.push(closing
-                ? 'Not enough in yet to put numbers on the week, but I wanted to close it out with you anyway.'
-                : "Not enough in yet to put numbers on this week, so treat this as a nudge rather than a scorecard.");
-        }
-
+        const hadWins = (d.wins || []).length > 0 || improved.length > 0;
         blocks.push(closing
-            ? 'Good work this week. Have a good weekend.'
+            ? `${hadWins ? 'Good work this week.' : 'Thanks for the effort this week.'} Have a good weekend.`
             : 'Keep it rolling, and I will check back before the week is out.');
 
         return blocks.join('\n\n');

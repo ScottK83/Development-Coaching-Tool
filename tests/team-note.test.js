@@ -8,8 +8,8 @@ const { suite } = require('./harness');
  * One paragraph the manager writes once (service level at risk for the year,
  * say) and the private messages carry until it is cleared. It goes on the
  * messages of anyone missing Schedule Adherence or AHT in the window being
- * read, or on everyone's when the manager says so, and it goes last, after
- * the standings and near-miss tails.
+ * read, or on everyone's when the manager says so, and it goes after the
+ * standings and near-miss tails, just above the sign-off.
  *
  * Ana misses adherence, Cal runs long on AHT, Ben meets both. The judging is
  * the same analysis the card badge reads, so these three cover all of it.
@@ -93,7 +93,11 @@ suite('team note: the service level note is on by default for the rest of 2026',
 
     const comparison = { unit: 'week', latestKey: THIS_WEEK, baselineKey: LAST_WEEK };
     const ana = await pulse.buildOutreachMessage(outreach, outreach.planById('monday'), 'Ana Missing', THIS_WEEK, LAST_WEEK, null, comparison);
-    t.check('and her message ends with it', Boolean(ana) && ana.endsWith('\n\n' + note.text));
+    // Just above the sign-off, which stays the last thing she reads (Scott,
+    // 2026-10-14). The note's words are unchanged.
+    t.check('and her message carries it, word for word, as its own paragraph',
+        Boolean(ana) && ana.indexOf('\n\n' + note.text + '\n\n') > -1);
+    t.check('above the sign-off', Boolean(ana) && !ana.endsWith(note.text));
 
     t.pinClock('2026-12-31');
     t.check('still on New Year\'s Eve', pulse.loadTeamNote().text === note.text);
@@ -134,7 +138,10 @@ suite('team note: clearing it is saved, not removed, so a restore cannot bring i
     t.equal('and nobody gets one', pulse.teamNoteFor('Ana Missing', THIS_WEEK), '');
 });
 
-suite('team note: the private message ends with it', async (t) => {
+// It used to go after the sign-off, so the message ended "Let me know if you
+// need anything." and then kept going (Scott, 2026-10-14). It sits just above
+// the sign-off now, and the sign-off is the last paragraph.
+suite('team note: the private message carries it just above the sign-off', async (t) => {
     const { pulse, outreach } = load(t);
     pulse.saveTeamNote({ text: NOTE, who: 'missing' });
     const plan = outreach.planById('monday');
@@ -144,9 +151,21 @@ suite('team note: the private message ends with it', async (t) => {
     const ben = await pulse.buildOutreachMessage(outreach, plan, 'Ben Fine', THIS_WEEK, LAST_WEEK, null, comparison);
 
     t.check('a message was written for Ana', Boolean(ana) && ana.length > NOTE.length);
-    t.check('and it ends with the note, set off as its own paragraph', Boolean(ana) && ana.endsWith('\n\n' + NOTE));
+    const paragraphs = String(ana || '').split('\n\n');
+    t.equal('the note is its own paragraph, second from last', paragraphs[paragraphs.length - 2], NOTE);
+    t.check('and the sign-off is the last thing', paragraphs[paragraphs.length - 1].indexOf(NOTE) === -1);
     t.check('a message was written for Ben', Boolean(ben));
     t.check('and his has no note', Boolean(ben) && ben.indexOf(NOTE) === -1);
+
+    // The note on screen can still be swapped where it sits.
+    const swapped = pulse.swapTeamNote(ana, NOTE, 'New ask.');
+    const swappedParas = swapped.split('\n\n');
+    t.equal('a changed note takes the same place', swappedParas[swappedParas.length - 2], 'New ask.');
+    t.equal('and the old one is gone', swapped.indexOf(NOTE), -1);
+    t.equal('clearing it leaves the sign-off last',
+        pulse.swapTeamNote(ana, NOTE, '').split('\n\n').slice(-1)[0], paragraphs[paragraphs.length - 1]);
+    t.equal('a note added later lands above the sign-off too',
+        pulse.swapTeamNote(pulse.swapTeamNote(ana, NOTE, ''), '', NOTE), ana);
 });
 
 suite('team note: a changed note moves onto a message without rewriting it', (t) => {

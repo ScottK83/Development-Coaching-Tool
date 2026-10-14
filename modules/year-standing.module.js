@@ -127,15 +127,25 @@
 
         const lines = list.slice(0, opts.limit || 3).map(e => {
             const value = e.valueText ? `${e.label} ${e.valueText}` : e.label;
-            const against = e.targetText ? ` against a ${e.targetText} target` : '';
+            const against = e.targetText ? ` against ${withArticle(e.targetText)} target` : '';
             const bullet = `  • ${value}${against}: ${phraseFor(e.movement, opts.pick)}.`;
             const pace = safePaceText(e.paceText);
             return pace ? `${bullet}\n    ${pace}` : bullet;
         });
 
+        // A heading in words. The calendar emoji in front of it was one of
+        // four or five section markers that took a private message past its
+        // two emojis (Scott, 2026-10-14).
         const header = opts.header || 'Where the year stands';
         const closer = opts.closer || '';
-        return `📅 ${header}\n${lines.join('\n')}${closer ? `\n\n${closer}` : ''}`;
+        return `${header}\n${lines.join('\n')}${closer ? `\n\n${closer}` : ''}`;
+    }
+
+    // "an 82% target", "a 93% target": "a 82.0% target" read unproofed.
+    // Eight, eleven and eighteen are the numbers said with a vowel up front.
+    function withArticle(text) {
+        const s = String(text || '').trim();
+        return (/^(8|11(?!\d)|18(?!\d))/.test(s) ? 'an ' : 'a ') + s;
     }
 
     /**
@@ -147,11 +157,35 @@
         return 11 - when.getMonth();
     }
 
+    /**
+     * Whole weeks from this date to December 31, to the nearest week.
+     *
+     * Months counted the way monthsLeftInYear counts them are calendar months
+     * after this one, so on October 14 they said "2 months left" with eleven
+     * weeks still to work.
+     */
+    function weeksLeftInYear(date) {
+        const when = date instanceof Date ? new Date(date.getTime()) : new Date();
+        when.setHours(12, 0, 0, 0);
+        const end = new Date(when.getFullYear(), 11, 31, 12);
+        const days = Math.round((end.getTime() - when.getTime()) / 86400000);
+        return Math.max(0, Math.round(days / 7));
+    }
+
+    /* The line under the block.
+     *
+     * "2 months left in the year. This is the stretch that decides it." went
+     * out on October 14 (Scott, 2026-10-14): wrong by two weeks and ominous
+     * with it. The run-in now counts the weeks that are really there and says
+     * they are enough, which they are. Earlier in the year it is months, and
+     * December names the month rather than promising time that is gone.
+     */
     function urgencyLine(date) {
-        const left = monthsLeftInYear(date);
-        if (left <= 0) return 'That is the year. Worth knowing where it landed.';
-        if (left === 1) return 'One month left in the year. This is the stretch that decides it.';
-        if (left <= 3) return `${left} months left in the year. This is the stretch that decides it.`;
+        const when = date instanceof Date ? date : new Date();
+        const left = monthsLeftInYear(when);
+        if (left <= 0) return 'December is the last stretch of the year, and every call in it still counts.';
+        const weeks = weeksLeftInYear(when);
+        if (weeks <= 16) return `About ${weeks} weeks left in the year. That is real time to move any of these, and I'm here to help.`;
         return `${left} months left in the year, so there is time to move this.`;
     }
 
@@ -208,6 +242,7 @@
         safePaceText,
         buildYearStandingText,
         monthsLeftInYear,
+        weeksLeftInYear,
         urgencyLine,
         gatherYearMovement
     };
