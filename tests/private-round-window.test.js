@@ -251,9 +251,9 @@ suite('private round: month to date opens on October against September', async (
     t.equal(`no generic "latest numbers" opener (${generic[0] || 'clean'})`, generic.length, 0);
 
     t.check('the gain shows both months\' numbers',
-        messages.every(m => m.indexOf('📈 Better than September: Schedule Adherence 93.0% \u2192 95.1%.') > -1));
+        messages.every(m => m.indexOf('Better than September: Schedule Adherence 93.0% \u2192 95.1%.') > -1));
     t.check('and so does the slide',
-        messages.every(m => m.indexOf('👀 Behind September: Average Handle Time 540s \u2192 564s.') > -1));
+        messages.every(m => m.indexOf('Behind September: Average Handle Time 540s \u2192 564s.') > -1));
     t.check('the jump the praise led with is not said twice',
         messages.every(m => !/Better than September:[^\n]*Hold Time/.test(m)));
 });

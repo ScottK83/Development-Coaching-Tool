@@ -311,13 +311,13 @@
         ongoing: [
             (now, prior) => `Here's where ${now} stands so far, next to ${prior}.`,
             (now, prior) => `Checking in on ${now} so far and how it compares to ${prior}.`,
-            (now, prior) => `📊 Here's ${now} so far, side by side with ${prior}.`,
+            (now, prior) => `Here's ${now} so far, side by side with ${prior}.`,
             (now, prior) => `Quick look at how ${now} is going so far against ${prior}.`,
         ],
         done: [
             (now, prior) => `Here's how ${now} finished, next to ${prior}.`,
             (now, prior) => `Looking back at ${now} and how it compares to ${prior}.`,
-            (now, prior) => `📊 Here's ${now}, side by side with ${prior}.`,
+            (now, prior) => `Here's ${now}, side by side with ${prior}.`,
             (now, prior) => `Quick look at how ${now} went against ${prior}.`,
         ],
         // Nothing to hold it against. The opener still names the stretch and
@@ -1265,9 +1265,9 @@
         const behind = moved.filter(d => d.delta < 0).sort(bySize).slice(0, 2);
 
         const lines = [];
-        if (better.length) lines.push(`📈 ${frame.better}: ${better.map(show).join(', ')}.`);
-        if (behind.length) lines.push(`👀 ${frame.behind}: ${behind.map(show).join(', ')}.`);
-        if (!lines.length && !moved.length) lines.push(`📊 ${frame.steady}`);
+        if (better.length) lines.push(`${frame.better}: ${better.map(show).join(', ')}.`);
+        if (behind.length) lines.push(`${frame.behind}: ${behind.map(show).join(', ')}.`);
+        if (!lines.length && !moved.length) lines.push(frame.steady);
         return lines.join('\n');
     }
 
