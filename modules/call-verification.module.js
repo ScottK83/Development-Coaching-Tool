@@ -822,8 +822,13 @@
 
     /**
      * One or two sentences for the QA row, plus the quote that proves it.
+     *
+     * options.confirmed is for a breach Scott has listened to and called
+     * valid. A name-only breach otherwise ends "check how the call came in",
+     * which is the question his answer has already settled, and in the
+     * documented note it read as though nobody had looked.
      */
-    function describe(read) {
+    function describe(read, options = {}) {
         if (read?.reason === 'unsegmented') {
             return {
                 tone: 'neutral',
@@ -847,6 +852,8 @@
                 sentences.push(`${capitalize(b.what)} was shared${atTime(b)}, and verification did not come until${b.lateCheck?.time ? ` ${b.lateCheck.time}` : ' later'}.`);
             } else if (b.types.includes('unverified')) {
                 sentences.push(`${capitalize(b.what)} was shared${atTime(b)} and nothing only the account holder would know was asked for before it.`);
+            } else if (b.types.includes('nameOnly') && options.confirmed) {
+                sentences.push(`${capitalize(b.what)} was shared${atTime(b)} with only the caller's name confirmed${atTime(b.nameCheck)}, and the call did not come in authorized, so ${STANDARD} was needed first.`);
             } else if (b.types.includes('nameOnly')) {
                 sentences.push(`${capitalize(b.what)} was shared${atTime(b)} with only the caller's name confirmed${atTime(b.nameCheck)}. That is enough if the call came in authorized. If it did not, ${STANDARD} was needed first, so check how the call came in.`);
             }

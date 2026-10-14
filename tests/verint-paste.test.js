@@ -243,7 +243,7 @@ suite('verint paste: wiring', (t) => {
     t.check('the default paste is only prevented after a successful read',
         /if \(converted\?\.text\) \{[\s\S]{0,200}event\.preventDefault\(\)/.test(script));
     t.check('and the associate name is passed in to help identify the advisor',
-        /handleTranscriptPaste[\s\S]{0,1400}advisorName/.test(script));
+        /handleTranscriptPaste[\s\S]{0,2200}advisorName/.test(script));
     t.check('it says what it did', /lines labelled from the colours/.test(script));
 
     // Pasting is the whole job: a paste over the whole box reads the call on

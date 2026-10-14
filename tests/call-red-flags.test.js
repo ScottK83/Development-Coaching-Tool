@@ -240,6 +240,6 @@ suite('call listening: the header picks the associate, and a new call starts fre
 
     // A new call pasted over an old one does not stack its drafts under the
     // last call's, and typed notes are never cleared without asking.
-    t.check('a new call over an old one starts fresh feedback', /if \(hadCall\) startFreshCallFeedback\(\)/.test(script));
-    t.check('asking first when something was typed', /typedIn && !confirm\(/.test(script));
+    t.check('a new call over an old one starts fresh feedback', /if \(hadCall \|\| followsAnotherCall\) startFreshCallFeedback\(\)/.test(script));
+    t.check('asking first when something was typed', /\(typedIn \|\| unsentEmail\) && !confirm\(/.test(script));
 });

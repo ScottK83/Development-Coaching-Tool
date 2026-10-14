@@ -68,7 +68,14 @@
     const SPEAKER_LINE = /^\s*(?:[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\s*[APap]\.?[Mm]\.?)?[\])]?\s*)?([A-Za-z][A-Za-z0-9 .'\-]{0,34}?)\s*[:\-]\s+(.+)$/;
 
     // A Verint body line is just "04:30" on its own, with the speech beneath.
-    const TIMESTAMP_ONLY_LINE = /^\s*(\d{1,3}):([0-5]\d)\s*$/;
+    // Past the hour it can carry the hour as well, "1:02:03". Without it, a
+    // long call read as one block, verification could not be read, and the
+    // strip said there were no red flags.
+    const TIMESTAMP_ONLY_LINE = /^\s*(?:(\d{1,2}):)?(\d{1,3}):([0-5]\d)\s*$/;
+
+    function stampSeconds(stamp) {
+        return (Number(stamp[1] || 0) * 3600) + (Number(stamp[2]) * 60) + Number(stamp[3]);
+    }
 
     const GREETING_HINT = /thank(?:s| you) for calling|my name is|this is \w+ speaking|how (?:can|may) i help/i;
 
@@ -198,8 +205,8 @@
     /* ── Verint export metadata ── */
 
     const DATE_TIME = /Date\s*\/\s*Time:\s*[\r\n\s]*(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*[AaPp]\.?[Mm]\.?)/;
-    const DURATION = /(\d{1,3}:[0-5]\d)\s*[\r\n\s]*\/\s*[\r\n\s]*(\d{1,3}:[0-5]\d)/;
-    const CATEGORY_BLOCK = /Categories:\s*([\s\S]*?)(?:No visual indicators|^\s*\d{1,3}:[0-5]\d\s*$)/m;
+    const DURATION = /((?:\d{1,2}:)?\d{1,3}:[0-5]\d)\s*[\r\n\s]*\/\s*[\r\n\s]*((?:\d{1,2}:)?\d{1,3}:[0-5]\d)/;
+    const CATEGORY_BLOCK = /Categories:\s*([\s\S]*?)(?:No visual indicators|^\s*(?:\d{1,2}:)?\d{1,3}:[0-5]\d\s*$)/m;
     const BODY_START_MARKERS = [/No visual indicators[^\r\n]*/];
     const BODY_END_MARKERS = [
         /^Did advisor /m,
@@ -241,8 +248,8 @@
 
     function clockToSeconds(clock) {
         const parts = String(clock || '').split(':').map(Number);
-        if (parts.length !== 2 || parts.some(Number.isNaN)) return null;
-        return (parts[0] * 60) + parts[1];
+        if (parts.length < 2 || parts.length > 3 || parts.some(Number.isNaN)) return null;
+        return parts.reduce((total, part) => (total * 60) + part, 0);
     }
 
     /**
@@ -274,7 +281,7 @@
             .filter(Boolean);
 
         parts.forEach(part => {
-            const length = part.match(/^length\s+(\d{1,3}:[0-5]\d)$/i);
+            const length = part.match(/^length\s+((?:\d{1,2}:)?\d{1,3}:[0-5]\d)$/i);
             if (length) {
                 meta.durationLabel = length[1];
                 meta.durationSeconds = clockToSeconds(length[1]);
@@ -440,7 +447,7 @@
         lines.forEach(line => {
             const stamp = line.match(TIMESTAMP_ONLY_LINE);
             if (stamp) {
-                current = { label: '', text: '', at: (Number(stamp[1]) * 60) + Number(stamp[2]) };
+                current = { label: '', text: '', at: stampSeconds(stamp) };
                 turns.push(current);
                 return;
             }
@@ -1016,6 +1023,11 @@
 
     const SPOKEN_DIGITS = '(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|niner)';
 
+    // Every word a house number can be said in: "seventeen five hundred",
+    // "twenty four ten", "nine oh one".
+    const SPOKEN_NUMBER = '(?:\\d+|zero|oh|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)';
+    const STREET_WORD = '(?:street|avenue|road|drive|lane|way|boulevard|court|place|circle|trail|parkway|terrace|loop|highway)';
+
     function maskIdentifiers(text) {
         return String(text || '')
             // Digits as digits: socials, accounts, cards, phone numbers.
@@ -1024,6 +1036,15 @@
             // reading them out. Four or more in a row is somebody reciting
             // something, not somebody counting.
             .replace(new RegExp('(?:\\b' + SPOKEN_DIGITS + '\\b[ ,.-]*){4,}', 'gi'), '[number] ')
+            // Three in a row is too: an account number read out in groups,
+            // "eight five six", then "eight seven eight", slipped through
+            // the four-word rule a group at a time (smoke test, 2026-10-14).
+            // Not after "point", which is a rate being read: "fourteen point
+            // zero five two cents" is what the plan costs, not who they are.
+            .replace(new RegExp('(?<!\\b(?:point|' + SPOKEN_DIGITS.slice(3, -1) + ')[ ,.-]*)(?:\\b' + SPOKEN_DIGITS + '\\b[ ,.-]*){3}(?![ ,.-]*\\b' + SPOKEN_DIGITS + '\\b)', 'gi'), '[number] ')
+            // A house number said in words, in front of the direction or the
+            // street: "seventeen five hundred north sixty seventh avenue".
+            .replace(new RegExp('(?:\\b' + SPOKEN_NUMBER + '\\b[ -]+){2,}(?=(?:north|south|east|west)\\b|[a-z]+ ' + STREET_WORD + '\\b)', 'gi'), '[number] ')
             // An email carries a name and a domain. Written form first, then
             // the form these transcripts actually hold, which is somebody
             // reading it out: "sheryl dot ross at gmail dot com".

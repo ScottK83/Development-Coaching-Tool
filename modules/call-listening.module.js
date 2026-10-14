@@ -23,6 +23,46 @@
             .trim();
     }
 
+    /*
+     * Copilot's text, made plain for where it is pasted on to.
+     *
+     * Copilot is asked for plain text with no em dashes and does not always
+     * listen. On the 10/14 smoke test its summary carried **bold** headings
+     * and an em dash straight into the Verint note, which is plain text and
+     * goes out under Scott's name. So the markup comes off, a dash in a
+     * sentence becomes a comma, a range keeps a hyphen, and the emojis are
+     * held to two like every other message.
+     *
+     * The dashes are built from their codes because the characters themselves
+     * are banned from source by tests/no-em-dash.test.js.
+     */
+    const DASHES = [0x2014, 0x2013, 0x2015].map((code) => String.fromCharCode(code)).join('');
+    const EN_DASH = String.fromCharCode(0x2013);
+    const LINE_OPENING_DASH = new RegExp(`^(\\s*)[${DASHES}]\\s*`);
+    const NUMBER_RANGE_DASH = new RegExp(`(\\d)\\s*${EN_DASH}\\s*(\\d)`, 'g');
+    const SENTENCE_DASH = new RegExp(`\\s*[${DASHES}]\\s*`, 'g');
+
+    function tidyPastedText(text) {
+        const tidied = String(text || '')
+            .replace(/\r\n?/g, '\n')
+            .split('\n')
+            .map((line) => line
+                .replace(/^(\s*)#{1,6}\s+/, '$1')
+                .replace(/^(\s*)[*•]\s+/, '$1- ')
+                .replace(LINE_OPENING_DASH, '$1- ')
+                .replace(/\*\*(.+?)\*\*/g, '$1')
+                .replace(/__(.+?)__/g, '$1')
+                .replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=$|[\s).,!?:;])/g, '$1$2')
+                .replace(NUMBER_RANGE_DASH, '$1-$2')
+                .replace(SENTENCE_DASH, ', ')
+                .replace(/,\s*([,.!?;:])/g, '$1')
+                .replace(/[ \t]+$/, ''))
+            .join('\n')
+            .trim();
+        const limit = window.DevCoachModules?.messageVoice?.limitEmojis;
+        return typeof limit === 'function' ? limit(tidied, 2) : tidied;
+    }
+
     function buildTranscriptSection(entry) {
         const prepare = window.DevCoachModules?.callTranscript?.prepareForPrompt
             || ((value) => String(value || '').trim());
@@ -241,6 +281,9 @@ Requirements:
                 key: 'verification',
                 headline: said.headline,
                 detail: said.detail,
+                // How it is written once Scott has listened and called it
+                // valid, which is the only time it is documented.
+                confirmedDetail: verifier.describe(read, { confirmed: true }).detail,
                 time: read.breach?.time || '',
                 timeline: (verifier.buildTimeline?.(read) || [])
                     .map(row => ({ time: row.time || '', text: row.text || '', quote: row.quote || '' })),
@@ -262,11 +305,14 @@ Requirements:
         return items.length ? { items, labeled: Boolean(analysis.stats?.labeled) } : null;
     }
 
+    // Only ever called for a red flag Scott has confirmed, so the confirmed
+    // wording is used where there is one.
     function redFlagLines(record) {
         const lines = [];
         (record?.items || []).forEach((item) => {
             lines.push(`${item.headline}${item.time ? ` (at ${item.time})` : ''}.`);
-            if (item.detail) lines.push(item.detail);
+            const detail = item.confirmedDetail || item.detail;
+            if (detail) lines.push(detail);
             item.timeline.forEach(row => {
                 lines.push(`- ${row.time ? `${row.time} ` : ''}${row.text}${row.quote ? ` ("${row.quote}")` : ''}`);
             });
@@ -820,7 +866,9 @@ Requirements:
     function generateOutlookDraft(options = {}) {
         const employeeName = String(options.employeeName || '').trim();
         const callDate = String(options.callDate || '').trim();
-        const bodyText = String(options.bodyText || '').trim();
+        // Usually Copilot's email pasted in, so its bold markers and dashes
+        // are taken out on the way to Outlook.
+        const bodyText = tidyPastedText(options.bodyText);
         const showToast = typeof options.showToast === 'function' ? options.showToast : () => {};
 
         if (!bodyText) {
@@ -839,7 +887,9 @@ Requirements:
             openDraft(subject, bodyText, { to });
             // An address typed over the resolved one is remembered for that
             // associate, so a pattern that is wrong for somebody is wrong once.
-            if (to && employeeName) {
+            // Only when the caller says it was typed: remembering every send
+            // saved a stale autofill, another associate's address, for good.
+            if (to && employeeName && options.remember === true) {
                 window.DevCoachModules?.sharedUtils?.setAssociateEmailOverride?.(employeeName, to);
             }
             showToast(to ? `📧 Outlook draft opened for ${to}` : '📧 Outlook draft opened', 2500);
@@ -910,6 +960,7 @@ Requirements:
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.callListening = {
         describeCallMoment,
+        tidyPastedText,
         buildPrompt,
         buildCoachingSummaryPrompt,
         buildEmailFromSummaryPrompt,

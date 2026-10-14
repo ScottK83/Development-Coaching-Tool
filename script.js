@@ -7782,26 +7782,29 @@ function buildCallListeningVerintSummary(entry) {
     // and agreed with. It already says what the call was, carries the good
     // and the bad, and was asked to include the Oscar steps, so it goes in
     // whole in place of the recap, the notes and the steps.
+    // Verint is plain text. Copilot's bold markers and em dashes, and any
+    // dash typed into the notes, come off on the way in.
+    const tidy = window.DevCoachModules?.callListening?.tidyPastedText || ((value) => value);
     const copilotSummary = String(entry.copilotSummary || '').trim();
     if (copilotSummary) {
-        return [
+        return tidy([
             ...header,
             '',
             correct(copilotSummary)
-        ].join('\n');
+        ].join('\n'));
     }
 
     const recap = window.DevCoachModules?.callSummary?.buildSummaryText?.(
         buildCallSummary(entry.transcript, entry.employeeName, null, entry),
         { voice: 'supervisor' }
     ) || '';
-    return [
+    return tidy([
         ...header,
         ...(recap ? ['', 'Call summary:', recap] : []),
         ...section('What went well:', entry.whatWentWell),
         ...section('What to work on:', entry.improvementAreas),
         ...section('Oscar steps:', entry.relevantInfo)
-    ].join('\n');
+    ].join('\n'));
 }
 
 function copyCallListeningVerintSummary(entryId = null) {
@@ -7834,6 +7837,9 @@ function loadCallListeningEntryIntoForm(entryId) {
 
     const entry = findCallListeningEntryById(employeeName, entryId);
     if (!entry) return;
+    callOnFormSinceLoad = true;
+    // It is in the history already, so the next call can clear it unasked.
+    lastKeptCallDraft = entry;
 
     const setValue = (id, value) => {
         const el = document.getElementById(id);
@@ -7919,7 +7925,7 @@ function mergeCallListeningDraftText(textareaId, draftText) {
 
 // A Verint export already carries the call date and who took it, so the
 // supervisor should not have to retype either.
-function applyCallListeningTranscriptMetadata(meta) {
+function applyCallListeningTranscriptMetadata(meta, options = {}) {
     const applied = [];
     if (!meta) return applied;
 
@@ -7945,9 +7951,13 @@ function applyCallListeningTranscriptMetadata(meta) {
     // fill only an empty dropdown, which meant pasting a second associate's
     // call quietly filed it under the first one. Changed through a real change
     // event so the recipient, the history and the saved calls all follow.
+    //
+    // Except straight after somebody picked an associate by hand. That pick
+    // re-reads the call, and the header used to put the dropdown straight
+    // back, so nobody could choose anyone else with a Verint call on screen.
     const employeeSelect = document.getElementById('callListeningEmployeeSelect');
     const matchOption = window.DevCoachModules?.callTranscript?.matchAssociateOption;
-    if (meta.advisorDisplayName && employeeSelect && typeof matchOption === 'function') {
+    if (!options.keepAssociate && meta.advisorDisplayName && employeeSelect && typeof matchOption === 'function') {
         const options = Array.from(employeeSelect.options).map(option => option.value).filter(Boolean);
         const match = matchOption(options, meta.advisorDisplayName);
         if (match && employeeSelect.value !== match) {
@@ -8742,9 +8752,15 @@ function handleTranscriptPaste(event) {
     const replacesAll = !hadCall
         || (field.selectionStart === 0 && field.selectionEnd === field.value.length)
         || looksLikeWholeCall(plain);
+    // Emptying the box before pasting is the same as pasting over it. The box
+    // being empty used to mean "first call", so Ctrl+A, Delete, Ctrl+V kept
+    // the last call's summary and email and stacked the new drafts under its
+    // notes, and Copy For Verint would have filed them under the new name.
+    const followsAnotherCall = !hadCall && callOnFormSinceLoad
+        && (looksLikeWholeCall(plain) || Boolean(html)) && callFormHoldsWork();
     if (replacesAll) {
         resetCallListeningReadPanels();
-        if (hadCall) startFreshCallFeedback();
+        if (hadCall || followsAnotherCall) startFreshCallFeedback();
     }
 
     // Kept whether or not it converts, because the one that does not convert
@@ -8789,7 +8805,7 @@ function handleTranscriptPaste(event) {
 function looksLikeWholeCall(text) {
     const value = String(text || '');
     if (/Date\s*\/\s*Time:/i.test(value)) return true;
-    const stamps = (value.match(/^\s*\d{1,3}:[0-5]\d\s*$/gm) || []).length;
+    const stamps = (value.match(/^\s*(?:\d{1,2}:)?\d{1,3}:[0-5]\d\s*$/gm) || []).length;
     const speakers = (value.match(/^\s*(?:agent|advisor|customer|caller)\s*:/gim) || []).length;
     return stamps >= 3 || speakers >= 3;
 }
@@ -8811,17 +8827,32 @@ function rememberCallDrafts() {
     });
 }
 
-// The boxes that belong to one call, and the saved field each one is.
+// The boxes that belong to one call, and the saved field each one is. The
+// Oscar steps, the manager notes, the reference and the Oscar link are one
+// call's too: left behind, the last call's steps went into the next call's
+// Copilot prompts.
 const CALL_NOTE_FIELDS = {
     callListeningStrengths: 'whatWentWell',
     callListeningImprovements: 'improvementAreas',
-    callListeningCopilotSummary: 'copilotSummary'
+    callListeningCopilotSummary: 'copilotSummary',
+    callListeningRelevantInfo: 'relevantInfo',
+    callListeningManagerNotes: 'managerNotes',
+    callListeningReference: 'callReference',
+    callListeningOscarUrl: 'oscarUrl'
 };
 
 // What the last save kept, so a new call can clear boxes that are safely in
 // the history without asking. Copilot's pasted summary is never a draft, so
 // without this every new call after using it would stop to ask.
 let lastKeptCallDraft = null;
+
+// The email box is not saved with the call. What was last opened in Outlook
+// from it is done with, so a new call clears that without asking.
+let lastSentCallEmail = '';
+
+// Whether a call has been read or loaded on the form since the page opened,
+// so notes typed before the first paste are never taken for a last call's.
+let callOnFormSinceLoad = false;
 
 function startFreshCallFeedback() {
     const fields = Object.keys(CALL_NOTE_FIELDS)
@@ -8835,14 +8866,34 @@ function startFreshCallFeedback() {
             && value !== (lastCallDrafts[id] || '')
             && value !== String(lastKeptCallDraft?.[key] || '').trim();
     });
+    const email = (document.getElementById('callListeningOutlookBody')?.value || '').trim();
+    const unsentEmail = Boolean(email) && email !== lastSentCallEmail;
 
-    if (typedIn && !confirm('New call pasted. Clear the notes and summary from the last call?\n\nCancel keeps them, and this call\'s drafts are added underneath.')) {
+    if ((typedIn || unsentEmail) && !confirm('New call pasted. Clear the notes, summary and email from the last call?\n\nCancel keeps them, and this call\'s drafts are added underneath.')) {
         return;
     }
     fields.forEach(({ id, field }) => {
         field.value = '';
         if (id in lastCallDrafts) lastCallDrafts[id] = '';
     });
+    clearCallEmailBox();
+}
+
+// Empties the email box and greys its button again.
+function clearCallEmailBox() {
+    const body = document.getElementById('callListeningOutlookBody');
+    if (!body) return;
+    body.value = '';
+    const button = document.getElementById('generateCallListeningOutlookBtn');
+    if (button) updateCallListeningOutlookButtonState(body, button);
+}
+
+// Whether any box holds work from a call. Used when a whole call lands in an
+// empty transcript box: emptying the box first, the habit before pasting
+// anything, used to keep the last call's summary and email under the new one.
+function callFormHoldsWork() {
+    return Object.keys(CALL_NOTE_FIELDS).concat('callListeningOutlookBody')
+        .some(id => (document.getElementById(id)?.value || '').trim());
 }
 
 // A read in progress changes the associate itself, from the Verint header,
@@ -8859,7 +8910,9 @@ function rereadCallForSelectedAssociate() {
     const transcript = (document.getElementById('callListeningTranscript')?.value || '').trim();
     const summary = document.getElementById('callTranscriptAnalysisSummary');
     if (!transcript || !summary || summary.style.display === 'none') return;
-    analyzeCallListeningTranscript({ auto: true, quiet: true });
+    // The pick is the answer to "whose call is this", so the header does not
+    // get to change it back.
+    analyzeCallListeningTranscript({ auto: true, quiet: true, keepAssociate: true });
 }
 
 /**
@@ -9026,7 +9079,7 @@ function analyzeCallListeningTranscript(options) {
         // The header is applied before the read, not after, so the associate
         // it names is the one the feedback is ordered for on the first pass.
         const meta = analyzer.extractMetadata?.(transcript);
-        const applied = applyCallListeningTranscriptMetadata(meta);
+        const applied = applyCallListeningTranscriptMetadata(meta, { keepAssociate: options?.keepAssociate === true });
 
         const associateName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
         const analysis = analyzer.analyzeTranscript(transcript, { associateName });
@@ -9034,6 +9087,7 @@ function analyzeCallListeningTranscript(options) {
             showToast('⚠️ Nothing readable in that transcript.', 3000);
             return;
         }
+        callOnFormSinceLoad = true;
 
         const forName = associateName || analysis.meta?.advisorDisplayName;
 
@@ -9191,6 +9245,12 @@ function renderCallFlagStrip(analysis) {
         .map(item => `- ${item.text}`);
 
     const items = [];
+    // A call verification could not be read on is not a clean call. It used
+    // to get the green "No red flags" line, with the reason it could not be
+    // checked folded away under More.
+    if (analysis.verification && !analysis.verification.ok) {
+        items.push({ level: 'warn', icon: '🎧', text: 'Verification could not be read from this paste, so listen for it', time: '' });
+    }
     (analysis.redFlags?.flags || []).filter(flag => flag.level !== 'red').forEach(flag => {
         items.push({ level: flag.level, text: flag.title, time: flag.time || '' });
     });
@@ -9310,7 +9370,7 @@ function writeCallEmailInCopilot() {
     }
 
     const saved = keepCallOnTheWayOut();
-    const to = (document.getElementById('callListeningRecipient')?.value || '').trim();
+    const to = currentCallRecipient();
     const source = entry.copilotSummary ? '' : ' No summary pasted, so it works from your notes.';
     const result = listening.copyPromptAndOpenCopilot?.({
         prompt,
@@ -9462,22 +9522,48 @@ function writeCallFeedbackEmail() {
     showToast(`✍️ Email written. ${note} Read it over before you send.`.trim(), 5000);
 }
 
+/**
+ * The To: address for the associate on the form.
+ *
+ * Refilled first when it was filled for somebody else. The field follows the
+ * dropdown through its change event, and when that event never arrived the
+ * field kept the last associate's address: Christi's call went out addressed
+ * to Alyssa (smoke test, 2026-10-14).
+ */
+function currentCallRecipient() {
+    const input = document.getElementById('callListeningRecipient');
+    if (!input) return '';
+    const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
+    if (employeeName && input.dataset.autofilledFor !== employeeName) refreshCallListeningRecipient();
+    return input.value.trim();
+}
+
 function generateCallListeningOutlookEmail() {
     const employeeName = (document.getElementById('callListeningEmployeeSelect')?.value || '').trim();
     const callDate = (document.getElementById('callListeningDate')?.value || '').trim();
     const bodyText = (document.getElementById('callListeningOutlookBody')?.value || '').trim();
-    const to = (document.getElementById('callListeningRecipient')?.value || '').trim();
+    const to = currentCallRecipient();
+    // Remembered only when it is a correction: something other than the
+    // address the app would have filled in. Remembering every send saved a
+    // stale autofill as the associate's address for good.
+    const resolved = window.DevCoachModules?.sharedUtils?.resolveAssociateEmail?.(employeeName) || '';
+    const remember = Boolean(to) && to.toLowerCase() !== resolved.toLowerCase();
 
     const delegatedResult = window.DevCoachModules?.callListening?.generateOutlookDraft?.({
         employeeName,
         callDate,
         bodyText,
+        remember,
         to,
         getEmployeeNickname,
         showToast,
         onError: (error) => console.error('Error opening Outlook draft from call listening:', error)
     });
-    if (delegatedResult?.ok || delegatedResult?.reason === 'missing-body') {
+    if (delegatedResult?.ok) {
+        lastSentCallEmail = bodyText;
+        return;
+    }
+    if (delegatedResult?.reason === 'missing-body') {
         return;
     }
     showToast('⚠️ Call Listening module is unavailable. Refresh and try again.', 3500);
@@ -9898,17 +9984,21 @@ function loadSavedCallIntoForm(employeeName, entryId) {
 
     const select = document.getElementById('callListeningEmployeeSelect');
     const transcriptField = document.getElementById('callListeningTranscript');
-    const hasWork = String(transcriptField?.value || '').trim()
-        || String(document.getElementById('callListeningStrengths')?.value || '').trim()
-        || String(document.getElementById('callListeningImprovements')?.value || '').trim();
+    const hasWork = String(transcriptField?.value || '').trim() || callFormHoldsWork();
 
     if (hasWork && !confirm('Load this call into the form? What is in the form now will be replaced.')) return false;
 
     if (select && select.value !== employeeName) {
         select.value = employeeName;
         renderCallListeningHistoryForSelectedEmployee();
-        refreshCallListeningRecipient();
     }
+    // Always, not only when the dropdown moved: a pick from the dropdown
+    // first leaves it already matching, and the To: field could still be
+    // holding the last associate's address.
+    refreshCallListeningRecipient();
+    // The email box is not saved with a call, so loading one would otherwise
+    // leave the last call's email sitting under this one.
+    clearCallEmailBox();
 
     loadCallListeningEntryIntoForm(entryId);
     document.getElementById('callListeningTranscript')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -10250,8 +10340,24 @@ function initializeMidYearTab() {
     return window.DevCoachModules?.onOffTracker?.initializeMidYearTab?.();
 }
 
+// Once per element, event and handler. It used to be once per element, so
+// the second, third and fourth change handlers on the call listening
+// associate dropdown were never attached: picking an associate redrew the
+// history but left the To: field on the last person, and a call's email went
+// to the wrong associate. Inline arrow handlers are new objects on every
+// call, so a handler is known by its name, or by its source when it has none.
+const boundElementHandlers = new WeakMap();
+
 function bindElementOnce(element, eventName, handler) {
-    if (!element || element.dataset.bound) return;
+    if (!element || typeof handler !== 'function') return;
+    const key = `${eventName}|${handler.name || String(handler)}`;
+    let bound = boundElementHandlers.get(element);
+    if (!bound) {
+        bound = new Set();
+        boundElementHandlers.set(element, bound);
+    }
+    if (bound.has(key)) return;
+    bound.add(key);
     element.addEventListener(eventName, handler);
     element.dataset.bound = 'true';
 }

@@ -235,7 +235,8 @@
         return runs;
     }
 
-    const TIMESTAMP = /^\s*(\d{1,3}):([0-5]\d)\s*$/;
+    // The hour comes first past an hour into the call: "1:02:03".
+    const TIMESTAMP = /^\s*(?:\d{1,2}:)?\d{1,3}:[0-5]\d\s*$/;
     const AGENT_GREETING = /thank(?:s| you)?(?: you)? (?:so much )?for (?:being|calling|choosing)|my name is|this is \w+ speaking|how m(?:ay|ight) i help|how can i help/i;
 
     /**
