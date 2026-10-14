@@ -199,24 +199,41 @@ Box 2 - Future Improvement Areas:
         return extractSection(box2Index, lines.length);
     }
 
+    /* The opening of the speech, the part that is the same for everybody.
+     *
+     * It used to be fixed text, and the year it described is not every year:
+     * "not as successful as years past. JD Power changed the way they do
+     * their awards" was read to every associate, the best on the team
+     * included. Scott, 2026-10-14: "let's edit year end." It is now his to
+     * write once per review year, and {name} and {year} fill in per person.
+     * This default is the old text, so nothing changes until he edits it.
+     */
+    var DEFAULT_OPENING = '{name}, as we close out {year}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.\n\n'
+        + 'For this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.';
+
+    function fillOpening(template, preferredName, reviewYear) {
+        var text = String(template == null ? '' : template).trim() || DEFAULT_OPENING;
+        return text
+            .replace(/\{name\}/gi, preferredName)
+            .replace(/\{year\}/gi, reviewYear);
+    }
+
     /* The speech read aloud at the year-end meeting.
      *
      * A blank field leaves its line out. This used to print "Your overall
      * performance rating is: Not provided." into a script Scott reads to the
      * associate (Scott, 2026-10-14). The caller refuses to build at all
      * without a rating, so the only lines that can go are merit and bonus,
-     * which some years and some people simply do not have. The opening is
-     * Scott's own words and is not changed here.
+     * which some years and some people simply do not have. `opening` is the
+     * year's saved opening; left out or blank, the default above is used.
      */
-    function buildVerbalSummary(preferredName, reviewYear, performanceRating, meritDetails, bonusAmount) {
+    function buildVerbalSummary(preferredName, reviewYear, performanceRating, meritDetails, bonusAmount, opening) {
         var filled = function (v) { return String(v == null ? '' : v).trim(); };
         var details = [];
         if (filled(performanceRating)) details.push(`Your overall performance rating is: ${filled(performanceRating)}.`);
         if (filled(meritDetails)) details.push(`Your merit increase details are: ${filled(meritDetails)}.`);
         if (filled(bonusAmount)) details.push(`Your incentive/bonus amount is: ${filled(bonusAmount)}.`);
-        return `${preferredName}, as we close out ${reviewYear}, we had a successful year, not as successful as years past. JD Power changed the way they do their awards, and it bumped us down, but we clawed up a bit.
-
-For this review, we looked at how you stacked up with your peers, and your overall metrics were a big part of the final decision.` + (details.length ? '\n\n' + details.join('\n') : '');
+        return fillOpening(opening, preferredName, reviewYear) + (details.length ? '\n\n' + details.join('\n') : '');
     }
 
     window.DevCoachModules = window.DevCoachModules || {};
@@ -228,6 +245,8 @@ For this review, we looked at how you stacked up with your peers, and your overa
         metricLine,
         buildCopilotPrompt,
         extractBoxText,
+        DEFAULT_OPENING,
+        fillOpening,
         buildVerbalSummary
     };
 })();

@@ -26,6 +26,54 @@
     let yearEndDraftContext = null;
 
     /* ──────────────────────────────────────────────
+     *  The verbal summary's opening, one per review year
+     *
+     *  The part of the speech that is the same for everybody. It was fixed
+     *  text about one particular year; Scott writes it now (2026-10-14), once
+     *  per review year, and it syncs with his other hand-typed stores. A year
+     *  with nothing saved reads the default in the year-end module.
+     * ────────────────────────────────────────────── */
+    const OPENING_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'yearEndOpening';
+
+    function _defaultOpening() {
+        return window.DevCoachModules?.yearEnd?.DEFAULT_OPENING || '';
+    }
+
+    function _readOpenings() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(OPENING_STORAGE_KEY) || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function loadYearEndOpening(reviewYear) {
+        const saved = _readOpenings()[String(reviewYear || '')];
+        return String(saved?.text || '').trim() || _defaultOpening();
+    }
+
+    // Saving the default, or nothing, forgets the year rather than pinning a
+    // copy of the default, so a later change to the default still reaches it.
+    function saveYearEndOpening(reviewYear, text) {
+        const year = String(reviewYear || '').trim();
+        if (!year) return;
+        const clean = String(text || '').trim();
+        const all = _readOpenings();
+        if (!clean || clean === _defaultOpening().trim()) delete all[year];
+        else all[year] = { text: clean, updatedAt: new Date().toISOString() };
+        try {
+            localStorage.setItem(OPENING_STORAGE_KEY, JSON.stringify(all));
+        } catch (e) { /* storage full or blocked; the speech still builds from the box */ }
+    }
+
+    function refreshYearEndOpeningInput() {
+        const input = document.getElementById('yearEndOpeningInput');
+        const year = document.getElementById('yearEndReviewYear')?.value;
+        if (input) input.value = loadYearEndOpening(year);
+    }
+
+    /* ──────────────────────────────────────────────
      *  Utility: one-time event binding
      * ────────────────────────────────────────────── */
     function bindElementOnce(element, eventName, handler) {
@@ -60,7 +108,9 @@
             copyBox1Btn: document.getElementById('copyYearEndBox1Btn'),
             copyBox2Btn: document.getElementById('copyYearEndBox2Btn'),
             generateVerbalSummaryBtn: document.getElementById('generateYearEndVerbalSummaryBtn'),
-            copyVerbalSummaryBtn: document.getElementById('copyYearEndVerbalSummaryBtn')
+            copyVerbalSummaryBtn: document.getElementById('copyYearEndVerbalSummaryBtn'),
+            openingInput: document.getElementById('yearEndOpeningInput'),
+            openingResetBtn: document.getElementById('yearEndOpeningResetBtn')
         };
     }
 
@@ -154,6 +204,14 @@
         bindElementOnce(elements.copyBox2Btn, 'click', () => copyYearEndBoxResponseToClipboard(2));
         bindElementOnce(elements.generateVerbalSummaryBtn, 'click', generateYearEndVerbalSummary);
         bindElementOnce(elements.copyVerbalSummaryBtn, 'click', copyYearEndVerbalSummary);
+        bindElementOnce(elements.openingInput, 'input', () => {
+            saveYearEndOpening(elements.reviewYearInput.value, elements.openingInput.value);
+        });
+        bindElementOnce(elements.openingResetBtn, 'click', () => {
+            saveYearEndOpening(elements.reviewYearInput.value, '');
+            refreshYearEndOpeningInput();
+            _showToast('Opening set back to the default for ' + (elements.reviewYearInput.value || 'this year') + '.', 3000);
+        });
         bindElementOnce(elements.calculateOnOffBtn, 'click', () => {
             const selectedEmployee = elements.employeeSelect.value;
             const selectedYear = elements.reviewYearInput.value;
@@ -206,6 +264,7 @@
 
         bindYearEndPrimaryActionHandlers(elements);
         bindYearEndDraftPersistenceHandlers(elements);
+        refreshYearEndOpeningInput();
         _renderYearEndAnnualGoalsInputs(elements.employeeSelect.value, elements.reviewYearInput.value);
     }
 
@@ -336,6 +395,8 @@
     function updateYearEndSnapshotDisplay() {
         const employeeName = document.getElementById('yearEndEmployeeSelect')?.value;
         const reviewYear = document.getElementById('yearEndReviewYear')?.value;
+        // The opening belongs to the year, so a new year shows its own.
+        refreshYearEndOpeningInput();
         const {
             status,
             snapshotPanel,
@@ -696,12 +757,15 @@
         ].filter(Boolean);
 
         const preferredName = _getEmployeeNickname(employeeName) || employeeName.split(' ')[0] || employeeName;
+        const openingInput = document.getElementById('yearEndOpeningInput');
+        const opening = openingInput ? openingInput.value : loadYearEndOpening(reviewYear);
         const summary = window.DevCoachModules?.yearEnd?.buildVerbalSummary?.(
             preferredName,
             reviewYear,
             performanceRating,
             meritDetails,
-            bonusAmount
+            bonusAmount,
+            opening
         ) || '';
 
         if (!summary) {
@@ -731,6 +795,9 @@
      * ────────────────────────────────────────────── */
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.yearEndComments = {
+        loadYearEndOpening,
+        saveYearEndOpening,
+        refreshYearEndOpeningInput,
         bindElementOnce,
         getYearEndCommentsElements,
         hasRequiredYearEndCommentsElements,

@@ -403,6 +403,14 @@
                         <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid #5e35b1;">
                             <h3 style="color: #4527a0; margin-top: 0;">🗣️ Verbal Review Summary</h3>
                             <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 0.9em;">Fill in the three boxes, then generate a ready-to-read verbal summary.</p>
+                            <div style="margin-bottom: 12px;">
+                                <label for="yearEndOpeningInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">Opening, read to everyone this review year:</label>
+                                <textarea id="yearEndOpeningInput" placeholder="{name}, as we close out {year}, ..." style="width: 100%; min-height: 90px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; resize: vertical;"></textarea>
+                                <div class="flex-row" style="margin-top: 6px; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-tertiary); font-size: 0.82em;">{name} and {year} fill in for each associate. Saved for the review year above as you type.</span>
+                                    <button type="button" id="yearEndOpeningResetBtn" style="background: var(--bg-surface-raised); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 0.82em;">Reset to default</button>
+                                </div>
+                            </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
                                 <div>
                                     <label for="yearEndPerformanceRatingInput" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary);">Performance Rating (Successful/Unsuccessful):</label>

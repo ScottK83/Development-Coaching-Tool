@@ -221,7 +221,9 @@
         STORAGE_PREFIX + 'modifiedServerTips',
         STORAGE_PREFIX + 'deletedServerTips',
         // The private messages' team note. Hand-typed; nothing can rebuild it.
-        STORAGE_PREFIX + 'teamNote'
+        STORAGE_PREFIX + 'teamNote',
+        // The Year-End speech's opening, one per review year. Hand-typed too.
+        STORAGE_PREFIX + 'yearEndOpening'
         // dailyData is deliberately absent: dailies are ephemeral and would
         // churn the queue. It still rides along in verbatimStores, so it has a
         // backup without driving a push of its own.
