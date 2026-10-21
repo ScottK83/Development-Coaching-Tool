@@ -3311,18 +3311,16 @@
     const STANDINGS_MIN_FIELD = 5;
     const STANDINGS_MIN_TEAM = 3;
 
-    /* A Call Center placing is said only inside the top 15.
+    /* Every placing in the private block is said as a placing.
      *
-     * Scott, 2026-10-14: "I only want them to see if they're top 15. But it's
-     * not the worst to say, xxx people above, and xxx amount of people below
-     * you." Fifteen is the shout-out bar, so the placing a private message
-     * names is one that could also be celebrated. Past it the bullet says how
-     * many are ahead and how many behind instead, counted off the values
-     * themselves so a tie is neither. Last on the board has nobody behind, and
-     * "29 people ahead of you" is the placing by another name, so that line is
-     * left off and the number and its next step speak for themselves.
+     * Scott, 2026-10-14, asked for the Call Center placing only inside the
+     * top 15, with "34 people ahead of you and 3 behind you" past it. Reading
+     * the private round on 2026-10-21 he changed that: "I don't want to say
+     * ... fifty-two people ahead of you and 58 behind you. I wouldn't mind
+     * saying like 52nd in the call center, 7th on the team." So each bullet
+     * gives the Call Center placing and the team placing, wherever they fall.
+     * The field minimums below still decide whether a placing is said at all.
      */
-    const STANDINGS_PLACING_BAR = 15;
 
     // Never, whatever a caller or a later edit puts into PROJECTABLE_RANK_KEYS.
     const STANDINGS_NEVER = new Set(['reliability']);
@@ -3729,18 +3727,6 @@
                 ? !!isReverseMetric(registryKey)
                 : !!window.METRICS_REGISTRY?.[registryKey]?.isReverse;
 
-            // Who is ahead and who is behind, by value, for a placing past the
-            // bar. A tie with them is neither.
-            let ahead = 0;
-            let behind = 0;
-            measured.forEach(r => {
-                if (r === row || r.name === employeeName) return;
-                const v = valueOf(r);
-                if (v === current) return;
-                if (reverse ? v < current : v > current) ahead++;
-                else behind++;
-            });
-
             const teamMeasured = teamRows.filter(r => valueOf(r) !== null);
             const teamRank = teamMeasured.length >= STANDINGS_MIN_TEAM
                 ? rp.projectRank(teamRows, rankKey, employeeName, current)
@@ -3760,8 +3746,6 @@
                 label: window.METRICS_REGISTRY?.[registryKey]?.label || registryKey,
                 centerRank,
                 centerField: measured.length,
-                ahead,
-                behind,
                 teamRank: teamRank >= 1 ? teamRank : null,
                 teamField: teamMeasured.length,
                 milestone: standingsMilestone({
@@ -3814,19 +3798,10 @@
             // and the place they finished is the part they asked for.
             //
             // "Call Center" capitalised, the way every other placing in the
-            // app writes it. And a team placing in the bottom third of the
-            // team is left off (Scott, 2026-10-14): "10th on our team" out of
-            // ten tells somebody already struggling nothing they can use, and
-            // the center placing beside it is still there.
-            const teamWorthSaying = c.teamRank
-                && !(c.teamField >= STANDINGS_MIN_TEAM && c.teamRank > (c.teamField * 2) / 3);
-            const people = n => (n === 1 ? '1 person' : n + ' people');
-            const center = c.centerRank <= STANDINGS_PLACING_BAR
-                ? standingsOrdinal(c.centerRank) + ' in the Call Center'
-                : (c.behind > 0
-                    ? people(c.ahead) + ' ahead of you and ' + c.behind + ' behind you in the Call Center'
-                    : '');
-            const team = teamWorthSaying ? standingsOrdinal(c.teamRank) + ' on our team' : '';
+            // app writes it. Both placings, wherever they fall (Scott,
+            // 2026-10-21: "52nd in the call center, 7th on the team").
+            const center = standingsOrdinal(c.centerRank) + ' in the Call Center';
+            const team = c.teamRank ? standingsOrdinal(c.teamRank) + ' on our team' : '';
             const where = [center, team].filter(Boolean).join(', ');
             const bullet = '  • ' + c.label + ': ' + fmtVal(c.registryKey, c.current)
                 + (where ? '\n      ' + where.charAt(0).toUpperCase() + where.slice(1) + '.' : '');
@@ -5032,37 +5007,18 @@
     const TEAM_NOTE_STORAGE_KEY = (window.DevCoachConstants?.STORAGE_PREFIX || 'devCoachingTool_') + 'teamNote';
     const TEAM_NOTE_METRICS = ['scheduleAdherence', 'aht'];
 
-    /* The note that is on before one has ever been saved, so the round
-     * carries it from the first time it opens. It speaks for October to
-     * December 2026 and says so, so it is only offered in that stretch; past
-     * it, a stale "rest of the year" would go out to people in January.
-     * Saving anything, an empty note included, takes over from it for good.
+    /* No note goes out until one is written and saved.
+     *
+     * There was a built-in service level note here (93% at risk for 2026,
+     * bonus could be under half), on by default for October to December.
+     * Scott, 2026-10-21, reading the private round: "it looks like it's doom
+     * and gloom. So maybe just get rid of that whole thing." It is gone, and
+     * the editor stays for a note he chooses to write.
      */
-    const DEFAULT_TEAM_NOTE = {
-        from: '2026-10-01',
-        until: '2026-12-31',
-        who: 'missing',
-        text: "One more thing, and it matters. As a center we're at risk of missing our 93% service level goal for 2026. " +
-            "If we miss it, our bonus could be less than half of what we've seen in past years, or nothing at all. " +
-            "Service level comes down to being on the phones when customers call, and the two pieces you control most are your adherence and your handle time. " +
-            "When we're off schedule or calls run long, customers wait longer. " +
-            "We have the rest of October, November and December to get there. " +
-            "I know VPN and system issues are frustrating, but the whole center is dealing with the same ones, and we still have people sitting at 98% adherence for the year. " +
-            "This is our chance to make a big push and finish the year strong, and I need you with us on it."
-    };
-
-    function defaultTeamNote() {
-        const d = new Date();
-        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        return today >= DEFAULT_TEAM_NOTE.from && today <= DEFAULT_TEAM_NOTE.until
-            ? { text: DEFAULT_TEAM_NOTE.text, who: DEFAULT_TEAM_NOTE.who }
-            : { text: '', who: 'missing' };
-    }
-
     function loadTeamNote() {
         try {
             const raw = localStorage.getItem(TEAM_NOTE_STORAGE_KEY);
-            if (raw === null || raw === undefined) return defaultTeamNote();
+            if (raw === null || raw === undefined) return { text: '', who: 'missing' };
             const parsed = JSON.parse(raw);
             return {
                 text: String(parsed?.text || '').trim(),
@@ -5141,7 +5097,7 @@
         return newText ? beforeSignOff(text, newText) : text;
     }
 
-    const TEAM_NOTE_PLACEHOLDER = 'Example: As a center we are at risk of missing our 93% service level for the year. Adherence and handle time are the two pieces you control most...';
+    const TEAM_NOTE_PLACEHOLDER = 'Something for the whole team, added to each private message until you clear it.';
 
     function teamNoteEditorHtml(idPrefix) {
         const note = loadTeamNote();

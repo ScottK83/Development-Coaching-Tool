@@ -72,7 +72,7 @@ function load(t) {
     return { pulse, outreach };
 }
 
-suite('team note: outside October to December 2026 nothing is added until one is written', (t) => {
+suite('team note: nothing is added until one is written, in any month', (t) => {
     const { pulse } = load(t);
     t.pinClock('2026-08-18');
     t.equal('no note in August', pulse.loadTeamNote().text, '');
@@ -81,26 +81,24 @@ suite('team note: outside October to December 2026 nothing is added until one is
     t.equal('nor in January, when "the rest of the year" has run out', pulse.loadTeamNote().text, '');
 });
 
-suite('team note: the service level note is on by default for the rest of 2026', async (t) => {
+// Scott, 2026-10-21, reading the private round: "the center we're at a risk
+// of missing our 93% service level ... it looks like it's doom and gloom. So
+// maybe just get rid of that whole thing." The built-in service level note
+// is gone; a note goes out only when one is written and saved.
+suite('team note: the service level note is no longer on by default', async (t) => {
     const { pulse, outreach } = load(t);
-    t.pinClock('2026-10-20');
-    const note = pulse.loadTeamNote();
-    t.check('nothing saved, and the default is there', note.text.indexOf('93% service level') > -1);
-    t.equal('for whoever misses adherence or AHT', note.who, 'missing');
-    t.check('with no em dash in it', note.text.indexOf('—') === -1);
-    t.equal('Ana gets it', pulse.teamNoteFor('Ana Missing', THIS_WEEK), note.text);
-    t.equal('Ben does not', pulse.teamNoteFor('Ben Fine', THIS_WEEK), '');
+    t.pinClock('2026-10-21');
+    t.equal('nothing saved, nothing added', pulse.loadTeamNote().text, '');
+    t.equal('Ana, who misses AHT, gets nothing', pulse.teamNoteFor('Ana Missing', THIS_WEEK), '');
 
     const comparison = { unit: 'week', latestKey: THIS_WEEK, baselineKey: LAST_WEEK };
     const ana = await pulse.buildOutreachMessage(outreach, outreach.planById('monday'), 'Ana Missing', THIS_WEEK, LAST_WEEK, null, comparison);
-    // Just above the sign-off, which stays the last thing she reads (Scott,
-    // 2026-10-14). The note's words are unchanged.
-    t.check('and her message carries it, word for word, as its own paragraph',
-        Boolean(ana) && ana.indexOf('\n\n' + note.text + '\n\n') > -1);
-    t.check('above the sign-off', Boolean(ana) && !ana.endsWith(note.text));
+    t.check('and her message has no service level paragraph in it',
+        Boolean(ana) && !/service level|bonus could be/i.test(ana));
+    t.check('not even as the editor\'s example text', !/service level/i.test(pulse.teamNoteEditorHtml?.('x') || ''));
 
     t.pinClock('2026-12-31');
-    t.check('still on New Year\'s Eve', pulse.loadTeamNote().text === note.text);
+    t.equal('nor on New Year\'s Eve', pulse.loadTeamNote().text, '');
 });
 
 suite('team note: saving or clearing takes over from the default for good', (t) => {

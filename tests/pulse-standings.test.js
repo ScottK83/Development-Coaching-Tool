@@ -244,22 +244,22 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
     const block = load(t, { rows }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     const bullets = block.split('\n').filter(line => line.indexOf('  • ') === 0);
 
-    // Last of thirty is past the top 15 with nobody behind, so no placing
-    // and no ahead-and-behind count either (Scott, 2026-10-14).
+    // Every placing is said as a placing, in the Call Center and on the team,
+    // wherever it falls (Scott, 2026-10-21: "I wouldn't mind saying like 52nd
+    // in the call center, 7th on the team"). It replaced "52 people ahead of
+    // you and 58 behind you", which he did not want.
     t.check('rep satisfaction keeps its slot',
         block.indexOf('  • Rep Satisfaction: 70%') > -1);
-    t.check('with no placing past the top 15', !/\b(1[6-9]|[2-9]\d)(st|nd|rd|th) in the Call Center/.test(block));
+    t.check('placed in the Call Center and on the team, past the top 15 too',
+        /Rep Satisfaction: 70%\n      30th in the Call Center, 8th on our team\./.test(block));
     t.check('and it takes the slot straight after the lead', bullets[1].indexOf('Rep Satisfaction') === 4);
+    t.check('no ahead-and-behind count anywhere', !/ahead of you|behind you/.test(block));
 
     // Nothing was invented to justify the slot. Bottom of a field that tight
     // has no step worth naming, and the placing stands without one.
     // Its group is the label line and the placing line, and nothing after.
-    // 8th of an eight-person team is the bottom third, so the team half is
-    // left off (Scott, 2026-10-14): it tells somebody already at the bottom
-    // nothing they can use, and the center placing still stands.
     t.check('with no milestone attached to it',
-        block.indexOf('Rep Satisfaction: 70%\n\n') > -1);
-    t.check('and no bottom-of-the-team placing beside it', block.indexOf('8th on our team') === -1);
+        /Rep Satisfaction: 70%\n[^\n]+\n\n/.test(block));
     t.check('the metric it displaced is gone', block.indexOf('Overall Sentiment') === -1);
     t.equal('and the block is still three metrics', bullets.length, 3);
 
@@ -273,7 +273,7 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
         })])
     }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('it really did have a milestone to lose',
-        withoutSurveys.indexOf('Overall Sentiment: 90.1%\n      25 people ahead of you and 4 behind you in the Call Center') > -1
+        /Overall Sentiment: 90\.1%\n      26th in the Call Center/.test(withoutSurveys)
         && withoutSurveys.indexOf('Add 1 point. At 91.1% you would have finished about 5 places higher.') > -1);
 
     // The pin is a slot, not a lower bar. Three surveys is still the floor, and

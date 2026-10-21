@@ -581,6 +581,9 @@ suite('pulse voice: the year block reads the year and never contradicts a placin
 suite('pulse voice: one "One more thing" per message', async (t) => {
     const { pulse, outreach } = loadTeam(t, { celebrations: CELEBRATIONS });
     try {
+        // No note is built in any more (Scott, 2026-10-21), so the test writes
+        // one that opens the way the near-miss line used to.
+        pulse.saveTeamNote({ text: 'One more thing, and it matters. Let\'s finish the year strong together.', who: 'missing' });
         const out = [];
         for (let i = 0; i < 20; i++) {
             out.push(await pulse.buildOutreachMessage(outreach, outreach.planById('monday'), 'Lupe Garcia', W1, W2, null, WINDOWS.lastWeek));
@@ -590,6 +593,7 @@ suite('pulse voice: one "One more thing" per message', async (t) => {
         t.check('and only one of them opens "One more thing"', out.every(m => (m.match(/One more thing/g) || []).length === 1));
         t.check('the near-miss line uses the registry\'s label', out.every(m => /Avoid Negative Words/.test(m) && !/Avoiding Negative Words/.test(m)));
     } finally {
+        pulse.saveTeamNote({ text: '', who: 'missing' });
         cleanUp();
     }
 });
