@@ -7299,25 +7299,8 @@ async function initApp() {
     
     installDebugListeners();
 
-    // Dark mode toggle
-    (function initDarkMode() {
-        var STORAGE_KEY = 'devCoachingTool_theme';
-        // bootstrap.js already resolved data-theme before first paint, so this
-        // only wires the toggle. Setting the attribute again here would risk
-        // drifting from what the stylesheet was rendered against.
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        var btn = document.getElementById('darkModeToggle');
-        if (btn) {
-            btn.textContent = isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
-            btn.addEventListener('click', function() {
-                var current = document.documentElement.getAttribute('data-theme');
-                var next = current === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-theme', next);
-                localStorage.setItem(STORAGE_KEY, next);
-                btn.textContent = next === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
-            });
-        }
-    })();
+    // No theme toggle: the app is dark only (Scott, 2026-10-21). bootstrap.js
+    // sets data-theme before the first paint.
 
     // Load data from localStorage
     weeklyData = loadWeeklyData();

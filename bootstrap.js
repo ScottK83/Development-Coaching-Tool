@@ -50,24 +50,11 @@ window.addEventListener('unhandledrejection', function(event) {
     }
 }, true);
 
-// 5. Resolve the theme before the page paints.
-// The dark mode overrides in styles-v2.css are scoped to [data-theme="dark"],
-// but the design tokens also flip on a prefers-color-scheme media query. If the
-// attribute is set late (or never, because something upstream threw), system
-// dark mode darkens the page while every override stays off, which strands
-// light panels on a dark background. Setting it here keeps the two in step and
-// removes the theme flash on load.
-(function resolveTheme() {
-    var saved = null;
-    try {
-        saved = localStorage.getItem('devCoachingTool_theme');
-    } catch (err) {
-        // Storage can be blocked; fall through to the system preference.
-    }
-
-    var prefersDark = typeof window.matchMedia === 'function'
-        && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
-})();
+// 5. The theme, set before the page paints.
+// Dark only (Scott, 2026-10-21, matching the Downloader Bot). There is no
+// toggle and no system preference any more: every rule is written against
+// [data-theme="dark"], and the only thing that ever sets "light" is an image
+// export, on its own cloned document, so a card pasted into Teams comes out
+// light. A theme saved by the old toggle is ignored.
+document.documentElement.setAttribute('data-theme', 'dark');
 

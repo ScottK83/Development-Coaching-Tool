@@ -1,6 +1,6 @@
 /* ============================================
-   DEVELOPMENT COACHING TOOL — V2 DESIGN SYSTEM
-   Clean, modern, Notion/Linear-inspired aesthetic
+   DEVELOPMENT COACHING TOOL — DESIGN SYSTEM
+   Dark only, matched to the Downloader Bot (2026-10-21)
    ============================================ */
 
 * {
@@ -26,6 +26,11 @@
     --brand-muted: #8b8fcf;
     --brand-text: #3b3e8a;
 
+    --bg-sidebar: #f0f1f3;
+    --brand-pressed: #3f43a8;
+    --text-disabled: #a0a3b1;
+    --border-input: #d1d3d8;
+    --border-hover: #b8bbc4;
     /* Text */
     --text-primary: #1a1a2e;
     --text-secondary: #5a5d6e;
@@ -58,10 +63,10 @@
     --shadow-focus: 0 0 0 3px var(--border-focus);
 
     /* Radii */
-    --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
 
     /* Legacy variable mappings for existing code */
     --ui-radius-sm: var(--radius-sm);
@@ -88,97 +93,66 @@
     --space-8: 32px;
 
     /* Typography */
-    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
-    --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    --font-sans: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji';
+    --font-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
     --leading-tight: 1.25;
     --leading-normal: 1.5;
     --leading-relaxed: 1.65;
 }
 
-/* --- Dark mode tokens --- */
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-        --bg-app: #101827;
-        --bg-surface: #1a2234;
-        --bg-surface-raised: #1f2a3e;
-        --bg-surface-sunken: #141c2b;
-        --bg-hover: #243047;
-        --bg-active: #2a3a54;
-
-        --brand: #7ba4e8;
-        --brand-hover: #9bbcf0;
-        --brand-soft: #1a2744;
-        --brand-muted: #5a84c4;
-        --brand-text: #a8c8f0;
-
-        --text-primary: #e2e8f0;
-        --text-secondary: #94a3b8;
-        --text-tertiary: #64748b;
-        --text-inverse: #101827;
-
-        --border: #2a3a54;
-        --border-strong: #374b6a;
-        --border-focus: rgba(123, 164, 232, 0.4);
-
-        --green: #4ade80;
-        --green-soft: #132a1e;
-        --green-text: #6ee7a0;
-        --red: #f87171;
-        --red-soft: #2a1418;
-        --red-text: #fca5a5;
-        --yellow: #fbbf24;
-        --yellow-soft: #2a2213;
-        --yellow-text: #fcd34d;
-        --orange: #fb923c;
-        --orange-soft: #2a1d11;
-
-        --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-    }
-}
-
-/* Manual dark mode toggle */
+/* The one theme. Scott, 2026-10-21: "Dark only", to match the Downloader
+   Bot's redesign: charcoal surfaces with a slight blue bias, one indigo
+   accent, and green / amber / red for state only. bootstrap.js always sets
+   data-theme="dark". The light values in :root are kept for one job: image
+   exports set data-theme="light" on their clone, so a card pasted into Teams
+   still comes out light. */
 [data-theme="dark"] {
-    --bg-app: #101827;
-    --bg-surface: #1a2234;
-    --bg-surface-raised: #1f2a3e;
-    --bg-surface-sunken: #141c2b;
-    --bg-hover: #243047;
-    --bg-active: #2a3a54;
+    --bg-app: #111318;
+    --bg-surface: #171a21;
+    --bg-surface-raised: #1e222b;
+    --bg-surface-sunken: #0c0e12;
+    --bg-hover: #262b36;
+    --bg-active: #2e3442;
+    --bg-sidebar: #0d0f13;
 
-    --brand: #7ba4e8;
-    --brand-hover: #9bbcf0;
-    --brand-soft: #1a2744;
-    --brand-muted: #5a84c4;
-    --brand-text: #a8c8f0;
+    /* fills, white label 4.8:1 */
+    --brand: #4c66e5;
+    --brand-hover: #5a73f0;
+    --brand-pressed: #4058cc;
+    --brand-soft: #232a45;
+    --brand-muted: #6e86f0;
+    /* the accent as text or a focus ring, 7.8:1 */
+    --brand-text: #8fa3ff;
 
-    --text-primary: #e2e8f0;
-    --text-secondary: #94a3b8;
-    --text-tertiary: #64748b;
-    --text-inverse: #101827;
+    /* 15:1 on the page, 7.5:1 and 5.6:1 on a card */
+    --text-primary: #e6e8ee;
+    --text-secondary: #a3aab8;
+    --text-tertiary: #8a92a3;
+    --text-disabled: #5c6372;
+    --text-inverse: #ffffff;
 
-    --border: #2a3a54;
-    --border-strong: #374b6a;
-    --border-focus: rgba(123, 164, 232, 0.4);
+    --border: #252a34;
+    --border-strong: #353c4a;
+    --border-input: #3a4150;
+    --border-hover: #4a5263;
+    --border-focus: rgba(143, 163, 255, 0.55);
 
     --green: #4ade80;
-    --green-soft: #132a1e;
-    --green-text: #6ee7a0;
+    --green-soft: #1c3029;
+    --green-text: #4ade80;
     --red: #f87171;
-    --red-soft: #2a1418;
-    --red-text: #fca5a5;
-    --yellow: #fbbf24;
-    --yellow-soft: #2a2213;
-    --yellow-text: #fcd34d;
+    --red-soft: #2c1d21;
+    --red-text: #f87171;
+    --yellow: #f5b843;
+    --yellow-soft: #2b2619;
+    --yellow-text: #f5b843;
     --orange: #fb923c;
-    --orange-soft: #2a1d11;
+    --orange-soft: #2b2119;
 
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-xs: none;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
 /* Override inline white/light backgrounds in dark mode */
@@ -218,7 +192,7 @@
    Every element gets dark background + light text.
    This overrides ALL inline styles app-wide. */
 [data-theme="dark"] {
-    color: #e2e8f0;
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] body,
@@ -239,7 +213,7 @@
 [data-theme="dark"] h1, [data-theme="dark"] h2,
 [data-theme="dark"] h3, [data-theme="dark"] h4,
 [data-theme="dark"] h5, [data-theme="dark"] h6 {
-    color: #e2e8f0 !important;
+    color: var(--text-primary) !important;
 }
 
 /* Override EVERY inline light background in the entire app */
@@ -251,12 +225,12 @@
 [data-theme="dark"] [style*="background: white"],
 [data-theme="dark"] [style*="background: #fff"],
 [data-theme="dark"] [style*="background:#fff"] {
-    background: #1f2a3e !important;
+    background: var(--bg-surface-raised) !important;
 }
 [data-theme="dark"] [style*="background: #fff3e0"],
 [data-theme="dark"] [style*="background:#fff3e0"] { background: #2a2013 !important; }
 [data-theme="dark"] [style*="background: #e3f2fd"],
-[data-theme="dark"] [style*="background:#e3f2fd"] { background: #0d1a2e !important; }
+[data-theme="dark"] [style*="background:#e3f2fd"] { background: var(--brand-soft) !important; }
 
 /* Force all table content readable - !important to beat inline styles */
 [data-theme="dark"] table,
@@ -292,18 +266,18 @@
 }
 
 [data-theme="dark"] .ranking-card-name {
-    color: #e2e8f0 !important;
-    text-decoration-color: #94a3b8 !important;
+    color: var(--text-primary) !important;
+    text-decoration-color: var(--text-secondary) !important;
 }
 [data-theme="dark"] .ranking-name-cell,
 [data-theme="dark"] .ranking-row td {
-    color: #e2e8f0 !important;
+    color: var(--text-primary) !important;
 }
 [data-theme="dark"] .ranking-row {
-    background: #1a2234 !important;
+    background: var(--bg-surface) !important;
 }
 [data-theme="dark"] .ranking-row:nth-child(even) {
-    background: #1f2a3e !important;
+    background: var(--bg-surface-raised) !important;
 }
 
 [data-theme="dark"] div[style*="background: #fff8e1"],
@@ -325,16 +299,35 @@
 
 /* Nuclear option: any span/div/td with a hard-coded dark color */
 [data-theme="dark"] [style*="color: #1565c0"],
-[data-theme="dark"] [style*="color:#1565c0"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color:#1565c0"] { color: var(--brand-text) !important; }
 [data-theme="dark"] [style*="color: #4a148c"] { color: var(--text-primary) !important; }
 [data-theme="dark"] [style*="color: #7a4f00"] { color: var(--yellow-text) !important; }
 
 [data-theme="dark"] textarea,
 [data-theme="dark"] input,
 [data-theme="dark"] select {
-    background: var(--bg-surface-raised) !important;
+    background: var(--bg-surface-sunken) !important;
     color: var(--text-primary) !important;
-    border-color: var(--border-strong) !important;
+    border-color: var(--border-input) !important;
+}
+
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus {
+    border-color: var(--brand-text) !important;
+}
+
+/* Native checkboxes, radios and range sliders take the accent. */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+progress {
+    accent-color: var(--brand);
+}
+
+::selection {
+    background: var(--brand-soft);
+    color: var(--text-primary);
 }
 
 /* Override all inline-styled buttons in dark mode */
@@ -355,20 +348,6 @@
     background: var(--bg-surface-raised) !important;
     color: var(--text-secondary) !important;
     border-color: var(--border) !important;
-}
-
-/* Sub-nav buttons in dark mode */
-[data-theme="dark"] .sub-nav button {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-secondary) !important;
-    border-color: var(--border) !important;
-}
-
-[data-theme="dark"] .sub-nav button[style*="gradient"],
-[data-theme="dark"] .sub-nav button[style*="opacity: 1"] {
-    background: var(--brand) !important;
-    color: var(--text-inverse) !important;
-    border-color: var(--brand-hover) !important;
 }
 
 /* Inner tab buttons (Celebrations/Morning Pulse toggle) */
@@ -474,11 +453,11 @@
     background: var(--bg-surface-raised) !important;
 }
 [data-theme="dark"] [style*="background:#f0f9ff"],
-[data-theme="dark"] [style*="background: #f0f9ff"] { background: #0d1a2e !important; }
+[data-theme="dark"] [style*="background: #f0f9ff"] { background: var(--brand-soft) !important; }
 [data-theme="dark"] [style*="background:#fff3e0"],
 [data-theme="dark"] [style*="background: #fff3e0"] { background: var(--orange-soft) !important; }
 [data-theme="dark"] [style*="background:#e3f2fd"],
-[data-theme="dark"] [style*="background: #e3f2fd"] { background: #0d1a2e !important; }
+[data-theme="dark"] [style*="background: #e3f2fd"] { background: var(--brand-soft) !important; }
 
 /* Data validation preview */
 .validation-success {
@@ -582,11 +561,11 @@ header h1 {
     box-shadow: none !important;
 }
 
-/* Active nav state - applied via JS inline styles, so we override gradients */
-.top-nav-btn[style*="gradient"] {
-    background: var(--brand) !important;
-    color: var(--text-inverse) !important;
-    border-color: var(--brand-hover) !important;
+/* The section on screen. navigation.module.js sets .is-active. */
+.top-nav-btn.is-active {
+    background: var(--bg-active) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-strong) !important;
 }
 
 .top-nav-btn-manage {
@@ -672,42 +651,65 @@ main section {
 }.form-section input,
 .form-section select,
 .form-section textarea {
-    padding: 9px 12px;
-    border: 1px solid var(--border-strong) !important;
+    padding: 7px 10px;
+    border: 1px solid var(--border-input) !important;
     border-radius: var(--radius-md) !important;
-    font-size: 0.9em;
+    font-size: 0.93em;
     font-family: inherit;
     color: var(--text-primary);
-    background: var(--bg-surface);
+    background: var(--bg-surface-sunken);
     transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-section input:hover,
+.form-section select:hover,
+.form-section textarea:hover {
+    border-color: var(--border-hover) !important;
 }
 
 .form-section input:focus,
 .form-section select:focus,
 .form-section textarea:focus {
     outline: none;
-    border-color: var(--brand) !important;
+    border-color: var(--brand-text) !important;
     box-shadow: var(--shadow-focus);
 }
 
-/* --- Buttons --- */
+/* --- Buttons ---
+   The Downloader Bot's four: primary (one per page, the accent fill),
+   secondary (every plain button), ghost (quiet, no frame) and danger (a red
+   outline, never a red fill). */
 button {
-    padding: 8px 16px;
-    font-size: 0.85em;
-    border: 1px solid var(--border);
+    min-height: 32px;
+    padding: 6px 14px;
+    font-size: 0.93em;
+    font-family: inherit;
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.15s ease;
-    background: var(--bg-surface);
-    color: var(--text-secondary);
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    background: var(--bg-surface-raised);
+    color: var(--text-primary);
     line-height: var(--leading-tight);
 }
 
 button:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
-    border-color: var(--border-strong);
+    border-color: var(--border-hover);
+}
+
+button:active {
+    background: var(--bg-active);
+}
+
+button:disabled,
+button[disabled] {
+    color: var(--text-disabled);
+    border-color: var(--border);
+    background: transparent;
+    cursor: not-allowed;
 }
 
 button:focus-visible,
@@ -721,52 +723,75 @@ textarea:focus-visible {
 .btn-primary {
     background: var(--brand) !important;
     color: var(--text-inverse) !important;
-    border: 1px solid var(--brand-hover) !important;
+    border: 1px solid var(--brand) !important;
     margin-right: 0;
 }
 
 .btn-primary:hover {
     background: var(--brand-hover) !important;
+    border-color: var(--brand-hover) !important;
     box-shadow: none;
     transform: none;
 }
 
+.btn-primary:active {
+    background: var(--brand-pressed) !important;
+}
+
 .btn-secondary {
-    background: var(--bg-surface) !important;
-    color: var(--text-secondary) !important;
-    border: 1px solid var(--border) !important;
+    background: var(--bg-surface-raised) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-strong) !important;
 }
 
 .btn-secondary:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--border-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+.btn-ghost {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid transparent !important;
+}
+
+.btn-ghost:hover {
     background: var(--bg-hover) !important;
     color: var(--text-primary) !important;
 }
 
 .btn-danger {
-    background: var(--red) !important;
-    color: var(--text-inverse) !important;
-    border: 1px solid var(--red) !important;
+    background: transparent !important;
+    color: var(--red-text) !important;
+    border: 1px solid rgba(248, 113, 113, 0.45) !important;
 }
 
 .btn-danger:hover {
-    background: var(--red-text) !important;
-    border-color: var(--red-text) !important;
-}/* --- Sub-navigation --- */
+    background: var(--red-soft) !important;
+    border-color: var(--red) !important;
+}
+
+/* --- Sub-navigation ---
+   Tabs inside a page. Quiet until chosen, and the chosen one is a raised
+   pill, as the Downloader Bot marks its selected item: the accent fill is
+   kept for the one main action on a page. navigation.module.js sets
+   .is-active and aria-selected. */
 .sub-nav {
     margin-bottom: var(--space-5);
     display: flex;
-    gap: var(--space-2);
+    gap: var(--space-1);
     flex-wrap: wrap;
     border-bottom: 1px solid var(--border) !important;
-    padding-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
 }
 
 .sub-nav button {
-    background: var(--bg-surface-raised) !important;
+    background: transparent !important;
     color: var(--text-secondary) !important;
-    border: 1px solid var(--border) !important;
-    padding: 7px 14px !important;
-    font-size: 0.83em !important;
+    border: 1px solid transparent !important;
+    padding: 6px 12px !important;
+    font-size: 0.93em !important;
     border-radius: var(--radius-md) !important;
     font-weight: 600 !important;
     opacity: 1 !important;
@@ -777,12 +802,10 @@ textarea:focus-visible {
     color: var(--text-primary) !important;
 }
 
-/* Active sub-nav state (set via inline gradient) */
-.sub-nav button[style*="gradient"],
-.sub-nav button[style*="opacity: 1"] {
-    background: var(--brand) !important;
-    color: var(--text-inverse) !important;
-    border-color: var(--brand-hover) !important;
+.sub-nav button.is-active {
+    background: var(--bg-active) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-strong) !important;
 }
 
 /* --- Cards/panels --- */
@@ -1500,7 +1523,7 @@ textarea:focus-visible {
     border: 1px solid var(--border);
 }.target {
     font-size: 0.8em;
-    color: var(--brand);
+    color: var(--brand-text);
     font-weight: 600;
     margin-top: var(--space-1);
 }/* --- Upload buttons --- */
@@ -1835,7 +1858,7 @@ textarea:focus-visible {
 
 /* Links in dark mode */
 [data-theme="dark"] a[style*="color"] {
-    color: #7ba4e8 !important;
+    color: var(--brand-text) !important;
 }
 
 [data-theme="dark"] [style*="color: #1565c0"],
@@ -1865,7 +1888,7 @@ textarea:focus-visible {
 /* Summary bar: dark gradient instead of light */
 [data-theme="dark"] [style*="background:linear-gradient(135deg, #f5f7fa"],
 [data-theme="dark"] [style*="background: linear-gradient(135deg, #f5f7fa"] {
-    background: linear-gradient(135deg, #1a2744 0%, #243047 100%) !important;
+    background: linear-gradient(135deg, var(--brand-soft) 0%, var(--bg-hover) 100%) !important;
     border: 1px solid var(--border-strong);
 }
 
@@ -1945,7 +1968,7 @@ textarea:focus-visible {
 /* Badge pills - dark-safe background variants */
 [data-theme="dark"] .pulse-card [style*="background:#eceff1"],
 [data-theme="dark"] .pulse-card [style*="background: #eceff1"] {
-    background: #263040 !important;
+    background: var(--bg-active) !important;
 }
 
 /* Check-in / High-Five / Review buttons - slightly brighter in dark mode */
@@ -2017,7 +2040,7 @@ textarea:focus-visible {
 [data-theme="dark"] [style*="background: #f4effc"] { background: #1f1530 !important; }
 [data-theme="dark"] [style*="background: #f5f3ff"] { background: #1f1530 !important; }
 [data-theme="dark"] [style*="background: #faf7ff"] { background: #1f1530 !important; }
-[data-theme="dark"] [style*="background: #e1f5fe"] { background: #0d1a2e !important; }
+[data-theme="dark"] [style*="background: #e1f5fe"] { background: var(--brand-soft) !important; }
 [data-theme="dark"] [style*="background: #f4f9ff"] { background: var(--bg-surface-raised) !important; }
 [data-theme="dark"] [style*="background: #f5f9ff"] { background: var(--bg-surface-raised) !important; }
 [data-theme="dark"] [style*="background: #f8fbff"] { background: var(--bg-surface-raised) !important; }
@@ -2051,7 +2074,7 @@ textarea:focus-visible {
 [data-theme="dark"] [style*="color:#6a1b9a"] { color: #c084fc !important; }
 [data-theme="dark"] [style*="color: #9c27b0"] { color: #c084fc !important; }
 [data-theme="dark"] [style*="color: #4a148c"] { color: #c084fc !important; }
-[data-theme="dark"] [style*="color: #1976d2"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color: #1976d2"] { color: var(--brand-text) !important; }
 
 /* --- Colored action buttons keep colors but darken for contrast --- */
 [data-theme="dark"] button[style*="background: #28a745"] { background: #22863a !important; }
@@ -2180,17 +2203,17 @@ turning "background: #f0f9ff" into
 [data-theme="dark"] [style*="color: #5e35b1"],
 [data-theme="dark"] [style*="color:#5e35b1"] { color: var(--brand-text) !important; }
 [data-theme="dark"] [style*="color: #0d47a1"],
-[data-theme="dark"] [style*="color:#0d47a1"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color:#0d47a1"] { color: var(--brand-text) !important; }
 [data-theme="dark"] [style*="color: #8a6d1f"] { color: var(--yellow-text) !important; }
 [data-theme="dark"] [style*="color: #1e40af"],
-[data-theme="dark"] [style*="color:#1e40af"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color:#1e40af"] { color: var(--brand-text) !important; }
 [data-theme="dark"] [style*="color:#b8860b"] { color: var(--yellow-text) !important; }
 [data-theme="dark"] [style*="color: #f57f17"],
 [data-theme="dark"] [style*="color:#f57f17"] { color: var(--yellow) !important; }
 [data-theme="dark"] [style*="color: #e53935"],
 [data-theme="dark"] [style*="color:#e53935"] { color: var(--red) !important; }
 [data-theme="dark"] [style*="color: #ff9800"] { color: var(--orange) !important; }
-[data-theme="dark"] [style*="color: #2196F3"] { color: var(--brand) !important; }
+[data-theme="dark"] [style*="color: #2196F3"] { color: var(--brand-text) !important; }
 [data-theme="dark"] [style*="color: #9c27b0"] { color: #c084fc !important; }
 
 /* --- Semantic backgrounds the nuclear override incorrectly flattens --- */

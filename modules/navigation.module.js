@@ -16,9 +16,10 @@
     // migrateToCondensedLayout. The layout before this is recorded in
     // audit/2026-10-07-layout-before-condense.md.
 
-    // CSS uses .top-nav-btn[style*="gradient"] to style the active top-nav
-    // button, so toggling the active state means moving an inline gradient
-    // from one button to another.
+    // The active button carries .is-active and aria-current. It used to be
+    // marked by moving an inline gradient from button to button, with the
+    // stylesheet matching [style*="gradient"]; a class is what the 2026-10-21
+    // restyle styles, and it survives the browser rewriting inline colours.
     var SECTION_TO_TOP_NAV_BTN = {
         coachingEmailSection: 'coachingEmailBtn',
         peopleSection: 'peopleBtn',
@@ -26,20 +27,21 @@
         uploadSection: 'homeBtn',
         manageDataSection: 'manageDataBtn'
     };
-    var ACTIVE_TOP_NAV_GRADIENT = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+    function markActive(btn, active, ariaName) {
+        if (!btn) return;
+        btn.classList.toggle('is-active', active);
+        if (active) btn.setAttribute(ariaName, ariaName === 'aria-current' ? 'page' : 'true');
+        else btn.removeAttribute(ariaName);
+        // Anything a build before the class left inline.
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.opacity = '';
+    }
 
     function setActiveTopNav(sectionId) {
         var activeBtnId = SECTION_TO_TOP_NAV_BTN[sectionId];
         Object.values(SECTION_TO_TOP_NAV_BTN).forEach(function(btnId) {
-            var btn = document.getElementById(btnId);
-            if (!btn) return;
-            if (btnId === activeBtnId) {
-                btn.style.background = ACTIVE_TOP_NAV_GRADIENT;
-                btn.style.color = 'white';
-            } else {
-                btn.style.background = '';
-                btn.style.color = '';
-            }
+            markActive(document.getElementById(btnId), btnId === activeBtnId, 'aria-current');
         });
     }
 
@@ -62,7 +64,7 @@
 
     // --- Generic sub-section show/hide helper ---
 
-    function showSubSectionGeneric(subSectionId, activeButtonId, subSectionIds, subNavButtonIds, activeGradient, stateKey) {
+    function showSubSectionGeneric(subSectionId, activeButtonId, subSectionIds, subNavButtonIds, stateKey) {
         // Hide all sub-sections in this group
         subSectionIds.forEach(function(id) {
             var el = document.getElementById(id);
@@ -75,18 +77,7 @@
 
         // Update button active states
         subNavButtonIds.forEach(function(btnId) {
-            var btn = document.getElementById(btnId);
-            if (btn) {
-                if (btnId === activeButtonId) {
-                    btn.style.background = activeGradient;
-                    btn.style.color = 'white';
-                    btn.style.opacity = '1';
-                } else {
-                    btn.style.background = '#ccc';
-                    btn.style.color = '';
-                    btn.style.opacity = '0.7';
-                }
-            }
+            markActive(document.getElementById(btnId), btnId === activeButtonId, 'aria-selected');
         });
 
         // Save state
@@ -108,8 +99,7 @@
 
     function showMyTeamSubSection(subSectionId, activeButtonId) {
         var btnId = activeButtonId || MY_TEAM_SUB_TO_BTN[subSectionId] || '';
-        showSubSectionGeneric(subSectionId, btnId, MY_TEAM_SUB_SECTIONS, MY_TEAM_NAV_BUTTONS,
-            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 'myTeamSubSectionId');
+        showSubSectionGeneric(subSectionId, btnId, MY_TEAM_SUB_SECTIONS, MY_TEAM_NAV_BUTTONS, 'myTeamSubSectionId');
         saveUiNavState({ sectionId: 'coachingEmailSection' });
         // The team bar sits above the sub-nav and belongs to Today as a
         // whole, so it's drawn here rather than by each tab's own handler,
@@ -138,8 +128,7 @@
 
     function showPeopleSubSection(subSectionId, activeButtonId) {
         var btnId = activeButtonId || PEOPLE_SUB_TO_BTN[subSectionId] || 'subNavPeNumbers';
-        showSubSectionGeneric(subSectionId, btnId, PEOPLE_SUB_SECTIONS, PEOPLE_NAV_BUTTONS,
-            'linear-gradient(135deg, #5c6bc0 0%, #3949ab 100%)', 'peopleSubSectionId');
+        showSubSectionGeneric(subSectionId, btnId, PEOPLE_SUB_SECTIONS, PEOPLE_NAV_BUTTONS, 'peopleSubSectionId');
         saveUiNavState({ sectionId: 'peopleSection' });
     }
 
@@ -156,8 +145,7 @@
 
     function showReviewPrepSubSection(subSectionId, activeButtonId) {
         var btnId = activeButtonId || REVIEW_SUB_TO_BTN[subSectionId] || 'subNavRpQuarterly';
-        showSubSectionGeneric(subSectionId, btnId, REVIEW_SUB_SECTIONS, REVIEW_NAV_BUTTONS,
-            'linear-gradient(135deg, #d84315 0%, #bf360c 100%)', 'reviewPrepSubSectionId');
+        showSubSectionGeneric(subSectionId, btnId, REVIEW_SUB_SECTIONS, REVIEW_NAV_BUTTONS, 'reviewPrepSubSectionId');
         saveUiNavState({ sectionId: 'peopleSection', peopleSubSectionId: 'subSectionReviews' });
     }
 
@@ -175,8 +163,7 @@
 
     function showTrendsSubSection(subSectionId, activeButtonId) {
         var btnId = activeButtonId || TRENDS_SUB_TO_BTN[subSectionId] || 'subNavTaRankings';
-        showSubSectionGeneric(subSectionId, btnId, TRENDS_SUB_SECTIONS, TRENDS_NAV_BUTTONS,
-            'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', 'trendsSubSectionId');
+        showSubSectionGeneric(subSectionId, btnId, TRENDS_SUB_SECTIONS, TRENDS_NAV_BUTTONS, 'trendsSubSectionId');
         saveUiNavState({ sectionId: 'trendsAnalysisSection' });
     }
 
@@ -194,8 +181,7 @@
 
     function showTrendsInnerSubSection(subSectionId, activeButtonId) {
         var btnId = activeButtonId || TRENDS_INNER_SUB_TO_BTN[subSectionId] || 'innerNavTrReports';
-        showSubSectionGeneric(subSectionId, btnId, TRENDS_INNER_SUB_SECTIONS, TRENDS_INNER_NAV_BUTTONS,
-            'linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%)', 'trendsInnerSubSectionId');
+        showSubSectionGeneric(subSectionId, btnId, TRENDS_INNER_SUB_SECTIONS, TRENDS_INNER_NAV_BUTTONS, 'trendsInnerSubSectionId');
         saveUiNavState({ sectionId: 'trendsAnalysisSection', trendsSubSectionId: 'subSectionTaTrendsGroup' });
     }
 
@@ -218,18 +204,8 @@
         if (target) target.style.display = 'block';
 
         SETTINGS_NAV_BUTTONS.forEach(function(btnId) {
-            var btn = document.getElementById(btnId);
-            if (btn) {
-                // Match button to sub-section by convention
-                var expectedSubId = btnId.replace('subNav', 'subSection');
-                if (expectedSubId === subSectionId) {
-                    btn.style.background = 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)';
-                    btn.style.opacity = '1';
-                } else {
-                    btn.style.background = '#ccc';
-                    btn.style.opacity = '0.7';
-                }
-            }
+            // Button and sub-section are paired by name.
+            markActive(document.getElementById(btnId), btnId.replace('subNav', 'subSection') === subSectionId, 'aria-selected');
         });
 
         saveUiNavState({ sectionId: 'manageDataSection', settingsSubSectionId: subSectionId });

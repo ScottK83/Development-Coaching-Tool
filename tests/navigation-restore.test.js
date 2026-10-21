@@ -67,8 +67,18 @@ function loadNav(t, savedState) {
     const clicked = [];
 
     function makeEl(id) {
+        const classes = new Set();
+        const attrs = {};
         return {
             id, style: {}, dataset: {}, _listeners: [],
+            // The active tab is marked with a class and an aria attribute.
+            classList: {
+                toggle(name, on) { if (on) classes.add(name); else classes.delete(name); return on; },
+                contains: (name) => classes.has(name)
+            },
+            setAttribute(name, value) { attrs[name] = String(value); },
+            removeAttribute(name) { delete attrs[name]; },
+            getAttribute: (name) => (name in attrs ? attrs[name] : null),
             addEventListener(type, fn) { if (type === 'click') this._listeners.push(fn); },
             click() { clicked.push(this.id); this._listeners.forEach((fn) => fn()); }
         };
@@ -131,6 +141,12 @@ suite('navigation: a refresh lands where clicking Today lands', (t) => {
     snapshot.nav.restoreLastViewedSection();
     t.equal('another Today tab comes back as itself', snapshot.visible(TODAY).join(','), 'subSectionTeamSnapshot');
     t.equal('through its own button', snapshot.clicked.join(','), 'subNavTdSnapshot');
+    // Marked by a class and aria, never an inline colour (2026-10-21 restyle).
+    t.check('its tab is the one marked active', snapshot.els.subNavTdSnapshot.classList.contains('is-active')
+        && snapshot.els.subNavTdSnapshot.getAttribute('aria-selected') === 'true');
+    t.check('and the day tab is not', !snapshot.els.subNavTdDay.classList.contains('is-active')
+        && snapshot.els.subNavTdDay.getAttribute('aria-selected') === null);
+    t.check('with no inline background left on either', !snapshot.els.subNavTdSnapshot.style.background && !snapshot.els.subNavTdDay.style.background);
 
     // State written by a build that is gone.
     const stale = loadNav(t, { sectionId: 'coachingEmailSection', myTeamSubSectionId: 'subSectionSomethingRemoved' });
