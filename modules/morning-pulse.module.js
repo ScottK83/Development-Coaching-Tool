@@ -3732,6 +3732,13 @@
                 ? rp.projectRank(teamRows, rankKey, employeeName, current)
                 : null;
 
+            // Last means nobody in the field has a worse number; a tie at the
+            // bottom is still last. A last place is never said (Scott,
+            // 2026-10-21: "Let's hide it"), so these decide whether each half
+            // of the placing line is printed.
+            const worse = v => (reverse ? v > current : v < current);
+            const isLast = list => !list.some(r => r !== row && r.name !== employeeName && worse(valueOf(r)));
+
             let fieldBest = null;
             measured.forEach(r => {
                 const v = valueOf(r);
@@ -3746,7 +3753,9 @@
                 label: window.METRICS_REGISTRY?.[registryKey]?.label || registryKey,
                 centerRank,
                 centerField: measured.length,
+                centerLast: isLast(measured),
                 teamRank: teamRank >= 1 ? teamRank : null,
+                teamLast: isLast(teamMeasured),
                 teamField: teamMeasured.length,
                 milestone: standingsMilestone({
                     rp, rows, rankKey, registryKey, employeeName,
@@ -3799,9 +3808,11 @@
             //
             // "Call Center" capitalised, the way every other placing in the
             // app writes it. Both placings, wherever they fall (Scott,
-            // 2026-10-21: "52nd in the call center, 7th on the team").
-            const center = standingsOrdinal(c.centerRank) + ' in the Call Center';
-            const team = c.teamRank ? standingsOrdinal(c.teamRank) + ' on our team' : '';
+            // 2026-10-21: "52nd in the call center, 7th on the team"), except
+            // a last place, which is left off. The number and its next step
+            // still stand when both halves are.
+            const center = c.centerLast ? '' : standingsOrdinal(c.centerRank) + ' in the Call Center';
+            const team = c.teamRank && !c.teamLast ? standingsOrdinal(c.teamRank) + ' on our team' : '';
             const where = [center, team].filter(Boolean).join(', ');
             const bullet = '  • ' + c.label + ': ' + fmtVal(c.registryKey, c.current)
                 + (where ? '\n      ' + where.charAt(0).toUpperCase() + where.slice(1) + '.' : '');
