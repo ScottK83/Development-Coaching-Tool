@@ -7398,6 +7398,10 @@ async function initApp() {
     installRepoSyncStorageHooks();
     renderCallListeningLastSync();
     
+    // The sidebar goes in before the last page comes back, so the restore
+    // marks its item (restyle, 2026-10-21).
+    window.DevCoachModules?.sidebar?.mount?.();
+
     // Restore last viewed section/sub-section on refresh
     restoreLastViewedSection();
     

@@ -1,6 +1,7 @@
 # Tasks
 
 ## Open
+- Restyle steps 3 to 6 (see HANDOFF.md). Harness note: seeding the local copy with the real backup froze Chrome on 10/21 (reload loop after `applyRepoBackupPayload`); empty-profile previews work. Find why before step 6.
 - Rankings emails (Center > Rankings): still carry more than 2 emojis, a reliability "Met." line, and "off by 20s" instead of "20 seconds".
 - 30-day goal Copilot prompt (script.js `buildTrendAiGoalPrompt`) has no praise and no zero-survey or no-calls check.
 - Worker auth secret needs deploying from the home PC (see memory: project_worker_auth_deploy).

@@ -1131,12 +1131,12 @@ Box 2 - Future Improvement Areas:
                     </div>
 
                     <!-- Sub-navigation for Settings -->
-                    <div id="manageDataSubNav" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                        <button type="button" id="subNavTeamMembers" class="btn-secondary" style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); opacity: 1;">👥 Team Members</button>
-                        <button type="button" id="subNavCoachingTips" class="btn-secondary" style="background: #ccc; opacity: 0.7;">💡 Coaching Tips</button>
-                        <button type="button" id="subNavSentimentKeywords" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗣️ Scored Phrases</button>
-                        <button type="button" id="subNavSyncBackup" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🔄 Sync & Backup</button>
-                        <button type="button" id="subNavDeleteData" class="btn-secondary" style="background: #ccc; opacity: 0.7;">🗑️ Delete Data</button>
+                    <div id="manageDataSubNav" class="sub-nav">
+                        <button type="button" id="subNavTeamMembers" class="btn-secondary is-active" aria-selected="true">👥 Team Members</button>
+                        <button type="button" id="subNavCoachingTips" class="btn-secondary">💡 Coaching Tips</button>
+                        <button type="button" id="subNavSentimentKeywords" class="btn-secondary">🗣️ Scored Phrases</button>
+                        <button type="button" id="subNavSyncBackup" class="btn-secondary">🔄 Sync & Backup</button>
+                        <button type="button" id="subNavDeleteData" class="btn-secondary">🗑️ Delete Data</button>
                     </div>
                     
                     <!-- Sync & Backup Sub-section -->
@@ -1833,6 +1833,9 @@ Box 2 - Future Improvement Areas:
                 'modules/red-flag.module.js',
                 // Infrastructure Modules
                 'modules/navigation.module.js',
+                // Builds the sidebar and drives the nav buttons above; navigation
+                // tells it when the page changes.
+                'modules/sidebar.module.js',
                 'modules/debug.module.js',
                 'modules/team-filter.module.js',
                 'modules/repo-sync.module.js',

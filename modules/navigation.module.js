@@ -60,6 +60,14 @@
         }
 
         setActiveTopNav(sectionId);
+        syncSidebar();
+    }
+
+    // The sidebar reads what is on screen off the page; it is told whenever
+    // that changes. Absent in tests and before it mounts.
+    function syncSidebar() {
+        var sidebar = window.DevCoachModules && window.DevCoachModules.sidebar;
+        if (sidebar && typeof sidebar.sync === 'function') sidebar.sync();
     }
 
     // --- Generic sub-section show/hide helper ---
@@ -79,6 +87,7 @@
         subNavButtonIds.forEach(function(btnId) {
             markActive(document.getElementById(btnId), btnId === activeButtonId, 'aria-selected');
         });
+        syncSidebar();
 
         // Save state
         var partial = {};
@@ -207,6 +216,7 @@
             // Button and sub-section are paired by name.
             markActive(document.getElementById(btnId), btnId.replace('subNav', 'subSection') === subSectionId, 'aria-selected');
         });
+        syncSidebar();
 
         saveUiNavState({ sectionId: 'manageDataSection', settingsSubSectionId: subSectionId });
     }
