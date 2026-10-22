@@ -24,7 +24,7 @@ suite('escaping: user and file text is escaped where it becomes HTML', (t) => {
 
     const tips = read('modules/tips.module.js');
     t.check('category names in the picker', tips.indexOf('${escapeHtml(metricNames[metricKey])}</option>') > -1);
-    t.check('and in the heading', tips.indexOf('📂 ${escapeHtml(displayMetricName)}') > -1);
+    t.check('and in the heading', tips.indexOf('>${escapeHtml(displayMetricName)}</h3>') > -1);
 });
 
 suite('escaping: the fallback escapes too', (t) => {

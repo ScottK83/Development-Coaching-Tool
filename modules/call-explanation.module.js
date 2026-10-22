@@ -709,7 +709,7 @@
                 ${how ? `<div class="call-trend-title call-explain-heading">How</div><ul class="call-explain-list">${how}</ul>` : ''}
                 <div class="call-alert-note"><strong>Check it landed:</strong> ${safe(playbook.check.charAt(0).toUpperCase() + playbook.check.slice(1))}</div>
                 <div class="flex-row" style="margin-top: var(--space-3);">
-                    <button type="button" data-call-explain-copilot="${index}">🤖 Ask Copilot for clearer wording</button>
+                    <button type="button" data-call-explain-copilot="${index}">Ask Copilot for clearer wording</button>
                 </div>`}
             </div>`;
         }).join('');

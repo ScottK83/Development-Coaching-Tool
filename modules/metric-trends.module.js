@@ -95,7 +95,7 @@ function initializeMetricTrends() {
         avgMetricsForm.style.display = 'none';
     }
     if (toggleAvgMetricsBtn) {
-        toggleAvgMetricsBtn.textContent = '✏️ Edit Averages';
+        toggleAvgMetricsBtn.textContent = 'Edit Averages';
         // Remove any existing click handlers to prevent duplicates
         const oldBtn = toggleAvgMetricsBtn.cloneNode(true);
         toggleAvgMetricsBtn.parentNode.replaceChild(oldBtn, toggleAvgMetricsBtn);
@@ -103,7 +103,7 @@ function initializeMetricTrends() {
             if (avgMetricsForm) {
                 const isVisible = avgMetricsForm.style.display !== 'none';
                 avgMetricsForm.style.display = isVisible ? 'none' : 'block';
-                oldBtn.textContent = isVisible ? '✏️ Edit Averages' : '✏️ Hide Averages';
+                oldBtn.textContent = isVisible ? 'Edit Averages' : 'Hide Averages';
             }
         });
     }
@@ -253,8 +253,8 @@ function renderCallCenterAverageTargets() {
         if (!hint) {
             hint = document.createElement('div');
             hint.id = hintId;
+            hint.className = 'text-secondary';
             hint.style.fontSize = '0.8em';
-            hint.style.color = '#666';
             hint.style.marginTop = '4px';
             input.insertAdjacentElement('afterend', hint);
         }
@@ -1735,9 +1735,9 @@ function buildTrendFocusAreas(weakestMetric, tipsForWeakest, trendingMetric, tip
     return focusCandidates.slice(0, 2).map((candidate, index) => ({
         metric: candidate.metric,
         tips: candidate.tips.length > 0 ? candidate.tips : ['No coaching tips available yet for this metric.'],
-        bgColor: index === 0 ? '#fff3cd' : '#ffe0b2',
-        borderColor: index === 0 ? '#ff9800' : '#f57c00',
-        titleColor: index === 0 ? '#ff9800' : '#f57c00'
+        bgColor: 'var(--yellow-soft)',
+        borderColor: 'var(--yellow)',
+        titleColor: 'tone-warn'
     }));
 }
 
@@ -1754,8 +1754,8 @@ function buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot
     const sentimentFocusText = buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics);
     const sentimentHtml = sentimentSnapshot
         ? `
-        <div style="margin: 20px 0; padding: 15px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffb300;">
-            <h4 style="color: #8d6e00; margin-top: 0;">💬 Sentiment Focus (${sentimentSnapshot.timeframeStart} to ${sentimentSnapshot.timeframeEnd})</h4>
+        <div class="callout callout-warn" style="margin: 20px 0; padding: 15px;">
+            <h4 class="tone-warn" style="margin-top: 0;">Sentiment Focus (${sentimentSnapshot.timeframeStart} to ${sentimentSnapshot.timeframeEnd})</h4>
             <p style="margin: 0; color: var(--text-primary); white-space: pre-wrap;">${escapeHtml(sentimentFocusText)}</p>
         </div>
         `
@@ -1767,18 +1767,18 @@ function buildTrendSentimentSectionHtml(employeeName, weekKey, sentimentSnapshot
 function renderTrendFocusAreasHtml(focusAreas) {
     return focusAreas.map((focusArea, areaIndex) => {
         const tipsHtml = focusArea.tips.map((tip, tipIndex) => `
-            <div style="background: var(--bg-surface-sunken); padding: 12px; border-radius: 4px; margin-bottom: 10px; border-left: 4px solid #9c27b0;">
-                <strong>💡 Tip ${tipIndex + 1}:</strong> ${escapeHtml(tip)}
+            <div class="card-sunken" style="margin-bottom: 10px;">
+                <strong>Tip ${tipIndex + 1}:</strong> ${escapeHtml(tip)}
             </div>
         `).join('');
 
         const heading = focusAreas.length === 1
-            ? `📉 Focus Area: ${escapeHtml(focusArea.metric.label)}`
-            : `📉 Focus Area ${areaIndex + 1}: ${escapeHtml(focusArea.metric.label)}`;
+            ? `Focus Area: ${escapeHtml(focusArea.metric.label)}`
+            : `Focus Area ${areaIndex + 1}: ${escapeHtml(focusArea.metric.label)}`;
 
         return `
-            <div style="margin-bottom: 20px; padding: 15px; background: ${focusArea.bgColor}; border-radius: 4px; border-left: 4px solid ${focusArea.borderColor};">
-                <h4 style="color: ${focusArea.titleColor}; margin-top: 0;">${heading}</h4>
+            <div class="callout callout-warn" style="margin-bottom: 20px; padding: 15px;">
+                <h4 class="${focusArea.titleColor || 'tone-warn'}" style="margin-top: 0;">${heading}</h4>
                 <p style="margin: 5px 0 15px 0; color: var(--text-primary);">
                     Currently at <strong>${escapeHtml(formatMetricDisplay(focusArea.metric.metricKey, focusArea.metric.employeeValue))}</strong>,
                     <strong>${escapeHtml(trendGoalPhrase(focusArea.metric.metricKey, focusArea.metric.target))}</strong>
@@ -1816,29 +1816,29 @@ function renderTrendIntelligenceSnapshotHtml(allMetrics) {
             : metric.trendDirection === 'declining'
             ? 'Declining'
             : 'Stable';
-        const directionColor = metric.trendDirection === 'improving'
-            ? '#2e7d32'
+        const directionClass = metric.trendDirection === 'improving'
+            ? 'tone-good'
             : metric.trendDirection === 'declining'
-            ? '#b71c1c'
-            : '#455a64';
+            ? 'tone-bad'
+            : 'text-secondary';
 
-        const classColor = metric.classification === 'Exceeding Expectation'
-            ? '#2e7d32'
+        const classClass = metric.classification === 'Exceeding Expectation'
+            ? 'tone-good'
             : metric.classification === 'On Track'
-            ? '#0277bd'
+            ? 'tone-info'
             : metric.classification === 'Watch Area'
-            ? '#ef6c00'
-            : '#b71c1c';
+            ? 'tone-warn'
+            : 'tone-bad';
 
         const volatilityText = metric.isVolatile ? 'Volatile' : 'Stable';
-        const volatilityColor = metric.isVolatile ? '#ef6c00' : '#455a64';
+        const volatilityClass = metric.isVolatile ? 'tone-warn' : 'text-secondary';
 
         return `
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid var(--border); color: var(--text-primary);">${metric.label}</td>
-                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: ${classColor}; font-weight: 600;">${metric.classification || 'On Track'}</td>
-                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: ${directionColor};">${directionText}</td>
-                <td style="padding: 8px; border-bottom: 1px solid var(--border); color: ${volatilityColor};">${volatilityText}</td>
+                <td class="${classClass}" style="padding: 8px; border-bottom: 1px solid var(--border); font-weight: 600;">${metric.classification || 'On Track'}</td>
+                <td class="${directionClass}" style="padding: 8px; border-bottom: 1px solid var(--border);">${directionText}</td>
+                <td class="${volatilityClass}" style="padding: 8px; border-bottom: 1px solid var(--border);">${volatilityText}</td>
             </tr>
         `;
     }).join('');
@@ -1851,23 +1851,23 @@ function renderTrendIntelligenceSnapshotHtml(allMetrics) {
     };
 
     return `
-        <div style="margin: 20px 0; padding: 15px; background: #f4f9ff; border-radius: 4px; border-left: 4px solid #1976d2;">
+        <div class="card" style="margin: 20px 0; padding: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
-                <h4 style="color: #1976d2; margin: 0;">🧠 Intelligence Snapshot</h4>
-                <button id="copyTrendIntelligenceSnapshotBtn" type="button" style="padding: 8px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85em;">
-                    📋 Copy Snapshot
+                <h4 class="card-title" style="margin: 0;">Intelligence Snapshot</h4>
+                <button id="copyTrendIntelligenceSnapshotBtn" type="button" class="btn-secondary">
+                    Copy Snapshot
                 </button>
             </div>
-            <p style="margin: 0 0 10px 0; color: #455a64; font-size: 0.9em;">
+            <p class="text-secondary" style="margin: 0 0 10px 0; font-size: 0.9em;">
                 Exceeding: <strong>${counts.exceeding}</strong> · On Track: <strong>${counts.onTrack}</strong> · Watch: <strong>${counts.watch}</strong> · Needs Focus: <strong>${counts.needsFocus}</strong>
             </p>
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; background: var(--bg-surface); border: 1px solid #e3eef9;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; background: var(--bg-surface); border: 1px solid var(--border);">
                 <thead>
-                    <tr style="background: #e3f2fd; color: #0d47a1; text-align: left;">
-                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Metric</th>
-                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Class</th>
-                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Momentum</th>
-                        <th style="padding: 8px; border-bottom: 1px solid #d3e7f9;">Volatility</th>
+                    <tr style="background: var(--bg-surface-raised); text-align: left;">
+                        <th style="padding: 8px; border-bottom: 1px solid var(--border-strong);">Metric</th>
+                        <th style="padding: 8px; border-bottom: 1px solid var(--border-strong);">Class</th>
+                        <th style="padding: 8px; border-bottom: 1px solid var(--border-strong);">Momentum</th>
+                        <th style="padding: 8px; border-bottom: 1px solid var(--border-strong);">Volatility</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2013,38 +2013,38 @@ function attachTrendTipsModalHandlers(options) {
 
 function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, focusAreasHtml, sentimentHtml, intelligenceSnapshotHtml, copilotPrompt) {
     return `
-        <h3 style="color: #9c27b0; margin-top: 0;">📊 Coaching Summary for ${escapeHtml(displayName)}</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
+        <h3 class="card-title" style="font-size: 1.17em; margin-top: 0;">Coaching Summary for ${escapeHtml(displayName)}</h3>
+        <p class="text-secondary" style="margin-bottom: 20px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
 
         ${summaryBoxesHtml}
 
-        ${focusAreasHtml ? `<h4 style="color: #9c27b0; margin: 0 0 12px 0;">🎯 Coaching Focus</h4>${focusAreasHtml}` : ''}
+        ${focusAreasHtml ? `<h4 class="section-title" style="margin: 0 0 12px 0;">Coaching Focus</h4>${focusAreasHtml}` : ''}
 
         ${intelligenceSnapshotHtml}
 
         ${sentimentHtml}
 
         <div style="margin: 20px 0;">
-            <label style="display: block; margin-bottom: 8px; font-weight: bold;">💬 Additional Notes (optional):</label>
+            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Additional Notes (optional):</label>
             <textarea id="trendCoachingNotes" style="width: 100%; height: 70px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: Arial;" placeholder="Any additional coaching notes..."></textarea>
         </div>
 
         <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
-            <h4 style="color: var(--text-primary); margin-top: 0;">🤖 CoPilot Prompt</h4>
-            <p style="color: var(--text-secondary); font-size: 0.9em; margin: 0 0 10px 0;">
-                Copy this prompt and paste it into <strong><a href="${copilotUrl()}" target="_blank" style="color: #1976d2;">Microsoft CoPilot</a></strong> to draft the coaching email:
+            <h4 class="card-title" style="margin-top: 0;">CoPilot Prompt</h4>
+            <p class="text-secondary" style="font-size: 0.9em; margin: 0 0 10px 0;">
+                Copy this prompt and paste it into <strong><a href="${copilotUrl()}" target="_blank" class="tone-accent">Microsoft CoPilot</a></strong> to draft the coaching email:
             </p>
             <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${escapeHtml(copilotPrompt)}</textarea>
-            <button id="copyPromptBtn" style="margin-top: 10px; padding: 10px 16px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                📋 Copy Prompt
+            <button id="copyPromptBtn" class="btn-secondary" style="margin-top: 10px;">
+                Copy Prompt
             </button>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button id="logTrendCoachingBtn" style="flex: 1; padding: 12px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
-                ✅ Log Coaching
+            <button id="logTrendCoachingBtn" class="btn-primary" style="flex: 1;">
+                Log Coaching
             </button>
-            <button id="skipTrendCoachingBtn" style="flex: 1; padding: 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
+            <button id="skipTrendCoachingBtn" class="btn-ghost" style="flex: 1;">
                 Skip
             </button>
         </div>
@@ -2070,12 +2070,13 @@ function createTrendTipsModalElements() {
     const panel = document.createElement('div');
     panel.style.cssText = `
         background: var(--bg-surface);
+        border: 1px solid var(--border);
         border-radius: 8px;
         padding: 24px;
         max-width: 650px;
         max-height: 85vh;
         overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-lg);
     `;
 
     return { modal, panel };
@@ -3991,20 +3992,20 @@ function renderTrendSummaryBoxesHtml(positiveHighlights, improvementAreas, posit
 
     const positiveHtml = positiveHighlights.length > 0
         ? `<ul style="margin: 0; padding-left: 20px;">${renderListItems(positiveHighlights)}</ul>`
-        : `<p style="margin: 0; color: var(--green-text);">${escapeHtml(positiveEmptyText || 'No above-target metrics in this period.')}</p>`;
+        : `<p class="tone-good" style="margin: 0;">${escapeHtml(positiveEmptyText || 'No above-target metrics in this period.')}</p>`;
 
     const improvementHtml = improvementAreas.length > 0
         ? `<ul style="margin: 0; padding-left: 20px;">${renderListItems(improvementAreas)}</ul>`
-        : `<p style="margin: 0; color: var(--red-text);">${escapeHtml(improvementEmptyText || 'No below-target metrics in this period.')}</p>`;
+        : `<p class="tone-bad" style="margin: 0;">${escapeHtml(improvementEmptyText || 'No below-target metrics in this period.')}</p>`;
 
     return `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px 0;">
-            <div style="padding: 14px; border: 1px solid #81c784; border-radius: 8px; background: var(--green-soft); color: var(--green-text);">
-                <h4 style="margin: 0 0 10px 0; color: var(--green-text);">✅ Positive Highlights</h4>
+            <div class="callout callout-good" style="padding: 14px;">
+                <h4 class="tone-good" style="margin: 0 0 10px 0;">Positive Highlights</h4>
                 ${positiveHtml}
             </div>
-            <div style="padding: 14px; border: 1px solid #ef9a9a; border-radius: 8px; background: var(--red-soft); color: var(--red-text);">
-                <h4 style="margin: 0 0 10px 0; color: var(--red-text);">⚠️ Improvement Areas</h4>
+            <div class="callout callout-bad" style="padding: 14px;">
+                <h4 class="tone-bad" style="margin: 0 0 10px 0;">Improvement Areas</h4>
                 ${improvementHtml}
             </div>
         </div>
@@ -4220,31 +4221,32 @@ function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, te
     const panel = document.createElement('div');
     panel.style.cssText = `
         background: var(--bg-surface);
+        border: 1px solid var(--border);
         border-radius: 8px;
         padding: 24px;
         max-width: 900px;
         width: 92%;
         max-height: 88vh;
         overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: var(--shadow-lg);
     `;
 
     panel.innerHTML = `
-        <h3 style="color: var(--green-text); margin-top: 0;">👥 Team Metric Trend Summary</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
-        <p style="color: var(--text-secondary); margin: 0 0 14px 0; font-size: 0.9em;">Based on ${teamSize} associates</p>
+        <h3 class="card-title" style="font-size: 1.17em; margin-top: 0;">Team Metric Trend Summary</h3>
+        <p class="text-secondary" style="margin-bottom: 6px; font-size: 0.95em;">${escapeHtml(periodLabel)}</p>
+        <p class="text-secondary" style="margin: 0 0 14px 0; font-size: 0.9em;">Based on ${teamSize} associates</p>
 
         ${summaryBoxesHtml}
 
         <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
-            <h4 style="color: var(--text-primary); margin-top: 0;">🤖 Team CoPilot Prompt</h4>
+            <h4 class="card-title" style="margin-top: 0;">Team CoPilot Prompt</h4>
             <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${escapeHtml(teamPrompt)}</textarea>
         </div>
 
         <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
-            <button id="copyTeamTrendPromptBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📋 Copy Prompt</button>
-            <button id="openTeamTrendEmailBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📧 Open Team Email Draft</button>
-            <button id="closeTeamTrendSummaryBtn" style="flex: 1; min-width: 180px; padding: 12px; background: #777; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Close</button>
+            <button id="copyTeamTrendPromptBtn" class="btn-secondary" style="flex: 1; min-width: 180px;">Copy Prompt</button>
+            <button id="openTeamTrendEmailBtn" class="btn-primary" style="flex: 1; min-width: 180px;">Open Team Email Draft</button>
+            <button id="closeTeamTrendSummaryBtn" class="btn-ghost" style="flex: 1; min-width: 180px;">Close</button>
         </div>
     `;
 

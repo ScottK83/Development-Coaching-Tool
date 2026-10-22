@@ -168,14 +168,14 @@
         return p[1] + '/' + p[2] + '/' + p[0];
     }
 
-    function rowHtml(row, action, label, colour) {
+    function rowHtml(row, action, label, buttonClass) {
         return '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 10px; border-bottom:1px solid var(--border);">'
             + '<span style="font-weight:600; min-width:180px;">' + escapeHtml(row.name) + '</span>'
-            + '<span style="color:var(--text-secondary); font-size:0.88em; min-width:140px;">' + escapeHtml(row.supervisor) + '</span>'
-            + '<span style="color:var(--text-tertiary); font-size:0.85em; flex:1;">Last numbers: ' + escapeHtml(formatDate(row.lastSeen))
+            + '<span class="text-secondary" style="font-size:0.88em; min-width:140px;">' + escapeHtml(row.supervisor) + '</span>'
+            + '<span class="text-faint" style="font-size:0.85em; flex:1;">Last numbers: ' + escapeHtml(formatDate(row.lastSeen))
             + (row.reinstatedOn ? ' · reinstated ' + escapeHtml(formatDate(row.reinstatedOn)) : '') + '</span>'
-            + '<button type="button" class="btn-secondary" data-activity-action="' + action + '" data-activity-name="' + escapeHtml(row.name) + '"'
-            + ' style="background:' + colour + '; color:#fff; font-size:0.85em; padding:5px 12px;">' + label + '</button>'
+            + '<button type="button" class="' + buttonClass + '" data-activity-action="' + action + '" data-activity-name="' + escapeHtml(row.name) + '"'
+            + ' style="font-size:0.85em; padding:5px 12px;">' + label + '</button>'
             + '</div>';
     }
 
@@ -185,21 +185,21 @@
         var activity = getActivity();
         var html = '';
         if (!activity.newest) {
-            html = '<p style="color:var(--text-tertiary); margin:0;">Nothing uploaded yet, so nobody is set aside.</p>';
+            html = '<p class="text-faint" style="margin:0;">Nothing uploaded yet, so nobody is set aside.</p>';
         } else {
-            html += '<p style="color:var(--text-secondary); margin:0 0 10px 0; font-size:0.9em;">No numbers since '
+            html += '<p class="text-secondary" style="margin:0 0 10px 0; font-size:0.9em;">No numbers since '
                 + escapeHtml(formatDate(activity.cutoff)) + ' (30 days before your newest upload, ' + escapeHtml(formatDate(activity.newest)) + ').</p>';
             if (!activity.inactive.length) {
-                html += '<p style="color:var(--green-text); margin:0;">Everyone on the roster has numbers in the last 30 days.</p>';
+                html += '<p class="tone-good" style="margin:0;">Everyone on the roster has numbers in the last 30 days.</p>';
             } else {
-                html += '<div style="border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised);">'
-                    + activity.inactive.map(function (row) { return rowHtml(row, 'reinstate', 'Reinstate', '#2e7d32'); }).join('')
+                html += '<div class="card-sunken" style="padding:0;">'
+                    + activity.inactive.map(function (row) { return rowHtml(row, 'reinstate', 'Reinstate', 'btn-secondary'); }).join('')
                     + '</div>';
             }
             if (activity.reinstatedWaiting.length) {
                 html += '<h4 style="margin:16px 0 8px 0;">Reinstated, waiting for numbers</h4>'
-                    + '<div style="border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised);">'
-                    + activity.reinstatedWaiting.map(function (row) { return rowHtml(row, 'undo', 'Set aside again', '#757575'); }).join('')
+                    + '<div class="card-sunken" style="padding:0;">'
+                    + activity.reinstatedWaiting.map(function (row) { return rowHtml(row, 'undo', 'Set aside again', 'btn-ghost'); }).join('')
                     + '</div>';
             }
         }

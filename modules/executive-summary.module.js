@@ -423,27 +423,26 @@
     // METRIC CARD STYLE
     // ============================================
 
+    // The kit's callouts carry the state: green on target, amber close to it,
+    // red off it, and the plain callout when there is nothing to judge.
     function getExecutiveSummaryMetricCardStyle(metricKey, averageValue, reviewYear) {
-        var neutralStyle = {
-            background: 'linear-gradient(135deg, #90a4ae 0%, #78909c 100%)',
-            textColor: '#ffffff'
-        };
+        var neutralStyle = { cardClass: 'callout', valueClass: 'text-primary' };
 
         if (!Number.isFinite(averageValue)) return neutralStyle;
 
         // Use metric target (goal) for card color, not on/off tracker stretch bands
         if (metricMeetsTarget(metricKey, averageValue)) {
-            return { background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)', textColor: '#ffffff' };
+            return { cardClass: 'callout callout-good', valueClass: 'tone-good' };
         }
 
         var gap = Math.abs(metricGapToTarget(metricKey, averageValue));
         var thresholdObj = getTrendDeltaThreshold(metricKey);
         var threshold = thresholdObj?.value || 0;
         if (threshold > 0 && gap <= threshold) {
-            return { background: 'linear-gradient(135deg, #f0de87 0%, #e6c65a 100%)', textColor: '#222222' };
+            return { cardClass: 'callout callout-warn', valueClass: 'tone-warn' };
         }
 
-        return { background: 'linear-gradient(135deg, #c62828 0%, #ef5350 100%)', textColor: '#ffffff' };
+        return { cardClass: 'callout callout-bad', valueClass: 'tone-bad' };
     }
 
     // ============================================
@@ -464,29 +463,27 @@
             return {
                 label: 'Avg ' + metricDef.label,
                 value: Number.isFinite(averageValue) ? formatMetricDisplay(key, averageValue) : 'N/A',
-                icon: '\u{1F4C8}',
-                background: style.background,
-                textColor: style.textColor
+                cardClass: style.cardClass,
+                valueClass: style.valueClass
             };
         }).filter(Boolean);
 
         return [
-            { label: 'Total Data Periods', value: metrics.totalWeeks, icon: '\u{1F4CA}' },
-            { label: 'Total Employees', value: metrics.totalEmployees.size, icon: '\u{1F465}' }
+            { label: 'Total Data Periods', value: metrics.totalWeeks },
+            { label: 'Total Employees', value: metrics.totalEmployees.size }
         ].concat(metricCards).map(function(card) {
             return {
-                background: card.background || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                textColor: card.textColor || '#ffffff',
+                cardClass: card.cardClass || 'callout',
+                valueClass: card.valueClass || 'text-primary',
                 label: card.label,
-                value: card.value,
-                icon: card.icon
+                value: card.value
             };
         });
     }
 
     function renderExecutiveSummaryCardsHtml(cards) {
         return cards.map(function(card) {
-            return '\n            <div style="padding: 20px; background: ' + card.background + '; color: ' + card.textColor + '; border-radius: 8px; text-align: center;">\n                <div style="font-size: 2em; margin-bottom: 8px;">' + card.icon + '</div>\n                <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 4px;">' + card.value + '</div>\n                <div style="font-size: 0.9em; opacity: 0.9;">' + card.label + '</div>\n            </div>\n        ';
+            return '\n            <div class="' + card.cardClass + '" style="padding: 20px; border-radius: 8px; text-align: center;">\n                <div class="' + card.valueClass + '" style="font-size: 1.8em; font-weight: bold; margin-bottom: 4px;">' + card.value + '</div>\n                <div class="text-secondary" style="font-size: 0.9em;">' + card.label + '</div>\n            </div>\n        ';
         }).join('');
     }
 
@@ -680,8 +677,8 @@
         // If window is null or blocked, provide manual fallback
         if (!windowRef) {
             var tempDiv = document.createElement('div');
-            tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-surface); padding: 20px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); max-width: 600px; z-index: 10001;';
-            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">\u{1F4CB} Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="' + copilotUrl + '" target="_blank">' + copilotUrl.split('//').pop() + '</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" style="margin-top: 10px; padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>\n            ';
+            tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow-lg); max-width: 600px; z-index: 10001;';
+            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="' + copilotUrl + '" target="_blank">' + copilotUrl.split('//').pop() + '</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" class="btn-secondary" style="margin-top: 10px; padding: 8px 16px;">Close</button>\n            ';
             document.body.appendChild(tempDiv);
         }
     }
@@ -954,7 +951,7 @@
     }
 
     function initializeYearlySummaryChartsContainer(chartsContainer) {
-        chartsContainer.innerHTML = '<h4 style="margin: 0 0 20px 0; color: #ff9800; font-size: 1.3em;">\u{1F4CA} Weekly Metric Trends</h4>';
+        chartsContainer.innerHTML = '<h4 style="margin: 0 0 20px 0; font-size: 1.3em;">Weekly Metric Trends</h4>';
 
         var chartsGrid = document.createElement('div');
         chartsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;';
@@ -964,7 +961,7 @@
 
     function buildYearlySummaryChartCard(chartsGrid) {
         var chartContainer = document.createElement('div');
-        chartContainer.style.cssText = 'background: var(--bg-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+        chartContainer.style.cssText = 'background: var(--bg-surface); padding: 15px; border-radius: 8px; border: 1px solid var(--border);';
 
         var canvas = document.createElement('canvas');
         canvas.style.cssText = 'max-height: 250px;';

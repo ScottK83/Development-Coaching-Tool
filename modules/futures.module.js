@@ -870,19 +870,19 @@
         var weekInfo = data.weekInfo;
 
         if (data.employees.length === 0) {
-            container.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 40px;">No data available. Upload data to see projections.</p>';
+            container.innerHTML = '<p class="text-faint" style="text-align: center; padding: 40px;">No data available. Upload data to see projections.</p>';
             return;
         }
 
         var html = '';
 
         // Summary header
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--green-soft); border-radius: 8px; border-left: 4px solid #4caf50;">';
+        html += '<div class="callout" style="margin-bottom: 20px;">';
         html += '<strong>Year Progress:</strong> ' + weekInfo.weeksCompleted + ' weeks completed, ' + weekInfo.weeksRemaining + ' weeks remaining in ' + weekInfo.currentYear;
         html += '</div>';
 
         // Employee selector
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">';
+        html += '<div class="card" style="margin-bottom: 20px;">';
         html += '<label for="futuresEmployeeSelect" style="font-weight: bold; display: block; margin-bottom: 8px;">Select Associate:</label>';
         html += '<select id="futuresEmployeeSelect" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1em; cursor: pointer;">';
         html += '<option value="__all__">All Team Members</option>';
@@ -893,13 +893,13 @@
         html += '</div>';
 
         // Timeframe toggle
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">';
+        html += '<div class="card" style="margin-bottom: 20px;">';
         html += '<label style="font-weight: bold; display: block; margin-bottom: 8px;">Show targets as:</label>';
-        html += '<div style="display: flex; gap: 8px;">';
+        html += '<div class="sub-nav" role="tablist" style="margin-bottom: 0;">';
         ['Daily', 'Weekly', 'Monthly'].forEach(function (label) {
             var val = label.toLowerCase();
             var isDefault = val === 'weekly';
-            html += '<button type="button" class="futures-timeframe-btn" data-timeframe="' + val + '" style="padding: 8px 18px; border: 2px solid ' + (isDefault ? '#4caf50' : 'var(--border)') + '; background: ' + (isDefault ? '#4caf50' : 'white') + '; color: ' + (isDefault ? 'white' : 'var(--text-secondary)') + '; border-radius: 4px; cursor: pointer; font-weight: bold;">' + label + '</button>';
+            html += '<button type="button" role="tab" class="futures-timeframe-btn' + (isDefault ? ' is-active' : '') + '" data-timeframe="' + val + '"' + (isDefault ? ' aria-selected="true"' : '') + '>' + label + '</button>';
         });
         html += '</div></div>';
 
@@ -912,7 +912,7 @@
         var select = document.getElementById('futuresEmployeeSelect');
         if (select) {
             select.addEventListener('change', function () {
-                var tf = document.querySelector('.futures-timeframe-btn[style*="background: rgb(76, 175, 80)"]')?.dataset?.timeframe || 'weekly';
+                var tf = document.querySelector('.futures-timeframe-btn.is-active')?.dataset?.timeframe || 'weekly';
                 renderFuturesTable(data, select.value, tf);
             });
         }
@@ -921,9 +921,9 @@
         document.querySelectorAll('.futures-timeframe-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 document.querySelectorAll('.futures-timeframe-btn').forEach(function (b) {
-                    b.style.background = 'white'; b.style.color = '#666'; b.style.borderColor = '#ddd';
+                    b.classList.remove('is-active'); b.removeAttribute('aria-selected');
                 });
-                btn.style.background = '#4caf50'; btn.style.color = 'white'; btn.style.borderColor = '#4caf50';
+                btn.classList.add('is-active'); btn.setAttribute('aria-selected', 'true');
                 var empVal = document.getElementById('futuresEmployeeSelect')?.value || '__all__';
                 renderFuturesTable(data, empVal, btn.dataset.timeframe);
             });
@@ -943,20 +943,20 @@
             : data.employees.filter(function (e) { return e.name === selectedEmployee; });
 
         if (employees.length === 0) {
-            tableContainer.innerHTML = '<p style="color: var(--text-tertiary); text-align: center;">No data for selected employee.</p>';
+            tableContainer.innerHTML = '<p class="text-faint" style="text-align: center;">No data for selected employee.</p>';
             return;
         }
 
         var html = '';
 
         employees.forEach(function (emp) {
-            html += '<div style="margin-bottom: 24px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
-            html += '<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4caf50; padding-bottom: 8px; margin-bottom: 0;">';
-            html += '<h3 style="margin: 0; color: var(--text-primary);">' + _escapeHtml(emp.name) + '</h3>';
+            html += '<div class="card" style="margin-bottom: 24px; padding: 20px;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 0;">';
+            html += '<h3 class="card-title" style="margin: 0;">' + _escapeHtml(emp.name) + '</h3>';
             html += '</div>';
 
             if (emp.dataSource) {
-                html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(emp.dataSource) + '</p>';
+                html += '<p class="text-secondary" style="margin: 0 0 12px 0; font-size: 0.85em;">Source: ' + _escapeHtml(emp.dataSource) + '</p>';
             }
 
             // Table
@@ -968,8 +968,8 @@
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Target</th>';
             html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Status</th>';
             var tfLabel = timeframe === 'daily' ? 'Avg/Day' : timeframe === 'monthly' ? 'Avg/Month' : 'Avg/Week';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border); background: var(--green-soft);">Meet (' + tfLabel + ')</th>';
-            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border); background: #e3f2fd;">Exceed (' + tfLabel + ')</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Meet (' + tfLabel + ')</th>';
+            html += '<th style="padding: 10px 8px; text-align: center; border-bottom: 2px solid var(--border);">Exceed (' + tfLabel + ')</th>';
             html += '</tr></thead><tbody>';
 
             // The five KPIs lead, marked, and everything else follows under
@@ -980,11 +980,11 @@
             var metricKeys = kpiKeys.filter(function (k) { return allKeys.indexOf(k) > -1; })
                 .concat(allKeys.filter(function (k) { return kpiKeys.indexOf(k) === -1; }));
             if (metricKeys.length === 0) {
-                html += '<tr><td colspan="6" style="padding: 15px; text-align: center; color: var(--text-tertiary);">No metric data available</td></tr>';
+                html += '<tr><td colspan="6" class="text-faint" style="padding: 15px; text-align: center;">No metric data available</td></tr>';
             }
             var sectionRow = function (label) {
-                return '<tr><td colspan="6" style="padding: 10px 8px 6px; font-size: 0.78em; font-weight: 700; ' +
-                    'letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); ' +
+                return '<tr><td colspan="6" class="text-secondary" style="padding: 10px 8px 6px; font-size: 0.78em; font-weight: 700; ' +
+                    'letter-spacing: 0.06em; text-transform: uppercase; ' +
                     'border-bottom: 1px solid var(--border);">' + label + '</td></tr>';
             };
             var shownKpi = false, shownOther = false;
@@ -1001,38 +1001,35 @@
                 var icon = metric.icon || '';
                 var label = metric.label || metricKey;
 
-                // Row background based on status
-                var rowBg = m.currentlyMeeting ? '#f1f8e9' : '#fff3e0';
-                if (m.currentlyExceeding) rowBg = '#e8f5e9';
-
-                html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border);">';
+                // The status pill carries the state, so the row stays plain.
+                html += '<tr style="border-bottom: 1px solid var(--border);">';
 
                 // Metric name. A KPI gets an accent bar and a tag.
                 html += isKpi
-                    ? '<td style="padding: 8px; font-weight: 700; box-shadow: inset 4px 0 0 #1e88e5;">' + icon + ' ' + _escapeHtml(label) +
-                      ' <span style="display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; font-size: 0.72em; ' +
-                      'font-weight: 700; color: #fff; background: #1e88e5; vertical-align: middle;">KPI</span></td>'
+                    ? '<td style="padding: 8px; font-weight: 700;">' + icon + ' ' + _escapeHtml(label) +
+                      ' <span class="pill pill-info" style="margin-left: 6px; font-size: 0.72em; vertical-align: middle;">KPI</span></td>'
                     : '<td style="padding: 8px; font-weight: 500;">' + icon + ' ' + _escapeHtml(label) + '</td>';
 
                 // Current YTD value
                 html += '<td style="padding: 8px; text-align: center; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.currentAvg) + '</td>';
 
                 // Target
-                html += '<td style="padding: 8px; text-align: center; color: var(--text-secondary);">' + _formatMetricDisplay(metricKey, m.meetTarget) + '</td>';
+                html += '<td class="text-secondary" style="padding: 8px; text-align: center;">' + _formatMetricDisplay(metricKey, m.meetTarget) + '</td>';
 
                 // Status badge
-                var statusText, statusColor;
+                var statusText, statusPill;
                 if (m.currentlyExceeding) {
                     statusText = 'Exceeding';
-                    statusColor = '#2e7d32';
+                    statusPill = 'pill-good';
                 } else if (m.currentlyMeeting) {
                     statusText = 'Meeting';
-                    statusColor = '#f57f17';
+                    // On target is green; amber is for watch (restyle, 2026-10-21).
+                    statusPill = 'pill-good';
                 } else {
                     statusText = 'Below';
-                    statusColor = '#c62828';
+                    statusPill = 'pill-bad';
                 }
-                html += '<td style="padding: 8px; text-align: center;"><span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold; color: white; background: ' + statusColor + ';">' + statusText + '</span></td>';
+                html += '<td style="padding: 8px; text-align: center;"><span class="pill ' + statusPill + '">' + statusText + '</span></td>';
 
                 // Timeframe divisor for cumulative budgets
                 var weeksLeft = data.weekInfo.weeksRemaining;
@@ -1040,44 +1037,44 @@
                 var tfSuffix = timeframe === 'daily' ? '/day' : timeframe === 'monthly' ? '/mo' : '/wk';
 
                 // Required to meet
-                html += '<td style="padding: 8px; text-align: center; background: rgba(232,245,233,0.3);">';
+                html += '<td style="padding: 8px; text-align: center;">';
                 if (m.isCumulative) {
                     if (m.currentlyMeeting) {
                         var meetBudgetPer = tfDivisor > 0 ? m.budgetRemaining / tfDivisor : 0;
-                        html += '<span style="color: var(--green-text); font-weight: bold;">' + _formatMetricDisplay(metricKey, meetBudgetPer) + tfSuffix + ' left</span>';
+                        html += '<span class="tone-good" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, meetBudgetPer) + tfSuffix + ' left</span>';
                     } else {
-                        html += '<span style="color: var(--red-text); font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.budgetRemaining)) + '</span>';
+                        html += '<span class="tone-bad" style="font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.budgetRemaining)) + '</span>';
                     }
                 } else if (m.currentlyMeeting) {
-                    html += '<span style="color: var(--green-text); font-weight: bold;">On track</span>';
+                    html += '<span class="tone-good" style="font-weight: bold;">On track</span>';
                 } else if (m.requiredToMeet !== null && m.meetAchievable) {
-                    html += '<span style="color: #e65100; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + tfSuffix + '</span>';
+                    html += '<span class="tone-warn" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + tfSuffix + '</span>';
                 } else if (m.requiredToMeet !== null && !m.meetAchievable) {
-                    html += '<span style="color: var(--red-text); font-size: 0.85em;">Not achievable</span>';
+                    html += '<span class="tone-bad" style="font-size: 0.85em;">Not achievable</span>';
                 } else {
-                    html += '<span style="color: var(--text-tertiary);">N/A</span>';
+                    html += '<span class="text-faint">N/A</span>';
                 }
                 html += '</td>';
 
                 // Required to exceed
-                html += '<td style="padding: 8px; text-align: center; background: rgba(227,242,253,0.3);">';
+                html += '<td style="padding: 8px; text-align: center;">';
                 if (!m.hasExceedBand) {
-                    html += '<span style="color: var(--text-tertiary); font-size: 0.85em;">No band</span>';
+                    html += '<span class="text-faint" style="font-size: 0.85em;">No band</span>';
                 } else if (m.isCumulative) {
                     if (m.currentlyExceeding) {
                         var excBudgetPer = tfDivisor > 0 ? m.exceedBudgetRemaining / tfDivisor : 0;
-                        html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, excBudgetPer) + tfSuffix + ' left</span>';
+                        html += '<span class="tone-info" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, excBudgetPer) + tfSuffix + ' left</span>';
                     } else {
-                        html += '<span style="color: var(--red-text); font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.exceedBudgetRemaining)) + '</span>';
+                        html += '<span class="tone-bad" style="font-weight: bold;">Over by ' + _formatMetricDisplay(metricKey, Math.abs(m.exceedBudgetRemaining)) + '</span>';
                     }
                 } else if (m.currentlyExceeding) {
-                    html += '<span style="color: #1565c0; font-weight: bold;">On track</span>';
+                    html += '<span class="tone-info" style="font-weight: bold;">On track</span>';
                 } else if (m.requiredToExceed !== null && m.exceedAchievable) {
-                    html += '<span style="color: #1565c0; font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + tfSuffix + '</span>';
+                    html += '<span class="tone-info" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + tfSuffix + '</span>';
                 } else if (m.requiredToExceed !== null && !m.exceedAchievable) {
-                    html += '<span style="color: var(--red-text); font-size: 0.85em;">Not achievable</span>';
+                    html += '<span class="tone-bad" style="font-size: 0.85em;">Not achievable</span>';
                 } else {
-                    html += '<span style="color: var(--text-tertiary);">N/A</span>';
+                    html += '<span class="text-faint">N/A</span>';
                 }
                 html += '</td>';
 
@@ -1104,16 +1101,16 @@
 
             html += '<div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">';
             if (exceedingCount > 0) {
-                html += '<span style="padding: 6px 14px; border-radius: 16px; background: var(--green-soft); color: var(--green-text); font-weight: bold; font-size: 0.9em;">' + exceedingCount + ' Exceeding</span>';
+                html += '<span class="pill pill-good" style="padding: 4px 12px;">' + exceedingCount + ' Exceeding</span>';
             }
             if (meetingCount > 0) {
-                html += '<span style="padding: 6px 14px; border-radius: 16px; background: #fff8e1; color: #f57f17; font-weight: bold; font-size: 0.9em;">' + meetingCount + ' Meeting</span>';
+                html += '<span class="pill pill-good" style="padding: 4px 12px;">' + meetingCount + ' Meeting</span>';
             }
             if (belowCount > 0) {
-                html += '<span style="padding: 6px 14px; border-radius: 16px; background: #fbe9e7; color: var(--red-text); font-weight: bold; font-size: 0.9em;">' + belowCount + ' Below</span>';
+                html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + belowCount + ' Below</span>';
             }
             if (notAchievableCount > 0) {
-                html += '<span style="padding: 6px 14px; border-radius: 16px; background: #f8d7da; color: #721c24; font-weight: bold; font-size: 0.9em;">' + notAchievableCount + ' Not Achievable</span>';
+                html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + notAchievableCount + ' Not Achievable</span>';
             }
             html += '</div>';
 

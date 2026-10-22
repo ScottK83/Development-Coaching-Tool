@@ -259,11 +259,11 @@
                 'style="width: 60px; padding: 4px; text-align: center; border: 1px solid var(--border); border-radius: 3px; font-size: 0.85em;" /></td>';
         }).join('');
 
-        return '<tr style="background: #e3f2fd;">' +
-            '<td style="padding: 6px 8px; font-weight: 600; color: #1565c0; white-space: nowrap;">' +
-            'Center Avg<br><span style="font-size: 0.7em; font-weight: 400; color: #1976d2;">' +
+        return '<tr style="background: var(--brand-soft);">' +
+            '<td style="padding: 6px 8px; font-weight: 600; white-space: nowrap;">' +
+            'Center Avg<br><span class="text-secondary" style="font-size: 0.7em; font-weight: 400;">' +
             'Headcount: <input type="number" id="snapCenterHeadcount" value="144" min="1" ' +
-            'style="width: 45px; padding: 2px; text-align: center; border: 1px solid #90caf9; border-radius: 3px; font-size: 0.85em;" />' +
+            'style="width: 45px; padding: 2px; text-align: center; border: 1px solid var(--border); border-radius: 3px; font-size: 0.85em;" />' +
             '</span></td>' +
             cells + '</tr>';
     }
@@ -1064,10 +1064,12 @@
             var labels = container.querySelectorAll('label');
             labels.forEach(function(label) {
                 var input = label.querySelector('input');
+                // The chosen period is the raised pill the sub-nav uses.
+                label.classList.toggle('is-active', Boolean(input && input.checked));
                 if (input && input.checked) {
-                    label.style.background = '#3b82f6';
-                    label.style.color = '#fff';
-                    label.style.borderColor = '#3b82f6';
+                    label.style.background = 'var(--bg-active)';
+                    label.style.color = 'var(--text-primary)';
+                    label.style.borderColor = 'var(--border-strong)';
                 } else {
                     label.style.background = 'var(--bg-surface-sunken)';
                     label.style.color = 'var(--text-secondary)';
@@ -1123,12 +1125,12 @@
         // Header
         var headerCells = SNAPSHOT_METRICS.map(function(key) {
             return '<th style="padding: 6px 4px; font-size: 0.75em; font-weight: 600; color: var(--text-secondary); text-align: center; ' +
-                'border-bottom: 2px solid #cbd5e1;">' + SHORT_LABELS[key] + '</th>';
+                'border-bottom: 2px solid var(--border-strong);">' + SHORT_LABELS[key] + '</th>';
         }).join('');
 
         // Employee rows (read-only preview from data)
         var rows = employees.map(function(emp, idx) {
-            var bg = idx % 2 === 0 ? '#fff' : '#f8fafc';
+            var bg = idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-raised)';
             var firstName = emp.firstName || emp.name?.split(',')[0]?.trim() || emp.name || 'Unknown';
             var cells = SNAPSHOT_METRICS.map(function(key) {
                 var val = emp[key];
@@ -1136,11 +1138,11 @@
                 var display = (val !== undefined && val !== null && val !== '' && !isNaN(parseFloat(val)))
                     ? (metrics.formatMetricValue?.(key, val) || String(val))
                     : '--';
-                return '<td style="padding: 5px 4px; text-align: center; font-size: 0.82em; color: #334155; ' +
-                    'border-bottom: 1px solid #e2e8f0;">' + escapeHtml(display) + '</td>';
+                return '<td style="padding: 5px 4px; text-align: center; font-size: 0.82em; ' +
+                    'border-bottom: 1px solid var(--border);">' + escapeHtml(display) + '</td>';
             }).join('');
             return '<tr style="background: ' + bg + ';"><td style="padding: 5px 8px; font-weight: 600; font-size: 0.82em; ' +
-                'color: #1e293b; border-bottom: 1px solid var(--border); white-space: nowrap;">' + escapeHtml(firstName) + '</td>' + cells + '</tr>';
+                'border-bottom: 1px solid var(--border); white-space: nowrap;">' + escapeHtml(firstName) + '</td>' + cells + '</tr>';
         }).join('');
 
         // Center avg input row
@@ -1149,7 +1151,7 @@
         gridContainer.innerHTML = '<div style="overflow-x: auto;">' +
             '<table style="width: 100%; border-collapse: collapse;">' +
             '<thead><tr><th style="padding: 6px 8px; text-align: left; font-size: 0.75em; font-weight: 600; color: var(--text-secondary); ' +
-            'border-bottom: 2px solid #cbd5e1;">Name</th>' + headerCells + '</tr></thead>' +
+            'border-bottom: 2px solid var(--border-strong);">Name</th>' + headerCells + '</tr></thead>' +
             '<tbody>' + rows + centerRow + '</tbody></table></div>';
 
         // Show generate button area

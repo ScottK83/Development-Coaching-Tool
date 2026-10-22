@@ -1327,12 +1327,33 @@
     // DISPLAY
     // ============================================
 
+    // Kit tones (restyle 2026-10-21). Green is fine, amber is watch, red is
+    // against; info marks a system issue. Text colour goes on as a class,
+    // because the dark layer forces a div, span or td back to the body
+    // colour; fills and soft backgrounds use the matching tokens.
+    var TONE_CLASS = { good: 'tone-good', warn: 'tone-warn', bad: 'tone-bad', info: 'tone-info', muted: 'text-faint', plain: 'text-primary' };
+    var TONE_FILL = { good: 'var(--green)', warn: 'var(--yellow)', bad: 'var(--red)', info: 'var(--brand-text)', muted: 'var(--text-tertiary)', plain: 'var(--text-secondary)' };
+    var TONE_SOFT = { good: 'var(--green-soft)', warn: 'var(--yellow-soft)', bad: 'var(--red-soft)', info: 'var(--brand-soft)', muted: 'var(--bg-surface-raised)', plain: 'var(--bg-surface-raised)' };
+    var TONE_PILL = { good: 'pill pill-good', warn: 'pill pill-warn', bad: 'pill pill-bad', info: 'pill pill-info', muted: 'pill', plain: 'pill' };
+
+    // The PTOST buffer and the bars: under 75% fine, 75% watch, full is against.
+    function toneByPct(pct) {
+        return pct >= 100 ? 'bad' : pct >= 75 ? 'warn' : 'good';
+    }
+
+    // A table row that needs a look carries a coloured left edge. It is an
+    // inset shadow on the first cell, because the dark layer forces a row's
+    // own background and border colours.
+    function rowEdgeStyle(tone) {
+        return tone ? ' box-shadow:inset 4px 0 0 ' + TONE_FILL[tone] + ';' : '';
+    }
+
     function getTierInfo(reliabilityHours) {
-        if (reliabilityHours <= 0)  return { label: 'Clean', color: '#2e7d32', bg: '#e8f5e9' };
-        if (reliabilityHours <= 16) return { label: 'Verbal', color: '#f57f17', bg: '#fff8e1' };
-        if (reliabilityHours <= 24) return { label: 'Written', color: '#e65100', bg: '#fff3e0' };
-        if (reliabilityHours <= 32) return { label: 'Final', color: '#b71c1c', bg: '#ffebee' };
-        return { label: 'Termination', color: '#4a148c', bg: '#f3e5f5' };
+        if (reliabilityHours <= 0)  return { label: 'Clean', tone: 'good' };
+        if (reliabilityHours <= 16) return { label: 'Verbal', tone: 'warn' };
+        if (reliabilityHours <= 24) return { label: 'Written', tone: 'warn' };
+        if (reliabilityHours <= 32) return { label: 'Final', tone: 'bad' };
+        return { label: 'Termination', tone: 'bad' };
     }
 
     function getReliabilityNamesByTeamFilter(allNames) {
@@ -1416,13 +1437,13 @@
 
         var html = '';
         html += '<div style="margin-bottom:16px;">';
-        html += '<h3 style="margin:0 0 12px 0; color:#00695c;">📋 Reliability Tracker</h3>';
-        html += '<p style="font-size:0.88em; color:var(--text-secondary); margin-bottom:16px;">Upload files in the Upload section.</p>';
+        html += '<h3 class="section-title" style="margin:0 0 12px 0;">Reliability Tracker</h3>';
+        html += '<p class="text-secondary" style="font-size:0.88em; margin-bottom:16px;">Upload files in the Upload section.</p>';
 
         html += '<div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:10px;">';
         html += '<div>';
-        html += '<label style="display:block; font-size:0.78em; color:var(--text-secondary); margin-bottom:2px;">Employee breakdown</label>';
-        html += '<select id="relEmployeeSelect" style="padding:6px 10px; border:1px solid #cdd; border-radius:4px; min-width:260px;">';
+        html += '<label class="text-secondary" style="display:block; font-size:0.78em; margin-bottom:2px;">Employee breakdown</label>';
+        html += '<select id="relEmployeeSelect" style="padding:6px 10px; min-width:260px;">';
         // Ordered by review priority, worst first, so sort is switched off. The
         // option text carries the review marker, which is why it needs a label
         // separate from the value.
@@ -1434,21 +1455,21 @@
         );
         html += '</select>';
         html += '</div>';
-        html += '<div style="font-size:0.78em; color:var(--text-secondary);">Tip: choose one checked team member to view detail.</div>';
+        html += '<div class="text-secondary" style="font-size:0.78em;">Tip: choose one checked team member to view detail.</div>';
         if (reviewCount > 0) {
-            html += '<div style="font-size:0.78em; color:#b26a00; font-weight:600;">Review queue: ' + reviewCount + ' associate' + (reviewCount === 1 ? '' : 's') + '.</div>';
+            html += '<div class="tone-warn" style="font-size:0.78em; font-weight:600;">Review queue: ' + reviewCount + ' associate' + (reviewCount === 1 ? '' : 's') + '.</div>';
         }
         html += '</div>';
 
         if (names.length === 0) {
-            html += '<div style="padding:20px; background:var(--bg-surface-raised); border-radius:8px; text-align:center; color:var(--text-secondary);">';
+            html += '<div class="text-secondary" style="padding:20px; background:var(--bg-surface-raised); border-radius:8px; text-align:center;">';
             html += 'No checked team members found in Settings for the current period.';
             html += '</div>';
             html += '</div>';
             container.innerHTML = html;
             return;
         }
-        html += '<div id="relSelectionHint" style="padding:14px; border:1px dashed var(--border-strong); border-radius:8px; color:#607d8b; background:#fafcfd; margin-top:8px;">Select an employee from the dropdown to view reliability details.</div>';
+        html += '<div id="relSelectionHint" class="text-secondary" style="padding:14px; border:1px dashed var(--border-strong); border-radius:8px; background:var(--bg-surface-raised); margin-top:8px;">Select an employee from the dropdown to view reliability details.</div>';
 
         // Detail panel (shown when clicking a row)
         html += '<div id="relDetailPanel" style="display:none; margin-top:16px;"></div>';
@@ -1460,11 +1481,11 @@
 
     // Category display config
     var CAT_STYLES = {
-        'ptost':    { label: 'PTOST',       bg: '#e8f5e9', color: '#2e7d32', icon: '🛡' },
-        'same-day': { label: 'Same Day/Partial', bg: '#ffebee', color: '#b71c1c', icon: '⚠' },
-        'tardy':    { label: 'Tardy',       bg: '#fff3e0', color: '#e65100', icon: '⏰' },
-        'planned':  { label: 'Planned',     bg: '#e3f2fd', color: '#0d47a1', icon: '📅' },
-        'other':    { label: 'Other',       bg: '#f5f5f5', color: '#666',    icon: '-' }
+        'ptost':    { label: 'PTOST',       tone: 'good',  icon: '🛡' },
+        'same-day': { label: 'Same Day/Partial', tone: 'bad', icon: '⚠' },
+        'tardy':    { label: 'Tardy',       tone: 'warn',  icon: '⏰' },
+        'planned':  { label: 'Planned',     tone: 'muted', icon: '📅' },
+        'other':    { label: 'Other',       tone: 'muted', icon: '-' }
     };
 
     // ============================================
@@ -1478,7 +1499,7 @@
         var ptostUsed = round2(Number(r.ptostHoursUsed || 0));
         var ptostRemaining = round2(Math.max(0, PTOST_BUFFER_LIMIT - ptostUsed));
         var ptostPct = Math.min(100, (ptostUsed / PTOST_BUFFER_LIMIT) * 100);
-        var ptostColor = ptostPct >= 100 ? '#b71c1c' : ptostPct >= 75 ? '#e65100' : '#2e7d32';
+        var ptostTone = toneByPct(ptostPct);
         var sameDayAgainst = round2(Number(r.sameDayNoPtostHours || 0));
         var discCount = (r.discrepancies || []).length;
         var reviewCount = (r.reviewCodingCandidates || []).length;
@@ -1519,27 +1540,27 @@
                 : overage > 0 ? overage
                 : round2((t.verint || []).reduce(function(s, v) { return s + Number(v.hours || 0); }, 0));
 
-            var problem, color, action;
+            var problem, tone, action;
             if (hasDiscrepancy) {
-                problem = '⚠ Verint absent, Payroll REG'; color = '#b71c1c';
+                problem = '⚠ Verint absent, Payroll REG'; tone = 'bad';
                 action = 'Payroll wrong. Send correction';
             } else if (hasReview) {
-                problem = '⚠ Verint Same Day vs Payroll PTO'; color = '#e65100';
+                problem = '⚠ Verint Same Day vs Payroll PTO'; tone = 'warn';
                 action = 'Re-code to PTOST (if buffer remains)';
             } else if (hasPcIssue) {
-                problem = 'PC issue. Verint tardy, clocked in'; color = '#1565c0';
+                problem = 'PC issue. Verint tardy, clocked in'; tone = 'info';
                 action = 'Document as system issue';
             } else if (overage > 0) {
-                problem = 'PTOST over 40h cap'; color = '#e65100';
+                problem = 'PTOST over 40h cap'; tone = 'warn';
                 action = 'Counts against reliability';
             } else if (exposure > 0) {
-                problem = 'Same Day without PTOST'; color = '#b71c1c';
+                problem = 'Same Day without PTOST'; tone = 'bad';
                 action = 'Counts against reliability';
             } else if (hasPartial) {
-                problem = 'Partial day. Review'; color = '#78909c';
+                problem = 'Partial day. Review'; tone = 'muted';
                 action = 'Confirm payroll matches';
             } else {
-                problem = '-'; color = '#78909c'; action = '-';
+                problem = '-'; tone = 'muted'; action = '-';
             }
 
             rows.push({
@@ -1548,7 +1569,7 @@
                 payroll: payrollDesc,
                 hrs: hrs,
                 problem: problem,
-                color: color,
+                tone: tone,
                 action: action
             });
         });
@@ -1578,44 +1599,44 @@
 
         // Verdict tiles
         html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;">';
-        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #ffcdd2; border-radius:8px; text-align:center;">';
-        html += '<div style="font-size:1.8em; font-weight:800; color:var(--red-text);">' + sameDayAgainst + 'h</div>';
-        html += '<div style="font-size:0.78em; color:var(--text-secondary);">Against reliability</div></div>';
-        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #b2dfdb; border-radius:8px;">';
-        html += '<div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="font-size:1.6em; font-weight:800; color:' + ptostColor + ';">' + ptostUsed + '<span style="font-size:0.55em; color:#90a4ae;"> / 40h</span></div><div style="font-size:0.75em; color:#607d8b;">' + ptostRemaining + 'h left</div></div>';
-        html += '<div style="margin-top:6px; height:6px; background:#e0e0e0; border-radius:3px; overflow:hidden;"><div style="height:100%; width:' + ptostPct + '%; background:' + ptostColor + ';"></div></div>';
-        html += '<div style="font-size:0.75em; color:#607d8b; text-align:center; margin-top:4px;">PTOST buffer</div></div>';
-        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #ffe0b2; border-radius:8px; text-align:center;">';
-        html += '<div style="font-size:1.8em; font-weight:800; color:#e65100;">' + (discCount + reviewCount) + '</div>';
-        html += '<div style="font-size:0.78em; color:var(--text-secondary);">Payroll discrepancies</div></div>';
-        html += '<div style="padding:12px; background:var(--bg-surface); border:1px solid #bbdefb; border-radius:8px; text-align:center;">';
-        html += '<div style="font-size:1.8em; font-weight:800; color:#1565c0;">' + pcCount + '</div>';
-        html += '<div style="font-size:0.78em; color:var(--text-secondary);">PC issue candidates</div></div>';
+        html += '<div class="card" style="margin:0; padding:12px; text-align:center;">';
+        html += '<div class="' + (sameDayAgainst > 0 ? 'tone-bad' : 'text-primary') + '" style="font-size:1.8em; font-weight:800;">' + sameDayAgainst + 'h</div>';
+        html += '<div class="text-secondary" style="font-size:0.78em;">Against reliability</div></div>';
+        html += '<div class="card" style="margin:0; padding:12px;">';
+        html += '<div style="display:flex; justify-content:space-between; align-items:baseline;"><div class="' + TONE_CLASS[ptostTone] + '" style="font-size:1.6em; font-weight:800;">' + ptostUsed + '<span class="text-faint" style="font-size:0.55em;"> / 40h</span></div><div class="text-secondary" style="font-size:0.75em;">' + ptostRemaining + 'h left</div></div>';
+        html += '<div style="margin-top:6px; height:6px; background:var(--bg-active); border-radius:3px; overflow:hidden;"><div style="height:100%; width:' + ptostPct + '%; background:' + TONE_FILL[ptostTone] + ';"></div></div>';
+        html += '<div class="text-secondary" style="font-size:0.75em; text-align:center; margin-top:4px;">PTOST buffer</div></div>';
+        html += '<div class="card" style="margin:0; padding:12px; text-align:center;">';
+        html += '<div class="' + ((discCount + reviewCount) > 0 ? 'tone-warn' : 'text-primary') + '" style="font-size:1.8em; font-weight:800;">' + (discCount + reviewCount) + '</div>';
+        html += '<div class="text-secondary" style="font-size:0.78em;">Payroll discrepancies</div></div>';
+        html += '<div class="card" style="margin:0; padding:12px; text-align:center;">';
+        html += '<div class="' + (pcCount > 0 ? 'tone-info' : 'text-primary') + '" style="font-size:1.8em; font-weight:800;">' + pcCount + '</div>';
+        html += '<div class="text-secondary" style="font-size:0.78em;">PC issue candidates</div></div>';
         html += '</div>';
 
         // Discrepancy table — only rows that disagree or count
         html += '<div style="margin-bottom:14px; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; overflow:hidden;">';
-        html += '<div style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700; color:#37474f;">What needs attention (' + rows.length + ')</div>';
+        html += '<div class="text-primary" style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700;">What needs attention (' + rows.length + ')</div>';
         if (rows.length === 0) {
-            html += '<div style="padding:20px; text-align:center; color:var(--green-text); font-weight:600;">✓ Verint and Payroll agree. Nothing to review.</div>';
+            html += '<div class="tone-good" style="padding:20px; text-align:center; font-weight:600;">✓ Verint and Payroll agree. Nothing to review.</div>';
         } else {
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-            html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap;">Date</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Verint says</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Payroll says</th>';
-            html += '<th style="padding:8px 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;">Hours</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Problem</th>';
-            html += '<th style="padding:8px 10px; text-align:left; border-bottom:1px solid var(--border);">Action</th>';
+            html += '<table class="data-table" style="font-size:0.85em;">';
+            html += '<thead><tr>';
+            html += '<th style="white-space:nowrap;">Date</th>';
+            html += '<th>Verint says</th>';
+            html += '<th>Payroll says</th>';
+            html += '<th style="text-align:center; white-space:nowrap;">Hours</th>';
+            html += '<th>Problem</th>';
+            html += '<th>Action</th>';
             html += '</tr></thead><tbody>';
             rows.forEach(function(row) {
-                html += '<tr style="border-bottom:1px solid #f0f0f0;">';
+                html += '<tr>';
                 html += '<td style="padding:8px 10px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.dateStr) + '</td>';
-                html += '<td style="padding:8px 10px; color:#455a64;">' + escapeHtml(row.verint) + '</td>';
-                html += '<td style="padding:8px 10px; color:#455a64;">' + escapeHtml(row.payroll) + '</td>';
+                html += '<td class="text-secondary" style="padding:8px 10px;">' + escapeHtml(row.verint) + '</td>';
+                html += '<td class="text-secondary" style="padding:8px 10px;">' + escapeHtml(row.payroll) + '</td>';
                 html += '<td style="padding:8px 10px; text-align:center; font-weight:700;">' + row.hrs + 'h</td>';
-                html += '<td style="padding:8px 10px; color:' + row.color + '; font-weight:600;">' + escapeHtml(row.problem) + '</td>';
-                html += '<td style="padding:8px 10px; color:#455a64; font-size:0.92em;">' + escapeHtml(row.action) + '</td>';
+                html += '<td class="' + TONE_CLASS[row.tone] + '" style="padding:8px 10px; font-weight:600;">' + escapeHtml(row.problem) + '</td>';
+                html += '<td class="text-secondary" style="padding:8px 10px; font-size:0.92em;">' + escapeHtml(row.action) + '</td>';
                 html += '</tr>';
             });
             html += '</tbody></table>';
@@ -1625,28 +1646,28 @@
         // PTOST ledger
         if (ptostLedger.length > 0) {
             html += '<div style="margin-bottom:14px; background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; overflow:hidden;">';
-            html += '<div style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700; color:#37474f;">PTOST ledger. Running total vs 40h cap</div>';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.85em;">';
-            html += '<thead><tr style="background:#f5f7f8; color:#455a64;">';
-            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--border);">Date</th>';
-            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid var(--border);">PTOST this day</th>';
-            html += '<th style="padding:6px 10px; text-align:center; border-bottom:1px solid var(--border);">Running total</th>';
-            html += '<th style="padding:6px 10px; text-align:left; border-bottom:1px solid var(--border);">Status</th>';
+            html += '<div class="text-primary" style="padding:10px 14px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); font-weight:700;">PTOST ledger. Running total vs 40h cap</div>';
+            html += '<table class="data-table" style="font-size:0.85em;">';
+            html += '<thead><tr>';
+            html += '<th style="padding:6px 10px;">Date</th>';
+            html += '<th style="padding:6px 10px; text-align:center;">PTOST this day</th>';
+            html += '<th style="padding:6px 10px; text-align:center;">Running total</th>';
+            html += '<th style="padding:6px 10px;">Status</th>';
             html += '</tr></thead><tbody>';
             ptostLedger.forEach(function(row) {
-                var statusText, statusColor, rowBg = '';
+                var statusText, statusTone, edgeTone = '';
                 if (row.overage > 0) {
-                    statusText = '✗ Over cap (+' + row.overage + 'h against)'; statusColor = '#b71c1c'; rowBg = 'background:#fff5f5;';
+                    statusText = '✗ Over cap (+' + row.overage + 'h against)'; statusTone = 'bad'; edgeTone = 'bad';
                 } else if (row.protected) {
-                    statusText = '✓ Protected'; statusColor = '#2e7d32';
+                    statusText = '✓ Protected'; statusTone = 'good';
                 } else {
-                    statusText = '⚠ Over cap'; statusColor = '#e65100'; rowBg = 'background:#fff8e1;';
+                    statusText = '⚠ Over cap'; statusTone = 'warn'; edgeTone = 'warn';
                 }
-                html += '<tr style="border-bottom:1px solid #f0f0f0;' + rowBg + '">';
-                html += '<td style="padding:6px 10px; white-space:nowrap; font-weight:600;">' + escapeHtml(row.dateStr) + '</td>';
+                html += '<tr>';
+                html += '<td style="padding:6px 10px; white-space:nowrap; font-weight:600;' + rowEdgeStyle(edgeTone) + '">' + escapeHtml(row.dateStr) + '</td>';
                 html += '<td style="padding:6px 10px; text-align:center;">' + row.hrs + 'h</td>';
                 html += '<td style="padding:6px 10px; text-align:center; font-weight:700;">' + row.running + 'h</td>';
-                html += '<td style="padding:6px 10px; color:' + statusColor + '; font-weight:600;">' + statusText + '</td>';
+                html += '<td class="' + TONE_CLASS[statusTone] + '" style="padding:6px 10px; font-weight:600;">' + statusText + '</td>';
                 html += '</tr>';
             });
             html += '</tbody></table></div>';
@@ -1654,9 +1675,9 @@
 
         // Action bar — same buttons as classic so nothing is lost
         html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
-        html += '<button type="button" id="relDiscCopySummary" style="padding:8px 16px; background:#37474f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📋 Copy Manager Summary</button>';
+        html += '<button type="button" id="relDiscCopySummary" class="btn-secondary" style="padding:8px 16px;">Copy Manager Summary</button>';
         if ((discCount + reviewCount + pcCount) > 0) {
-            html += '<button type="button" id="relDiscEmailCorrections" style="padding:8px 16px; background:#0d47a1; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Open Corrections Email</button>';
+            html += '<button type="button" id="relDiscEmailCorrections" class="btn-primary" style="padding:8px 16px;">Open Corrections Email</button>';
         }
         html += '</div>';
 
@@ -1711,26 +1732,25 @@
 
         // Header
         html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
-        html += '<h4 style="margin:0; color:#00695c;">' + escapeHtml(employeeName) + '</h4>';
-        html += '<button type="button" id="relCloseDetail" style="padding:4px 12px; border:1px solid var(--border); background:var(--bg-surface); border-radius:4px; cursor:pointer;">✕ Close</button>';
+        html += '<h4 class="card-title" style="margin:0;">' + escapeHtml(employeeName) + '</h4>';
+        html += '<button type="button" id="relCloseDetail" class="btn-ghost" style="padding:4px 12px;">Close</button>';
         html += '</div>';
 
         var sourceLabel = emp.hasVerint && emp.hasPayroll ? 'Matched' : (emp.hasVerint ? 'Verint only' : (emp.hasPayroll ? 'Payroll only' : 'None'));
-        var sourceBg = sourceLabel === 'Matched' ? '#e8f5e9' : '#fff3e0';
-        var sourceColor = sourceLabel === 'Matched' ? '#2e7d32' : '#e65100';
+        var sourceCallout = sourceLabel === 'Matched' ? 'callout callout-good' : 'callout callout-warn';
         var sourceNote = sourceLabel === 'Payroll only'
             ? 'No Verint file matched this employee in the current data.'
             : (sourceLabel === 'Verint only'
                 ? 'No Payroll row matched this employee in the current data.'
                 : 'Verint and Payroll are both matched for this employee.');
-        html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:' + sourceBg + '; color:' + sourceColor + '; font-size:0.83em; border:1px solid var(--border);">';
+        html += '<div class="' + sourceCallout + '" style="margin-bottom:12px; padding:8px 10px; font-size:0.83em;">';
         html += '<strong>Data Source:</strong> ' + sourceLabel + ' • ' + escapeHtml(sourceNote);
         html += '</div>';
 
         // Tab bar — Discrepancies (default) / Classic
-        html += '<div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:2px solid var(--border);">';
-        html += '<button type="button" id="relTabDisc" data-tab="disc" style="padding:8px 16px; border:none; background:#00695c; color:#fff; cursor:pointer; font-weight:700; border-radius:6px 6px 0 0; font-size:0.9em;">Discrepancies</button>';
-        html += '<button type="button" id="relTabClassic" data-tab="classic" style="padding:8px 16px; border:none; background:#eceff1; color:#455a64; cursor:pointer; font-weight:600; border-radius:6px 6px 0 0; font-size:0.9em;">Classic view</button>';
+        html += '<div class="sub-nav" role="tablist" style="margin-bottom:12px;">';
+        html += '<button type="button" id="relTabDisc" data-tab="disc" role="tab" class="is-active" aria-selected="true">Discrepancies</button>';
+        html += '<button type="button" id="relTabClassic" data-tab="classic" role="tab">Classic view</button>';
         html += '</div>';
 
         // Render discrepancy view (default visible)
@@ -1751,7 +1771,7 @@
         }).length;
 
         if (needsReviewCount > 0) {
-            html += '<div style="margin-bottom:12px; padding:8px 10px; border-radius:6px; background:#fff8e1; border:1px solid #ffe08a; color:#8a5300; font-size:0.83em; font-weight:700;">';
+            html += '<div class="callout callout-warn" style="margin-bottom:12px; padding:8px 10px; font-size:0.83em; font-weight:700;">';
             html += '⚠ ' + needsReviewCount + ' day(s) need review for ' + escapeHtml(firstName) + '.';
             html += '</div>';
         }
@@ -1763,13 +1783,13 @@
             : '-';
 
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
-        html += '<div style="padding:10px; background:#fff8e1; border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:#e65100;">' + (ptoBalance ? ptoBalance.carryover : '-') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Carryover</div></div>';
-        html += '<div style="padding:10px; background:var(--green-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--green-text);">' + (ptoBalance ? ptoBalance.earned : '-') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Earned</div></div>';
-        html += '<div style="padding:10px; background:var(--red-soft); border-radius:6px; text-align:center;"><div style="font-size:1.15em; font-weight:700; color:var(--red-text);">' + (ptoBalance ? ptoBalance.used : '-') + (ptoBalance ? 'h' : '') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Used</div></div>';
-        html += '<div style="padding:10px; background:' + (ptoIsNegative ? 'var(--red-soft)' : '#e3f2fd') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (ptoIsNegative ? 'var(--red-text)' : '#1565c0') + ';">' + ptoRemainingText + '</div><div style="font-size:0.75em; color:var(--text-secondary);">PTO Remaining</div></div>';
+        html += '<div style="padding:10px; background:var(--bg-surface-raised); border-radius:6px; text-align:center;"><div class="text-primary" style="font-size:1.15em; font-weight:700;">' + (ptoBalance ? ptoBalance.carryover : '-') + (ptoBalance ? 'h' : '') + '</div><div class="text-secondary" style="font-size:0.75em;">PTO Carryover</div></div>';
+        html += '<div style="padding:10px; background:var(--green-soft); border-radius:6px; text-align:center;"><div class="tone-good" style="font-size:1.15em; font-weight:700;">' + (ptoBalance ? ptoBalance.earned : '-') + (ptoBalance ? 'h' : '') + '</div><div class="text-secondary" style="font-size:0.75em;">PTO Earned</div></div>';
+        html += '<div style="padding:10px; background:var(--red-soft); border-radius:6px; text-align:center;"><div class="tone-bad" style="font-size:1.15em; font-weight:700;">' + (ptoBalance ? ptoBalance.used : '-') + (ptoBalance ? 'h' : '') + '</div><div class="text-secondary" style="font-size:0.75em;">PTO Used</div></div>';
+        html += '<div style="padding:10px; background:' + (ptoIsNegative ? 'var(--red-soft)' : 'var(--bg-surface-raised)') + '; border-radius:6px; text-align:center;"><div class="' + (ptoIsNegative ? 'tone-bad' : 'text-primary') + '" style="font-size:1.05em; font-weight:700;">' + ptoRemainingText + '</div><div class="text-secondary" style="font-size:0.75em;">PTO Remaining</div></div>';
         html += '</div>';
         if (ptoIsNegative) {
-            html += '<div style="margin:-8px 0 12px 0; font-size:0.8em; color:#8d1f1f;">PTO used is currently higher than carryover + earned in the imported PTO tracker data.</div>';
+            html += '<div class="tone-bad" style="margin:-8px 0 12px 0; font-size:0.8em;">PTO used is currently higher than carryover + earned in the imported PTO tracker data.</div>';
         }
 
         var payrollFollowUpCount = (correctionCandidates || []).length + (r.pcIssueCandidates || []).length + (r.discrepancies || []).length + (r.reviewCodingCandidates || []).length;
@@ -1780,10 +1800,10 @@
 
         // Status cards
         html += '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px;">';
-        html += '<div style="padding:10px; background:#e0f2f1; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#00695c;">' + ptostUsed + 'h / ' + PTOST_BUFFER_LIMIT + 'h</div><div style="font-size:0.75em; color:var(--text-secondary);">PTOST Logged</div></div>';
-        html += '<div style="padding:10px; background:#e3f2fd; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#0d47a1;">' + ptostRemaining + 'h</div><div style="font-size:0.75em; color:var(--text-secondary);">PTOST Left Before 40h</div></div>';
-        html += '<div style="padding:10px; background:#fff3e0; border-radius:6px; text-align:center;"><div style="font-size:1.3em; font-weight:700; color:#ef6c00;">' + unscheduledHours + 'h</div><div style="font-size:0.75em; color:var(--text-secondary);">Unscheduled or Unplanned</div></div>';
-        html += '<div style="padding:10px; background:' + (payrollFollowUpNeeded ? '#fff8e1' : 'var(--green-soft)') + '; border-radius:6px; text-align:center;"><div style="font-size:1.05em; font-weight:700; color:' + (payrollFollowUpNeeded ? '#8a5300' : 'var(--green-text)') + ';">' + (payrollFollowUpNeeded ? 'Yes (' + payrollFollowUpCount + ')' : 'No') + '</div><div style="font-size:0.75em; color:var(--text-secondary);">Needs Payroll Follow-up</div></div>';
+        html += '<div style="padding:10px; background:var(--bg-surface-raised); border-radius:6px; text-align:center;"><div class="text-primary" style="font-size:1.3em; font-weight:700;">' + ptostUsed + 'h / ' + PTOST_BUFFER_LIMIT + 'h</div><div class="text-secondary" style="font-size:0.75em;">PTOST Logged</div></div>';
+        html += '<div style="padding:10px; background:var(--bg-surface-raised); border-radius:6px; text-align:center;"><div class="text-primary" style="font-size:1.3em; font-weight:700;">' + ptostRemaining + 'h</div><div class="text-secondary" style="font-size:0.75em;">PTOST Left Before 40h</div></div>';
+        html += '<div style="padding:10px; background:' + (unscheduledHours > 0 ? 'var(--yellow-soft)' : 'var(--bg-surface-raised)') + '; border-radius:6px; text-align:center;"><div class="' + (unscheduledHours > 0 ? 'tone-warn' : 'text-primary') + '" style="font-size:1.3em; font-weight:700;">' + unscheduledHours + 'h</div><div class="text-secondary" style="font-size:0.75em;">Unscheduled or Unplanned</div></div>';
+        html += '<div style="padding:10px; background:' + (payrollFollowUpNeeded ? 'var(--yellow-soft)' : 'var(--green-soft)') + '; border-radius:6px; text-align:center;"><div class="' + (payrollFollowUpNeeded ? 'tone-warn' : 'tone-good') + '" style="font-size:1.05em; font-weight:700;">' + (payrollFollowUpNeeded ? 'Yes (' + payrollFollowUpCount + ')' : 'No') + '</div><div class="text-secondary" style="font-size:0.75em;">Needs Payroll Follow-up</div></div>';
         html += '</div>';
 
         var mismatchDates = [];
@@ -1798,45 +1818,43 @@
 
         // ── High-level Summary ──────────────────────────────────────────
         var ptostBarPct = Math.min(100, (ptostUsed / PTOST_BUFFER_LIMIT) * 100);
-        var ptostBarColor = ptostBarPct >= 100 ? '#b71c1c' : ptostBarPct >= 75 ? '#e65100' : '#2e7d32';
-        var tierBadgeBg = tier.bg; var tierBadgeColor = tier.color;
+        var ptostBarTone = toneByPct(ptostBarPct);
 
-        html += '<div style="margin-bottom:14px; padding:12px 14px; background:#f7fdfc; border:1px solid #b2dfdb; border-radius:8px;">';
-        html += '<div style="font-weight:700; color:#00695c; font-size:0.95em; margin-bottom:10px; letter-spacing:0.02em;">At a Glance</div>';
+        html += '<div style="margin-bottom:14px; padding:12px 14px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:8px;">';
+        html += '<div class="card-title" style="font-weight:700; font-size:0.95em; margin-bottom:10px; letter-spacing:0.02em;">At a Glance</div>';
 
         // Row 1: 4 key stat chips
         html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;">';
 
         // PTOST chip with inline mini-bar
-        html += '<div style="background:var(--bg-surface); border:1px solid #b2dfdb; border-radius:6px; padding:8px 10px;">';
-        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">PTOST</div>';
-        html += '<div style="font-size:1.25em; font-weight:700; color:' + ptostBarColor + ';">' + ptostUsed + '<span style="font-size:0.65em; color:#90a4ae;"> / 40h</span></div>';
-        html += '<div style="margin-top:5px; height:5px; background:#e0e0e0; border-radius:3px; overflow:hidden;">';
-        html += '<div style="height:100%; width:' + ptostBarPct + '%; background:' + ptostBarColor + '; border-radius:3px;"></div></div>';
+        html += '<div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; padding:8px 10px;">';
+        html += '<div class="eyebrow" style="margin-bottom:3px;">PTOST</div>';
+        html += '<div class="' + TONE_CLASS[ptostBarTone] + '" style="font-size:1.25em; font-weight:700;">' + ptostUsed + '<span class="text-faint" style="font-size:0.65em;"> / 40h</span></div>';
+        html += '<div style="margin-top:5px; height:5px; background:var(--bg-active); border-radius:3px; overflow:hidden;">';
+        html += '<div style="height:100%; width:' + ptostBarPct + '%; background:' + TONE_FILL[ptostBarTone] + '; border-radius:3px;"></div></div>';
         html += '</div>';
 
         // Reliability tier chip
-        html += '<div style="background:' + tierBadgeBg + '; border:1px solid ' + tierBadgeColor + '33; border-radius:6px; padding:8px 10px;">';
-        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Reliability</div>';
-        html += '<div style="font-size:1.25em; font-weight:700; color:' + tierBadgeColor + ';">' + tier.label + '</div>';
-        html += '<div style="font-size:0.75em; color:' + tierBadgeColor + '; opacity:0.85;">' + (r.reliabilityHours || 0) + 'h against</div>';
+        html += '<div style="background:' + TONE_SOFT[tier.tone] + '; border:1px solid var(--border); border-radius:6px; padding:8px 10px;">';
+        html += '<div class="eyebrow" style="margin-bottom:3px;">Reliability</div>';
+        html += '<div class="' + TONE_CLASS[tier.tone] + '" style="font-size:1.25em; font-weight:700;">' + tier.label + '</div>';
+        html += '<div class="' + TONE_CLASS[tier.tone] + '" style="font-size:0.75em; opacity:0.85;">' + (r.reliabilityHours || 0) + 'h against</div>';
         html += '</div>';
 
         // Unscheduled chip
-        var unschedChipColor = unscheduledHours > 0 ? '#e65100' : '#2e7d32';
-        html += '<div style="background:var(--bg-surface); border:1px solid #ffe0b2; border-radius:6px; padding:8px 10px;">';
-        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Unscheduled</div>';
-        html += '<div style="font-size:1.25em; font-weight:700; color:' + unschedChipColor + ';">' + unscheduledHours + 'h</div>';
-        html += '<div style="font-size:0.75em; color:#90a4ae;">mismatch rows</div>';
+        var unschedChipTone = unscheduledHours > 0 ? 'warn' : 'good';
+        html += '<div style="background:var(--bg-surface); border:1px solid var(--border); border-radius:6px; padding:8px 10px;">';
+        html += '<div class="eyebrow" style="margin-bottom:3px;">Unscheduled</div>';
+        html += '<div class="' + TONE_CLASS[unschedChipTone] + '" style="font-size:1.25em; font-weight:700;">' + unscheduledHours + 'h</div>';
+        html += '<div class="text-faint" style="font-size:0.75em;">mismatch rows</div>';
         html += '</div>';
 
         // Payroll follow-up chip
-        var followChipBg = payrollFollowUpNeeded ? '#fff8e1' : '#e8f5e9';
-        var followChipColor = payrollFollowUpNeeded ? '#8a5300' : '#2e7d32';
-        html += '<div style="background:' + followChipBg + '; border:1px solid ' + (payrollFollowUpNeeded ? '#ffe08a' : '#a5d6a7') + '; border-radius:6px; padding:8px 10px;">';
-        html += '<div style="font-size:0.7em; color:#607d8b; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">Payroll Actions</div>';
-        html += '<div style="font-size:1.25em; font-weight:700; color:' + followChipColor + ';">' + (payrollFollowUpNeeded ? payrollFollowUpCount + ' item' + (payrollFollowUpCount !== 1 ? 's' : '') : 'None') + '</div>';
-        html += '<div style="font-size:0.75em; color:#90a4ae;">' + (payrollFollowUpNeeded ? 'need follow-up' : 'all clear') + '</div>';
+        var followChipTone = payrollFollowUpNeeded ? 'warn' : 'good';
+        html += '<div style="background:' + TONE_SOFT[followChipTone] + '; border:1px solid var(--border); border-radius:6px; padding:8px 10px;">';
+        html += '<div class="eyebrow" style="margin-bottom:3px;">Payroll Actions</div>';
+        html += '<div class="' + TONE_CLASS[followChipTone] + '" style="font-size:1.25em; font-weight:700;">' + (payrollFollowUpNeeded ? payrollFollowUpCount + ' item' + (payrollFollowUpCount !== 1 ? 's' : '') : 'None') + '</div>';
+        html += '<div class="text-faint" style="font-size:0.75em;">' + (payrollFollowUpNeeded ? 'need follow-up' : 'all clear') + '</div>';
         html += '</div>';
 
         html += '</div>'; // end grid row 1
@@ -1846,56 +1864,56 @@
             html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">';
 
             // Correct Now
-            html += '<div style="background:var(--green-soft); border:1px solid #a5d6a7; border-radius:6px; padding:8px 10px;">';
-            html += '<div style="font-size:0.72em; font-weight:700; color:var(--green-text); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">✓ Correct Now (stays ≤ 40h)</div>';
+            html += '<div class="callout callout-good" style="padding:8px 10px;">';
+            html += '<div class="tone-good" style="font-size:0.72em; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">✓ Correct Now (stays ≤ 40h)</div>';
             if (safeCorrectionRows.length > 0) {
                 safeCorrectionRows.forEach(function(row) {
-                    html += '<div style="font-size:0.82em; color:var(--green-text); padding:1px 0;">' + escapeHtml(row) + '</div>';
+                    html += '<div class="tone-good" style="font-size:0.82em; padding:1px 0;">' + escapeHtml(row) + '</div>';
                 });
             } else {
-                html += '<div style="font-size:0.82em; color:#90a4ae;">-</div>';
+                html += '<div class="text-faint" style="font-size:0.82em;">-</div>';
             }
             html += '</div>';
 
             // Hold
-            html += '<div style="background:#fff8e1; border:1px solid #ffe082; border-radius:6px; padding:8px 10px;">';
-            html += '<div style="font-size:0.72em; font-weight:700; color:#8a5300; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">⏸ Hold (would exceed 40h)</div>';
+            html += '<div class="callout callout-warn" style="padding:8px 10px;">';
+            html += '<div class="tone-warn" style="font-size:0.72em; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">⏸ Hold (would exceed 40h)</div>';
             if (holdCorrectionRows.length > 0) {
                 holdCorrectionRows.forEach(function(row) {
-                    html += '<div style="font-size:0.82em; color:#6d4200; padding:1px 0;">' + escapeHtml(row) + '</div>';
+                    html += '<div class="tone-warn" style="font-size:0.82em; padding:1px 0;">' + escapeHtml(row) + '</div>';
                 });
             } else {
-                html += '<div style="font-size:0.82em; color:#90a4ae;">-</div>';
+                html += '<div class="text-faint" style="font-size:0.82em;">-</div>';
             }
             html += '</div>';
 
             html += '</div>'; // end two-col grid
 
             if (mismatchDates.length > 0) {
-                html += '<div style="margin-top:6px; font-size:0.8em; color:var(--text-secondary);">';
-                html += '<span style="font-weight:600; color:var(--red-text);">⚠ Mismatched days (Verint/Payroll coding differs):</span> ';
+                html += '<div class="text-secondary" style="margin-top:6px; font-size:0.8em;">';
+                html += '<span class="tone-bad" style="font-weight:600;">⚠ Mismatched days (Verint/Payroll coding differs):</span> ';
                 html += escapeHtml(mismatchDates.join(', '));
                 html += '</div>';
             }
         }
 
         // Subtext: YTD delta status
-        var deltaColor = unexplainedDelta == null ? '#555' : (Math.abs(unexplainedDelta) > 0.25 ? '#b71c1c' : '#2e7d32');
-        var reconStatus, reconStatusColor;
+        var deltaClass = unexplainedDelta == null ? 'text-secondary' : (Math.abs(unexplainedDelta) > 0.25 ? 'tone-bad' : 'tone-good');
+        var reconStatus;
         if (unexplainedDelta == null) {
-            reconStatus = 'Partial coverage'; reconStatusColor = '#e65100';
+            reconStatus = 'Partial coverage';
         } else if (Math.abs(unexplainedDelta) <= 0.25) {
-            reconStatus = 'Matched'; reconStatusColor = '#2e7d32';
+            reconStatus = 'Matched';
         } else if (Math.abs(unexplainedDelta) <= 2) {
-            reconStatus = 'Partial coverage'; reconStatusColor = '#e65100';
+            reconStatus = 'Partial coverage';
         } else {
-            reconStatus = 'Needs correction'; reconStatusColor = '#b71c1c';
+            reconStatus = 'Needs correction';
         }
-        html += '<div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:12px; font-size:0.8em; color:#607d8b; border-top:1px solid #e0f2f1; padding-top:7px;">';
-        html += '<span>Can still convert: <strong style="color:#00695c;">' + (r.correctableSameDayHours || 0) + 'h</strong> across ' + correctionCandidates.length + ' day(s)</span>';
-        html += '<span>Still exposed: <strong style="color:' + (Number(r.remainingSameDayExposureHours || 0) > 0 ? 'var(--red-text)' : 'var(--green-text)') + ';">' + (r.remainingSameDayExposureHours || 0) + 'h</strong></span>';
-        html += '<span>YTD delta: <strong style="color:' + deltaColor + ';">' + (unexplainedDelta == null ? '-' : (unexplainedDelta + 'h')) + '</strong> (' + reconStatus + ')</span>';
-        html += '<span>PTOST threshold: <strong>' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? '<span style="color:var(--red-text);">Reached</span>' : 'Not reached') + '</strong></span>';
+        html += '<div class="text-secondary" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:12px; font-size:0.8em; border-top:1px solid var(--border); padding-top:7px;">';
+        html += '<span class="text-secondary">Can still convert: <strong class="text-primary">' + (r.correctableSameDayHours || 0) + 'h</strong> across ' + correctionCandidates.length + ' day(s)</span>';
+        html += '<span class="text-secondary">Still exposed: <strong class="' + (Number(r.remainingSameDayExposureHours || 0) > 0 ? 'tone-bad' : 'tone-good') + '">' + (r.remainingSameDayExposureHours || 0) + 'h</strong></span>';
+        html += '<span class="text-secondary">YTD delta: <strong class="' + deltaClass + '">' + (unexplainedDelta == null ? '-' : (unexplainedDelta + 'h')) + '</strong> (' + reconStatus + ')</span>';
+        html += '<span class="text-secondary">PTOST threshold: <strong>' + ((r.ptostHoursUsed || 0) >= PTOST_BUFFER_LIMIT ? '<span class="tone-bad">Reached</span>' : 'Not reached') + '</strong></span>';
         html += '</div>';
 
         html += '</div>'; // end At a Glance
@@ -1911,15 +1929,15 @@
         });
 
         if (missedRows.length > 0) {
-            html += '<div style="margin-bottom:14px; padding:12px 14px; background:#fafcfd; border:1px solid #d0dde5; border-radius:8px;">';
-            html += '<div style="font-weight:700; color:#37474f; font-size:0.88em; margin-bottom:8px; letter-spacing:0.02em;">Missed / Flagged Days (' + missedRows.length + ')</div>';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.81em;">';
-            html += '<thead><tr style="background:#eceff1;">';
-            html += '<th style="padding:5px 8px; text-align:left; border-bottom:1px solid #cfd8dc; white-space:nowrap;">Date</th>';
-            html += '<th style="padding:5px 8px; text-align:left; border-bottom:1px solid #cfd8dc;">Verint</th>';
-            html += '<th style="padding:5px 8px; text-align:left; border-bottom:1px solid #cfd8dc;">Payroll</th>';
-            html += '<th style="padding:5px 8px; text-align:center; border-bottom:1px solid #cfd8dc; white-space:nowrap;">Hrs</th>';
-            html += '<th style="padding:5px 8px; text-align:center; border-bottom:1px solid #cfd8dc; white-space:nowrap;">vs Reliability</th>';
+            html += '<div style="margin-bottom:14px; padding:12px 14px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:8px;">';
+            html += '<div class="text-primary" style="font-weight:700; font-size:0.88em; margin-bottom:8px; letter-spacing:0.02em;">Missed / Flagged Days (' + missedRows.length + ')</div>';
+            html += '<table class="data-table" style="font-size:0.81em;">';
+            html += '<thead><tr>';
+            html += '<th style="padding:5px 8px; white-space:nowrap;">Date</th>';
+            html += '<th style="padding:5px 8px;">Verint</th>';
+            html += '<th style="padding:5px 8px;">Payroll</th>';
+            html += '<th style="padding:5px 8px; text-align:center; white-space:nowrap;">Hrs</th>';
+            html += '<th style="padding:5px 8px; text-align:center; white-space:nowrap;">vs Reliability</th>';
             html += '</tr></thead><tbody>';
 
             missedRows.forEach(function(t) {
@@ -1946,37 +1964,37 @@
                 var hasPcIssue = (t.flags || []).some(function(f) { return String(f).toUpperCase().indexOf('PC ISSUE') >= 0; });
                 var hasMismatch = (t.flags || []).some(function(f) { return String(f).toUpperCase().indexOf('REVIEW') >= 0; });
 
-                var vsText, vsColor;
+                var vsText, vsTone;
                 if (exposure > 0) {
                     vsText = '+' + exposure + 'h';
-                    vsColor = '#b71c1c';
+                    vsTone = 'bad';
                 } else if (overage > 0) {
                     vsText = '+' + overage + 'h overage';
-                    vsColor = '#e65100';
+                    vsTone = 'warn';
                 } else if (hasDiscrepancy) {
                     vsText = '⚠ Discrepancy';
-                    vsColor = '#e65100';
+                    vsTone = 'warn';
                 } else if (hasPcIssue) {
                     vsText = 'PC Issue';
-                    vsColor = '#1565c0';
+                    vsTone = 'info';
                 } else if (hasMismatch) {
                     vsText = 'Review';
-                    vsColor = '#e65100';
+                    vsTone = 'warn';
                 } else if (t.category === 'ptost' && t.ptostProtected !== false) {
                     vsText = 'Protected';
-                    vsColor = '#2e7d32';
+                    vsTone = 'good';
                 } else {
                     vsText = '-';
-                    vsColor = '#78909c';
+                    vsTone = 'muted';
                 }
 
-                var rowBg = (hasDiscrepancy || hasMismatch) ? 'background:#fff8e1;' : (exposure > 0 ? 'background:#fff5f5;' : '');
-                html += '<tr style="border-bottom:1px solid #eceff1;' + rowBg + '">';
-                html += '<td style="padding:5px 8px; white-space:nowrap; font-weight:600;">' + escapeHtml(t.dateStr) + '</td>';
-                html += '<td style="padding:5px 8px; color:#455a64;">' + verintDesc + '</td>';
-                html += '<td style="padding:5px 8px; color:#455a64;">' + escapeHtml(payrollDesc) + '</td>';
+                var edgeTone = (hasDiscrepancy || hasMismatch) ? 'warn' : (exposure > 0 ? 'bad' : '');
+                html += '<tr>';
+                html += '<td style="padding:5px 8px; white-space:nowrap; font-weight:600;' + rowEdgeStyle(edgeTone) + '">' + escapeHtml(t.dateStr) + '</td>';
+                html += '<td class="text-secondary" style="padding:5px 8px;">' + verintDesc + '</td>';
+                html += '<td class="text-secondary" style="padding:5px 8px;">' + escapeHtml(payrollDesc) + '</td>';
                 html += '<td style="padding:5px 8px; text-align:center;">' + (totalHrs || '-') + '</td>';
-                html += '<td style="padding:5px 8px; text-align:center; font-weight:700; color:' + vsColor + ';">' + vsText + '</td>';
+                html += '<td class="' + TONE_CLASS[vsTone] + '" style="padding:5px 8px; text-align:center; font-weight:700;">' + vsText + '</td>';
                 html += '</tr>';
             });
 
@@ -1986,50 +2004,50 @@
 
         // Running bars
         var ptostPct = Math.min(100, ((r.ptostHoursUsed || 0) / PTOST_BUFFER_LIMIT) * 100);
-        var ptostColor = ptostPct >= 100 ? '#b71c1c' : ptostPct >= 75 ? '#e65100' : '#2e7d32';
+        var ptostFill = TONE_FILL[toneByPct(ptostPct)];
         var unschedPct = Math.min(100, ((r.unscheduledRunningHours || 0) / PTOST_BUFFER_LIMIT) * 100);
-        var unschedColor = unschedPct >= 100 ? '#b71c1c' : unschedPct >= 75 ? '#ef6c00' : '#ff8f00';
+        var unschedFill = unschedPct >= 100 ? TONE_FILL.bad : TONE_FILL.warn;
 
         html += '<div style="margin-bottom:16px; display:grid; grid-template-columns:1fr; gap:8px;">';
         html += '<div>';
         html += '<div style="font-size:0.82em; font-weight:600; margin-bottom:4px;">PTOST Logged (' + (r.ptostHoursUsed || 0) + ' / ' + PTOST_BUFFER_LIMIT + 'h)</div>';
-        html += '<div style="height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden;">';
-        html += '<div style="height:100%; width:' + ptostPct + '%; background:' + ptostColor + '; border-radius:6px; transition:width 0.3s;"></div>';
+        html += '<div style="height:12px; background:var(--bg-active); border-radius:6px; overflow:hidden;">';
+        html += '<div style="height:100%; width:' + ptostPct + '%; background:' + ptostFill + '; border-radius:6px; transition:width 0.3s;"></div>';
         html += '</div>';
         html += '</div>';
         html += '<div>';
         html += '<div style="font-size:0.82em; font-weight:600; margin-bottom:4px;">Unscheduled or Unplanned (' + (r.unscheduledRunningHours || 0) + 'h)</div>';
-        html += '<div style="height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden;">';
-        html += '<div style="height:100%; width:' + unschedPct + '%; background:' + unschedColor + '; border-radius:6px; transition:width 0.3s;"></div>';
+        html += '<div style="height:12px; background:var(--bg-active); border-radius:6px; overflow:hidden;">';
+        html += '<div style="height:100%; width:' + unschedPct + '%; background:' + unschedFill + '; border-radius:6px; transition:width 0.3s;"></div>';
         html += '</div>';
         html += '</div>';
         html += '</div>';
 
         // Payroll visibility controls
         html += '<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; padding:8px 10px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:6px; font-size:0.82em;">';
-        html += '<strong style="color:#334155;">Show Payroll:</strong>';
+        html += '<strong class="text-primary">Show Payroll:</strong>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowBrv" checked> BRV</label>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowFmla" checked> FMLA</label>';
         html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="relShowHoliday" checked> Holiday</label>';
-        html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-left:8px; font-weight:700; color:#8a5300;"><input type="checkbox" id="relManagerMode" ' + (needsReviewCount > 0 ? 'checked' : '') + '> Manager Mode</label>';
+        html += '<label class="text-primary" style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-left:8px; font-weight:700;"><input type="checkbox" id="relManagerMode" ' + (needsReviewCount > 0 ? 'checked' : '') + '> Manager Mode</label>';
         html += '</div>';
 
         // Filter tabs
-        html += '<div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">';
-        html += '<button type="button" class="rel-filter-btn" data-filter="all" style="padding:4px 12px; border:1px solid #00695c; background:#00695c; color:#fff; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">All (' + timeline.length + ')</button>';
+        html += '<div class="sub-nav" style="margin-bottom:12px;">';
+        html += '<button type="button" class="rel-filter-btn is-active" aria-selected="true" data-filter="all">All (' + timeline.length + ')</button>';
         var catCounts = { ptost: 0, 'same-day': 0, planned: 0 };
         timeline.forEach(function(t) { if (catCounts[t.category] !== undefined) catCounts[t.category]++; });
-        html += '<button type="button" class="rel-filter-btn" data-filter="same-day" style="padding:4px 12px; border:1px solid #b71c1c; background:var(--bg-surface); color:var(--red-text); border-radius:4px; cursor:pointer; font-size:0.82em;">Same Day (' + catCounts['same-day'] + ')</button>';
-        html += '<button type="button" class="rel-filter-btn" data-filter="ptost" style="padding:4px 12px; border:1px solid #2e7d32; background:var(--bg-surface); color:var(--green-text); border-radius:4px; cursor:pointer; font-size:0.82em;">PTOST (' + catCounts.ptost + ')</button>';
-        html += '<button type="button" class="rel-filter-btn" data-filter="planned" style="padding:4px 12px; border:1px solid #0d47a1; background:var(--bg-surface); color:#0d47a1; border-radius:4px; cursor:pointer; font-size:0.82em;">Planned (' + catCounts.planned + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="same-day">Same Day (' + catCounts['same-day'] + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="ptost">PTOST (' + catCounts.ptost + ')</button>';
+        html += '<button type="button" class="rel-filter-btn" data-filter="planned">Planned (' + catCounts.planned + ')</button>';
         if (needsReviewCount > 0) {
-            html += '<button type="button" class="rel-filter-btn" data-filter="needs-review" style="padding:4px 12px; border:1px solid #f57f17; background:var(--bg-surface); color:#f57f17; border-radius:4px; cursor:pointer; font-size:0.82em; font-weight:600;">Needs Review (' + needsReviewCount + ')</button>';
+            html += '<button type="button" class="rel-filter-btn" data-filter="needs-review">Needs Review (' + needsReviewCount + ')</button>';
         }
         if ((r.pcIssueCandidates || []).length > 0) {
-            html += '<button type="button" class="rel-filter-btn" data-filter="pc-issue" style="padding:4px 12px; border:1px solid #1565c0; background:var(--bg-surface); color:#1565c0; border-radius:4px; cursor:pointer; font-size:0.82em;">PC Issues (' + r.pcIssueCandidates.length + ')</button>';
+            html += '<button type="button" class="rel-filter-btn" data-filter="pc-issue">PC Issues (' + r.pcIssueCandidates.length + ')</button>';
         }
         if ((r.discrepancies || []).length > 0) {
-            html += '<button type="button" class="rel-filter-btn" data-filter="discrepancy" style="padding:4px 12px; border:1px solid #e65100; background:var(--bg-surface); color:#e65100; border-radius:4px; cursor:pointer; font-size:0.82em;">Discrepancies (' + r.discrepancies.length + ')</button>';
+            html += '<button type="button" class="rel-filter-btn" data-filter="discrepancy">Discrepancies (' + r.discrepancies.length + ')</button>';
         }
         html += '</div>';
 
@@ -2038,19 +2056,19 @@
         html += buildTimelineTable(timeline, r.discrepancies || [], 'all', { showBrv: true, showFmla: true, showHoliday: true });
         html += '</div>';
 
-        html += '<div style="margin-top:12px; padding:10px; background:var(--bg-surface-raised); border:1px solid #e6e6e6; border-radius:6px;">';
+        html += '<div style="margin-top:12px; padding:10px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:6px;">';
         html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">';
-        html += '<strong style="color:#455a64; font-size:0.88em;">Payroll Action List (' + actionRows.length + ')</strong>';
-        html += '<button type="button" id="relExportActionsCsv" style="padding:5px 10px; border:1px solid #607d8b; background:var(--bg-surface); color:#455a64; border-radius:4px; cursor:pointer; font-size:0.8em;">Export CSV</button>';
+        html += '<strong class="text-secondary" style="font-size:0.88em;">Payroll Action List (' + actionRows.length + ')</strong>';
+        html += '<button type="button" id="relExportActionsCsv" class="btn-secondary" style="padding:5px 10px; font-size:0.8em;">Export CSV</button>';
         html += '</div>';
         if (actionRows.length === 0) {
-            html += '<div style="font-size:0.82em; color:#78909c;">No actions currently needed.</div>';
+            html += '<div class="text-faint" style="font-size:0.82em;">No actions currently needed.</div>';
         } else {
-            html += '<div style="max-height:180px; overflow:auto; border:1px solid #eceff1; border-radius:4px;">';
-            html += '<table style="width:100%; border-collapse:collapse; font-size:0.8em;">';
-            html += '<thead><tr style="background:#f5f7f8;"><th style="padding:5px 6px; text-align:left;">Date</th><th style="padding:5px 6px; text-align:left;">Action</th><th style="padding:5px 6px; text-align:left;">Target</th><th style="padding:5px 6px; text-align:center;">Hours</th><th style="padding:5px 6px; text-align:left;">Detail</th></tr></thead><tbody>';
+            html += '<div style="max-height:180px; overflow:auto; border:1px solid var(--border); border-radius:4px;">';
+            html += '<table class="data-table" style="font-size:0.8em;">';
+            html += '<thead><tr><th style="padding:5px 6px;">Date</th><th style="padding:5px 6px;">Action</th><th style="padding:5px 6px;">Target</th><th style="padding:5px 6px; text-align:center;">Hours</th><th style="padding:5px 6px;">Detail</th></tr></thead><tbody>';
             actionRows.forEach(function(a) {
-                html += '<tr style="border-top:1px solid #eef2f4;"><td style="padding:5px 6px; white-space:nowrap;">' + escapeHtml(a.date) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.actionType) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.target) + '</td><td style="padding:5px 6px; text-align:center;">' + escapeHtml(a.hours) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.detail) + '</td></tr>';
+                html += '<tr><td style="padding:5px 6px; white-space:nowrap;">' + escapeHtml(a.date) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.actionType) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.target) + '</td><td style="padding:5px 6px; text-align:center;">' + escapeHtml(a.hours) + '</td><td style="padding:5px 6px;">' + escapeHtml(a.detail) + '</td></tr>';
             });
             html += '</tbody></table></div>';
         }
@@ -2059,10 +2077,10 @@
         // Action buttons
         html += '<div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">';
 
-        html += '<button type="button" id="relCopySummary" style="padding:8px 16px; background:#37474f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">📋 Copy Manager Summary</button>';
+        html += '<button type="button" id="relCopySummary" class="btn-secondary" style="padding:8px 16px;">Copy Manager Summary</button>';
 
         if (((r.pcIssueCandidates || []).length + (correctionCandidates || []).length + (r.discrepancies || []).length) > 0) {
-            html += '<button type="button" id="relEmailCorrections" style="padding:8px 16px; background:#0d47a1; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">✉ Open Corrections Email</button>';
+            html += '<button type="button" id="relEmailCorrections" class="btn-primary" style="padding:8px 16px;">Open Corrections Email</button>';
         }
 
         html += '</div>';
@@ -2081,8 +2099,8 @@
             if (!discBtn || !classicBtn || !discView || !classicWrap) return;
             var active = which === 'classic' ? classicBtn : discBtn;
             var inactive = which === 'classic' ? discBtn : classicBtn;
-            active.style.background = '#00695c'; active.style.color = '#fff';
-            inactive.style.background = 'var(--bg-surface-sunken)'; inactive.style.color = 'var(--text-secondary)';
+            active.classList.add('is-active'); active.setAttribute('aria-selected', 'true');
+            inactive.classList.remove('is-active'); inactive.removeAttribute('aria-selected');
             discView.style.display = which === 'classic' ? 'none' : '';
             classicWrap.style.display = which === 'classic' ? '' : 'none';
             container.dataset.activeTab = which;
@@ -2107,17 +2125,19 @@
         // Bind filter tabs and visibility controls
         var currentFilter = needsReviewCount > 0 ? 'needs-review' : 'all';
 
+        // The chosen filter is the sub-nav's active tab.
+        function markActiveFilter(btn) {
+            container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
+                b.classList.toggle('is-active', b === btn);
+                if (b === btn) b.setAttribute('aria-selected', 'true');
+                else b.removeAttribute('aria-selected');
+            });
+        }
+
         if (currentFilter !== 'all') {
             var activeDefault = container.querySelector('.rel-filter-btn[data-filter="' + currentFilter + '"]');
             if (activeDefault) {
-                container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
-                    b.style.background = 'var(--bg-surface)';
-                    b.style.fontWeight = 'normal';
-                    b.style.color = b.style.borderColor;
-                });
-                activeDefault.style.background = activeDefault.style.borderColor;
-                activeDefault.style.color = '#fff';
-                activeDefault.style.fontWeight = '600';
+                markActiveFilter(activeDefault);
                 var tableDiv = document.getElementById('relTimelineTable');
                 if (tableDiv) tableDiv.innerHTML = buildTimelineTable(timeline, r.discrepancies || [], currentFilter, getTimelineOptions());
             }
@@ -2140,14 +2160,7 @@
         container.querySelectorAll('.rel-filter-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 currentFilter = this.getAttribute('data-filter') || 'all';
-                // Update active button style
-                container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
-                    b.style.background = 'var(--bg-surface)';
-                    b.style.fontWeight = 'normal';
-                });
-                this.style.background = this.style.borderColor;
-                this.style.color = '#fff';
-                this.style.fontWeight = '600';
+                markActiveFilter(this);
                 // Re-render table
                 renderTimelineForCurrentView();
             });
@@ -2161,16 +2174,7 @@
             if (managerOn) {
                 currentFilter = 'needs-review';
                 var reviewBtn = container.querySelector('.rel-filter-btn[data-filter="needs-review"]');
-                if (reviewBtn) {
-                    container.querySelectorAll('.rel-filter-btn').forEach(function(b) {
-                        b.style.background = 'var(--bg-surface)';
-                        b.style.fontWeight = 'normal';
-                        b.style.color = b.style.borderColor;
-                    });
-                    reviewBtn.style.background = reviewBtn.style.borderColor;
-                    reviewBtn.style.color = '#fff';
-                    reviewBtn.style.fontWeight = '600';
-                }
+                if (reviewBtn) markActiveFilter(reviewBtn);
             }
             renderTimelineForCurrentView();
         });
@@ -2275,18 +2279,18 @@
         filtered = filtered.filter(rowHasVisibleData);
 
         if (filtered.length === 0) {
-            return '<div style="padding:16px; text-align:center; color:var(--text-tertiary); font-size:0.9em;">No events for this filter.</div>';
+            return '<div class="text-faint" style="padding:16px; text-align:center; font-size:0.9em;">No events for this filter.</div>';
         }
 
-        var html = '<table style="width:100%; border-collapse:collapse; font-size:0.82em;">';
-        html += '<thead><tr style="background:var(--bg-surface-raised);">';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Date</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Type</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Verint</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Payroll</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid var(--border);">Hours</th>';
-        html += '<th style="padding:6px 8px; text-align:center; border-bottom:2px solid var(--border);">Running</th>';
-        html += '<th style="padding:6px 8px; text-align:left; border-bottom:2px solid var(--border);">Flags</th>';
+        var html = '<table class="data-table" style="font-size:0.82em;">';
+        html += '<thead><tr>';
+        html += '<th style="padding:6px 8px;">Date</th>';
+        html += '<th style="padding:6px 8px;">Type</th>';
+        html += '<th style="padding:6px 8px;">Verint</th>';
+        html += '<th style="padding:6px 8px;">Payroll</th>';
+        html += '<th style="padding:6px 8px; text-align:center;">Hours</th>';
+        html += '<th style="padding:6px 8px; text-align:center;">Running</th>';
+        html += '<th style="padding:6px 8px;">Flags</th>';
         html += '</tr></thead><tbody>';
 
         filtered.forEach(function(t) {
@@ -2298,16 +2302,13 @@
                 var s = String(f || '').toLowerCase();
                 return s.indexOf('review') >= 0 || s.indexOf('against reliability') >= 0 || s.indexOf('ptost over 40h') >= 0;
             });
-            var rowBg = isDiscrepancy
-                ? '#ffe9e9'
-                : (isPcIssue ? '#e8f1ff' : (isReliabilityReview ? '#fff8e1' : ''));
-            var rowBorder = isDiscrepancy
-                ? '4px solid #c62828'
-                : (isPcIssue ? '4px solid #1565c0' : (isReliabilityReview ? '4px solid #f57f17' : 'none'));
+            var edgeTone = isDiscrepancy
+                ? 'bad'
+                : (isPcIssue ? 'info' : (isReliabilityReview ? 'warn' : ''));
 
             // Verint column
             var verintVisible = (t.verint || []).filter(showVerintItem);
-            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span style="color:var(--text-tertiary);">-</span>';
+            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span class="text-faint">-</span>';
 
             // Payroll column
             var payrollVisible = (t.payroll || []).filter(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
@@ -2323,7 +2324,7 @@
                 var regLabel = regEntries.map(function(p) { return 'REG ' + p.quantity + 'h (in: ' + p.clockIn + ')'; }).join('<br>');
                 payrollText = payrollText ? payrollText + '<br>' + regLabel : regLabel;
             }
-            if (!payrollText) payrollText = '<span style="color:var(--text-tertiary);">-</span>';
+            if (!payrollText) payrollText = '<span class="text-faint">-</span>';
 
             // Total hours for the day (non-REG)
             var totalHours = 0;
@@ -2333,41 +2334,41 @@
                 totalHours = payrollNonReg.reduce(function(s, p) { return s + p.quantity; }, 0);
             }
 
-            html += '<tr style="border-bottom:1px solid var(--border);' + (rowBg ? ' background:' + rowBg + ';' : '') + ' border-left:' + rowBorder + ';">';
-            html += '<td style="padding:6px 8px; white-space:nowrap;">' + escapeHtml(t.dateStr) + '</td>';
-            html += '<td style="padding:6px 8px;"><span style="display:inline-block; padding:1px 6px; border-radius:3px; background:' + cat.bg + '; color:' + cat.color + '; font-weight:600; font-size:0.9em;">' + cat.icon + ' ' + cat.label + '</span></td>';
+            html += '<tr>';
+            html += '<td style="padding:6px 8px; white-space:nowrap;' + rowEdgeStyle(edgeTone) + '">' + escapeHtml(t.dateStr) + '</td>';
+            html += '<td style="padding:6px 8px;"><span class="' + TONE_PILL[cat.tone] + '" style="padding:1px 6px; font-size:0.9em;">' + cat.icon + ' ' + cat.label + '</span></td>';
             html += '<td style="padding:6px 8px;">' + verintText + '</td>';
             html += '<td style="padding:6px 8px;">' + payrollText + '</td>';
             html += '<td style="padding:6px 8px; text-align:center; font-weight:600;">' + round2(totalHours) + '</td>';
             html += '<td style="padding:6px 8px; text-align:center;">';
             if (t.ptostRunning !== undefined) {
-                var ptColor = t.ptostProtected ? '#2e7d32' : '#b71c1c';
-                html += '<span style="color:' + ptColor + '; font-weight:600;">' + t.ptostRunning + 'h</span>';
+                var ptClass = t.ptostProtected ? 'tone-good' : 'tone-bad';
+                html += '<span class="' + ptClass + '" style="font-weight:600;">' + t.ptostRunning + 'h</span>';
             } else if (t.unscheduledRunning !== undefined) {
-                html += '<span style="color:#e65100; font-weight:700;">Unsched ' + t.unscheduledRunning + 'h</span>';
+                html += '<span class="tone-warn" style="font-weight:700;">Unsched ' + t.unscheduledRunning + 'h</span>';
             } else {
-                html += '<span style="color:#ccc;">-</span>';
+                html += '<span class="text-faint">-</span>';
             }
             html += '</td>';
             html += '<td style="padding:6px 8px; font-size:0.9em;">';
             if (t.flags && t.flags.length > 0) {
                 if (isDiscrepancy || isPcIssue || isReliabilityReview) {
-                    html += '<div style="display:inline-block; margin-bottom:4px; padding:1px 6px; border-radius:8px; font-size:0.78em; font-weight:700; background:#fff3cd; color:#8a5300; border:1px solid #ffe08a;">REVIEW</div>';
+                    html += '<div class="pill pill-warn" style="margin-bottom:4px; padding:1px 6px; font-size:0.78em; font-weight:700;">REVIEW</div>';
                 }
                 html += t.flags.map(function(f) {
-                    var fColor = f.indexOf('DISCREPANCY') >= 0
-                        ? '#b71c1c'
+                    var fClass = f.indexOf('DISCREPANCY') >= 0
+                        ? 'tone-bad'
                         : f.indexOf('PC ISSUE CANDIDATE') >= 0
-                            ? '#1565c0'
+                            ? 'tone-info'
                             : f.indexOf('reliability') >= 0
-                                ? '#b71c1c'
-                                : '#666';
-                    return '<div style="color:' + fColor + ';">' + escapeHtml(f) + '</div>';
+                                ? 'tone-bad'
+                                : 'text-secondary';
+                    return '<div class="' + fClass + '">' + escapeHtml(f) + '</div>';
                 }).join('');
             } else if (isDiscrepancy) {
-                html += '<div style="color:var(--red-text); font-weight:700;">⚠ Discrepancy</div>';
+                html += '<div class="tone-bad" style="font-weight:700;">⚠ Discrepancy</div>';
             } else {
-                html += '<span style="color:#ccc;">-</span>';
+                html += '<span class="text-faint">-</span>';
             }
             html += '</td>';
             html += '</tr>';

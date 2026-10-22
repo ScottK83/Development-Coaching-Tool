@@ -171,29 +171,29 @@ function renderFollowUpFields(todoTypeKey) {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
             <div>
                 <label for="followUpCustomerAccount" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Customer Account:</label>
-                <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                <input type="text" id="followUpCustomerAccount" placeholder="e.g., 1234567890" style="width: 100%; padding: 10px; font-size: 1em; box-sizing: border-box;">
             </div>
             <div>
                 <label for="followUpCustomerName" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Customer Name:</label>
-                <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box;">
+                <input type="text" id="followUpCustomerName" placeholder="e.g., Jane Doe" style="width: 100%; padding: 10px; font-size: 1em; box-sizing: border-box;">
             </div>
         </div>
 
         <div style="margin-bottom: 15px;">
             <label for="followUpDeclineReason" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Reason To-Do Was Declined:</label>
-            <textarea id="followUpDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
+            <textarea id="followUpDeclineReason" placeholder="Enter the reason the to-do was declined..." style="width: 100%; padding: 10px; font-size: 0.95em; box-sizing: border-box; min-height: 100px; resize: vertical;"></textarea>
         </div>
 
         <div style="margin-bottom: 15px;">
             <label for="followUpProcessType" style="font-weight: bold; display: block; margin-bottom: 5px; color: var(--text-primary);">Correct Process:</label>
-            <select id="followUpProcessType" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
+            <select id="followUpProcessType" style="width: 100%; padding: 10px; font-size: 1em; box-sizing: border-box; margin-bottom: 10px;">
                 <option value="">-- Select Correct Process --</option>
                 ${processOptionsHtml}
             </select>
-            <textarea id="followUpProcess" style="width: 100%; padding: 10px; border: 2px solid #ff8a65; border-radius: 4px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical; background: #fff8f2;" placeholder="Process guidance will appear here. You can edit this before building the email draft."></textarea>
+            <textarea id="followUpProcess" style="width: 100%; padding: 10px; font-size: 0.95em; box-sizing: border-box; min-height: 170px; resize: vertical;" placeholder="Process guidance will appear here. You can edit this before building the email draft."></textarea>
         </div>
 
-        <button type="button" id="sendFollowUpEmailBtn" style="background: #ef6c00; color: white; border: none; border-radius: 4px; padding: 12px 24px; cursor: pointer; font-weight: bold; font-size: 1em;">📝 Build Follow Up Draft</button>
+        <button type="button" id="sendFollowUpEmailBtn" class="btn-primary" style="padding: 12px 24px; font-weight: bold; font-size: 1em;">Build Follow Up Draft</button>
     `;
 
     // Bind dynamic event listeners
@@ -284,18 +284,19 @@ function switchRedFlagMode(mode) {
     if (surveyPanel) surveyPanel.style.display = isSurvey ? 'block' : 'none';
     if (redFlagPanel) redFlagPanel.style.display = isRedFlag ? 'block' : 'none';
 
-    if (showFollowUpBtn) {
-        showFollowUpBtn.style.background = isFollowUp ? '#ef6c00' : '#b0bec5';
-        showFollowUpBtn.style.color = isFollowUp ? 'white' : '#263238';
-    }
-    if (showSurveyBtn) {
-        showSurveyBtn.style.background = isSurvey ? '#546e7a' : '#b0bec5';
-        showSurveyBtn.style.color = isSurvey ? 'white' : '#263238';
-    }
-    if (showRedFlagBtn) {
-        showRedFlagBtn.style.background = isRedFlag ? '#dc3545' : '#b0bec5';
-        showRedFlagBtn.style.color = isRedFlag ? '#263238' : 'white';
-    }
+    // The chosen mode is a sub-nav tab: .is-active, not an inline colour.
+    // The row gets .sub-nav here too, so the tab look holds whatever the
+    // page markup says.
+    const tabRow = (showFollowUpBtn || showSurveyBtn || showRedFlagBtn)?.parentElement;
+    if (tabRow?.classList && !tabRow.classList.contains('sub-nav')) tabRow.classList.add('sub-nav');
+    [[showFollowUpBtn, isFollowUp], [showSurveyBtn, isSurvey], [showRedFlagBtn, isRedFlag]].forEach(([btn, on]) => {
+        if (!btn) return;
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.classList?.toggle('is-active', on);
+        if (on) btn.setAttribute?.('aria-selected', 'true');
+        else btn.removeAttribute?.('aria-selected');
+    });
 }
 
 function populateFollowUpAssociateDropdown() {
@@ -515,26 +516,25 @@ function renderFollowUpHistory() {
     panel.style.display = 'block';
 
     if (filtered.length === 0) {
-        listEl.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: 12px;">No follow-ups match this filter.</p>';
+        listEl.innerHTML = '<p class="text-faint" style="text-align: center; padding: 12px;">No follow-ups match this filter.</p>';
         return;
     }
 
     listEl.innerHTML = filtered.map(entry => {
         const date = entry.sentAt ? new Date(entry.sentAt).toLocaleDateString() : 'Unknown';
         const isPending = entry.status === 'pending';
-        const statusColor = isPending ? '#ef6c00' : '#2e7d32';
-        const statusBg = isPending ? '#fff3e0' : '#e8f5e9';
+        const statusPill = isPending ? 'pill pill-warn' : 'pill pill-good';
         const statusLabel = isPending ? 'Pending' : 'Resolved';
         const rowOpacity = isPending ? '1' : '0.75';
         const reasonPreview = String(entry.declineReason || '').slice(0, 80) + (String(entry.declineReason || '').length > 80 ? '...' : '');
 
         return `<div style="padding: 10px 12px; border-bottom: 1px solid var(--border); opacity: ${rowOpacity}; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;">
             <div>
-                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95em;">${escapeHtml(entry.associateName)}. ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
-                <div style="font-size: 0.82em; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}). ${date}</div>
-                <div style="font-size: 0.8em; color: #888; margin-top: 2px; font-style: italic;">${escapeHtml(reasonPreview)}</div>
+                <div class="text-primary" style="font-weight: 600; font-size: 0.95em;">${escapeHtml(entry.associateName)}. ${escapeHtml(entry.todoLabel || entry.todoType)}</div>
+                <div class="text-secondary" style="font-size: 0.82em; margin-top: 2px;">${escapeHtml(entry.customerName || '')} (${escapeHtml(entry.customerAccount || '')}). ${date}</div>
+                <div class="text-faint" style="font-size: 0.8em; margin-top: 2px; font-style: italic;">${escapeHtml(reasonPreview)}</div>
             </div>
-            <button onclick="toggleFollowUpStatus('${entry.id}')" style="background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusColor}; border-radius: 999px; padding: 4px 12px; font-size: 0.8em; font-weight: 600; cursor: pointer; white-space: nowrap;">${statusLabel}</button>
+            <button onclick="toggleFollowUpStatus('${entry.id}')" class="${statusPill}" style="min-height: 0; padding: 4px 12px; font-size: 0.8em; cursor: pointer;">${statusLabel}</button>
         </div>`;
     }).join('');
 }
@@ -873,9 +873,9 @@ function displayExtractedSurveyData(data) {
     ];
 
     fieldsEl.innerHTML = fields.map(f => {
-        const val = f.value || '<span style="color: #e65100; font-style: italic;">Not found, edit below if needed</span>';
+        const val = f.value || '<span class="tone-warn" style="font-style: italic;">Not found, edit below if needed</span>';
         const isPresent = Boolean(f.value);
-        return `<div style="margin-bottom: 6px;"><strong style="color: #37474f;">${escapeHtml(f.label)}:</strong> ${isPresent ? escapeHtml(val) : val}</div>`;
+        return `<div style="margin-bottom: 6px;"><strong class="text-primary">${escapeHtml(f.label)}:</strong> ${isPresent ? escapeHtml(val) : val}</div>`;
     }).join('');
 
     section.style.display = 'block';

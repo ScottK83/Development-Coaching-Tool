@@ -341,11 +341,12 @@ function showToast(message, duration = 5000) {
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: #28a745;
-        color: white;
+        background: var(--bg-surface-raised);
+        color: var(--text-primary);
+        border: 1px solid var(--border-strong);
         padding: 12px 20px;
-        border-radius: 4px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
         font-size: 14px;
         z-index: 50000;
         animation: slideIn 0.3s ease-out;
@@ -427,8 +428,8 @@ function showLoadingSpinner(message = 'Processing...') {
     spinner.setAttribute('aria-busy', 'true');
     spinner.innerHTML = `
         <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; justify-content: center;">
-            <div style="background: var(--bg-surface); padding: 30px 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center;">
-                <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #2196F3; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+            <div style="background: var(--bg-surface); border: 1px solid var(--border); padding: 30px 40px; border-radius: 12px; box-shadow: var(--shadow-lg); text-align: center;">
+                <div style="width: 50px; height: 50px; border: 5px solid var(--border-strong); border-top: 5px solid var(--brand); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
                 <div style="font-size: 16px; color: var(--text-primary); font-weight: 600;">${escapeHtml(message)}</div>
             </div>
         </div>
@@ -2121,6 +2122,12 @@ function syncPeopleFollowerPickers() {
         select.style.display = display;
         const label = document.querySelector(`label[for="${id}"]`);
         if (label) label.style.display = display;
+        // A panel holding nothing but this picker was left on screen as an
+        // empty box (Coach, seen in the 2026-10-21 restyle screenshots).
+        const box = select.parentElement;
+        if (box && box !== people && Array.from(box.children).every((el) => el === select || el === label)) {
+            box.style.display = display;
+        }
     });
 }
 
@@ -2527,22 +2534,19 @@ function refreshStorageQuotaWidget() {
     const mbUsed = (totalBytes / (1024 * 1024)).toFixed(2);
     const bar = document.getElementById('storageQuotaBar');
     const label = document.getElementById('storageQuotaLabel');
-    let color = '#66bb6a';
-    if (pct >= 90) color = '#ef5350';
-    else if (pct >= 80) color = '#ffa726';
-    else color = '#ffee58';
+    let color = 'var(--green)';
+    if (pct >= 90) color = 'var(--red)';
+    else if (pct >= 80) color = 'var(--orange)';
+    else color = 'var(--yellow)';
     if (bar) {
         bar.style.width = pct.toFixed(1) + '%';
         bar.style.background = color;
     }
     if (label) {
         label.textContent = `${mbUsed} MB / ${STORAGE_TOTAL_BUDGET_MB} MB (${pct.toFixed(0)}%)`;
-        // Both of the old values (#c62828, #546e7a) are dark, and the dark-theme
-        // rules at styles-v2.css:184-190 turn this widget's light inline
-        // background into a dark surface without touching child text colours.
-        // Dark text on the new dark background is why this line was unreadable.
-        // #ef5350 carries on both grounds; the rest defers to the theme.
-        label.style.color = pct >= 80 ? '#ef5350' : 'var(--text-secondary)';
+        // The dark layer forces div text to the body colour, so an inline
+        // colour never shows here; the kit's tone class is the way past it.
+        label.classList.toggle('tone-bad', pct >= 80);
     }
     widget.style.display = 'flex';
 }
@@ -2842,19 +2846,19 @@ function showDeletedElsewhereBanner() {
     const banner = document.createElement('div');
     banner.id = 'deletedElsewhereBanner';
     banner.style.cssText = 'position: fixed; bottom: env(safe-area-inset-bottom, 0px); left: 0; right: 0; z-index: 10000; '
-        + 'padding: 10px 16px; background: #c62828; color: white; font-weight: 600; display: flex; gap: 12px; '
+        + 'padding: 10px 16px; background: var(--red-soft); border-top: 1px solid var(--red); color: var(--text-primary); font-weight: 600; display: flex; gap: 12px; '
         + 'align-items: center; justify-content: center; flex-wrap: wrap;';
     const text = document.createElement('span');
     text.textContent = 'Your other computer deleted all data. This computer still has its copy, and its next change will send some of it back to the cloud.';
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
+    deleteBtn.className = 'btn-danger';
     deleteBtn.textContent = 'Delete here too';
-    deleteBtn.style.cssText = 'padding: 6px 14px; border: none; border-radius: 4px; background: white; color: #c62828; font-weight: 700; cursor: pointer;';
     deleteBtn.addEventListener('click', () => { banner.remove(); handleDeleteAllDataClick(); });
     const keepBtn = document.createElement('button');
     keepBtn.type = 'button';
+    keepBtn.className = 'btn-secondary';
     keepBtn.textContent = 'Keep this copy';
-    keepBtn.style.cssText = 'padding: 6px 14px; border: 1px solid white; border-radius: 4px; background: transparent; color: white; font-weight: 700; cursor: pointer;';
     keepBtn.addEventListener('click', () => banner.remove());
     banner.appendChild(text);
     banner.appendChild(deleteBtn);
@@ -2868,14 +2872,14 @@ function showSyncReloadBanner(message) {
         banner = document.createElement('div');
         banner.id = 'syncReloadBanner';
         banner.style.cssText = 'position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 10000; '
-            + 'padding: 10px 16px; background: #ef6c00; color: white; font-weight: 600; display: flex; gap: 12px; '
+            + 'padding: 10px 16px; background: var(--yellow-soft); border-bottom: 1px solid var(--yellow); color: var(--text-primary); font-weight: 600; display: flex; gap: 12px; '
             + 'align-items: center; justify-content: center; flex-wrap: wrap;';
         const text = document.createElement('span');
         text.id = 'syncReloadBannerText';
         const button = document.createElement('button');
         button.type = 'button';
+        button.className = 'btn-primary';
         button.textContent = 'Reload now';
-        button.style.cssText = 'padding: 6px 14px; border: none; border-radius: 4px; background: white; color: #ef6c00; font-weight: 700; cursor: pointer;';
         button.addEventListener('click', () => location.reload());
         banner.appendChild(text);
         banner.appendChild(button);
@@ -2934,7 +2938,7 @@ function setCloudSyncResult(text, isError) {
     const el = document.getElementById('cloudSyncResult');
     if (!el) return;
     el.textContent = text || '';
-    el.style.color = isError ? '#ef5350' : 'var(--text-secondary)';
+    el.classList.toggle('tone-bad', !!isError);
 }
 
 /**
@@ -2976,7 +2980,7 @@ function renderCloudSyncStatus() {
     parts.push(`This computer is "${sync.getDeviceId()}".`);
 
     el.textContent = parts.join(' ');
-    el.style.color = pending.length ? '#ef6c00' : 'var(--text-secondary)';
+    el.classList.toggle('tone-warn', pending.length > 0);
 
     const setupBtn = document.getElementById('cloudSyncSetupBtn');
     // The first push seeds the copy, so the button is a manual escape hatch
@@ -3234,7 +3238,7 @@ function setSnapshotStatus(text, isError) {
     const el = document.getElementById('snapshotStatus');
     if (!el) return;
     el.textContent = text || '';
-    el.style.color = isError ? '#ef5350' : 'var(--text-secondary)';
+    el.classList.toggle('tone-bad', !!isError);
 }
 
 async function handleLoadSnapshotListClick() {
@@ -3440,30 +3444,30 @@ function renderUploadColumnInspector(employees, periodType) {
     metricsToShow.forEach(({ key, label, wtdWeight }) => {
         const count = populated(key);
         const hasData = count > 0;
-        let statusIcon, statusText, statusColor;
+        let statusIcon, statusText, statusClass;
         if (!hasData) {
             statusIcon = '-';
             statusText = 'no data in this upload';
-            statusColor = '#9e9e9e';
+            statusClass = 'text-faint';
         } else if (!wtdWeight) {
             statusIcon = '✓';
             statusText = `${count}/${rows.length} rows. Cumulative, no weighting needed`;
-            statusColor = '#2e7d32';
+            statusClass = 'tone-good';
         } else {
             const weightCount = wtdWeight === 'surveyTotal' ? surveyTotalCoverage : totalCallsCoverage;
             if (weightCount > 0) {
                 statusIcon = '✓';
                 statusText = `${count}/${rows.length} rows. Weighted by ${wtdWeight} (WTD math will be accurate)`;
-                statusColor = '#2e7d32';
+                statusClass = 'tone-good';
             } else {
                 statusIcon = '⚠';
                 statusText = `${count}/${rows.length} rows. But ${wtdWeight} missing; partial-week rollup will be display-only`;
-                statusColor = '#ef6c00';
+                statusClass = 'tone-warn';
                 missingWeightCount += 1;
             }
         }
         const li = document.createElement('li');
-        li.innerHTML = `<span style="color: ${statusColor}; font-weight: bold;">${statusIcon}</span> <strong>${label}:</strong> ${statusText}`;
+        li.innerHTML = `<span class="${statusClass}" style="font-weight: bold;">${statusIcon}</span> <strong>${label}:</strong> ${statusText}`;
         list.appendChild(li);
     });
 
@@ -3993,7 +3997,7 @@ function handleTestPastedDataClick() {
         const dateLabel = weekEndingDate ? `${startDate} to ${endDate}` : `${startDate} to ${endDate} (auto test range)`;
         const qualityWarnings = buildMetricsUploadQualityWarnings(employees);
         const qualityHtml = qualityWarnings.length
-            ? `<div style="margin-top: 8px; color: #8a6d1f;"><strong>Warnings:</strong><br>${qualityWarnings.join('<br>')}</div>`
+            ? `<div class="tone-warn" style="margin-top: 8px;"><strong>Warnings:</strong><br>${qualityWarnings.join('<br>')}</div>`
             : '';
 
         // Spot-check: show parsed values for first 5 employees
@@ -4788,9 +4792,9 @@ function renderYearEndAnnualGoalsInputs(employeeName, reviewYear) {
         const current = state[goal.key] || { status: 'met', note: '' };
         const safeNote = escapeHtml(current.note).replace(/"/g, '&quot;');
         return `
-            <div style="display: grid; grid-template-columns: minmax(260px, 2fr) 140px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid #e6dcfa; border-radius: 6px; background: #faf7ff;">
+            <div style="display: grid; grid-template-columns: minmax(260px, 2fr) 140px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface-raised);">
                 <div>
-                    <div style="font-weight: bold; color: #4a148c;">${escapeHtml(goal.label)}</div>
+                    <div class="text-primary" style="font-weight: bold;">${escapeHtml(goal.label)}</div>
                     <div style="font-size: 0.85em; color: var(--text-secondary);">Goal: ${escapeHtml(goal.expectation)}</div>
                 </div>
                 <select data-goal-status="${goal.key}" style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
@@ -5947,38 +5951,35 @@ function renderCoachingPriorityQueue() {
     queue.recognizeNow.sort((a, b) => b.score - a.score);
     queue.watchlist.sort((a, b) => b.score - a.score);
 
-    let html = `<div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">`;
+    let html = `<div class="card-sunken">`;
     html += `<strong>Mode:</strong> ${buckets.descriptor.label} • <strong>Team Members Scored:</strong> ${employeeNames.length}`;
     html += `</div>`;
 
     html += renderCoachingPriorityBucket(
-        '🎯 Coach Now',
+        'Coach Now',
         queue.coachNow,
-        '#ffebee',
-        '#f5c6cb',
+        'callout-bad',
         'No urgent coaching interventions this cycle.',
         'Why coach now:'
     );
     html += renderCoachingPriorityBucket(
-        '🏆 Recognize Now',
+        'Recognize Now',
         queue.recognizeNow,
-        '#e8f5e9',
-        '#c8e6c9',
+        'callout-good',
         'No standout recognition callouts this cycle.',
         'Why recognize now:'
     );
     html += renderCoachingPriorityBucket(
-        '👀 Watchlist',
+        'Watchlist',
         queue.watchlist,
-        '#fff8e1',
-        '#ffe0b2',
+        'callout-warn',
         'No watchlist candidates right now.',
         'Why watch:'
     );
 
     html += `
-        <details id="trendQueueLegend" ${isLegendExpanded ? 'open' : ''} style="margin-top: 10px; border: 1px solid #d9e2ef; border-radius: 6px; background: #f7f9fc; color: #455a64; font-size: 0.88em; line-height: 1.45;">
-            <summary style="cursor: pointer; padding: 10px; font-weight: 700; color: #2f4f87;">📘 Scoring Legend (Show/Hide)</summary>
+        <details id="trendQueueLegend" ${isLegendExpanded ? 'open' : ''} class="text-secondary" style="margin-top: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface-raised); font-size: 0.88em; line-height: 1.45;">
+            <summary class="text-primary" style="cursor: pointer; padding: 10px; font-weight: 700;">Scoring Legend (Show/Hide)</summary>
             <div style="padding: 0 10px 10px 10px;">
                 <div><strong>Coach Now:</strong> +14 below target, +10/+6/+3 severity, +12 significant drop, +12 negative coaching impact.</div>
                 <div><strong>Recognize Now:</strong> +9 meeting target, +8 strong improvement, +15 all core metrics on target, +10 positive coaching impact.</div>
@@ -6118,8 +6119,8 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
     };
 }
 
-function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, whyLabel = 'Why:') {
-    let html = `<div style="padding: 10px; border: 1px solid ${border}; border-radius: 6px; background: ${bg};">`;
+function renderCoachingPriorityBucket(title, entries, calloutClass, emptyText, whyLabel = 'Why:') {
+    let html = `<div class="callout ${calloutClass}">`;
     html += `<strong>${title}</strong>`;
     if (!entries.length) {
         html += `<div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.9em;">${emptyText}</div>`;
@@ -6131,7 +6132,7 @@ function renderCoachingPriorityBucket(title, entries, bg, border, emptyText, why
                 : entry.reason;
             html += `<div>
                 <div><strong>${escapeHtml(entry.name)}</strong> • Score ${entry.score} • ${escapeHtml(entry.reason)}</div>
-                <div style="margin-top: 2px; color: #455a64; font-size: 0.88em;"><strong>${whyLabel}</strong> ${escapeHtml(whyText)}</div>
+                <div class="text-secondary" style="margin-top: 2px; font-size: 0.88em;"><strong>${whyLabel}</strong> ${escapeHtml(whyText)}</div>
             </div>`;
         });
         html += '</div>';
@@ -6274,7 +6275,7 @@ function setTrendFocusMode(enabled) {
     trendIntelligenceFocusMode = Boolean(enabled);
     const focusBtn = document.getElementById('trendFocusModeBtn');
     if (focusBtn) {
-        focusBtn.textContent = trendIntelligenceFocusMode ? '🪄 Focus Mode: On' : '🪄 Focus Mode: Off';
+        focusBtn.textContent = trendIntelligenceFocusMode ? 'Focus Mode: On' : 'Focus Mode: Off';
     }
 
     // Focus Mode hides the charts and the impact card. The charts container
@@ -6304,7 +6305,7 @@ function renderTrendSimpleView() {
 
     const snapshot = trendPrioritySnapshot;
     if (!snapshot) {
-        container.innerHTML = `${goalsSummaryHtml}<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Simple View is waiting for trend data. Click Refresh Analysis.</div>`;
+        container.innerHTML = `${goalsSummaryHtml}<div class="card text-secondary">Simple View is waiting for trend data. Click Refresh Analysis.</div>`;
         return;
     }
 
@@ -6323,16 +6324,16 @@ function renderTrendSimpleView() {
 
     container.innerHTML = `
         ${goalsSummaryHtml}
-        <div style="padding: 14px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
-            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">🧭 Simple View: This Week’s Priorities</div>
-            <div style="color: #546e7a; font-size: 0.9em; margin-bottom: 10px;">${modeLabel} • Team Members Scored: ${scoredCount}</div>
+        <div class="card">
+            <div class="card-title">Simple View: This Week’s Priorities</div>
+            <div class="text-secondary" style="font-size: 0.9em; margin-bottom: 10px;">${modeLabel} • Team Members Scored: ${scoredCount}</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div style="padding: 10px; border-radius: 6px; background: #fff0f0; border: 1px solid #f3c9c9;">
-                    <div style="font-weight: 700; color: var(--red-text); margin-bottom: 6px;">Coach First (Top 3)</div>
+                <div class="callout callout-bad">
+                    <div class="tone-bad" style="font-weight: 700; margin-bottom: 6px;">Coach First (Top 3)</div>
                     <ul style="margin: 0; padding-left: 18px; color: var(--text-primary);">${coachHtml}</ul>
                 </div>
-                <div style="padding: 10px; border-radius: 6px; background: #eef8f0; border: 1px solid #cde6d1;">
-                    <div style="font-weight: 700; color: var(--green-text); margin-bottom: 6px;">Recognize Now (Top 2)</div>
+                <div class="callout callout-good">
+                    <div class="tone-good" style="font-weight: 700; margin-bottom: 6px;">Recognize Now (Top 2)</div>
                     <ul style="margin: 0; padding-left: 18px; color: var(--text-primary);">${recognizeHtml}</ul>
                 </div>
             </div>
@@ -6526,9 +6527,9 @@ function renderTrendCadenceTracker() {
         const descriptor = getTrendPeriodDescriptor(periodType);
 
         if (!summary) {
-            return `<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
-                <div style="font-weight: 700; color: #2f4f87; margin-bottom: 6px;">${descriptor.shortLabel}</div>
-                <div style="color: #546e7a; font-size: 0.9em;">Not enough ${descriptor.compareLabel} data yet.</div>
+            return `<div class="card" style="margin: 0;">
+                <div class="card-title">${descriptor.shortLabel}</div>
+                <div class="text-secondary" style="font-size: 0.9em;">Not enough ${descriptor.compareLabel} data yet.</div>
             </div>`;
         }
 
@@ -6542,22 +6543,22 @@ function renderTrendCadenceTracker() {
             ? `${summary.focusMetric.label} at ${formatMetricDisplay(summary.focusMetric.metricKey, summary.focusMetric.currentValue)}`
             : 'No focus metric identified';
 
-        return `<div style="padding: 14px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff;">
+        return `<div class="card" style="margin: 0;">
             <div style="display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
-                <div style="font-weight: 700; color: #2f4f87;">${summary.descriptor.label}</div>
-                <div style="font-size: 0.82em; color: #546e7a;">${escapeHtml(summary.previousLabel)} -> ${escapeHtml(summary.currentLabel)}</div>
+                <div class="text-primary" style="font-weight: 700;">${summary.descriptor.label}</div>
+                <div class="text-secondary" style="font-size: 0.82em;">${escapeHtml(summary.previousLabel)} -> ${escapeHtml(summary.currentLabel)}</div>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
-                <div style="padding: 10px; border-radius: 6px; background: #eef8f0; border: 1px solid #cde6d1;">
-                    <div style="font-weight: 700; color: var(--green-text); margin-bottom: 4px;">Improving</div>
+                <div class="callout callout-good">
+                    <div class="tone-good" style="font-weight: 700; margin-bottom: 4px;">Improving</div>
                     <div style="color: var(--text-primary); font-size: 0.9em;">${escapeHtml(improvingText)}</div>
                 </div>
-                <div style="padding: 10px; border-radius: 6px; background: #fff4e5; border: 1px solid #ffe0b2;">
-                    <div style="font-weight: 700; color: #e65100; margin-bottom: 4px;">Watch</div>
+                <div class="callout callout-warn">
+                    <div class="tone-warn" style="font-weight: 700; margin-bottom: 4px;">Watch</div>
                     <div style="color: var(--text-primary); font-size: 0.9em;">${escapeHtml(riskText)}</div>
                 </div>
-                <div style="padding: 10px; border-radius: 6px; background: #eef3fb; border: 1px solid #c6d8f5;">
-                    <div style="font-weight: 700; color: #2f4f87; margin-bottom: 4px;">Current Focus</div>
+                <div class="callout callout-info">
+                    <div class="text-primary" style="font-weight: 700; margin-bottom: 4px;">Current Focus</div>
                     <div style="color: var(--text-primary); font-size: 0.9em;">${escapeHtml(focusText)}</div>
                 </div>
             </div>
@@ -6584,9 +6585,9 @@ function buildTrendGoalsSummaryHtml() {
     }).join('');
 
     return `
-        <div style="margin-bottom: 12px; padding: 12px; border: 1px solid #d9e7ff; border-radius: 8px; background: #f5f9ff;">
-            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 6px;">🎯 2026 Goals Snapshot</div>
-            <ul style="margin: 0; padding-left: 18px; color: #3f5168; columns: 2; column-gap: 24px;">${itemsHtml}</ul>
+        <div class="card" style="margin: 0 0 12px 0;">
+            <div class="card-title">2026 Goals Snapshot</div>
+            <ul class="text-secondary" style="margin: 0; padding-left: 18px; columns: 2; column-gap: 24px;">${itemsHtml}</ul>
         </div>
     `;
 }
@@ -6657,9 +6658,7 @@ function syncTrendCadenceQuickButtons() {
     const periodType = document.getElementById('trendPeriodSelector')?.value || 'wow';
     document.querySelectorAll('#trendCadenceQuickSelect .trend-cadence-btn').forEach(btn => {
         const isActive = btn.dataset.period === periodType;
-        btn.style.background = isActive ? '#2f4f87' : '#ffffff';
-        btn.style.color = isActive ? '#ffffff' : '#2f4f87';
-        btn.style.borderColor = isActive ? '#2f4f87' : '#bfd6fb';
+        btn.classList.toggle('is-active', isActive);
         btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 }
@@ -6854,10 +6853,10 @@ function renderCoachingImpactTracker() {
     const list = selectedEmployee ? [spotlight].filter(Boolean) : scored.slice(0, 5);
 
     container.innerHTML = list.map(item => `
-        <div style="padding: 10px; border: 1px solid #e6eefc; border-radius: 6px; background: #f8fbff;">
+        <div class="card-sunken">
             <strong>${escapeHtml(item.employeeName)}</strong><br>
             Momentum: <strong>${item.momentumScore}%</strong> · Consistency: <strong>${item.consistencyScore}%</strong> · Goal Progress: <strong>${item.goalProgressScore}%</strong>
-            <div style="color: #546e7a; font-size: 0.88em; margin-top: 4px;">Tracked metrics: ${item.totalTracked}</div>
+            <div class="text-secondary" style="font-size: 0.88em; margin-top: 4px;">Tracked metrics: ${item.totalTracked}</div>
         </div>
     `).join('');
 }
@@ -6982,7 +6981,7 @@ function renderTrendIntelligence() {
         container.innerHTML = `<div style="color: var(--text-secondary); font-size: 0.95em;">Upload at least 2 ${periodDescriptor.compareLabel} periods to see ${periodDescriptor.shortLabel} trends.</div>`;
         const simpleContainer = document.getElementById('trendSimpleViewOutput');
         if (simpleContainer) {
-            simpleContainer.innerHTML = `<div style="padding: 12px; border: 1px solid #d7e7ff; border-radius: 8px; background: #f8fbff; color: #546e7a;">Upload at least 2 ${periodDescriptor.compareLabel} periods to unlock Simple View priorities.</div>`;
+            simpleContainer.innerHTML = `<div class="card text-secondary">Upload at least 2 ${periodDescriptor.compareLabel} periods to unlock Simple View priorities.</div>`;
         }
         if (modeIndicator) modeIndicator.style.display = 'none';
         renderTrendCadenceTracker();
@@ -6993,14 +6992,12 @@ function renderTrendIntelligence() {
     if (modeIndicator && modeText && emailBtnText) {
         if (selectedEmployee) {
             modeIndicator.style.display = 'block';
-            modeIndicator.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-            modeText.textContent = `👤 Individual Coaching Mode (${periodDescriptor.shortLabel}): ${selectedEmployee}`;
-            emailBtnText.textContent = '🤖 Generate Individual Coaching Email';
+            modeText.textContent = `Individual Coaching Mode (${periodDescriptor.shortLabel}): ${selectedEmployee}`;
+            emailBtnText.textContent = 'Generate Individual Coaching Email';
         } else {
             modeIndicator.style.display = 'block';
-            modeIndicator.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            modeText.textContent = `📊 Team-Wide Analysis Mode (${periodDescriptor.shortLabel})`;
-            emailBtnText.textContent = '📧 Generate Group Email';
+            modeText.textContent = `Team-Wide Analysis Mode (${periodDescriptor.shortLabel})`;
+            emailBtnText.textContent = 'Generate Group Email';
         }
     }
 
@@ -8985,7 +8982,7 @@ function showTranscriptPasteDiagnosis() {
         + '.</p>'
         + groupList
         + '<div class="flex-row" style="margin-top: var(--space-3);">'
-        + '<button type="button" id="copyTranscriptPasteMarkupBtn">📋 Copy the markup, words removed</button>'
+        + '<button type="button" id="copyTranscriptPasteMarkupBtn">Copy the markup, words removed</button>'
         + '</div>'
         + '<p style="margin-top: var(--space-2); font-size: 0.9em;">The copy keeps the tags, colours and '
         + 'classes and replaces every letter with x and every digit with 0, so it shows how the page is '
@@ -9190,11 +9187,11 @@ function renderCallRedFlagBox(record) {
     const first = items.find(item => item.time);
     const caveat = record.labeled ? '' : '<div class="call-alert-note">Who said what was worked out from the conversation, not the colours, so the listen matters more than usual.</div>';
     return `<div class="call-alert call-alert-red call-listen" role="alert">`
-        + `<div class="call-alert-title">🎧 Listen to this call before anything goes out${first ? `, starting at ${escapeHtml(first.time)}` : ''}</div>`
+        + `<div class="call-alert-title">Listen to this call before anything goes out${first ? `, starting at ${escapeHtml(first.time)}` : ''}</div>`
         + heard
         + caveat
         + `<div class="flex-row" style="margin-top: var(--space-3);">`
-        + `<button type="button" class="btn-primary" data-red-flag-review="valid">🚩 It's valid, document it</button>`
+        + `<button type="button" class="btn-primary" data-red-flag-review="valid">It's valid, document it</button>`
         + `<button type="button" data-red-flag-review="dismissed">Not valid, leave it out</button>`
         + `</div></div>`;
 }
@@ -9906,7 +9903,7 @@ function toggleAllSavedCalls() {
     const opening = container.style.display === 'none';
     if (opening) renderAllSavedCalls();
     container.style.display = opening ? 'block' : 'none';
-    if (button) button.textContent = opening ? '🔎 Hide Saved Calls' : '🔎 Show Saved Calls';
+    if (button) button.textContent = opening ? 'Hide Saved Calls' : 'Show Saved Calls';
 }
 
 /**

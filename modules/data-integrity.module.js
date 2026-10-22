@@ -325,9 +325,9 @@
     }
 
     function severityBadge(severity) {
-        if (severity === 'high') return '<span style="display:inline-block; padding:2px 8px; border-radius:10px; background:var(--red-soft); color:var(--red-text); font-size:0.75em; font-weight:700;">HIGH</span>';
-        if (severity === 'medium') return '<span style="display:inline-block; padding:2px 8px; border-radius:10px; background:#fff3e0; color:#ef6c00; font-size:0.75em; font-weight:700;">MED</span>';
-        return '<span style="display:inline-block; padding:2px 8px; border-radius:10px; background:#e3f2fd; color:#1565c0; font-size:0.75em; font-weight:700;">LOW</span>';
+        if (severity === 'high') return '<span class="pill pill-bad" style="font-size:0.75em; font-weight:700;">HIGH</span>';
+        if (severity === 'medium') return '<span class="pill pill-warn" style="font-size:0.75em; font-weight:700;">MED</span>';
+        return '<span class="pill pill-info" style="font-size:0.75em; font-weight:700;">LOW</span>';
     }
 
     function showDataIntegrityModal() {
@@ -364,12 +364,12 @@
                 const group = groupedByWeek.get(weekKey);
                 const label = weekKey === 'no-period' ? 'No period' : formatWeekLabel(weekKey, weeklyData);
                 return `<div style="margin-bottom:18px;">` +
-                    `<div style="font-weight:700; color:#1a237e; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);">${escapeHtml(label)} <span style="color:var(--text-tertiary); font-weight:400; font-size:0.85em;">(${group.length} issue${group.length === 1 ? '' : 's'})</span></div>` +
+                    `<div class="text-primary" style="font-weight:700; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);">${escapeHtml(label)} <span class="text-faint" style="font-weight:400; font-size:0.85em;">(${group.length} issue${group.length === 1 ? '' : 's'})</span></div>` +
                     group.map(issue => `<div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; font-size:0.9em;">` +
                         `<div style="flex-shrink:0; width:52px;">${severityBadge(issue.severity)}</div>` +
                         `<div style="flex:1;">` +
-                            `<div style="color:#424242;">${escapeHtml(issue.message)}</div>` +
-                            `<div style="color:var(--text-tertiary); font-size:0.82em; margin-top:2px;">${escapeHtml(issue.category)}</div>` +
+                            `<div class="text-primary">${escapeHtml(issue.message)}</div>` +
+                            `<div class="text-faint" style="font-size:0.82em; margin-top:2px;">${escapeHtml(issue.category)}</div>` +
                         `</div>` +
                     `</div>`).join('') +
                 `</div>`;
@@ -380,7 +380,7 @@
             const note = reviewedCount
                 ? `${reviewedCount} finding${reviewedCount === 1 ? '' : 's'} you already cleared ${reviewedCount === 1 ? 'is' : 'are'} hidden.`
                 : 'Your upload history looks clean.';
-            return `<div style="padding:40px; text-align:center; color:var(--green-text);">` +
+            return `<div class="tone-good" style="padding:40px; text-align:center;">` +
                 `<div style="font-size:3em; margin-bottom:12px;">✅</div>` +
                 `<div style="font-size:1.15em; font-weight:600;">Nothing new to look at.</div>` +
                 `<div style="color:var(--text-secondary); font-size:0.9em; margin-top:8px;">${escapeHtml(note)}</div>` +
@@ -406,33 +406,33 @@
                 : '';
 
             overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:760px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
-                `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
+                `<div style="padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">` +
                     `<div>` +
-                        `<h2 style="margin:0; color:#1a237e; font-size:1.25em;">🔍 Data Health Check</h2>` +
-                        `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
+                        `<h2 style="margin:0; color:var(--text-primary); font-size:1.25em;">Data Health Check</h2>` +
+                        `<div class="text-secondary" style="margin-top:6px; font-size:0.88em;">` +
                             `${visible.length} issue${visible.length === 1 ? '' : 's'} shown • ` +
-                            `<span style="color:var(--red-text); font-weight:600;">${counts.high} high</span> • ` +
-                            `<span style="color:#ef6c00; font-weight:600;">${counts.medium} medium</span> • ` +
-                            `<span style="color:#1565c0; font-weight:600;">${counts.low} low</span>` +
+                            `<span class="tone-bad" style="font-weight:600;">${counts.high} high</span> • ` +
+                            `<span class="tone-warn" style="font-weight:600;">${counts.medium} medium</span> • ` +
+                            `<span class="tone-info" style="font-weight:600;">${counts.low} low</span>` +
                             hiddenNote +
                         `</div>` +
                     `</div>` +
-                    `<button id="dataIntegrityClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">✕</button>` +
+                    `<button id="dataIntegrityClose" class="btn-ghost" aria-label="Close" style="font-size:1.3em;">✕</button>` +
                 `</div>` +
                 `<div style="padding:16px 24px; overflow-y:auto; flex:1;">${bodyHtml}</div>` +
-                `<div style="padding:14px 24px; border-top:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">` +
+                `<div style="padding:14px 24px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">` +
                     `<div style="display:flex; gap:8px; flex-wrap:wrap;">` +
                         (issues.length
-                            ? `<button id="dataIntegrityWipe" style="background:#7b1fa2; color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">🧹 Clear these. Seen them</button>`
+                            ? `<button id="dataIntegrityWipe" class="btn-primary">Clear these. Seen them</button>`
                             : '') +
                         (hiddenCount
-                            ? `<button id="dataIntegrityToggle" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">${showAll ? 'Hide cleared' : `Show cleared (${hiddenCount})`}</button>`
+                            ? `<button id="dataIntegrityToggle" class="btn-secondary">${showAll ? 'Hide cleared' : `Show cleared (${hiddenCount})`}</button>`
                             : '') +
                         (hiddenCount
-                            ? `<button id="dataIntegrityRestore" style="background:none; color:var(--text-secondary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">Bring them all back</button>`
+                            ? `<button id="dataIntegrityRestore" class="btn-ghost">Bring them all back</button>`
                             : '') +
                     `</div>` +
-                    `<button id="dataIntegrityCloseBtn" style="background:#1a237e; color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Close</button>` +
+                    `<button id="dataIntegrityCloseBtn" class="btn-secondary">Close</button>` +
                 `</div>` +
             `</div>`;
 

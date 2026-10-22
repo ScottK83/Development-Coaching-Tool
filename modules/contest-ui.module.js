@@ -117,7 +117,7 @@
         ).join('');
 
         return `
-            <h2>🎟️ Contest</h2>
+            <h2>Contest</h2>
             <p style="color: var(--text-secondary);">Entries are worked out from the days you enter, so correcting a day fixes it rather than awarding twice.</p>
 
             <div style="margin-bottom: 20px; padding: 14px 20px; background: var(--bg-surface-raised); border-radius: 8px; border: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
@@ -127,9 +127,9 @@
                 <select id="contestTeam" style="padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);">
                     ${teamOptions}<option value="__all__">Everyone</option>
                 </select>
-                <button type="button" id="contestImportBtn" class="btn-secondary" style="background: #1565c0; color: white;">⬇️ Pull from uploads</button>
-                <button type="button" id="contestTraceBtn" class="btn-secondary" style="background: #546e7a; color: white;">🔍 Where surveys came from</button>
-                <button type="button" id="contestClearBtn" class="btn-secondary" style="background: #c62828; color: white;">🗑️ Start the month over</button>
+                <button type="button" id="contestImportBtn" class="btn-primary">Pull from uploads</button>
+                <button type="button" id="contestTraceBtn" class="btn-secondary">Where surveys came from</button>
+                <button type="button" id="contestClearBtn" class="btn-danger">Start the month over</button>
             </div>
             <div id="contestTrace" style="display: none; margin-bottom: 20px; padding: 14px 20px; background: var(--bg-surface-raised); border-radius: 8px; border: 1px solid var(--border);">
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
@@ -139,13 +139,13 @@
                 <div id="contestTraceBody" style="white-space: pre-wrap; font-family: monospace; font-size: 0.85em; color: var(--text-primary); max-height: 480px; overflow-y: auto;"></div>
             </div>
 
-            <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #00897b;">
-                <h3 style="color: #00897b; margin-top: 0;">Standings</h3>
+            <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">
+                <h3 style="margin-top: 0;">Standings</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <button type="button" id="contestCopyBtn" class="btn-secondary" style="background: #00695c; color: white;">📣 Post to Teams</button>
-                    <button type="button" id="contestCopyGraphicBtn" class="btn-secondary" style="background: #7b1fa2; color: white;">🖼️ Copy the graphic</button>
-                    <button type="button" id="contestDrawBtn" class="btn-secondary" style="background: #ef6c00; color: white;">🎲 Draw a winner</button>
-                    <a id="contestRaffleLink" href="raffle" target="_blank" rel="noopener" class="btn-secondary" style="background: #ad1457; color: white; text-decoration: none; display: inline-flex; align-items: center;">🎉 Open the raffle screen</a>
+                    <button type="button" id="contestCopyBtn" class="btn-primary">Post to Teams</button>
+                    <button type="button" id="contestCopyGraphicBtn" class="btn-secondary">Copy the graphic</button>
+                    <button type="button" id="contestDrawBtn" class="btn-secondary">Draw a winner</button>
+                    <a id="contestRaffleLink" href="raffle" target="_blank" rel="noopener" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; padding: 6px 14px; border-radius: var(--radius-md); font-weight: 600;">Open the raffle screen</a>
                 </div>
                 <div id="contestGraphicStatus" style="margin-bottom: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
                 <div id="contestDrawResult" style="display: none; margin-bottom: 12px; padding: 12px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);"></div>
@@ -156,11 +156,11 @@
                     <div style="overflow-x: auto;"><div id="contestGraphicExport" style="width: 900px;"></div></div>
                 </div>
             </div>
-            <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #7b1fa2;">
-                <h3 style="color: #7b1fa2; margin-top: 0;">Enter a day</h3>
+            <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">
+                <h3 style="margin-top: 0;">Enter a day</h3>
                 <p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.9em;">For the date picked above. Anything the upload could not work out on its own gets typed here.</p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
-                    <button type="button" id="contestSaveDayBtn" class="btn-secondary" style="background: #2e7d32; color: white;">Save this day</button>
+                    <button type="button" id="contestSaveDayBtn" class="btn-primary">Save this day</button>
                 </div>
                 <div id="contestDayGrid" style="max-height: 420px; overflow-y: auto;"></div>
                 <div id="contestDayStatus" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
@@ -294,19 +294,21 @@
         try { check = buildCheck(); } catch (error) { check = null; }
         if (!check) { host.style.display = 'none'; host.innerHTML = ''; return; }
 
+        // The edge carries the state: red behind, amber open, green all
+        // proven, a plain rule for the rest.
         var line = function (color, text) {
             return '<div style="margin: 3px 0; padding-left: 8px; border-left: 3px solid ' + color + ';">' + esc(text) + '</div>';
         };
         var html = '';
         if (check.behind.length) {
-            html += line('#c62828', 'The board is behind the uploads for ' + check.behind.length + ' '
+            html += line('var(--red)', 'The board is behind the uploads for ' + check.behind.length + ' '
                 + (check.behind.length === 1 ? 'person' : 'people') + ': ' + check.behind.join(', ') + '. Click Pull from uploads.');
         }
-        check.open.forEach(function (text) { html += line('#ef6c00', text); });
+        check.open.forEach(function (text) { html += line('var(--yellow)', text); });
         var allGood = !check.behind.length && !check.open.length;
-        html += line(allGood ? '#2e7d32' : '#546e7a', (allGood ? 'Every count checked and proven against the uploads: ' : 'Proven against the uploads: ')
+        html += line(allGood ? 'var(--green)' : 'var(--border-strong)', (allGood ? 'Every count checked and proven against the uploads: ' : 'Proven against the uploads: ')
             + check.proven + ' of ' + check.people + ' people.');
-        html += line('#546e7a', check.fresh);
+        html += line('var(--border-strong)', check.fresh);
         host.innerHTML = html;
         host.style.display = 'block';
     }
@@ -371,7 +373,7 @@
                 if (!isAdherence && !(Number.isInteger(n) && n >= 0)) problem = 'surveys must be a whole number';
             }
             if (!problem) return;
-            box.style.outline = '2px solid #c62828';
+            box.style.outline = '2px solid var(--red)';
             problems.push(who + ': ' + problem);
         });
         return problems;
@@ -710,7 +712,7 @@
         const host = document.getElementById('contestDrawResult');
         if (host) { host.style.display = 'none'; host.innerHTML = ''; }
         const button = document.getElementById('contestDrawBtn');
-        if (button) button.textContent = '🎲 Draw a winner';
+        if (button) button.textContent = 'Draw a winner';
     }
 
     /**
@@ -812,7 +814,7 @@
         });
 
         const button = document.getElementById('contestDrawBtn');
-        if (button) button.textContent = '🎲 Draw another';
+        if (button) button.textContent = 'Draw another';
     }
 
     // ============================================

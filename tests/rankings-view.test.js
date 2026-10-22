@@ -370,11 +370,13 @@ suite('rankings view: nothing is left on a light background in dark mode', (t) =
     t.check('and none of them is on a pale panel',
         !PALE.test(shell.slice(shell.indexOf('Your Team'))));
 
+    // Dark only since the 2026-10-21 restyle: the panels come from the theme
+    // tokens and kit classes, so no theme gets a hard-coded pale panel.
     const light = loadRankings(t, WEEKS, YTD);
     global.window.getTeamMembersForWeek = () => ['P0', 'P1', 'P2'];
     light.cr.renderCenterRanking();
-    t.check('while light mode keeps the pale panels it was designed with',
-        PALE.test(light.dom.shell()));
+    t.check('and the panels are drawn from the theme tokens in any theme',
+        !PALE.test(light.dom.shell()) && /class="ranking-card callout callout-/.test(light.dom.shell()));
 });
 
 /* ── Survey values ── */
@@ -805,7 +807,7 @@ suite('rankings view: the strip marks a month that has not finished', (t) => {
     // Marked by colour, not by a star: a star already means "moved with no
     // score change" everywhere else on this view.
     t.check('the unfinished month is on the strip', (team.match(/<strong>/g) || []).length >= 9);
-    t.check('and it is marked as unfinished', /<span style="color: #e65100;">[A-Z][a-z]{2}<\/span> <strong>/.test(team));
+    t.check('and it is marked as unfinished', /<span class="tone-warn">[A-Z][a-z]{2}<\/span> <strong>/.test(team));
     t.check('while the complete months are not', /(^|>)[A-Z][a-z]{2} <strong>/.test(team));
 });
 
@@ -876,7 +878,7 @@ suite('rankings view: the whole card opens the trajectory, not just the name', (
     cr.renderCenterRanking();
     const team = dom.shell().slice(dom.shell().indexOf('Your Team'));
 
-    const cards = [...team.matchAll(/<div class="ranking-card" data-employee="([^"]+)"[^>]*>/g)];
+    const cards = [...team.matchAll(/<div class="ranking-card[^"]*" data-employee="([^"]+)"[^>]*>/g)];
     t.equal('every card is a target', cards.length, 3);
     t.check('and says so', cards.every((m) => /cursor: pointer/.test(m[0])));
     t.check('the name no longer carries the binding on its own',
@@ -917,9 +919,9 @@ suite('rankings view: the trajectory shows whether the YEAR is moving', (t) => {
     t.check('and its own movement row', />Year to date move<\/td>/.test(html));
     t.check('the standing carries its denominator', /#\d+<\/strong><span[^>]*> of \d+<\/span>/.test(html));
 
-    t.check('the chart draws it as a second line', /stroke="#8e6bbf"/.test(html));
+    t.check('the chart draws it as a second line', /stroke="var\(--text-secondary\)"/.test(html));
     t.check('with hollow markers, so colour is not the only tell',
-        /fill="var\(--bg-surface\)" stroke="#8e6bbf"/.test(html));
+        /fill="var\(--bg-surface\)" stroke="var\(--text-secondary\)"/.test(html));
     t.check('and a legend naming both lines',
         /Rank that month/.test(html) && /Year to date, as of that month/.test(html));
 
@@ -955,7 +957,7 @@ suite('rankings view: the year row agrees with the number on the card', (t) => {
     t.check('the card carries a year-to-date rank', Number.isFinite(cardRank));
 
     const html = cr.buildTrajectoryHtml('P0');
-    const yearCells = [...html.matchAll(/<strong style="color: #8e6bbf;">#(\d+)<\/strong>/g)].map((m) => Number(m[1]));
+    const yearCells = [...html.matchAll(/<strong class="text-secondary">#(\d+)<\/strong>/g)].map((m) => Number(m[1]));
     t.check('the modal carries them too', yearCells.length > 0);
     // The uploaded file closes in July, so July and August both read it.
     t.equal('and the last one is the same number the card shows',
@@ -984,7 +986,7 @@ suite('rankings view: a rebuilt year says which month it really starts in', (t) 
 
     t.check('the row is still year to date', />Year to date<\/td>/.test(html));
     t.check('but the cells admit where the data begins', /from Jun only/.test(html));
-    t.check('and it is marked, not buried', /color: #e65100;">from Jun only/.test(html));
+    t.check('and it is marked, not buried', /class="tone-warn" style="font-size: 0\.7em;">from Jun only/.test(html));
 });
 
 /* ── Month over month, as an email ── */
@@ -1588,7 +1590,7 @@ suite('rankings view: the CX Adv column places people the way the year card does
         return at === -1 ? '' : html.slice(at, html.indexOf('</tr>', at));
     };
     const cxRankIn = (row) => {
-        const spans = [...row.matchAll(/<span(?: title="[^"]*")? style="font-size: 0\.72em; color: [^;]+;">#(\d+|\?)<\/span>/g)];
+        const spans = [...row.matchAll(/<span(?: title="[^"]*")? class="[^"]+" style="font-size: 0\.72em;">#(\d+|\?)<\/span>/g)];
         return spans.length >= 4 ? spans[3][1] : null;
     };
 

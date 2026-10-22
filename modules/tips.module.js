@@ -682,12 +682,12 @@ async function renderTipsManagement() {
     html += '<p>Select a tip category below to expand and manage its coaching tips.</p>';
     html += '</div>';
 
-    html += '<div id="manageCategorySection" style="margin-bottom: 25px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 2px solid #2196F3;">';
+    html += '<div id="manageCategorySection" class="card" style="margin-bottom: 25px; padding: 20px;">';
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
-    html += '<label for="categoriesSelector" style="font-weight: bold; color: #2196F3; font-size: 1.1em; margin: 0;">Select Tip Category:</label>';
-    html += '<button id="newMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">+ New Category</button>';
+    html += '<label for="categoriesSelector" class="text-primary" style="font-weight: bold; font-size: 1.1em; margin: 0;">Select Tip Category:</label>';
+    html += '<button id="newMetricBtn" class="btn-secondary" style="padding: 10px 16px; font-weight: bold; font-size: 0.95em;">+ New Category</button>';
     html += '</div>';
-    html += '<select id="categoriesSelector" style="width: 100%; padding: 12px; border: 2px solid #2196F3; border-radius: 4px; font-size: 1em; cursor: pointer;">';
+    html += '<select id="categoriesSelector" style="width: 100%; padding: 12px; font-size: 1em; cursor: pointer;">';
     html += '<option value="">-- Choose a category --</option>';
     sortedCategories.forEach(metricKey => {
         html += `<option value="${escapeHtml(metricKey)}">${escapeHtml(metricNames[metricKey])}</option>`;
@@ -695,20 +695,20 @@ async function renderTipsManagement() {
     html += '</select>';
     html += '</div>';
 
-    html += '<div id="createMetricSection" style="display: none; margin-bottom: 25px; padding: 20px; background: #f0f8ff; border-radius: 8px; border: 2px dashed #2196F3;">';
+    html += '<div id="createMetricSection" class="card" style="display: none; margin-bottom: 25px; padding: 20px;">';
     html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">';
-    html += '<h3 style="color: #2196F3; margin: 0;">➕ Create New Category</h3>';
-    html += '<button id="backToManageBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-weight: bold; font-size: 0.95em;">Back</button>';
+    html += '<h3 class="card-title" style="margin: 0;">Create New Category</h3>';
+    html += '<button id="backToManageBtn" class="btn-ghost" style="padding: 8px 16px; font-weight: bold; font-size: 0.95em;">Back</button>';
     html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
-    html += '<label for="newMetricName" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">Category Name:</label>';
-    html += '<input type="text" id="newMetricName" placeholder="e.g., Accuracy, Compliance, Efficiency" style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; box-sizing: border-box;">';
+    html += '<label for="newMetricName" style="font-weight: bold; display: block; margin-bottom: 5px;">Category Name:</label>';
+    html += '<input type="text" id="newMetricName" placeholder="e.g., Accuracy, Compliance, Efficiency" style="width: 100%; padding: 10px; font-size: 0.95em; box-sizing: border-box;">';
     html += '</div>';
     html += '<div style="margin-bottom: 12px;">';
-    html += '<label for="newMetricTip" style="font-weight: bold; display: block; margin-bottom: 5px; color: #1976D2;">First Tip:</label>';
-    html += '<textarea id="newMetricTip" placeholder="Enter a coaching tip for this new category..." style="width: 100%; padding: 10px; border: 2px solid #2196F3; border-radius: 4px; font-size: 0.95em; resize: vertical; box-sizing: border-box;" rows="2"></textarea>';
+    html += '<label for="newMetricTip" style="font-weight: bold; display: block; margin-bottom: 5px;">First Tip:</label>';
+    html += '<textarea id="newMetricTip" placeholder="Enter a coaching tip for this new category..." style="width: 100%; padding: 10px; font-size: 0.95em; resize: vertical; box-sizing: border-box;" rows="2"></textarea>';
     html += '</div>';
-    html += '<button id="createMetricBtn" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-weight: bold;">Create Category</button>';
+    html += '<button id="createMetricBtn" class="btn-primary" style="padding: 10px 20px; font-weight: bold;">Create Category</button>';
     html += '</div>';
 
     html += '<div id="tipsDisplayArea" style="display: none;"></div>';
@@ -793,8 +793,8 @@ async function renderTipsManagement() {
         const displayMetricName = metricNames[metricKey];
 
         let tipsHtml = `<div style="padding: 20px; background: var(--bg-surface-raised); border-radius: 8px;">`;
-        tipsHtml += `<h3 style="color: #2196F3; margin-top: 0; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">📂 ${escapeHtml(displayMetricName)}</h3>`;
-        tipsHtml += '<div style="margin: 20px 0;"><h4 style="color: #1976D2; margin-bottom: 12px;">📋 Tips</h4>';
+        tipsHtml += `<h3 class="card-title" style="margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px;">${escapeHtml(displayMetricName)}</h3>`;
+        tipsHtml += '<div style="margin: 20px 0;"><h4 class="text-secondary" style="margin-bottom: 12px;">Tips</h4>';
 
         if (serverTipsWithIndex.length > 0) {
             serverTipsWithIndex.forEach((tipObj) => {
@@ -804,12 +804,12 @@ async function renderTipsManagement() {
                 const tip = tipObj.tip;
                 const originalIndex = tipObj.originalIndex;
                 tipsHtml += `
-                    <div style="margin-bottom: 12px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196F3; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div class="card-sunken" style="margin-bottom: 12px; padding: 15px;">
                         <div style="display: grid; grid-template-columns: minmax(0, 1fr) 130px; align-items: start; gap: 12px;">
-                            <textarea id="editServerTip_${metricKey}_${originalIndex}" style="width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; border: 1px solid #1976D2; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px; background: var(--bg-surface);" rows="2">${escapeHtml(tip)}</textarea>
+                            <textarea id="editServerTip_${metricKey}_${originalIndex}" style="width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px; width: 130px;">
-                                <button class="updateServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button class="deleteServerTipBtn" data-metric="${metricKey}" data-index="${originalIndex}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                                <button class="updateServerTipBtn btn-secondary" data-metric="${metricKey}" data-index="${originalIndex}" style="padding: 8px 12px; white-space: nowrap;">Save</button>
+                                <button class="deleteServerTipBtn btn-danger" data-metric="${metricKey}" data-index="${originalIndex}" style="padding: 8px 12px; white-space: nowrap;">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -820,12 +820,12 @@ async function renderTipsManagement() {
         if (userTipsForMetric.length > 0) {
             userTipsForMetric.forEach((tip, index) => {
                 tipsHtml += `
-                    <div style="margin-bottom: 12px; padding: 15px; background: var(--bg-surface); border-left: 4px solid #28a745; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div class="card-sunken" style="margin-bottom: 12px; padding: 15px;">
                         <div style="display: grid; grid-template-columns: minmax(0, 1fr) 130px; align-items: start; gap: 12px;">
-                            <textarea id="editTip_${metricKey}_${index}" style="width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
+                            <textarea id="editTip_${metricKey}_${index}" style="width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; font-size: 0.95em; resize: vertical; min-height: 60px;" rows="2">${escapeHtml(tip)}</textarea>
                             <div style="display: flex; flex-direction: column; gap: 8px; width: 130px;">
-                                <button class="updateTipBtn" data-metric="${metricKey}" data-index="${index}" style="background: #2196F3; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">💾 Save</button>
-                                <button class="deleteTipBtn" data-metric="${metricKey}" data-index="${index}" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; white-space: nowrap;">🗑️ Delete</button>
+                                <button class="updateTipBtn btn-secondary" data-metric="${metricKey}" data-index="${index}" style="padding: 8px 12px; white-space: nowrap;">Save</button>
+                                <button class="deleteTipBtn btn-danger" data-metric="${metricKey}" data-index="${index}" style="padding: 8px 12px; white-space: nowrap;">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -834,15 +834,15 @@ async function renderTipsManagement() {
         }
 
         if (serverTipsWithIndex.length === 0 && userTipsForMetric.length === 0) {
-            tipsHtml += '<div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;"><em>No tips found for this metric</em></div>';
+            tipsHtml += '<div class="callout callout-warn" style="margin: 20px 0; padding: 15px;"><em>No tips found for this metric</em></div>';
         }
 
         tipsHtml += '</div>';
 
         tipsHtml += `
-            <div style="margin-top: 15px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 2px dashed #28a745;">
-                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${displayMetricName}..." style="width: 100%; padding: 12px; border: 2px solid #28a745; border-radius: 4px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
-                <button class="addTipBtn" data-metric="${metricKey}" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 10px 20px; cursor: pointer; font-size: 1em; font-weight: bold;">➕ Add Tip</button>
+            <div class="card" style="margin-top: 15px; padding: 15px;">
+                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${displayMetricName}..." style="width: 100%; padding: 12px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
+                <button class="addTipBtn btn-primary" data-metric="${metricKey}" style="padding: 10px 20px; font-size: 1em; font-weight: bold;">Add Tip</button>
             </div>
         `;
         tipsHtml += '</div>';

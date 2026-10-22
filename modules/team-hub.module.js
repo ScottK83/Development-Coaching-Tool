@@ -135,15 +135,15 @@
             .join('');
 
         const chip = summary.isAll
-            ? `<span style="padding:4px 12px; border-radius:12px; background:#e8f5e9; color:#2e7d32; font-weight:600; font-size:0.82em;">My whole team • ${summary.memberCount}</span>`
-            : `<span style="padding:4px 12px; border-radius:12px; background:#ede7f6; color:#4527a0; font-weight:600; font-size:0.82em;">Just ${escapeHtml(summary.label)}</span>`;
+            ? `<span class="pill" style="padding:4px 12px; font-size:0.82em;">My whole team • ${summary.memberCount}</span>`
+            : `<span class="pill pill-info" style="padding:4px 12px; font-size:0.82em;">Just ${escapeHtml(summary.label)}</span>`;
 
         const note = summary.isAll
             ? 'Every tab below covers the whole team.'
             : 'Every tab below is about this one person.';
 
-        container.innerHTML = `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; padding:12px 16px; background:var(--bg-surface); border:1px solid #d1c4e9; border-radius:10px;">` +
-            `<label for="teamScopeSelect" style="font-weight:700; color:#4527a0; font-size:0.92em;">Who</label>` +
+        container.innerHTML = `<div class="card" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; padding:12px 16px;">` +
+            `<label for="teamScopeSelect" style="font-weight:700; font-size:0.92em;">Who</label>` +
             `<select id="teamScopeSelect" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; min-width:240px; background:var(--bg-surface-raised); color:var(--text-primary);">${options}</select>` +
             chip +
             `<span style="margin-left:auto; font-size:0.82em; color:var(--text-tertiary);">${note}` +

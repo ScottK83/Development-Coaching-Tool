@@ -126,10 +126,10 @@
 
     function changeList(entries, tone) {
         if (!entries?.length) return '';
-        const color = tone === 'up' ? 'var(--green-text)' : '#e65100';
+        const toneClass = tone === 'up' ? 'tone-good' : 'tone-warn';
         return entries.slice(0, 5).map(e =>
-            `<div style="padding:4px 0; font-size:0.9em; color:var(--text-primary);">` +
-                `<span style="color:${color}; font-weight:700;">${tone === 'up' ? '▲' : '▼'}</span> ` +
+            `<div class="text-primary" style="padding:4px 0; font-size:0.9em;">` +
+                `<span class="${toneClass}" style="font-weight:700;">${tone === 'up' ? '▲' : '▼'}</span> ` +
                 `${escapeHtml(e.label)}: ${escapeHtml(formatValue(e.key, e.before))} → <strong>${escapeHtml(formatValue(e.key, e.after))}</strong>` +
             `</div>`).join('');
     }
@@ -137,8 +137,8 @@
     function section(title, bodyHtml, note) {
         if (!bodyHtml) return '';
         return `<div style="margin-bottom:18px;">` +
-            `<div style="font-weight:700; color:#bf360c; margin-bottom:6px;">${escapeHtml(title)}` +
-                (note ? ` <span style="font-weight:400; font-size:0.85em; color:var(--text-tertiary);">${escapeHtml(note)}</span>` : '') +
+            `<div class="section-title" style="margin-bottom:6px;">${escapeHtml(title)}` +
+                (note ? ` <span class="text-faint" style="font-weight:400; font-size:0.85em;">${escapeHtml(note)}</span>` : '') +
             `</div>` + bodyHtml +
         `</div>`;
     }
@@ -149,7 +149,7 @@
 
         const oneOnOne = core();
         if (!oneOnOne) {
-            container.innerHTML = '<div style="padding:20px; color:var(--text-secondary);">Meeting module failed to load.</div>';
+            container.innerHTML = '<div class="text-secondary" style="padding:20px;">Meeting module failed to load.</div>';
             return;
         }
 
@@ -161,9 +161,9 @@
         const options = mods().associatePicker.optionsHtml(names, { selected: selected });
 
         container.innerHTML = `<div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:18px;">` +
-                `<div><label for="oneOnOneWho" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Associate</label>` +
+                `<div><label for="oneOnOneWho" class="text-secondary" style="display:block; font-size:0.85em; font-weight:600; margin-bottom:4px;">Associate</label>` +
                 `<select id="oneOnOneWho" style="padding:9px 12px; border:1px solid var(--border-strong); border-radius:8px; min-width:240px; background:var(--bg-surface-raised); color:var(--text-primary);">${options}</select></div>` +
-                `<div><label for="oneOnOneDate" style="display:block; font-size:0.85em; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Meeting date</label>` +
+                `<div><label for="oneOnOneDate" class="text-secondary" style="display:block; font-size:0.85em; font-weight:600; margin-bottom:4px;">Meeting date</label>` +
                 `<input type="date" id="oneOnOneDate" value="${escapeHtml(meetingDate)}" style="padding:9px 12px; border:1px solid var(--border-strong); border-radius:8px; background:var(--bg-surface-raised); color:var(--text-primary);"></div>` +
             `</div>` +
             `<div id="oneOnOneBody"></div>`;
@@ -192,7 +192,7 @@
         const date = document.getElementById('oneOnOneDate')?.value || todayIso();
 
         if (!who) {
-            body.innerHTML = `<div style="padding:30px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid var(--border); border-radius:10px;">Pick an associate to build talking points.</div>`;
+            body.innerHTML = `<div class="card text-secondary" style="padding:30px; text-align:center;">Pick an associate to build talking points.</div>`;
             return;
         }
 
@@ -203,35 +203,35 @@
             ? h.yearToDate.slice(0, 8).map(e => {
                 const meets = e.target === null ? null
                     : (window.METRICS_REGISTRY?.[e.key]?.isReverse ? e.value <= e.target : e.value >= e.target);
-                const colour = meets === null ? 'var(--text-secondary)' : (meets ? 'var(--green-text)' : '#e65100');
+                const toneClass = meets === null ? 'text-secondary' : (meets ? 'tone-good' : 'tone-warn');
                 const goalWord = e.key === 'reliability' ? 'allowance' : 'goal';
-                return `<div style="padding:4px 0; font-size:0.9em;"><span style="color:${colour}; font-weight:700;">${meets === null ? '·' : (meets ? '✓' : '•')}</span> ` +
+                return `<div style="padding:4px 0; font-size:0.9em;"><span class="${toneClass}" style="font-weight:700;">${meets === null ? '·' : (meets ? '✓' : '•')}</span> ` +
                     `${escapeHtml(e.label)}: <strong>${escapeHtml(formatValue(e.key, e.value))}</strong>` +
-                    (e.target !== null ? ` <span style="color:var(--text-tertiary);">${goalWord} ${escapeHtml(formatValue(e.key, e.target))}</span>` : '') + `</div>`;
+                    (e.target !== null ? ` <span class="text-faint">${goalWord} ${escapeHtml(formatValue(e.key, e.target))}</span>` : '') + `</div>`;
             }).join('')
             : '';
 
         const sinceHtml = h.sinceLast
             ? (changeList(h.sinceLast.improved, 'up') + changeList(h.sinceLast.slipped, 'down'))
-                || `<div style="font-size:0.9em; color:var(--text-secondary);">Holding roughly where they were.</div>`
+                || `<div class="text-secondary" style="font-size:0.9em;">Holding roughly where they were.</div>`
             : '';
 
         const monthHtml = h.lastMonth ? (changeList(h.lastMonth.improved, 'up') + changeList(h.lastMonth.slipped, 'down')) : '';
         const weeksHtml = h.recentWeeks ? (changeList(h.recentWeeks.improved, 'up') + changeList(h.recentWeeks.slipped, 'down')) : '';
 
         const priorNotes = h.prior?.notes
-            ? `<div style="white-space:pre-wrap; font-size:0.9em; color:var(--text-primary); background:var(--bg-surface-raised); border-left:3px solid #bf360c; padding:10px 12px; border-radius:4px;">${escapeHtml(h.prior.notes)}</div>`
+            ? `<div class="card-sunken text-primary" style="white-space:pre-wrap; font-size:0.9em;">${escapeHtml(h.prior.notes)}</div>`
             : '';
 
         const historyHtml = h.history.length
             ? `<details style="margin-top:16px; border:1px solid var(--border); border-radius:10px; padding:10px 14px; background:var(--bg-surface-raised);">` +
-                `<summary style="cursor:pointer; font-weight:700; color:var(--text-secondary);">Past meetings (${h.history.length})</summary>` +
+                `<summary class="text-secondary" style="cursor:pointer; font-weight:700;">Past meetings (${h.history.length})</summary>` +
                 h.history.slice().reverse().map(m => `<div style="padding:8px 0; border-bottom:1px solid var(--border);">` +
                     `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">` +
                         `<strong style="color:var(--text-primary);">${escapeHtml(formatDate(m.date))}</strong>` +
-                        `<button type="button" class="ooo-del" data-date="${escapeHtml(m.date)}" style="background:none; border:1px solid var(--border); border-radius:6px; padding:3px 10px; cursor:pointer; color:var(--text-secondary); font-size:0.82em;">Delete</button>` +
+                        `<button type="button" class="ooo-del btn-danger" data-date="${escapeHtml(m.date)}" style="min-height:0; padding:3px 10px; font-size:0.82em;">Delete</button>` +
                     `</div>` +
-                    (m.notes ? `<div style="white-space:pre-wrap; font-size:0.88em; color:var(--text-secondary); margin-top:4px;">${escapeHtml(m.notes)}</div>` : '') +
+                    (m.notes ? `<div class="text-secondary" style="white-space:pre-wrap; font-size:0.88em; margin-top:4px;">${escapeHtml(m.notes)}</div>` : '') +
                 `</div>`).join('') +
             `</details>`
             : '';
@@ -246,7 +246,7 @@
             recentWeeks: h.recentWeeks
         }) || [];
         const workingHtml = working.length
-            ? working.map(line => `<div style="padding:4px 0; font-size:0.9em;"><span style="color:var(--green-text); font-weight:700;">✓</span> ${escapeHtml(line)}</div>`).join('')
+            ? working.map(line => `<div style="padding:4px 0; font-size:0.9em;"><span class="tone-good" style="font-weight:700;">✓</span> ${escapeHtml(line)}</div>`).join('')
             : '';
 
         body.innerHTML =
@@ -257,13 +257,13 @@
             section('The last few weeks', weeksHtml) +
             section('What we said last time', priorNotes, h.prior ? formatDate(h.prior.date) : '') +
             `<div style="margin-top:8px;">` +
-                `<label for="oneOnOneNotes" style="display:block; font-weight:700; color:#bf360c; margin-bottom:6px;">My notes for this one</label>` +
+                `<label for="oneOnOneNotes" class="section-title" style="display:block; margin-bottom:6px;">My notes for this one</label>` +
                 `<textarea id="oneOnOneNotes" placeholder="What I want to raise. Observations, things to watch, what I promised them…" style="width:100%; min-height:150px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(existing?.notes || '')}</textarea>` +
             `</div>` +
             `<div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">` +
-                `<button type="button" id="oneOnOneSave" style="background:linear-gradient(135deg,#d84315,#bf360c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">💾 ${existing ? 'Update' : 'Save'} this meeting</button>` +
-                `<button type="button" id="oneOnOneCopy" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 20px; cursor:pointer;">📋 Copy talking points</button>` +
-                `<span id="oneOnOneStatus" style="align-self:center; font-size:0.85em; color:var(--text-secondary);"></span>` +
+                `<button type="button" id="oneOnOneSave" class="btn-primary">${existing ? 'Update' : 'Save'} this meeting</button>` +
+                `<button type="button" id="oneOnOneCopy" class="btn-secondary">Copy talking points</button>` +
+                `<span id="oneOnOneStatus" class="text-secondary" style="align-self:center; font-size:0.85em;"></span>` +
             `</div>` +
             historyHtml;
 

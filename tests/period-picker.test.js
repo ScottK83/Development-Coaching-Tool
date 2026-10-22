@@ -47,11 +47,11 @@ suite('period picker: the chosen one is visibly chosen', (t) => {
     const picker = loadPicker(t);
     const html = picker.renderRow(windowSet(), 'mtd', { chipClass: 'x-chip' });
 
-    // The accent is the only thing separating the live window from the rest,
-    // so exactly one chip may wear it.
-    t.equal('one chip is accented', (html.match(/#e65100/g) || []).length, 2); // border + text
-    const mtdChip = html.slice(html.indexOf('data-period-id="mtd"'));
-    t.check('and it is the chosen one', mtdChip.indexOf('#e65100') > -1);
+    // The chosen mark is the only thing separating the live window from the rest,
+    // so exactly one chip may carry it.
+    t.equal('one chip is marked chosen', (html.match(/is-active/g) || []).length, 1);
+    const mtdChip = html.slice(html.lastIndexOf('<button', html.indexOf('data-period-id="mtd"')));
+    t.check('and it is the chosen one', /^<button[^>]*is-active[^>]*data-period-id="mtd"/.test(mtdChip));
 });
 
 suite('period picker: a window with nothing behind it is greyed, not hidden', (t) => {

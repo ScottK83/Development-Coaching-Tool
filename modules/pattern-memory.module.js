@@ -276,11 +276,12 @@
         return '';
     }
 
-    function severityColor(severity) {
-        if (severity === 'high') return { bg: '#ffebee', text: '#c62828', border: '#ef5350' };
-        if (severity === 'medium') return { bg: '#fff3e0', text: '#ef6c00', border: '#ff9800' };
-        if (severity === 'positive') return { bg: '#e8f5e9', text: '#2e7d32', border: '#66bb6a' };
-        return { bg: '#e3f2fd', text: '#1565c0', border: '#42a5f5' };
+    // The kit's state tone for a pattern: callout-<tone> and tone-<tone>.
+    function severityTone(severity) {
+        if (severity === 'high') return 'bad';
+        if (severity === 'medium') return 'warn';
+        if (severity === 'positive') return 'good';
+        return 'info';
     }
 
     function showPatternMemoryModal() {
@@ -296,13 +297,13 @@
 
         let bodyHtml;
         if (summary.insufficientHistory) {
-            bodyHtml = `<div style="padding:40px; text-align:center; color:#546e7a;">` +
+            bodyHtml = `<div class="text-secondary" style="padding:40px; text-align:center;">` +
                 `<div style="font-size:3em; margin-bottom:12px;">\uD83D\uDCC5</div>` +
                 `<div style="font-size:1.1em; font-weight:600;">Not enough history yet.</div>` +
                 `<div style="color:var(--text-tertiary); font-size:0.9em; margin-top:8px;">Pattern detection needs at least ${MIN_WEEKS_FOR_PATTERN} weekly uploads. You currently have ${summary.weeksAvailable}.</div>` +
             `</div>`;
         } else if (!reps.length) {
-            bodyHtml = `<div style="padding:40px; text-align:center; color:var(--green-text);">` +
+            bodyHtml = `<div class="tone-good" style="padding:40px; text-align:center;">` +
                 `<div style="font-size:3em; margin-bottom:12px;">\u2705</div>` +
                 `<div style="font-size:1.15em; font-weight:600;">No notable patterns right now.</div>` +
                 `<div style="color:var(--text-secondary); font-size:0.9em; margin-top:8px;">Nobody is in a sustained slide, cliff drop, or volatile stretch over the last ${summary.weeksAnalyzed} weeks.</div>` +
@@ -310,13 +311,13 @@
         } else {
             bodyHtml = reps.map(rep => {
                 const patternsHtml = rep.patterns.map(p => {
-                    const colors = severityColor(p.severity);
-                    return `<div style="padding:10px 12px; margin-top:8px; background:${colors.bg}; border-left:3px solid ${colors.border}; border-radius:4px; color:${colors.text}; font-size:0.9em; line-height:1.45;">` +
+                    const tone = severityTone(p.severity);
+                    return `<div class="callout callout-${tone} tone-${tone}" style="padding:10px 12px; margin-top:8px; font-size:0.9em; line-height:1.45;">` +
                         describePattern(p) +
                     `</div>`;
                 }).join('');
-                return `<div style="margin-bottom:18px; padding:14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface);">` +
-                    `<div style="font-weight:700; color:#1a237e; font-size:1.05em;">${escapeHtml(rep.name)}</div>` +
+                return `<div class="card" style="margin-bottom:18px; padding:14px;">` +
+                    `<div class="card-title" style="margin:0; font-size:1.05em;">${escapeHtml(rep.name)}</div>` +
                     patternsHtml +
                 `</div>`;
             }).join('');
@@ -328,24 +329,24 @@
         overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
 
         overlay.innerHTML = `<div style="background:var(--bg-surface); border-radius:14px; max-width:760px; width:100%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,0.35);">` +
-            `<div style="padding:20px 24px; border-bottom:1px solid #eceff1; display:flex; justify-content:space-between; align-items:center;">` +
+            `<div style="padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">` +
                 `<div>` +
-                    `<h2 style="margin:0; color:#1a237e; font-size:1.25em;">\uD83E\uDDE0 Pattern Memory</h2>` +
-                    `<div style="margin-top:6px; font-size:0.88em; color:#546e7a;">` +
+                    `<h2 style="margin:0; color:var(--text-primary); font-size:1.25em;">Pattern Memory</h2>` +
+                    `<div class="text-secondary" style="margin-top:6px; font-size:0.88em;">` +
                         (summary.insufficientHistory
                             ? `Need more weekly history`
                             : `${summary.totalReps || 0} rep${summary.totalReps === 1 ? '' : 's'} with patterns \u2022 ` +
-                              `<span style="color:var(--red-text); font-weight:600;">${summary.declining || 0} declining</span> \u2022 ` +
-                              `<span style="color:#ef6c00; font-weight:600;">${summary.cliff || 0} cliff drops</span> \u2022 ` +
-                              `<span style="color:#1565c0; font-weight:600;">${summary.volatile || 0} volatile</span> \u2022 ` +
-                              `<span style="color:var(--green-text); font-weight:600;">${summary.improving || 0} improving</span>`) +
+                              `<span class="tone-bad" style="font-weight:600;">${summary.declining || 0} declining</span> \u2022 ` +
+                              `<span class="tone-warn" style="font-weight:600;">${summary.cliff || 0} cliff drops</span> \u2022 ` +
+                              `<span class="tone-info" style="font-weight:600;">${summary.volatile || 0} volatile</span> \u2022 ` +
+                              `<span class="tone-good" style="font-weight:600;">${summary.improving || 0} improving</span>`) +
                     `</div>` +
                 `</div>` +
-                `<button id="patternMemoryClose" style="background:none; border:none; font-size:1.6em; cursor:pointer; color:var(--text-tertiary);">\u2715</button>` +
+                `<button id="patternMemoryClose" class="btn-ghost" aria-label="Close" style="font-size:1.3em;">\u2715</button>` +
             `</div>` +
             `<div style="padding:16px 24px; overflow-y:auto; flex:1; background:var(--bg-surface-raised);">${bodyHtml}</div>` +
-            `<div style="padding:14px 24px; border-top:1px solid #eceff1; text-align:right;">` +
-                `<button id="patternMemoryCloseBtn" style="background:#1a237e; color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">Close</button>` +
+            `<div style="padding:14px 24px; border-top:1px solid var(--border); text-align:right;">` +
+                `<button id="patternMemoryCloseBtn" class="btn-secondary">Close</button>` +
             `</div>` +
         `</div>`;
 

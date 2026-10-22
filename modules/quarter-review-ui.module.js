@@ -186,7 +186,7 @@
         // Both are needed to draw anything. Guarding only the first left the
         // second to throw halfway through a render, on a blank panel.
         if (!_qt() || !_qr()) {
-            host.innerHTML = '<p style="padding:24px;color:var(--text-tertiary);">'
+            host.innerHTML = '<p class="text-faint" style="padding:24px;">'
                 + 'The quarterly review modules did not load. Reload the page, and if it persists the app needs a look.</p>';
             return;
         }
@@ -242,8 +242,8 @@
     }
 
     function _emptyYear() {
-        return '<div style="padding:24px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
-            + '<p style="margin:0;color:var(--text-secondary);">No quarter of '
+        return '<div class="card" style="padding:24px;">'
+            + '<p class="text-secondary" style="margin:0;">No quarter of '
             + _escape(state.year) + ' has started yet. Pick another year.</p>'
             + _yearControl() + '</div>';
     }
@@ -260,9 +260,9 @@
     function _coveragePanel() {
         var report = _qt().quarterCoverageReport(state.year);
         var cells = report.map(function (q) {
-            var tone = q.status === 'full' ? '#16a34a'
-                : q.status === 'partial' ? '#d97706'
-                    : q.status === 'thin' ? '#dc2626' : '#94a3b8';
+            var tone = q.status === 'full' ? ' callout-good'
+                : q.status === 'partial' ? ' callout-warn'
+                    : q.status === 'thin' ? ' callout-bad' : '';
             var detail;
             if (q.status === 'none') {
                 detail = 'nothing uploaded';
@@ -270,20 +270,19 @@
                 detail = q.periodCount + ' ' + q.sourceLabel
                     + ', ' + q.coveredDays + ' of ' + q.elapsedDays + ' days';
             }
-            return '<div style="flex:1 1 150px;min-width:150px;padding:10px 12px;border:1px solid var(--border);'
-                + 'border-left:4px solid ' + tone + ';border-radius:6px;background:var(--bg-surface);">'
+            return '<div class="callout' + tone + '" style="flex:1 1 150px;min-width:150px;">'
                 + '<div style="font-weight:700;color:var(--text-primary);">' + _escape(q.name) + ' ' + _escape(state.year)
-                + (q.complete ? '' : ' <span style="font-weight:400;font-size:0.82em;color:var(--text-tertiary);">(still running)</span>')
+                + (q.complete ? '' : ' <span class="text-faint" style="font-weight:400;font-size:0.82em;">(still running)</span>')
                 + '</div>'
-                + '<div style="font-size:0.85em;color:var(--text-secondary);margin-top:2px;">' + _escape(detail) + '</div>'
-                + (q.headcount ? '<div style="font-size:0.8em;color:var(--text-tertiary);margin-top:2px;">'
+                + '<div class="text-secondary" style="font-size:0.85em;margin-top:2px;">' + _escape(detail) + '</div>'
+                + (q.headcount ? '<div class="text-faint" style="font-size:0.8em;margin-top:2px;">'
                     + q.headcount + ' associates</div>' : '')
                 + '</div>';
         }).join('');
 
-        return '<div style="padding:14px 16px;background:var(--bg-surface-raised);border-radius:8px;border:1px solid var(--border);">'
+        return '<div class="card" style="padding:14px 16px;">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:10px;">'
-            + '<h4 style="margin:0;color:var(--text-primary);">What each quarter is built from</h4>'
+            + '<h4 class="card-title" style="margin:0;">What each quarter is built from</h4>'
             + _yearControl() + '</div>'
             + '<div style="display:flex;gap:10px;flex-wrap:wrap;">' + cells + '</div></div>';
     }
@@ -313,28 +312,24 @@
 
         var quarterButtons = _offeredQuarters().map(function (q) {
             var active = q.quarter === state.quarter;
-            return '<button type="button" class="quarter-review-q" data-quarter="' + q.quarter + '"'
-                + ' style="padding:7px 16px;border-radius:6px;cursor:pointer;font-weight:600;'
-                + 'border:1px solid ' + (active ? '#d84315' : 'var(--border)') + ';'
-                + 'background:' + (active ? '#d84315' : 'var(--bg-surface)') + ';'
-                + 'color:' + (active ? '#fff' : 'var(--text-primary)') + ';">'
+            return '<button type="button" role="tab" class="quarter-review-q' + (active ? ' is-active' : '') + '"'
+                + ' data-quarter="' + q.quarter + '"' + (active ? ' aria-selected="true"' : '') + '>'
                 + _escape(q.name) + '</button>';
         }).join('');
 
-        return '<div style="padding:14px 16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);'
+        return '<div class="card" style="padding:14px 16px;'
             + 'display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">'
             + '<div style="flex:1 1 260px;">'
             + '<label for="quarterReviewEmployee" style="display:block;font-weight:600;margin-bottom:6px;color:var(--text-primary);">Associate</label>'
             + '<select id="quarterReviewEmployee" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;">'
             + options + '</select></div>'
             + '<div><span style="display:block;font-weight:600;margin-bottom:6px;color:var(--text-primary);">Check-in for</span>'
-            + '<div style="display:flex;gap:6px;">' + quarterButtons + '</div></div>'
+            + '<div class="sub-nav" role="tablist" style="margin-bottom:0;padding-bottom:0;">' + quarterButtons + '</div></div>'
             + '</div>';
     }
 
     function _prompt() {
-        return '<div style="padding:40px;text-align:center;color:var(--text-tertiary);background:var(--bg-surface);'
-            + 'border-radius:8px;border:1px dashed var(--border);">'
+        return '<div class="card text-faint" style="padding:40px;text-align:center;border-style:dashed;">'
             + 'Pick an associate to build their check-in document.</div>';
     }
 
@@ -347,8 +342,7 @@
             throughQuarter: state.quarter
         });
         if (!ctx) {
-            return '<div style="padding:24px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);'
-                + 'color:var(--text-secondary);">No quarter of ' + _escape(state.year) + ' carries data for '
+            return '<div class="card text-secondary" style="padding:24px;">No quarter of ' + _escape(state.year) + ' carries data for '
                 + _escape(state.employee) + '.</div>';
         }
 
@@ -376,9 +370,9 @@
      */
     function _recapPanel(ctx) {
         var qrc = _qrc();
-        var frame = '<div id="quarterRecapPanel" style="padding:16px 18px;background:var(--bg-surface);border-radius:8px;border:2px solid #1565c0;">';
+        var frame = '<div id="quarterRecapPanel" class="card">';
         if (!qrc) {
-            return frame + '<p style="margin:0;color:var(--text-secondary);">The recap email module did not load. Reload the page, and if it persists the app needs a look.</p></div>';
+            return frame + '<p class="text-secondary" style="margin:0;">The recap email module did not load. Reload the page, and if it persists the app needs a look.</p></div>';
         }
         var status = qrc.statusFor(ctx.name, ctx.year, ctx.quarter);
         var mail = qrc.buildRecapEmail(ctx, { includeHours: status.includeHours });
@@ -389,13 +383,13 @@
             var onward = _nextRecapName(ctx.name);
             return frame
                 + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
-                + '<p style="margin:0;color:var(--text-secondary);">There are no KPI readings for '
+                + '<p class="text-secondary" style="margin:0;">There are no KPI readings for '
                 + _escape(ctx.firstName) + ' in ' + _escape(ctx.year) + ' yet, so there is nothing to recap.</p>'
                 + _recapStatusHtml(status, qrc) + '</div>'
                 + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">'
-                + (settled ? _button('quarterRecapUndoSent', 'Undo', '#64748b')
-                    : _button('quarterRecapSkip', 'Not sending this one', '#64748b'))
-                + (onward ? _button('quarterRecapNext', 'Next not sent: ' + onward, '#1565c0', { 'data-name': onward }) : '')
+                + (settled ? _button('quarterRecapUndoSent', 'Undo', 'ghost')
+                    : _button('quarterRecapSkip', 'Not sending this one', 'ghost'))
+                + (onward ? _button('quarterRecapNext', 'Next not sent: ' + onward, 'primary', { 'data-name': onward }) : '')
                 + '</div></div>';
         }
         var notes = qrc.buildRecapNotes(mail.model, { includeHours: status.includeHours });
@@ -410,7 +404,7 @@
         };
         var to = mail.to
             ? _escape(mail.to)
-            : '<span style="color:#c2410c;">no address found, type it in the draft</span>';
+            : '<span class="tone-warn">no address found, type it in the draft</span>';
 
         // The hours switch, only when there are hours the email could carry.
         var hours = mail.model.hours;
@@ -426,23 +420,23 @@
         var next = done ? _nextRecapName(ctx.name) : '';
         var primary;
         if (done) {
-            primary = (next ? _button('quarterRecapNext', 'Next not sent: ' + next, '#1565c0', { 'data-name': next }) : '')
-                + _button('quarterRecapUndoSent', 'Undo', '#64748b');
+            primary = (next ? _button('quarterRecapNext', 'Next not sent: ' + next, 'primary', { 'data-name': next }) : '')
+                + _button('quarterRecapUndoSent', 'Undo', 'ghost');
         } else if (status.state === 'drafted') {
-            primary = _button('quarterRecapMarkSent', '✓ Mark as sent', '#16a34a')
-                + _button('quarterRecapOpen', '✉️ Copy picture and open email again', '#64748b');
+            primary = _button('quarterRecapMarkSent', 'Mark as sent', 'primary')
+                + _button('quarterRecapOpen', 'Copy picture and open email again', 'secondary');
         } else {
-            primary = _button('quarterRecapOpen', '✉️ Copy picture and open email', '#1565c0')
-                + _button('quarterRecapMarkSent', '✓ Mark as sent', '#64748b');
+            primary = _button('quarterRecapOpen', 'Copy picture and open email', 'primary')
+                + _button('quarterRecapMarkSent', 'Mark as sent', 'secondary');
         }
 
         return frame
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'
-            + '<h4 style="margin:0;color:var(--text-primary);font-size:1.1em;">' + _escape(ctx.current.name)
+            + '<h4 class="card-title" style="margin:0;font-size:1.1em;">' + _escape(ctx.current.name)
             + ' recap email for ' + _escape(ctx.firstName) + '</h4>'
             + _recapStatusHtml(status, qrc)
             + '</div>'
-            + '<div style="display:grid;gap:2px;margin-bottom:10px;font-size:0.88em;color:var(--text-secondary);">'
+            + '<div class="text-secondary" style="display:grid;gap:2px;margin-bottom:10px;font-size:0.88em;">'
             + addressRow('To', to)
             + (mail.cc ? addressRow('CC', _escape(mail.cc)) : '')
             + addressRow('Subject', _escape(mail.subject))
@@ -457,13 +451,13 @@
             + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center;">'
             + primary
             + '</div>'
-            + '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:0.88em;color:var(--text-secondary);">More</summary>'
+            + '<details style="margin-top:10px;"><summary class="text-secondary" style="cursor:pointer;font-size:0.88em;">More</summary>'
             + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">'
-            + _button('quarterRecapCopyImage', 'Copy picture', '#0f766e')
-            + _button('quarterRecapCopyText', 'Copy email text', '#0f766e')
-            + (done ? '' : _button('quarterRecapSkip', 'Not sending this one', '#64748b'))
+            + _button('quarterRecapCopyImage', 'Copy picture', 'secondary')
+            + _button('quarterRecapCopyText', 'Copy email text', 'secondary')
+            + (done ? '' : _button('quarterRecapSkip', 'Not sending this one', 'ghost'))
             + '</div></details>'
-            + '<p style="margin:10px 0 0;font-size:0.82em;color:var(--text-tertiary);">'
+            + '<p class="text-faint" style="margin:10px 0 0;font-size:0.82em;">'
             + 'The picture is copied as the email opens. Click in the email where it should go, press Ctrl+V, '
             + 'and check it says ' + _escape(ctx.firstName) + ' before you send. Then mark it sent here, so the list above keeps count.</p>'
             + '</div>';
@@ -473,22 +467,20 @@
     // has already covered. The browser's own words are in it, because there
     // is no console to read them in.
     function _recapFailureHtml(failure, ctx) {
-        return '<div id="quarterRecapFailure" style="margin:0 0 12px;padding:10px 12px;border:2px solid #c2410c;border-radius:6px;'
-            + 'background:var(--bg-surface-raised);color:var(--text-primary);font-size:0.92em;line-height:1.5;">'
-            + '<strong style="color:#c2410c;">The picture did not copy, so the email has not been opened.</strong> '
+        return '<div id="quarterRecapFailure" class="callout callout-bad" style="margin:0 0 12px;font-size:0.92em;line-height:1.5;">'
+            + '<strong class="tone-bad">The picture did not copy, so the email has not been opened.</strong> '
             + 'Right-click the picture below, choose Copy image, then press Open email. '
             + 'Whatever was on the clipboard before is still there, so check the picture says '
             + _escape(ctx.firstName) + ' after pasting.'
-            + (failure.reason ? '<div style="margin-top:4px;font-size:0.88em;color:var(--text-secondary);">The browser said: '
+            + (failure.reason ? '<div class="text-secondary" style="margin-top:4px;font-size:0.88em;">The browser said: '
                 + _escape(failure.reason) + '</div>' : '')
-            + '<div style="margin-top:8px;">' + _button('quarterRecapOpenOnly', 'Open email', '#1565c0') + '</div>'
+            + '<div style="margin-top:8px;">' + _button('quarterRecapOpenOnly', 'Open email', 'secondary') + '</div>'
             + '</div>';
     }
 
     // For Scott only. Nothing here reaches the email or the picture.
     function _recapNotesHtml(notes) {
-        return '<div id="quarterRecapNotes" style="margin:0 0 12px;padding:10px 12px;border-left:4px solid #d97706;'
-            + 'background:var(--bg-surface-raised);border-radius:4px;font-size:0.9em;color:var(--text-primary);">'
+        return '<div id="quarterRecapNotes" class="callout callout-warn" style="margin:0 0 12px;font-size:0.9em;">'
             + '<div style="font-weight:700;margin-bottom:4px;">Before you send (only you see this)</div>'
             + '<ul style="margin:0;padding-left:18px;">' + notes.map(function (n) {
                 return '<li style="padding:2px 0;">' + _escape(n) + '</li>';
@@ -498,16 +490,16 @@
     function _recapStatusHtml(status, qrc) {
         var when = status.at ? qrc.shortDate(status.at) : '';
         if (status.state === 'sent') {
-            return '<span id="quarterRecapStatus" style="color:#16a34a;font-weight:700;">✓ Recap sent' + (when ? ' ' + _escape(when) : '') + '</span>';
+            return '<span id="quarterRecapStatus" class="tone-good" style="font-weight:700;">✓ Recap sent' + (when ? ' ' + _escape(when) : '') + '</span>';
         }
         if (status.state === 'skipped') {
-            return '<span id="quarterRecapStatus" style="color:var(--text-secondary);font-weight:700;">Not sending a recap</span>';
+            return '<span id="quarterRecapStatus" class="text-secondary" style="font-weight:700;">Not sending a recap</span>';
         }
         if (status.state === 'drafted') {
-            return '<span id="quarterRecapStatus" style="color:#d97706;font-weight:700;">Recap draft opened'
+            return '<span id="quarterRecapStatus" class="tone-warn" style="font-weight:700;">Recap draft opened'
                 + (when ? ' ' + _escape(when) : '') + ', not marked sent</span>';
         }
-        return '<span id="quarterRecapStatus" style="color:var(--text-tertiary);">Recap not sent yet</span>';
+        return '<span id="quarterRecapStatus" class="text-faint">Recap not sent yet</span>';
     }
 
     /* Who is due a recap, for the quarter being prepared.
@@ -563,8 +555,9 @@
 
         var chips = rows.map(function (r) {
             var when = r.at ? qrc.shortDate(r.at) : '';
-            var tone = r.state === 'sent' ? '#16a34a' : r.state === 'drafted' ? '#d97706'
+            var tone = r.state === 'sent' ? 'var(--green)' : r.state === 'drafted' ? 'var(--yellow)'
                 : r.state === 'skipped' ? 'var(--text-tertiary)' : 'var(--border)';
+            var markClass = r.state === 'sent' ? 'tone-good' : r.state === 'drafted' ? 'tone-warn' : 'text-faint';
             var icon = r.state === 'sent' ? '✓' : r.state === 'drafted' ? '✉' : r.state === 'skipped' ? '⊘' : '○';
             var title = r.state === 'sent' ? 'Recap sent ' + when
                 : r.state === 'drafted' ? 'Draft opened ' + when + ', not marked sent'
@@ -576,20 +569,20 @@
                 + 'font-size:0.85em;border:1px solid ' + tone + ';color:var(--text-primary);'
                 + 'background:' + (active ? 'var(--bg-surface-raised)' : 'var(--bg-surface)') + ';'
                 + (active ? 'font-weight:700;' : '') + (r.state === 'skipped' ? 'opacity:0.7;' : '') + '">'
-                + '<span style="font-weight:700;color:' + (r.state === 'none' ? 'var(--text-tertiary)' : tone) + ';">' + icon + '</span>'
+                + '<span class="' + markClass + '" style="font-weight:700;">' + icon + '</span>'
                 + _escape(r.name)
                 + (r.state === 'sent' && when
-                    ? ' <span style="font-size:0.88em;color:var(--text-tertiary);">' + _escape(when) + '</span>' : '')
+                    ? ' <span class="text-faint" style="font-size:0.88em;">' + _escape(when) + '</span>' : '')
                 + '</button>';
         }).join('');
 
         // Counted against the people actually being sent one, so the list can
         // reach done when somebody is deliberately not getting a recap.
         var due = rows.length - skipped;
-        return '<div id="quarterRecapRoster" style="padding:12px 16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
+        return '<div id="quarterRecapRoster" class="card" style="padding:12px 16px;">'
             + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;">'
-            + '<h4 style="margin:0;color:var(--text-primary);">Q' + _escape(state.quarter) + ' recap emails</h4>'
-            + '<span style="font-size:0.9em;color:var(--text-secondary);">' + sent + ' of ' + due + ' sent'
+            + '<h4 class="card-title" style="margin:0;">Q' + _escape(state.quarter) + ' recap emails</h4>'
+            + '<span class="text-secondary" style="font-size:0.9em;">' + sent + ' of ' + due + ' sent'
             + (drafted ? ', ' + drafted + ' opened and not marked sent' : '')
             + (skipped ? ', ' + skipped + ' not sending' : '') + '</span>'
             + '</div>'
@@ -626,7 +619,7 @@
         var through = _shortDate(model.yearThrough);
         var yearHead = hasYear
             ? '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);' + YEAR_STYLE + '">Year to date'
-                + (through ? '<div style="font-weight:400;font-size:0.75em;color:var(--text-tertiary);">through ' + _escape(through) + '</div>' : '')
+                + (through ? '<div class="text-faint" style="font-weight:400;font-size:0.75em;">through ' + _escape(through) + '</div>' : '')
                 + '</th>'
             : '';
         var firstName = ctx.quarters.length ? ctx.quarters[0].name : '';
@@ -636,18 +629,18 @@
             var isFocus = model.focus && model.focus.registry === row.registry;
             var cells = row.cells.map(function (c) { return _placingCell(c, ordinal); }).join('')
                 + (hasYear ? (row.year ? _placingCell(row.year, ordinal, YEAR_STYLE)
-                    : '<td style="padding:8px;text-align:center;color:var(--text-tertiary);' + YEAR_STYLE + '">-</td>') : '');
-            return '<tr style="border-bottom:1px solid var(--border);' + (isFocus ? 'background:rgba(216,67,21,0.08);' : '') + '">'
+                    : '<td class="text-faint" style="padding:8px;text-align:center;' + YEAR_STYLE + '">-</td>') : '');
+            return '<tr style="border-bottom:1px solid var(--border);">'
                 + '<td style="padding:8px;font-weight:600;">' + _escape(row.label)
-                + (isFocus ? ' <span style="font-size:0.75em;font-weight:700;color:#d84315;">FOCUS</span>' : '') + '</td>'
+                + (isFocus ? ' <span class="pill pill-accent" style="font-size:0.75em;">FOCUS</span>' : '') + '</td>'
                 + cells
-                + '<td style="padding:8px;text-align:center;color:var(--text-secondary);">' + _escape(_placingGoal(row)) + '</td>'
+                + '<td class="text-secondary" style="padding:8px;text-align:center;">' + _escape(_placingGoal(row)) + '</td>'
                 + '<td style="padding:8px;text-align:center;">' + _placingMove(row.climbed) + '</td></tr>';
         }).join('');
 
-        return '<div style="padding:16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
-            + '<h4 style="margin:0 0 4px;color:var(--text-primary);">Where ' + _escape(ctx.firstName) + ' placed in the call center</h4>'
-            + '<p style="margin:0 0 12px;font-size:0.85em;color:var(--text-tertiary);">'
+        return '<div class="card" style="padding:16px;">'
+            + '<h4 class="card-title" style="margin:0 0 4px;">Where ' + _escape(ctx.firstName) + ' placed in the call center</h4>'
+            + '<p class="text-faint" style="margin:0 0 12px;font-size:0.85em;">'
             + 'For you, not the file. Each placing is inside that one KPI, against everyone measured, and 1st is best. '
             + 'Each quarter column is that quarter on its own'
             + (hasYear ? ', and Year to date is the whole year so far, from the year to date upload' : '')
@@ -660,7 +653,7 @@
             + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Goal</th>'
             + '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">Moved'
             + (firstName && lastName && firstName !== lastName
-                ? '<div style="font-weight:400;font-size:0.75em;color:var(--text-tertiary);">' + _escape(firstName) + ' to ' + _escape(lastName) + '</div>'
+                ? '<div class="text-faint" style="font-weight:400;font-size:0.75em;">' + _escape(firstName) + ' to ' + _escape(lastName) + '</div>'
                 : '')
             + '</th>'
             + '</tr></thead><tbody>' + body + '</tbody></table></div>'
@@ -677,22 +670,22 @@
     function _placingCell(c, ordinal, extraStyle) {
         var extra = extraStyle || '';
         if (c.rank === null) {
-            return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);' + extra + '">-</td>';
+            return '<td class="text-faint" style="padding:8px;text-align:center;' + extra + '">-</td>';
         }
-        var colour = c.meets === true ? '#16a34a' : c.meets === false ? '#c2410c' : 'var(--text-primary)';
+        var toneClass = c.meets === true ? 'tone-good' : c.meets === false ? 'tone-bad' : 'text-primary';
         var step = '';
         if (c.climbed !== null && c.climbed !== 0) {
-            step = ' <span style="font-size:0.78em;font-weight:600;color:' + (c.climbed > 0 ? '#16a34a' : '#c2410c') + ';"'
+            step = ' <span class="' + (c.climbed > 0 ? 'tone-good' : 'tone-bad') + '" style="font-size:0.78em;font-weight:600;"'
                 + ' title="Places ' + (c.climbed > 0 ? 'gained' : 'lost') + ' since the quarter before, among the people measured in both">'
                 + (c.climbed > 0 ? '▲' : '▼') + Math.abs(c.climbed) + '</span>';
         }
         return '<td style="padding:8px;text-align:center;font-variant-numeric:tabular-nums;' + extra + '"'
             + (c.thin ? ' title="Too few surveys to join the field, so this is where the figure would sit"' : '') + '>'
             + '<div><strong style="font-size:1.05em;">' + _escape(ordinal(c.rank)) + '</strong>'
-            + ' <span style="font-size:0.8em;color:var(--text-tertiary);">of ' + _escape(c.total) + '</span>' + step + '</div>'
-            + '<div style="font-size:0.85em;font-weight:600;color:' + colour + ';">' + _escape(c.display)
-            + (c.substituted ? ' <span title="Rep sat was blank or zero this quarter, so this is Overall Experience" style="color:#e65100;">OE</span>' : '')
-            + (c.thin ? ' <span style="font-weight:400;color:var(--text-tertiary);">(few surveys)</span>' : '')
+            + ' <span class="text-faint" style="font-size:0.8em;">of ' + _escape(c.total) + '</span>' + step + '</div>'
+            + '<div class="' + toneClass + '" style="font-size:0.85em;font-weight:600;">' + _escape(c.display)
+            + (c.substituted ? ' <span class="tone-warn" title="Rep sat was blank or zero this quarter, so this is Overall Experience">OE</span>' : '')
+            + (c.thin ? ' <span class="text-faint" style="font-weight:400;">(few surveys)</span>' : '')
             + '</div></td>';
     }
 
@@ -705,11 +698,11 @@
     }
 
     function _placingMove(climbed) {
-        if (climbed === null || climbed === undefined) return '<span style="color:var(--text-tertiary);">-</span>';
-        if (climbed === 0) return '<span style="color:var(--text-secondary);">held</span>';
+        if (climbed === null || climbed === undefined) return '<span class="text-faint">-</span>';
+        if (climbed === 0) return '<span class="text-secondary">held</span>';
         var up = climbed > 0;
         var n = Math.abs(climbed);
-        return '<span style="color:' + (up ? '#16a34a' : '#c2410c') + ';font-weight:600;">'
+        return '<span class="' + (up ? 'tone-good' : 'tone-bad') + '" style="font-weight:600;">'
             + (up ? '▲ up ' : '▼ down ') + n + (n === 1 ? ' place' : ' places') + '</span>';
     }
 
@@ -720,9 +713,9 @@
         var why = focus.belowGoal
             ? 'Below goal in ' + ctx.current.name + ', and the lowest placing of the KPIs below goal (' + where + ').'
             : 'Handle time, adherence, sentiment and rep sat are all at goal in ' + ctx.current.name + '. This is the lowest placing of those (' + where + '), so it has the most room to climb.';
-        return '<div style="margin-top:12px;padding:10px 12px;border-left:4px solid #d84315;background:var(--bg-surface-raised);border-radius:4px;">'
+        return '<div class="callout callout-info" style="margin-top:12px;">'
             + '<div style="font-weight:700;color:var(--text-primary);">Suggested focus for ' + _escape(next) + ': ' + _escape(focus.label) + '</div>'
-            + '<div style="font-size:0.9em;color:var(--text-secondary);margin-top:2px;">' + _escape(why) + '</div>'
+            + '<div class="text-secondary" style="font-size:0.9em;margin-top:2px;">' + _escape(why) + '</div>'
             + '</div>';
     }
 
@@ -733,12 +726,11 @@
      * table to read out.
      */
     function _talkingBar(ctx) {
-        var label = state.showTalking ? 'Hide talking points' : '🗣️ Talking points for the meeting';
+        var label = state.showTalking ? 'Hide talking points' : 'Talking points for the meeting';
         return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">'
-            + '<button type="button" id="quarterReviewTalkToggle" aria-expanded="' + (state.showTalking ? 'true' : 'false') + '"'
-            + ' style="background:#d84315;color:#fff;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;'
-            + 'font-weight:700;font-size:0.98em;">' + _escape(label) + '</button>'
-            + (state.showTalking ? '' : '<span style="font-size:0.88em;color:var(--text-tertiary);">'
+            + '<button type="button" id="quarterReviewTalkToggle" class="' + (state.showTalking ? 'btn-secondary' : 'btn-primary') + '"'
+            + ' aria-expanded="' + (state.showTalking ? 'true' : 'false') + '">' + _escape(label) + '</button>'
+            + (state.showTalking ? '' : '<span class="text-faint" style="font-size:0.88em;">'
                 + _escape(ctx.quarterLabel) + ' for ' + _escape(ctx.firstName)
                 + ': what is working, what to work on, and questions to ask.</span>')
             + _recapToggle(ctx)
@@ -749,32 +741,34 @@
     function _recapToggle(ctx) {
         var qrc = _qrc();
         if (!qrc) return '';
-        var label = state.showRecap ? 'Hide recap email' : '✉️ ' + ctx.current.name + ' recap email';
+        var label = state.showRecap ? 'Hide recap email' : ctx.current.name + ' recap email';
         return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto;">'
             + (state.showRecap ? '' : _recapStatusHtml(qrc.statusFor(ctx.name, ctx.year, ctx.quarter), qrc))
-            + '<button type="button" id="quarterReviewRecapToggle" aria-expanded="' + (state.showRecap ? 'true' : 'false') + '"'
-            + ' style="background:#1565c0;color:#fff;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;'
-            + 'font-weight:700;font-size:0.98em;">' + _escape(label) + '</button>'
+            + '<button type="button" id="quarterReviewRecapToggle" class="btn-secondary"'
+            + ' aria-expanded="' + (state.showRecap ? 'true' : 'false') + '">' + _escape(label) + '</button>'
             + '</div>';
     }
 
+    // The edge and heading say what kind of section it is: green for what
+    // is working, amber for what to work on or watch, the accent for the
+    // questions, and plain for the rest.
     var TALK_TONES = {
-        wins: '#16a34a',
-        rising: '#16a34a',
-        focus: '#c2410c',
-        moreFocus: '#c2410c',
-        watch: '#d97706',
-        moreWins: '#16a34a',
-        together: '#0f766e',
-        ask: '#4f46e5',
-        notes: '#64748b'
+        wins: { edge: 'var(--green)', text: 'tone-good' },
+        rising: { edge: 'var(--green)', text: 'tone-good' },
+        focus: { edge: 'var(--yellow)', text: 'tone-warn' },
+        moreFocus: { edge: 'var(--yellow)', text: 'tone-warn' },
+        watch: { edge: 'var(--yellow)', text: 'tone-warn' },
+        moreWins: { edge: 'var(--green)', text: 'tone-good' },
+        together: { edge: 'var(--border-strong)', text: 'text-secondary' },
+        ask: { edge: 'var(--brand-text)', text: 'tone-accent' },
+        notes: { edge: 'var(--border-strong)', text: 'text-secondary' }
     };
 
     function _talkingPanel(tp) {
-        return '<div style="padding:16px 18px;background:var(--bg-surface);border-radius:8px;border:2px solid #d84315;">'
+        return '<div class="card">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'
-            + '<h4 style="margin:0;color:var(--text-primary);font-size:1.1em;">' + _escape(tp.title) + '</h4>'
-            + _button('quarterReviewTalkCopy', 'Copy talking points', '#0f766e')
+            + '<h4 class="card-title" style="margin:0;font-size:1.1em;">' + _escape(tp.title) + '</h4>'
+            + _button('quarterReviewTalkCopy', 'Copy talking points', 'secondary')
             + '</div>'
             + '<div id="quarterReviewTalkBody">' + _talkingSections(tp) + '</div>'
             + '</div>';
@@ -782,17 +776,17 @@
 
     function _talkingSections(tp) {
         return tp.sections.map(function (s) {
-            var tone = TALK_TONES[s.id] || 'var(--border)';
+            var tone = TALK_TONES[s.id] || { edge: 'var(--border)', text: 'text-secondary' };
             var items = (s.items || []).map(function (item) {
                 var aside = [item.goal, item.sample].filter(Boolean).join(', ');
                 return '<div style="padding:7px 0;border-bottom:1px solid var(--border);">'
                     + '<div style="font-weight:700;color:var(--text-primary);">' + _escape(item.label)
-                    + (aside ? ' <span style="font-weight:400;font-size:0.84em;color:var(--text-tertiary);">'
+                    + (aside ? ' <span class="text-faint" style="font-weight:400;font-size:0.84em;">'
                         + _escape(aside) + '</span>' : '')
                     + '</div>'
                     + '<div style="font-size:0.95em;color:var(--text-primary);font-variant-numeric:tabular-nums;">'
                     + _escape(item.numbers) + '</div>'
-                    + (item.said ? '<div style="font-size:0.92em;color:var(--text-secondary);margin-top:2px;">'
+                    + (item.said ? '<div class="text-secondary" style="font-size:0.92em;margin-top:2px;">'
                         + _escape(item.said) + '</div>' : '')
                     + '</div>';
             }).join('');
@@ -802,8 +796,8 @@
                         + _escape(line) + '</li>';
                 }).join('') + '</ul>'
                 : '';
-            return '<div style="margin-top:12px;padding-left:12px;border-left:4px solid ' + tone + ';">'
-                + '<div style="font-weight:700;font-size:0.8em;letter-spacing:0.04em;text-transform:uppercase;color:' + tone + ';">'
+            return '<div style="margin-top:12px;padding-left:12px;border-left:3px solid ' + tone.edge + ';">'
+                + '<div class="' + tone.text + '" style="font-weight:700;font-size:0.8em;letter-spacing:0.04em;text-transform:uppercase;">'
                 + _escape(s.heading) + '</div>'
                 + items + lines + '</div>';
         }).join('');
@@ -816,7 +810,7 @@
         var headCells = ctx.quarters.map(function (q) {
             return '<th style="padding:10px 8px;text-align:center;border-bottom:2px solid var(--border);">'
                 + _escape(q.name)
-                + (q.empty ? '<div style="font-weight:400;font-size:0.75em;color:var(--text-tertiary);">no data</div>' : '')
+                + (q.empty ? '<div class="text-faint" style="font-weight:400;font-size:0.75em;">no data</div>' : '')
                 + '</th>';
         }).join('');
 
@@ -827,10 +821,10 @@
         var rel = ctx.reliability;
         if (rel.hasValue) rows += _reliabilityRow(rel, ctx);
 
-        return '<div style="padding:16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
-            + '<h4 style="margin:0 0 4px;color:var(--text-primary);">' + _escape(ctx.name)
+        return '<div class="card" style="padding:16px;">'
+            + '<h4 class="card-title" style="margin:0 0 4px;">' + _escape(ctx.name)
             + ' across ' + _escape(state.year) + '</h4>'
-            + '<p style="margin:0 0 12px;font-size:0.85em;color:var(--text-tertiary);">'
+            + '<p class="text-faint" style="margin:0 0 12px;font-size:0.85em;">'
             + 'Each quarter is built from the uploads covering it, never from a year-to-date file.</p>'
             + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.9em;">'
             + '<thead><tr style="background:var(--bg-surface-raised);">'
@@ -850,7 +844,7 @@
         var cells = ctx.quarters.map(function (q) {
             var p = byQuarter[q.quarter];
             if (!p || !p.hasValue) {
-                return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);">-</td>';
+                return '<td class="text-faint" style="padding:8px;text-align:center;">-</td>';
             }
             // A survey quarter too thin to quote is shown, greyed, so the
             // supervisor can see it exists and see why the prose skipped it.
@@ -860,8 +854,8 @@
                 : typeof profiles.valueMeetsTarget === 'function'
                     ? profiles.valueMeetsTarget(m.metricKey, p.value, m.target)
                     : (m.target.type === 'min' ? p.value >= m.target.value : p.value <= m.target.value);
-            var colour = !quoted ? 'var(--text-tertiary)' : meets === true ? '#16a34a' : meets === false ? '#c2410c' : 'var(--text-primary)';
-            return '<td style="padding:8px;text-align:center;font-weight:600;color:' + colour + ';"'
+            var toneClass = !quoted ? 'text-faint' : meets === true ? 'tone-good' : meets === false ? 'tone-bad' : 'text-primary';
+            return '<td class="' + toneClass + '" style="padding:8px;text-align:center;font-weight:600;"'
                 + (quoted ? '' : ' title="Too few survey responses to read as a trend"')
                 + '>' + _escape(_display(m.metricKey, p.value))
                 + (quoted ? '' : ' <span style="font-weight:400;">(thin)</span>') + '</td>';
@@ -870,21 +864,21 @@
         return '<tr style="border-bottom:1px solid var(--border);">'
             + '<td style="padding:8px;">' + _escape(m.label) + '</td>'
             + cells
-            + '<td style="padding:8px;text-align:center;color:var(--text-secondary);">'
+            + '<td class="text-secondary" style="padding:8px;text-align:center;">'
             + (m.target ? _escape(_display(m.metricKey, m.target.value)) : '-') + '</td>'
             + '<td style="padding:8px;text-align:center;">' + _movementCell(m) + '</td></tr>';
     }
 
     function _movementCell(m) {
         var moved = m.movedAcross;
-        if (!moved) return '<span style="color:var(--text-tertiary);">one quarter only</span>';
-        if (moved.size === 0) return '<span style="color:var(--text-secondary);">held steady</span>';
+        if (!moved) return '<span class="text-faint">one quarter only</span>';
+        if (moved.size === 0) return '<span class="text-secondary">held steady</span>';
         var good = moved.improved === true;
         var arrow = moved.raw > 0 ? '↑' : '↓';
-        var colour = good ? '#16a34a' : '#c2410c';
+        var toneClass = good ? 'tone-good' : 'tone-bad';
         var amount = Math.round(Math.abs(moved.raw) * 10) / 10;
-        return '<span style="color:' + colour + ';font-weight:600;">' + arrow + ' ' + amount
-            + '</span> <span style="color:var(--text-tertiary);font-size:0.85em;">'
+        return '<span class="' + toneClass + '" style="font-weight:600;">' + arrow + ' ' + amount
+            + '</span> <span class="text-faint" style="font-size:0.85em;">'
             + (good ? 'better' : 'worse') + '</span>';
     }
 
@@ -900,37 +894,36 @@
             // climb to a different number. Showing both would put two
             // different answers for the year on one row.
             if (!rel.checkpointsReconcile || !c || c.runningTotal === null) {
-                return '<td style="padding:8px;text-align:center;color:var(--text-tertiary);">-</td>';
+                return '<td class="text-faint" style="padding:8px;text-align:center;">-</td>';
             }
             var over = rel.target && c.runningTotal > rel.target.value;
-            return '<td style="padding:8px;text-align:center;font-weight:600;color:'
-                + (over ? '#c2410c' : '#16a34a') + ';">'
+            return '<td class="' + (over ? 'tone-bad' : 'tone-good') + '" style="padding:8px;text-align:center;font-weight:600;">'
                 + _escape(_display('reliability', c.runningTotal)) + '</td>';
         }).join('');
 
         var summary;
         if (!rel.target) {
             // No allowance configured is not the same as being inside one.
-            summary = '<span style="color:var(--text-tertiary);">no allowance set</span>';
+            summary = '<span class="text-faint">no allowance set</span>';
         } else if (rel.partialYear) {
             // The allowance covers a year this associate has not worked, so
             // the hours are shown and the reading against it is not.
-            summary = '<span style="color:#d97706;font-weight:600;">'
+            summary = '<span class="tone-warn" style="font-weight:600;">'
                 + _escape(_display('reliability', rel.yearToDate)) + ' in '
                 + (rel.quartersCovered === 1 ? '1 quarter' : rel.quartersCovered + ' quarters')
                 + '</span>';
         } else if (rel.meetsTarget === false) {
-            summary = '<span style="color:#c2410c;font-weight:600;">'
+            summary = '<span class="tone-bad" style="font-weight:600;">'
                 + _escape(_display('reliability', rel.overBy)) + ' over</span>';
         } else if (rel.meetsTarget === true) {
-            summary = '<span style="color:#16a34a;font-weight:600;">inside the allowance</span>';
+            summary = '<span class="tone-good" style="font-weight:600;">inside the allowance</span>';
         } else {
-            summary = '<span style="color:var(--text-tertiary);">-</span>';
+            summary = '<span class="text-faint">-</span>';
         }
 
         return '<tr style="border-bottom:1px solid var(--border);background:var(--bg-surface-raised);">'
             + '<td style="padding:8px;">Reliability'
-            + '<div style="font-size:0.78em;color:var(--text-tertiary);font-weight:400;">'
+            + '<div class="text-faint" style="font-size:0.78em;font-weight:400;">'
             + (rel.fromYtdUpload
                 ? 'year to date, ' + _escape(_display('reliability', rel.yearToDate)) + ' from the year-to-date upload'
                 : rel.partialYear
@@ -938,21 +931,21 @@
                     : 'year running total')
             + '</div></td>'
             + cells
-            + '<td style="padding:8px;text-align:center;color:var(--text-secondary);">'
+            + '<td class="text-secondary" style="padding:8px;text-align:center;">'
             + (rel.target ? _escape(_display('reliability', rel.target.value)) : '-') + '</td>'
             + '<td style="padding:8px;text-align:center;">' + summary + '</td></tr>';
     }
 
     function _notesPanel(ctx, notes, note) {
-        return '<div style="padding:16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);">'
-            + '<h4 style="margin:0 0 10px;color:var(--text-primary);">Check-in document</h4>'
+        return '<div class="card" style="padding:16px;">'
+            + '<h4 class="card-title" style="margin:0 0 10px;">Check-in document</h4>'
 
             // Shown as well as copied. It is the line that makes the rest a
             // file note, so a supervisor should see what it says before it
             // goes into a record.
-            + '<div style="padding:9px 11px;margin-bottom:12px;background:var(--bg-surface-raised);'
+            + '<div class="text-secondary" style="padding:9px 11px;margin-bottom:12px;background:var(--bg-surface-raised);'
             + 'border-radius:6px;border:1px solid var(--border);font-size:0.88em;line-height:1.5;'
-            + 'color:var(--text-secondary);white-space:pre-wrap;">' + _escape(notes.header) + '</div>'
+            + 'white-space:pre-wrap;">' + _escape(notes.header) + '</div>'
 
             + '<label for="quarterReviewNotes" style="display:block;font-weight:600;margin-bottom:6px;color:var(--text-primary);">'
             + 'Your own notes for ' + _escape(ctx.firstName) + ' (optional)</label>'
@@ -966,13 +959,13 @@
             + '</div>'
 
             + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">'
-            + _button('quarterReviewCopyAll', 'Copy both boxes', '#16a34a')
-            + _button('quarterReviewCopy1', 'Copy strengths', '#0f766e')
-            + _button('quarterReviewCopy2', 'Copy focus', '#0f766e')
-            + _button('quarterReviewCopilot', 'Reword in Copilot', '#4f46e5')
-            + _button('quarterReviewCopyPrompt', 'Copy the Copilot prompt', '#64748b')
+            + _button('quarterReviewCopyAll', 'Copy both boxes', 'primary')
+            + _button('quarterReviewCopy1', 'Copy strengths', 'secondary')
+            + _button('quarterReviewCopy2', 'Copy focus', 'secondary')
+            + _button('quarterReviewCopilot', 'Reword in Copilot', 'secondary')
+            + _button('quarterReviewCopyPrompt', 'Copy the Copilot prompt', 'ghost')
             + '</div>'
-            + '<p style="margin:10px 0 0;font-size:0.82em;color:var(--text-tertiary);">'
+            + '<p class="text-faint" style="margin:10px 0 0;font-size:0.82em;">'
             + 'The text above is written here from the numbers in the table, so it says the same thing every time. '
             + 'Copilot is there when a particular associate needs the tone moved.</p>'
             + '</div>';
@@ -986,12 +979,13 @@
             + 'white-space:pre-wrap;">' + _escape(text) + '</div></div>';
     }
 
-    function _button(id, label, colour, attrs) {
+    // kind: 'primary' (the one main action of a panel), 'secondary',
+    // 'ghost' (Undo, Not sending) or 'danger'.
+    function _button(id, label, kind, attrs) {
         var extra = Object.keys(attrs || {}).map(function (k) {
             return ' ' + k + '="' + _escape(attrs[k]) + '"';
         }).join('');
-        return '<button type="button" id="' + id + '"' + extra + ' style="background:' + colour + ';color:#fff;border:none;'
-            + 'border-radius:6px;padding:8px 15px;cursor:pointer;font-weight:600;font-size:0.87em;">'
+        return '<button type="button" id="' + id + '"' + extra + ' class="btn-' + (kind || 'secondary') + '">'
             + _escape(label) + '</button>';
     }
 

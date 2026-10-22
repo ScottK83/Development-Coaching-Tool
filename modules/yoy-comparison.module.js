@@ -259,22 +259,22 @@
         var html = '';
 
         // Header
-        html += '<div style="margin-bottom: 16px; padding: 15px; background: #ede7f6; border-radius: 8px; border-left: 4px solid #5e35b1;">';
-        html += '<strong>📊 Year-over-Year</strong>, compare ' + _baselineYear() + ' vs ' + new Date().getFullYear() + ' per rep.';
+        html += '<div class="card" style="margin-bottom: 16px; padding: 15px;">';
+        html += '<strong>Year-over-Year</strong>, compare ' + _baselineYear() + ' vs ' + new Date().getFullYear() + ' per rep.';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Plug in your ' + _baselineYear() + ' full-year numbers below, then pick a metric to see who climbed and who slipped.</span>';
         html += '</div>';
 
         // ── Baseline input panel ──
-        html += '<div style="margin-bottom: 18px; padding: 14px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<div class="card" style="margin-bottom: 18px; padding: 14px;">';
         if (baseline) {
             html += '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">';
             var fromYtd = !!(baseline.metadata && baseline.metadata.fromYtd);
-            html += '<span style="font-weight:600; color:var(--green-text);">✓ ' + _baselineYear() + ' baseline loaded'
+            html += '<span class="tone-good" style="font-weight:600;">✓ ' + _baselineYear() + ' baseline loaded'
                 + (fromYtd ? ' from your YTD upload through ' + _escapeHtml(baseline.metadata.endDate || '') : '') + '</span>';
             html += '<span style="color:var(--text-secondary); font-size:0.9em;">' + baseline.employees.length + ' employees</span>';
             html += '<button type="button" id="yoyToggleInput" class="btn-secondary" style="font-size:0.85em; padding:5px 12px;">' + (fromYtd ? 'Paste different data' : 'Replace data') + '</button>';
             // A baseline read from the YTD upload has nothing pasted to clear.
-            if (!fromYtd) html += '<button type="button" id="yoyClearBaseline" class="btn-secondary" style="background:#c62828; color:#fff; font-size:0.85em; padding:5px 12px;">Clear</button>';
+            if (!fromYtd) html += '<button type="button" id="yoyClearBaseline" class="btn-danger" style="font-size:0.85em; padding:5px 12px;">Clear</button>';
             html += '</div>';
             html += '<div id="yoyInputArea" style="display:none; margin-top:12px;">';
         } else {
@@ -285,7 +285,7 @@
         html += '<textarea id="yoyPasteBox" rows="6" style="width:100%; box-sizing:border-box; font-family:monospace; font-size:0.82em; padding:8px; border:1px solid var(--border); border-radius:6px;" placeholder="Name&#9;Total Calls&#9;..."></textarea>';
         html += '<div style="margin-top:8px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">';
         html += '<button type="button" id="yoySaveBaseline" class="btn-primary" style="padding:6px 16px;">Save ' + _baselineYear() + ' Baseline</button>';
-        html += '<span id="yoyParseStatus" style="font-size:0.85em; color:var(--red-text);"></span>';
+        html += '<span id="yoyParseStatus" class="tone-bad" style="font-size:0.85em;"></span>';
         html += '</div>';
         html += '</div>'; // input area
         html += '</div>'; // panel
@@ -330,27 +330,27 @@
         if (!box) return;
         var text = box.value || '';
         if (!text.trim()) {
-            if (status) { status.style.color = '#c62828'; status.textContent = 'Paste your ' + _baselineYear() + ' data first.'; }
+            if (status) { status.className = 'tone-bad'; status.textContent = 'Paste your ' + _baselineYear() + ' data first.'; }
             return;
         }
         var parser = window.DevCoachModules && window.DevCoachModules.dataParsing;
         if (!parser || !parser.parsePastedData) {
-            if (status) { status.style.color = '#c62828'; status.textContent = 'Parser unavailable. Reload the page and try again.'; }
+            if (status) { status.className = 'tone-bad'; status.textContent = 'Parser unavailable. Reload the page and try again.'; }
             return;
         }
         var employees;
         try {
             employees = parser.parsePastedData(text, _baselineStart(), _baselineEnd());
         } catch (err) {
-            if (status) { status.style.color = '#c62828'; status.textContent = (err && err.message) ? err.message : 'Could not parse that data.'; }
+            if (status) { status.className = 'tone-bad'; status.textContent = (err && err.message) ? err.message : 'Could not parse that data.'; }
             return;
         }
         if (!employees || !employees.length) {
-            if (status) { status.style.color = '#c62828'; status.textContent = 'No employee rows found in that paste.'; }
+            if (status) { status.className = 'tone-bad'; status.textContent = 'No employee rows found in that paste.'; }
             return;
         }
         if (!_saveBaseline(employees)) {
-            if (status) { status.style.color = '#c62828'; status.textContent = 'Could not save (storage full?).'; }
+            if (status) { status.className = 'tone-bad'; status.textContent = 'Could not save (storage full?).'; }
             return;
         }
         renderYoYComparison();
@@ -386,7 +386,7 @@
         html += '<label style="font-size:0.9em; color:var(--text-secondary); cursor:pointer; user-select:none;">';
         html += '<input type="checkbox" id="yoyShow2025"' + (_show2025 ? ' checked' : '') + ' style="vertical-align:middle; margin-right:5px;">Show ' + _baselineYear() + ' numbers';
         html += '</label>';
-        html += '<button type="button" id="yoySummaryBtn" class="btn-primary" style="margin-left:auto; padding:6px 14px;">📋 Summarize for my leader</button>';
+        html += '<button type="button" id="yoySummaryBtn" class="btn-primary" style="margin-left:auto; padding:6px 14px;">Summarize for my leader</button>';
         html += '</div>';
         html += '<div id="yoyTableWrap"></div>';
 
@@ -450,14 +450,14 @@
         var html = '';
         html += '<div style="margin-bottom:12px; padding:10px 14px; background:var(--bg-surface-raised); border-radius:8px; font-size:0.9em;">';
         html += '<strong>' + _escapeHtml(metric.label) + '</strong>, ';
-        html += '<span style="color:var(--green-text); font-weight:600;">▲ ' + improved + ' improved</span> · ';
-        html += '<span style="color:var(--red-text); font-weight:600;">▼ ' + declined + ' declined</span> · ';
-        html += '<span style="color:#777;">' + flat + ' flat</span>';
+        html += '<span class="tone-good" style="font-weight:600;">▲ ' + improved + ' improved</span> · ';
+        html += '<span class="tone-bad" style="font-weight:600;">▼ ' + declined + ' declined</span> · ';
+        html += '<span class="text-faint">' + flat + ' flat</span>';
         html += '<span style="color:var(--text-tertiary); font-size:0.85em;"> &nbsp;|&nbsp; ' + data.matched + ' reps matched · ' + _escapeHtml(data.currentLabel) + '</span>';
         if (_myTeamOnly) {
             var ctx = _teamFilterContext();
             if (!ctx || !ctx.isFiltering) {
-                html += '<br><span style="color:#e65100; font-size:0.8em;">⚠ "My team only" is on, but no team is selected. Showing everyone. Pick your team via the team filter to narrow this.</span>';
+                html += '<br><span class="tone-warn" style="font-size:0.8em;">⚠ "My team only" is on, but no team is selected. Showing everyone. Pick your team via the team filter to narrow this.</span>';
             }
         }
         html += reverse ? '<br><span style="color:var(--text-tertiary); font-size:0.8em;">Lower is better for this metric. A drop counts as an improvement.</span>' : '';
@@ -466,10 +466,10 @@
         // Sort
         var sorted = _sortRows(data.rows.slice());
 
-        var thBase = 'padding:8px 6px; border-bottom:2px solid #ddd; cursor:pointer; user-select:none; font-size:0.85em;';
+        var thBase = 'padding:8px 6px; border-bottom:2px solid var(--border-strong); cursor:pointer; user-select:none; font-size:0.85em;';
         function arrow(key) {
             if (key !== _sort.key) return ' <span style="opacity:0.3;">&#8597;</span>';
-            return _sort.dir === 'asc' ? ' <span style="color:#5e35b1;">&#9650;</span>' : ' <span style="color:#5e35b1;">&#9660;</span>';
+            return _sort.dir === 'asc' ? ' <span class="tone-accent">&#9650;</span>' : ' <span class="tone-accent">&#9660;</span>';
         }
 
         html += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.88em;">';
@@ -482,25 +482,24 @@
         html += '</tr></thead><tbody>';
 
         sorted.forEach(function (r, idx) {
-            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            var bg = idx % 2 === 0 ? (isDark ? '#1a1f2e' : '#fafafa') : 'transparent';
+            var bg = idx % 2 === 0 ? 'var(--bg-surface-raised)' : 'transparent';
             html += '<tr style="background:' + bg + '; border-bottom:1px solid var(--border);">';
             html += '<td style="padding:6px; white-space:nowrap;">' + _escapeHtml(r.name) + '</td>';
-            if (_show2025) html += '<td style="padding:6px; text-align:right; color:#777;">' + _formatMetricDisplay(_selectedMetric, r.prior) + '</td>';
+            if (_show2025) html += '<td style="padding:6px; text-align:right;"><span class="text-faint">' + _formatMetricDisplay(_selectedMetric, r.prior) + '</span></td>';
             html += '<td style="padding:6px; text-align:right; font-weight:600;">' + _formatMetricDisplay(_selectedMetric, r.current) + '</td>';
 
             // Change cell. Colored by improvement direction
             var changeCell = '--', pctCell = '--';
             if (r.delta !== null) {
                 var good = r.improvement > 1e-9, bad = r.improvement < -1e-9;
-                var color = good ? '#2e7d32' : bad ? '#c62828' : '#777';
+                var tone = good ? 'tone-good' : bad ? 'tone-bad' : 'text-faint';
                 var sign = r.delta > 0 ? '+' : '';
                 var icon = good ? '▲ ' : bad ? '▼ ' : '';
                 var deltaDisp = _formatDelta(_selectedMetric, r.delta);
-                changeCell = '<span style="color:' + color + '; font-weight:600;">' + icon + sign + deltaDisp + '</span>';
+                changeCell = '<span class="' + tone + '" style="font-weight:600;">' + icon + sign + deltaDisp + '</span>';
                 if (r.pct !== null) {
                     var pctSign = r.pct > 0 ? '+' : '';
-                    pctCell = '<span style="color:' + color + ';">' + pctSign + r.pct.toFixed(1) + '%</span>';
+                    pctCell = '<span class="' + tone + '">' + pctSign + r.pct.toFixed(1) + '%</span>';
                 }
             }
             html += '<td style="padding:6px; text-align:right;">' + changeCell + '</td>';
@@ -591,10 +590,10 @@
         });
 
         var curYear = new Date().getFullYear();
-        var thBase = 'padding:8px 6px; border-bottom:2px solid #ddd; cursor:pointer; user-select:none; font-size:0.8em; white-space:nowrap;';
+        var thBase = 'padding:8px 6px; border-bottom:2px solid var(--border-strong); cursor:pointer; user-select:none; font-size:0.8em; white-space:nowrap;';
         function arrow(key) {
             if (key !== _allKpiSort.key) return ' <span style="opacity:0.3;">&#8597;</span>';
-            return _allKpiSort.dir === 'asc' ? ' <span style="color:#5e35b1;">&#9650;</span>' : ' <span style="color:#5e35b1;">&#9660;</span>';
+            return _allKpiSort.dir === 'asc' ? ' <span class="tone-accent">&#9650;</span>' : ' <span class="tone-accent">&#9660;</span>';
         }
 
         var html = '';
@@ -612,8 +611,8 @@
         html += '</tr></thead><tbody>';
 
         sorted.forEach(function (r, idx) {
-            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            var bg = idx % 2 === 0 ? (isDark ? '#1a1f2e' : '#fafafa') : (isDark ? 'transparent' : '#fff');
+            // The name cell is sticky, so its stripe has to be solid, not transparent.
+            var bg = idx % 2 === 0 ? 'var(--bg-surface-raised)' : 'var(--bg-surface)';
             html += '<tr style="background:' + bg + '; border-bottom:1px solid var(--border);">';
             html += '<td style="padding:6px; white-space:nowrap; font-weight:600; position:sticky; left:0; background:' + bg + ';">' + _escapeHtml(r.name) + '</td>';
             data.metrics.forEach(function (k) {
@@ -622,12 +621,12 @@
                 var sub = '';
                 if (c.delta !== null) {
                     var good = c.improvement > 1e-9, bad = c.improvement < -1e-9;
-                    var color = good ? '#2e7d32' : bad ? '#c62828' : '#777';
+                    var tone = good ? 'tone-good' : bad ? 'tone-bad' : 'text-faint';
                     var icon = good ? '▲' : bad ? '▼' : ', ';
                     var sign = c.delta > 0 ? '+' : '';
                     var deltaDisp = _formatDelta(k, c.delta);
                     var priorPart = _show2025 ? ('<span style="color:var(--text-tertiary);">' + _formatMetricDisplay(k, c.prior) + '</span> ') : '';
-                    sub = '<div style="font-size:0.76em; margin-top:1px;">' + priorPart + '<span style="color:' + color + ';">' + icon + sign + deltaDisp + '</span></div>';
+                    sub = '<div style="font-size:0.76em; margin-top:1px;">' + priorPart + '<span class="' + tone + '">' + icon + sign + deltaDisp + '</span></div>';
                 } else if (_show2025 && c.prior !== null && c.prior !== undefined) {
                     sub = '<div style="font-size:0.76em; margin-top:1px; color:var(--text-tertiary);">' + _formatMetricDisplay(k, c.prior) + ' →</div>';
                 }
@@ -758,8 +757,8 @@
 
         var head = document.createElement('div');
         head.style.cssText = 'padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;';
-        head.innerHTML = '<strong style="font-size:1.05em;">📋 Leader Summary</strong>' +
-            '<span style="font-size:0.82em; color:#777;">Review, then copy &amp; paste into your notes or an AI tool.</span>';
+        head.innerHTML = '<strong style="font-size:1.05em;">Leader Summary</strong>' +
+            '<span class="text-faint" style="font-size:0.82em;">Review, then copy &amp; paste into your notes or an AI tool.</span>';
 
         var body = document.createElement('div');
         body.style.cssText = 'padding:14px 18px; overflow:auto;';
@@ -772,9 +771,9 @@
         var foot = document.createElement('div');
         foot.style.cssText = 'padding:12px 18px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; align-items:center;';
         foot.innerHTML =
-            '<span id="yoyCopyStatus" style="font-size:0.85em; color:var(--green-text); margin-right:auto;"></span>' +
+            '<span id="yoyCopyStatus" class="tone-good" style="font-size:0.85em; margin-right:auto;"></span>' +
             '<button type="button" id="yoyCopyBtn" class="btn-primary" style="padding:7px 16px;">Copy to clipboard</button>' +
-            '<button type="button" id="yoyCloseSummary" class="btn-secondary" style="padding:7px 16px;">Close</button>';
+            '<button type="button" id="yoyCloseSummary" class="btn-ghost" style="padding:7px 16px;">Close</button>';
 
         box.appendChild(head);
         box.appendChild(body);

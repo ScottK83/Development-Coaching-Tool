@@ -2506,17 +2506,17 @@
         // Year-at-a-glance stats
         if (yearStats.length) {
             html += '<div style="margin-bottom:20px;">';
-            html += '<h3 style="color:var(--text-primary); margin:0 0 12px 0;">\uD83C\uDFC6 ' + new Date().getFullYear() + ' Year-to-Date Stats</h3>';
+            html += '<h3 style="color:var(--text-primary); margin:0 0 12px 0;">' + new Date().getFullYear() + ' Year-to-Date Stats</h3>';
             html += '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">';
 
             yearStats.forEach(function(s) {
-                html += '<div style="background:var(--bg-surface); border-radius:10px; border:1px solid #e0e7ff; padding:14px; display:flex; flex-direction:column; gap:8px;">';
+                html += '<div style="background:var(--bg-surface); border-radius:10px; border:1px solid var(--border); padding:14px; display:flex; flex-direction:column; gap:8px;">';
                 html += '<div style="font-weight:700; font-size:1.05em; color:var(--text-primary);">' + _escapeHtml(s.firstName) + '</div>';
 
                 // Summary stats
                 html += '<div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.85em;">';
                 html += '<span style="color:var(--text-secondary);"><strong>' + s.totalAppearances + '</strong> period' + (s.totalAppearances !== 1 ? 's' : '') + ' recognized</span>';
-                if (s.numberOneCount) html += '<span style="color:#b8860b;">\uD83E\uDD47 Only one x' + s.numberOneCount + '</span>';
+                if (s.numberOneCount) html += '<span class="text-primary" style="font-weight:600;">\uD83E\uDD47 Only one x' + s.numberOneCount + '</span>';
                 html += '</div>';
 
                 // Metric breakdown
@@ -2528,7 +2528,7 @@
                     metricKeys.forEach(function(mk) {
                         var meta = METRIC_RANK_LABELS[mk];
                         var label = meta ? meta.label : mk;
-                        html += '<span style="padding:2px 8px; background:#f0f9ff; border:1px solid #bfdbfe; border-radius:8px; font-size:0.8em; color:#1e40af;">' + _escapeHtml(label) + ' x' + s.metricBreakdown[mk] + '</span>';
+                        html += '<span class="pill" style="font-size:0.8em;">' + _escapeHtml(label) + ' x' + s.metricBreakdown[mk] + '</span>';
                     });
                     html += '</div>';
                 }
@@ -2540,7 +2540,7 @@
         }
 
         // Period-by-period history
-        html += '<h3 style="color:var(--text-primary); margin:0 0 12px 0;">\uD83D\uDCC5 Celebration History</h3>';
+        html += '<h3 style="color:var(--text-primary); margin:0 0 12px 0;">Celebration History</h3>';
 
         if (!history.length) {
             html += '<div style="text-align:center; padding:40px 20px; color:var(--text-tertiary);">';
@@ -2551,22 +2551,23 @@
                 html += '<div style="margin-bottom:16px; background:var(--bg-surface); border:1px solid var(--border); border-radius:10px; overflow:hidden;">';
                 // Period header
                 html += '<div style="padding:12px 16px; background:var(--bg-surface-raised); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">';
-                html += '<div style="font-weight:700; color:var(--text-primary);">\uD83D\uDCC5 ' + _escapeHtml(entry.dateRange || entry.periodKey) + '</div>';
+                html += '<div class="card-title" style="margin:0;">' + _escapeHtml(entry.dateRange || entry.periodKey) + '</div>';
                 html += '<div style="font-size:0.8em; color:var(--text-tertiary);">' + entry.entries.length + ' celebrated</div>';
                 html += '</div>';
                 // People in this period
                 html += '<div style="padding:12px 16px; display:flex; flex-wrap:wrap; gap:8px;">';
                 entry.entries.forEach(function(person) {
                     var hasOnlyOne = person.achievements.some(function(a) { return a.soloRank1; });
-                    html += '<div style="padding:8px 12px; background:var(--bg-surface-raised); border:1px solid #e0e7ff; border-radius:8px; display:flex; align-items:center; gap:6px;">';
+                    html += '<div style="padding:8px 12px; background:var(--bg-surface-raised); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; gap:6px;">';
                     html += '<span style="font-weight:600; font-size:0.9em;">' + _escapeHtml(person.firstName || _getFirstName(person.name)) + '</span>';
                     person.achievements.forEach(function(a) {
                         if (a.key === 'composite' || a.key === 'reliability') return;
                         var metaLabel = METRIC_RANK_LABELS[a.key]?.label || a.key;
                         var emoji = a.soloRank1 ? '\uD83E\uDD47' : '\uD83C\uDF1F';
-                        var bg = a.soloRank1 ? '#ffd700' : '#667eea';
-                        var color = a.soloRank1 ? '#7c5c00' : '#fff';
-                        html += '<span style="font-size:0.75em; padding:2px 6px; background:' + bg + '; color:' + color + '; border-radius:8px;" title="' + _escapeHtml(metaLabel) + '">' + emoji + ' ' + _escapeHtml(metaLabel) + '</span>';
+                        // The only one at #1 stands out in green; a shared
+                        // placing is a plain pill.
+                        var pill = a.soloRank1 ? 'pill pill-good' : 'pill';
+                        html += '<span class="' + pill + '" style="font-size:0.75em; padding:2px 6px;" title="' + _escapeHtml(metaLabel) + '">' + emoji + ' ' + _escapeHtml(metaLabel) + '</span>';
                     });
                     html += '</div>';
                 });

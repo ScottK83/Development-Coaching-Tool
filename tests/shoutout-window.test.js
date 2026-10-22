@@ -211,7 +211,7 @@ suite('shout-out picker: every window is on screen, usable or not', (t) => {
     t.check('all four windows are offered', ['This week', 'Last week', 'Month to date', 'Year to date']
         .every((label) => html.indexOf(label) > -1));
     t.check('along with the old behaviour', html.indexOf('Latest upload') > -1);
-    t.check('the chosen one is marked', html.indexOf('data-period-id="mtd"') > -1 && html.indexOf('#e65100') > -1);
+    t.check('the chosen one is marked', /class="[^"]*is-active"[^>]*data-period-id="mtd"/.test(html));
 
     // Greyed out rather than dropped: a missing window that simply vanishes
     // leaves "why can't I post this week" unanswerable without counting rows

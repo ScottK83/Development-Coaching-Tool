@@ -1664,6 +1664,15 @@
         window.DevCoachModules.associatePicker.populateSelect(select, Array.from(allEmployees));
     }
 
+    // A status line's colour goes on as a kit tone class: the dark layer
+    // forces a div's inline text colour back to the body colour.
+    const STATUS_TONE_CLASSES = ['tone-good', 'tone-warn', 'tone-bad', 'text-secondary'];
+    function setStatusTone(el, tone) {
+        if (!el || !el.classList) return;
+        STATUS_TONE_CLASSES.forEach(c => el.classList.remove(c));
+        if (tone) el.classList.add(tone);
+    }
+
     function handleSentimentUploadSubmit() {
         const associate = document.getElementById('sentimentUploadAssociate').value;
         const pullDate = document.getElementById('sentimentUploadPullDate').value;
@@ -1705,7 +1714,7 @@
         const timeframeKey = `${startDate}_${endDate}`;
 
         statusDiv.textContent= '⏳ Processing files...';
-        statusDiv.style.color = '#ff9800';
+        setStatusTone(statusDiv, 'tone-warn');
         statusDiv.style.display = 'block';
 
         // Process files
@@ -1738,7 +1747,7 @@
                 const problems = checkSentimentUploads(results, associate);
                 if (problems.length) {
                     statusDiv.textContent = `❌ Not saved. ${problems.join(' ')}`;
-                    statusDiv.style.color = '#f44336';
+                    setStatusTone(statusDiv, 'tone-bad');
                     return;
                 }
 
@@ -1785,7 +1794,7 @@
 
                 const uploadedTypes = results.map(r => r.type).join(', ');
                 statusDiv.textContent = `✅ Saved ${uploadedTypes} for ${associate} (pulled ${pullDate})`;
-                statusDiv.style.color = '#4CAF50';
+                setStatusTone(statusDiv, 'tone-good');
 
                 showToast(`✅ Sentiment data saved for ${associate}`, 3000);
 
@@ -1806,7 +1815,7 @@
             })
             .catch(error => {
                 statusDiv.textContent = `❌ Error: ${error.message}`;
-                statusDiv.style.color = '#f44336';
+                setStatusTone(statusDiv, 'tone-bad');
                 console.error('Upload sentiment error:', error);
             });
     }
@@ -2001,7 +2010,7 @@
 
         if (!fileInput.files || fileInput.files.length === 0) {
             statusDiv.textContent = 'No file selected';
-            statusDiv.style.color = '#666';
+            setStatusTone(statusDiv, 'text-secondary');
             sentimentReports[fileType.toLowerCase()] = null;
             return;
         }
@@ -2012,7 +2021,7 @@
         const isEmotions = fileType === 'Emotions';
 
         statusDiv.textContent = `⏳ Processing ${file.name}...`;
-        statusDiv.style.color = '#ff9800';
+        setStatusTone(statusDiv, 'tone-warn');
         showLoadingSpinner(`Processing ${escapeHtml(file.name)}...`);
 
         const reader = new FileReader();
@@ -2067,12 +2076,12 @@
                 }
 
                 statusDiv.textContent = `✅ ${escapeHtml(report.associateName || 'Loaded')} - ${report.totalCalls} calls, ${report.phrases.length} phrases`;
-                statusDiv.style.color = '#4caf50';
+                setStatusTone(statusDiv, 'tone-good');
                 syncSentimentSnapshotDateInputsFromReports();
                 hideLoadingSpinner();
             } catch (error) {
                 statusDiv.textContent = `❌ Error parsing file`;
-                statusDiv.style.color = '#f44336';
+                setStatusTone(statusDiv, 'tone-bad');
                 console.error('File parsing error:', error);
                 hideLoadingSpinner();
                 showToast(`❌ Failed to parse ${fileType} file: ${error.message}`, 5000);
@@ -2081,7 +2090,7 @@
 
         reader.onerror = () => {
             statusDiv.textContent = '❌ Failed to read file';
-            statusDiv.style.color = '#f44336';
+            setStatusTone(statusDiv, 'tone-bad');
             hideLoadingSpinner();
             showToast('❌ Failed to read file', 5000);
         };
@@ -2100,15 +2109,15 @@
 
         // Create modal dialog
         const modal = document.createElement('div');
-        modal.style.cssText = 'background: var(--bg-surface); border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+        modal.style.cssText = 'background: var(--bg-surface); border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; box-shadow: var(--shadow-lg);';
 
         modal.innerHTML = `
             <h2 style="margin-top: 0; color: var(--text-primary);">Paste ${fileType} Sentiment Data</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 15px;">Paste your CSV or Excel data below. Format: one entry per line, with columns for Speaker (A/C) and Phrase.</p>
+            <p class="text-secondary" style="margin-bottom: 15px;">Paste your CSV or Excel data below. Format: one entry per line, with columns for Speaker (A/C) and Phrase.</p>
             <textarea id="pasteArea" style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 12px; resize: vertical;" placeholder="Paste data here..."></textarea>
             <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="pasteCancelBtn" style="padding: 10px 20px; background: var(--bg-surface-sunken); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 14px;">Cancel</button>
-                <button id="pasteSubmitBtn" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Parse & Import</button>
+                <button id="pasteCancelBtn" class="btn-ghost" style="padding: 10px 20px; font-size: 14px;">Cancel</button>
+                <button id="pasteSubmitBtn" class="btn-primary" style="padding: 10px 20px; font-size: 14px;">Parse & Import</button>
             </div>
         `;
 
@@ -2140,7 +2149,7 @@
             const statusDiv = document.getElementById(`sentiment${fileType}Status`);
 
             statusDiv.textContent = `⏳ Processing pasted ${fileType.toLowerCase()} data...`;
-            statusDiv.style.color = '#ff9800';
+            setStatusTone(statusDiv, 'tone-warn');
 
             try {
                 // Parse pasted data using existing parser
@@ -2153,14 +2162,14 @@
                 // Show success status
                 const speakerCount = report.speakers ? (report.speakers.size ?? report.speakers.length ?? 0) : 0;
                 statusDiv.textContent = `✅ Parsed ${report.phrases.length} sentiment phrase(s) from ${speakerCount} speaker(s)`;
-                statusDiv.style.color = '#4CAF50';
+                setStatusTone(statusDiv, 'tone-good');
 
                 // Close modal
                 backdrop.remove();
             } catch (error) {
                 console.error('Error parsing pasted data:', error);
                 statusDiv.textContent = `❌ Error: ${error.message}`;
-                statusDiv.style.color = '#f44336';
+                setStatusTone(statusDiv, 'tone-bad');
             }
         });
 

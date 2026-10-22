@@ -965,7 +965,7 @@ suite('contest: the panel offers one way to do each thing', (t) => {
     const buttons = (ui.match(/<button type="button" id="contest\w+Btn"/g) || []);
     t.equal('three in the standings row, two in the day entry, two for the trace, one to start over',
         buttons.length, 8);
-    t.check('the post button says where it goes', ui.indexOf('📣 Post to Teams') > -1);
+    t.check('the post button says where it goes', ui.indexOf('>Post to Teams<') > -1);
     t.check('there is no second post button', ui.indexOf('Copy a check in') === -1);
 
     // Downloading is a fallback, not a button somebody has to read past. Scott's

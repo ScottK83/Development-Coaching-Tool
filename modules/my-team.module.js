@@ -218,21 +218,22 @@
             // Only meaningful for one person, a team sweep tracks sends per rep.
             const sent = person && Boolean(outreach.getSentEntry(sentLog, plan.id, stamp, person));
 
-            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (sent ? '#e8f5e9' : '#eef1f6');
-            const color = active ? '#fff' : (sent ? '#2e7d32' : 'var(--text-secondary)');
+            // The chosen day is the sub-nav's raised pill; a day already sent
+            // reads green under its tick.
+            const classes = 'mt-day-tab' + (active ? ' is-active' : '') + (sent ? ' tone-good' : '');
             const mark = sent ? '✓ ' : '';
             const tip = `${plan.label}. ${plan.styleLabel || ''}`.trim();
             const dayName = plan.id.charAt(0).toUpperCase() + plan.id.slice(1);
 
-            return `<button type="button" class="mt-day-tab" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
-                `style="padding:10px 18px; border:none; border-radius:8px; font-weight:700; font-size:0.95em; cursor:pointer; background:${bg}; color:${color};">` +
+            return `<button type="button" class="${classes}" data-day="${plan.id}" title="${escapeHtml(tip)}"` +
+                `${active ? ' aria-selected="true"' : ''}>` +
                 `${mark}${dayName}</button>`;
         }).join('');
 
         // Coaching, Calls and Attendance used to sit beside the days as a
         // quieter second group. They live under People now, and Snapshot is a
         // tab of Today's own, so the row is the days alone.
-        return `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:18px;">` +
+        return `<div class="sub-nav" style="align-items:center; margin-bottom:18px;">` +
             tabs +
         `</div>`;
     }
@@ -383,7 +384,7 @@
 
         container.innerHTML = renderDayTabs(dayId, person) +
             `<div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:12px;">` +
-                `<h3 style="margin:0; color:#4527a0;">${escapeHtml(plan.label)}</h3>` +
+                `<h3 class="text-primary" style="margin:0;">${escapeHtml(plan.label)}</h3>` +
                 `<div style="font-size:0.86em; color:var(--text-secondary);">${person ? escapeHtml(person) : 'whole team'}</div>` +
             `</div>` +
             renderWindowPicker(currentWindow().id) +
@@ -476,22 +477,29 @@
         const celebrated = Boolean(person && celebrationFor(person));
         const lastMonth = currentWindow().id === 'lastMonth';
         return [
-            { id: 'highfive', label: '🎉 High five', hint: 'Pure praise, no coaching attached' },
-            { id: 'celebrate', label: '🏅 Placings', hint: 'Where they placed in the center and how many they beat. Private.', show: celebrated },
-            { id: 'cheer', label: '🙌 Cheer', hint: 'Close to a year-to-date goal, and what is moving the right way' },
-            { id: 'checkin', label: '💬 Check-in', hint: 'Their wins and the one thing to work on' },
-            { id: 'growth', label: '📈 Growth', hint: 'How far they have come over a longer stretch' },
-            { id: 'monthly', label: '📅 Monthly review', hint: 'Their month in review', show: lastMonth },
-            { id: 'shoutout', label: '📣 Shout-out', hint: 'A channel post about just this person. Public.', show: celebrated, isPublic: true }
+            { id: 'highfive', label: 'High five', hint: 'Pure praise, no coaching attached' },
+            { id: 'celebrate', label: 'Placings', hint: 'Where they placed in the center and how many they beat. Private.', show: celebrated },
+            { id: 'cheer', label: 'Cheer', hint: 'Close to a year-to-date goal, and what is moving the right way' },
+            { id: 'checkin', label: 'Check-in', hint: 'Their wins and the one thing to work on' },
+            { id: 'growth', label: 'Growth', hint: 'How far they have come over a longer stretch' },
+            { id: 'monthly', label: 'Monthly review', hint: 'Their month in review', show: lastMonth },
+            { id: 'shoutout', label: 'Shout-out', hint: 'A channel post about just this person. Public.', show: celebrated, isPublic: true }
         ].filter(t => t.show !== false);
+    }
+
+    // A chip that is one of a few choices. The chosen one is the raised pill
+    // the sub-nav uses, not an accent: the accent is kept for the action.
+    function chipStyle(on) {
+        return on
+            ? 'border:1px solid var(--border-strong); background:var(--bg-active); color:var(--text-primary);'
+            : 'border:1px solid var(--border); background:transparent; color:var(--text-secondary);';
     }
 
     function renderToneRow(person) {
         const tone = (t) => {
             const on = activeTone === t.id;
-            return `<button type="button" class="mt-tone-btn" data-tone="${t.id}" title="${escapeHtml(t.hint)}" ` +
-                `style="padding:6px 14px; border:1px solid ${on ? '#4527a0' : 'var(--border)'}; border-radius:999px; font-size:0.85em; cursor:pointer; ` +
-                `background:${on ? '#ede7f6' : 'var(--bg-surface)'}; color:${on ? '#4527a0' : 'var(--text-secondary)'}; font-weight:600;">${t.label}</button>`;
+            return `<button type="button" class="mt-tone-btn${on ? ' is-active' : ''}"${on ? ' aria-pressed="true"' : ''} data-tone="${t.id}" title="${escapeHtml(t.hint)}" ` +
+                `style="padding:6px 14px; ${chipStyle(on)} border-radius:999px; font-size:0.85em; cursor:pointer; font-weight:600;">${t.label}</button>`;
         };
         const tones = toneOptions(person);
         const privateTones = tones.filter(t => !t.isPublic).map(tone).join('');
@@ -534,7 +542,7 @@
 
         const isPublic = activeTone === 'shoutout';
         await renderWritten(container, person, write, {
-            copyLabel: isPublic ? '📋 Copy for the channel' : '📋 Copy',
+            copyLabel: isPublic ? 'Copy for the channel' : 'Copy',
             note: isPublic ? 'Public. This names them in the channel.' : ''
         });
     }
@@ -556,12 +564,12 @@
         }
 
         container.innerHTML = (options.note
-                ? `<div style="font-size:0.82em; color:#e65100; font-weight:600; margin-bottom:6px;">${escapeHtml(options.note)}</div>`
+                ? `<div class="tone-warn" style="font-size:0.82em; font-weight:600; margin-bottom:6px;">${escapeHtml(options.note)}</div>`
                 : '') +
             `<textarea id="myTeamToneText" style="width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
             `<div style="display:flex; gap:8px; margin-top:10px;">` +
-                `<button type="button" id="myTeamToneCopy" style="flex:1; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">${escapeHtml(options.copyLabel || '📋 Copy')}</button>` +
-                `<button type="button" id="myTeamToneRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Regenerate</button>` +
+                `<button type="button" id="myTeamToneCopy" class="btn-primary" style="flex:1; padding:10px 16px;">${escapeHtml(options.copyLabel || 'Copy')}</button>` +
+                `<button type="button" id="myTeamToneRegen" class="btn-secondary" style="padding:10px 16px;">Regenerate</button>` +
             `</div>`;
 
         container.querySelector('#myTeamToneCopy')?.addEventListener('click', () => {
@@ -616,7 +624,7 @@
                         ? window.getEmployeeNickname(name)
                         : String(name).split(/[\s,]+/)[0];
                     return `<button type="button" class="mt-open-person" data-name="${escapeHtml(name)}" ` +
-                        `style="background:var(--bg-surface); color:#4527a0; border:1px solid #c7b3ff; border-radius:6px; padding:4px 10px; cursor:pointer; font-weight:600; font-size:0.8em; white-space:nowrap;">✉️ Write to ${escapeHtml(first)}</button>`;
+                        `class="btn-secondary" style="min-height:0; padding:4px 10px; font-size:0.8em; white-space:nowrap;">Write to ${escapeHtml(first)}</button>`;
                 }
             }) || '';
         } catch (e) { pulseHtml = ''; }
@@ -627,7 +635,7 @@
         }
 
         const patterns = mods().patternMemory?.showPatternMemoryModal
-            ? `<button type="button" id="myTeamPatterns" style="background:var(--bg-surface); color:#4f46e5; border:1px solid #c7d2fe; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; font-size:0.85em;">🧠 Patterns</button>`
+            ? `<button type="button" id="myTeamPatterns" class="btn-secondary" style="padding:6px 12px; font-size:0.85em;">Patterns</button>`
             : '';
         const heading = (text, extra) => `<div style="display:flex; align-items:center; gap:10px; margin:4px 0 10px;">` +
             `<div style="font-weight:700; color:var(--text-secondary); font-size:0.9em;">${text}</div>` +
@@ -680,17 +688,17 @@
         if (!container) return;
 
         container.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">` +
-            `<button type="button" id="myTeamShoutOut" style="text-align:left; padding:16px; border:1px solid #ffcc80; border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
-                `<div style="font-weight:700; color:#e65100; margin-bottom:4px;">📣 Team shout-out</div>` +
-                `<div style="font-size:0.86em; color:var(--text-secondary);">One post for the Teams channel, naming who earned it. Public.</div>` +
+            `<button type="button" id="myTeamShoutOut" style="text-align:left; padding:16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
+                `<div class="card-title" style="margin-bottom:4px;">Team shout-out</div>` +
+                `<div class="text-secondary" style="font-size:0.86em;">One post for the Teams channel, naming who earned it. Public.</div>` +
             `</button>` +
-            `<button type="button" id="myTeamRunSweep" style="text-align:left; padding:16px; border:1px solid #c7b3ff; border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
-                `<div style="font-weight:700; color:#4527a0; margin-bottom:4px;">✉️ Private round</div>` +
-                `<div style="font-size:0.86em; color:var(--text-secondary);">One ${escapeHtml(plan.label)} per associate, sent to them directly. Anyone already sent is pulled out.</div>` +
+            `<button type="button" id="myTeamRunSweep" style="text-align:left; padding:16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
+                `<div class="card-title" style="margin-bottom:4px;">Private round</div>` +
+                `<div class="text-secondary" style="font-size:0.86em;">One ${escapeHtml(plan.label)} per associate, sent to them directly. Anyone already sent is pulled out.</div>` +
             `</button>` +
-            `<button type="button" id="myTeamHighFiveAll" style="text-align:left; padding:16px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
-                `<div style="font-weight:700; color:#2e7d32; margin-bottom:4px;">🎉 High five round</div>` +
-                `<div style="font-size:0.86em; color:var(--text-secondary);">One high five per associate, written in a single pass. Copy them one at a time.</div>` +
+            `<button type="button" id="myTeamHighFiveAll" style="text-align:left; padding:16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
+                `<div class="card-title" style="margin-bottom:4px;">High five round</div>` +
+                `<div class="text-secondary" style="font-size:0.86em;">One high five per associate, written in a single pass. Copy them one at a time.</div>` +
             `</button>` +
         `</div>` +
         `<div id="myTeamShoutOutSlot" style="margin-top:14px;"></div>`;
@@ -794,6 +802,11 @@
         };
     }
 
+    // A row still to send is a plain button; once sent it goes quiet and green.
+    function highFiveCopyClass(sent) {
+        return 'mt-hf-copy ' + (sent ? 'btn-ghost tone-good' : 'btn-secondary');
+    }
+
     function highFiveNotice(text) {
         return `<div style="padding:20px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); color:var(--text-secondary);">${escapeHtml(text)}</div>`;
     }
@@ -806,7 +819,7 @@
         // Eighteen of these takes long enough that a panel sitting still reads
         // as a broken one, so the count moves while they're being written.
         const round = await buildHighFiveRound((done, total) => {
-            slot.innerHTML = `<div style="padding:20px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface); color:#2e7d32; font-weight:600;">` +
+            slot.innerHTML = `<div class="card text-secondary" style="padding:20px; font-weight:600;">` +
                 `🎉 Writing high fives… ${done} of ${total}</div>`;
         });
 
@@ -825,14 +838,14 @@
         }
 
         const rows = round.ready.map((entry, idx) =>
-            `<div class="mt-hf-row" data-idx="${idx}" style="border:1px solid ${entry.sent ? '#a5d6a7' : 'var(--border)'}; border-radius:10px; padding:12px 14px; background:var(--bg-surface); margin-bottom:10px; opacity:${entry.sent ? '0.72' : '1'};">` +
+            `<div class="mt-hf-row" data-idx="${idx}" style="border:1px solid ${entry.sent ? 'var(--green)' : 'var(--border)'}; border-radius:10px; padding:12px 14px; background:var(--bg-surface); margin-bottom:10px; opacity:${entry.sent ? '0.72' : '1'};">` +
                 `<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">` +
                     `<strong style="color:var(--text-primary);">${escapeHtml(entry.name)}</strong>` +
-                    `<button type="button" class="mt-hf-copy" data-idx="${idx}" ` +
-                        `style="margin-left:auto; background:${entry.sent ? '#c8e6c9' : 'linear-gradient(135deg,#10b981,#059669)'}; color:${entry.sent ? '#2e7d32' : '#fff'}; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-weight:bold;">` +
-                        `${entry.sent ? '✓ Sent' : '📋 Copy'}</button>` +
-                    `<button type="button" class="mt-hf-undo" data-idx="${idx}" title="Mark as not sent" ` +
-                        `style="display:${entry.sent ? 'inline-block' : 'none'}; background:none; border:1px solid #81c784; color:#2e7d32; border-radius:6px; padding:8px 12px; cursor:pointer;">↩</button>` +
+                    `<button type="button" class="${highFiveCopyClass(entry.sent)}" data-idx="${idx}" ` +
+                        `style="margin-left:auto; padding:8px 18px;">` +
+                        `${entry.sent ? '✓ Sent' : 'Copy'}</button>` +
+                    `<button type="button" class="mt-hf-undo btn-ghost" data-idx="${idx}" title="Mark as not sent" ` +
+                        `style="display:${entry.sent ? 'inline-block' : 'none'}; padding:8px 12px;">↩</button>` +
                 `</div>` +
                 `<textarea class="mt-hf-text" data-idx="${idx}" style="width:100%; min-height:130px; padding:10px; border:1px solid var(--border); border-radius:8px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(entry.message)}</textarea>` +
             `</div>`
@@ -848,13 +861,13 @@
         const sentState = highFiveSentState();
         const doneCount = () => round.ready.filter(e => e.sent).length;
 
-        slot.innerHTML = `<div style="padding:14px; border:1px solid #a5d6a7; border-radius:10px; background:var(--bg-surface);">` +
+        slot.innerHTML = `<div class="card" style="padding:14px;">` +
             `<div style="display:flex; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap;">` +
-                `<div style="font-weight:700; color:#2e7d32;">🎉 High five round. ${round.ready.length} ready</div>` +
+                `<div class="card-title" style="margin:0;">High five round. ${round.ready.length} ready</div>` +
                 `<div id="myTeamHighFiveProgress" style="font-size:0.85em; color:var(--text-tertiary);">${doneCount()} of ${round.ready.length} sent this week</div>` +
                 `<span style="margin-left:auto; display:flex; gap:8px;">` +
-                    `<button type="button" id="myTeamHighFiveClear" style="background:var(--bg-surface-raised); color:var(--text-secondary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">↩ Clear ticks</button>` +
-                    `<button type="button" id="myTeamHighFiveRerun" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:6px 14px; cursor:pointer; font-size:0.85em;">🔄 Rewrite all</button>` +
+                    `<button type="button" id="myTeamHighFiveClear" class="btn-ghost" style="padding:6px 14px; font-size:0.85em;">Clear ticks</button>` +
+                    `<button type="button" id="myTeamHighFiveRerun" class="btn-secondary" style="padding:6px 14px; font-size:0.85em;">Rewrite all</button>` +
                 `</span>` +
             `</div>` +
             rows +
@@ -875,13 +888,12 @@
             const copyBtn = slot.querySelector('.mt-hf-copy[data-idx="' + idx + '"]');
             const undoBtn = slot.querySelector('.mt-hf-undo[data-idx="' + idx + '"]');
             if (row) {
-                row.style.border = '1px solid ' + (entry.sent ? '#a5d6a7' : 'var(--border)');
+                row.style.border = '1px solid ' + (entry.sent ? 'var(--green)' : 'var(--border)');
                 row.style.opacity = entry.sent ? '0.72' : '1';
             }
             if (copyBtn) {
-                copyBtn.textContent = entry.sent ? '✓ Sent' : '📋 Copy';
-                copyBtn.style.background = entry.sent ? '#c8e6c9' : 'linear-gradient(135deg,#10b981,#059669)';
-                copyBtn.style.color = entry.sent ? '#2e7d32' : '#fff';
+                copyBtn.textContent = entry.sent ? '✓ Sent' : 'Copy';
+                copyBtn.className = highFiveCopyClass(entry.sent);
             }
             if (undoBtn) undoBtn.style.display = entry.sent ? 'inline-block' : 'none';
             refreshProgress();
@@ -969,7 +981,7 @@
         if (!cmp) return '<div id="myTeamComparison"></div>';
 
         const body = !cmp.latestKey
-            ? `<span style="color:#ef6c00;">${escapeHtml(cmp.reason || 'Nothing uploaded covers this window yet.')}</span>`
+            ? `<span class="tone-warn">${escapeHtml(cmp.reason || 'Nothing uploaded covers this window yet.')}</span>`
             : cmp.baselineKey
                 ? `Comparing <strong>${escapeHtml(cmp.latestLabel)}</strong> against <strong>${escapeHtml(cmp.baselineLabel)}</strong>.`
                 : `<strong>${escapeHtml(cmp.latestLabel)}</strong>, with nothing to compare it against. ` +
@@ -1046,9 +1058,8 @@
         const cel = mods().celebrations;
         const style = (id, label, hint) => {
             const on = shoutOutStyle === id;
-            return `<button type="button" class="mt-so-style" data-style="${id}" title="${escapeHtml(hint)}" ` +
-                `style="padding:5px 12px; border:1px solid ${on ? '#e65100' : 'var(--border)'}; border-radius:999px; font-size:0.82em; font-weight:600; cursor:pointer; ` +
-                `background:${on ? '#fff3e0' : 'var(--bg-surface-raised)'}; color:${on ? '#e65100' : 'var(--text-secondary)'};">${label}</button>`;
+            return `<button type="button" class="mt-so-style${on ? ' is-active' : ''}"${on ? ' aria-pressed="true"' : ''} data-style="${id}" title="${escapeHtml(hint)}" ` +
+                `style="padding:5px 12px; ${chipStyle(on)} border-radius:999px; font-size:0.82em; font-weight:600; cursor:pointer;">${label}</button>`;
         };
 
         const tiers = cel?.getActiveTiers?.() || [];
@@ -1057,10 +1068,10 @@
             ? `<label for="myTeamTopN" style="font-size:0.8em; color:var(--text-tertiary);" title="Adds a band to the placings. The widest band is the bar for being in the post at all.">Extra band: top</label>` +
               `<input type="number" id="myTeamTopN" min="1" max="999" value="${escapeHtml(custom)}" placeholder="${escapeHtml(tiers.length ? tiers[tiers.length - 1] : 15)}" ` +
                 `style="width:64px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:0.85em; background:var(--bg-surface-raised); color:var(--text-primary);">` +
-              `<button type="button" id="myTeamTopNSet" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised); color:var(--text-secondary); cursor:pointer; font-size:0.82em;">Set</button>`
+              `<button type="button" id="myTeamTopNSet" class="btn-secondary" style="min-height:0; padding:4px 10px; font-size:0.82em;">Set</button>`
             : '';
         const history = cel?.buildHistoryHtml
-            ? `<button type="button" id="myTeamHistoryToggle" style="padding:4px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface-raised); color:var(--text-secondary); cursor:pointer; font-size:0.82em;">${showHistory ? 'Hide history' : '📊 History'}</button>`
+            ? `<button type="button" id="myTeamHistoryToggle" class="btn-secondary" style="min-height:0; padding:4px 10px; font-size:0.82em;">${showHistory ? 'Hide history' : 'History'}</button>`
             : '';
 
         const more = bar || history
@@ -1072,8 +1083,8 @@
 
         return `<div style="display:flex; align-items:flex-start; gap:6px; flex-wrap:wrap; margin-bottom:10px;">` +
             `<span style="font-size:0.82em; color:var(--text-tertiary); padding-top:5px;">Post:</span>` +
-            style('ranked', '🏅 Placings', 'Who placed high in the call center, with the placing') +
-            style('targets', '✨ Beat a target', 'Everyone who beat a target, with no placings') +
+            style('ranked', 'Placings', 'Who placed high in the call center, with the placing') +
+            style('targets', 'Beat a target', 'Everyone who beat a target, with no placings') +
             more +
         `</div>`;
     }
@@ -1119,8 +1130,8 @@
             : '';
     }
 
-    function shoutOutCard(border, inner) {
-        return `<div style="padding:14px; border:1px solid ${border}; border-radius:10px; background:var(--bg-surface);">` +
+    function shoutOutCard(inner) {
+        return `<div class="card" style="padding:14px;">` +
             shoutOutControlsHtml() + inner + historyHtml() +
         `</div>`;
     }
@@ -1169,7 +1180,7 @@
         // sentence names the window it came up empty on. The chips that switch
         // it sit above this card on the day page.
         if (!text) {
-            slot.innerHTML = shoutOutCard('var(--border)',
+            slot.innerHTML = shoutOutCard(
                 `<div style="color:var(--text-secondary); font-size:0.92em;">Nobody cleared both the ranking bar and their own target ` +
                     `${chosen.id === 'latest' ? 'this period' : 'over ' + escapeHtml(chosen.label.toLowerCase())}, so there is nothing to put in the channel yet. ` +
                     `Try another window in <strong>Covering</strong> above, or <strong>Beat a target</strong>.</div>` +
@@ -1178,9 +1189,9 @@
             return;
         }
 
-        slot.innerHTML = shoutOutCard('#ffcc80',
+        slot.innerHTML = shoutOutCard(
             `<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">` +
-                `<div style="font-weight:700; color:#e65100;">📣 Team shout-out. ${count} ${count === 1 ? 'person' : 'people'}</div>` +
+                `<div class="card-title" style="margin:0;">Team shout-out. ${count} ${count === 1 ? 'person' : 'people'}</div>` +
                 (dateRange ? `<div style="font-size:0.82em; color:var(--text-tertiary);">${escapeHtml(dateRange)}</div>` : '') +
             `</div>` +
             // The post is shown once. The coloured view is what you read; Edit
@@ -1193,9 +1204,9 @@
             `<div id="myTeamShoutOutPreview" class="shoutout-preview">${highlightShoutOut(text)}</div>` +
             `<textarea id="myTeamShoutOutText" aria-label="Edit the shout-out" style="display:none; width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(text)}</textarea>` +
             `<div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">` +
-                `<button type="button" id="myTeamShoutOutCopy" style="background:linear-gradient(135deg,#f59e0b,#ea580c); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
-                `<button type="button" id="myTeamShoutOutEdit" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">✏️ Edit</button>` +
-                `<button type="button" id="myTeamShoutOutRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Reword</button>` +
+                `<button type="button" id="myTeamShoutOutCopy" class="btn-primary" style="padding:10px 20px;">Copy for the channel</button>` +
+                `<button type="button" id="myTeamShoutOutEdit" class="btn-secondary" style="padding:10px 16px;">Edit</button>` +
+                `<button type="button" id="myTeamShoutOutRegen" class="btn-secondary" style="padding:10px 16px;">Reword</button>` +
             `</div>` +
             missedHtml);
 
@@ -1212,11 +1223,11 @@
                 preview.innerHTML = highlightShoutOut(box.value);
                 box.style.display = 'none';
                 preview.style.display = '';
-                editBtn.textContent = '✏️ Edit';
+                editBtn.textContent = 'Edit';
             } else {
                 box.style.display = 'block';
                 preview.style.display = 'none';
-                editBtn.textContent = '✓ Done';
+                editBtn.textContent = 'Done';
                 box.focus();
             }
         });
@@ -1252,18 +1263,18 @@
             const why = built.resolved
                 ? `Nobody on the team beat a target by enough to call out ${over}. ${built.scanned} checked.`
                 : `Nothing uploaded covers ${chosen.id === 'latest' ? 'this period' : escapeHtml(chosen.label.toLowerCase())} yet.`;
-            slot.innerHTML = shoutOutCard('var(--border)',
+            slot.innerHTML = shoutOutCard(
                 `<div style="color:var(--text-secondary); font-size:0.92em;">${why} Try another window in <strong>Covering</strong> above.</div>`);
             bindShoutOutControls(slot);
             return;
         }
 
-        slot.innerHTML = shoutOutCard('#a7f3d0',
-            `<div style="font-weight:700; color:#047857; margin-bottom:8px;">✨ Beat a target. ${built.people} ${built.people === 1 ? 'person' : 'people'}</div>` +
+        slot.innerHTML = shoutOutCard(
+            `<div class="card-title">Beat a target. ${built.people} ${built.people === 1 ? 'person' : 'people'}</div>` +
             `<label for="myTeamTargetsText" style="display:block; font-size:0.78em; color:var(--text-tertiary); margin:0 0 4px;">Edit before copying</label>` +
             `<textarea id="myTeamTargetsText" style="width:100%; min-height:200px; padding:12px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(built.post)}</textarea>` +
             `<div style="display:flex; gap:8px; margin-top:10px;">` +
-                `<button type="button" id="myTeamTargetsCopy" style="background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 20px; cursor:pointer; font-weight:bold;">📋 Copy for the channel</button>` +
+                `<button type="button" id="myTeamTargetsCopy" class="btn-primary" style="padding:10px 20px;">Copy for the channel</button>` +
             `</div>`);
 
         bindShoutOutControls(slot);

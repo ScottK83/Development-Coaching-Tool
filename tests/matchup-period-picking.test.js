@@ -74,7 +74,7 @@ function button(html, scope) {
     const at = html.indexOf('data-scope="' + scope + '"');
     return at === -1 ? '' : html.slice(at, html.indexOf('</button>', at));
 }
-const isActive = (btn) => btn.includes('background: #e65100');
+const isActive = (btn) => /class="matchup-scope-btn is-active"/.test(btn);
 
 suite('teams periods: YTD, Monthly and Weekly, opening on year to date', (t) => {
     const matchup = load(t);

@@ -431,17 +431,17 @@
                 ? abs.toFixed(2) + ' hrs'
                 : abs.toFixed(1) + (unit === '%' ? ' pts' : '');
         if (delta > 0.05) {
-            return '<span style="color:var(--green-text);font-weight:600;">▲ ' + formatted + '</span>';
+            return '<span class="tone-good" style="font-weight:600;">▲ ' + formatted + '</span>';
         }
         if (delta < -0.05) {
-            return '<span style="color:var(--red-text);font-weight:600;">▼ ' + formatted + '</span>';
+            return '<span class="tone-bad" style="font-weight:600;">▼ ' + formatted + '</span>';
         }
-        return '<span style="color:var(--text-secondary);">≈ flat</span>';
+        return '<span class="text-secondary">≈ flat</span>';
     }
 
     function renderVolatilityTable(volatilityRows, teamFilter) {
         if (!volatilityRows.length) {
-            return '<p style="color:var(--text-secondary);font-style:italic;">Need at least ' + MIN_VOLATILITY_SAMPLES + ' weekly uploads per rep to compute volatility.</p>';
+            return '<p class="text-secondary" style="font-style:italic;">Need at least ' + MIN_VOLATILITY_SAMPLES + ' weekly uploads per rep to compute volatility.</p>';
         }
         // Show top 20 most volatile rep × metric pairs (highest CV).
         // Filter to team if a team roster is selected.
@@ -451,13 +451,13 @@
         const sorted = filtered.slice().sort(function (a, b) { return b.cv - a.cv; }).slice(0, 20);
 
         let html = '<table style="width:100%;border-collapse:collapse;font-size:0.9em;">';
-        html += '<thead><tr style="background:#ede7f6;">';
-        html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #9c27b0;">Rep</th>';
-        html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #9c27b0;">Metric</th>';
-        html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #9c27b0;">Avg</th>';
-        html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #9c27b0;">Std Dev</th>';
-        html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #9c27b0;">Range</th>';
-        html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #9c27b0;">Weeks</th>';
+        html += '<thead><tr style="background:var(--bg-surface-raised);">';
+        html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Rep</th>';
+        html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Metric</th>';
+        html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Avg</th>';
+        html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Std Dev</th>';
+        html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Range</th>';
+        html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Weeks</th>';
         html += '</tr></thead><tbody>';
 
         sorted.forEach(function (r) {
@@ -466,19 +466,19 @@
             html += '<td style="padding:8px;">' + escapeHtml(metricLabel(r.metricKey)) + '</td>';
             html += '<td style="padding:8px;text-align:right;">' + escapeHtml(fmt(r.metricKey, r.mean)) + '</td>';
             html += '<td style="padding:8px;text-align:right;font-weight:600;">' + escapeHtml(fmt(r.metricKey, r.sd)) + '</td>';
-            html += '<td style="padding:8px;text-align:right;color:var(--text-secondary);">' + escapeHtml(fmt(r.metricKey, r.min)) + ' to ' + escapeHtml(fmt(r.metricKey, r.max)) + '</td>';
-            html += '<td style="padding:8px;text-align:right;color:var(--text-secondary);">' + r.samples + '</td>';
+            html += '<td class=\"text-secondary\" style=\"padding:8px;text-align:right;\">' + escapeHtml(fmt(r.metricKey, r.min)) + ' to ' + escapeHtml(fmt(r.metricKey, r.max)) + '</td>';
+            html += '<td class=\"text-secondary\" style=\"padding:8px;text-align:right;\">' + r.samples + '</td>';
             html += '</tr>';
         });
 
         html += '</tbody></table>';
-        html += '<p style="color:var(--text-secondary);font-size:0.85em;margin-top:8px;">Higher std dev = less consistent week to week. Sorted by coefficient of variation (relative volatility).</p>';
+        html += '<p class="text-secondary" style="font-size:0.85em;margin-top:8px;">Higher std dev = less consistent week to week. Sorted by coefficient of variation (relative volatility).</p>';
         return html;
     }
 
     function renderStreaksTable(streakRows, teamFilter) {
         if (!streakRows.length) {
-            return '<p style="color:var(--text-secondary);font-style:italic;">No streak data yet. Need weekly uploads with target-comparable metrics.</p>';
+            return '<p class="text-secondary" style="font-style:italic;">No streak data yet. Need weekly uploads with target-comparable metrics.</p>';
         }
         const filtered = teamFilter
             ? streakRows.filter(function (r) { return teamFilter.indexOf(r.name) !== -1; })
@@ -495,15 +495,15 @@
             .sort(function (a, b) { return b.currentLen - a.currentLen; })
             .slice(0, 12);
 
-        function streakTable(title, rows, color) {
+        function streakTable(title, rows, toneClass) {
             if (!rows.length) {
                 return '<div style="flex:1;min-width:300px;">'
-                    + '<h4 style="color:' + color + ';margin:0 0 8px;">' + title + '</h4>'
-                    + '<p style="color:var(--text-secondary);font-style:italic;font-size:0.9em;">None right now.</p>'
+                    + '<h4 class="' + toneClass + '" style="margin:0 0 8px;">' + title + '</h4>'
+                    + '<p class="text-secondary" style="font-style:italic;font-size:0.9em;">None right now.</p>'
                     + '</div>';
             }
             let h = '<div style="flex:1;min-width:300px;">';
-            h += '<h4 style="color:' + color + ';margin:0 0 8px;">' + title + '</h4>';
+            h += '<h4 class="' + toneClass + '" style="margin:0 0 8px;">' + title + '</h4>';
             h += '<table style="width:100%;border-collapse:collapse;font-size:0.9em;">';
             h += '<thead><tr style="background:var(--bg-surface-raised);">';
             h += '<th style="text-align:left;padding:6px;">Rep</th>';
@@ -514,7 +514,7 @@
                 h += '<tr style="border-bottom:1px solid var(--border);">';
                 h += '<td style="padding:6px;">' + escapeHtml(r.name) + '</td>';
                 h += '<td style="padding:6px;">' + escapeHtml(metricLabel(r.metricKey)) + '</td>';
-                h += '<td style="padding:6px;text-align:right;font-weight:700;color:' + color + ';">' + r.currentLen + '</td>';
+                h += '<td class="' + toneClass + '" style="padding:6px;text-align:right;font-weight:700;">' + r.currentLen + '</td>';
                 h += '</tr>';
             });
             h += '</tbody></table>';
@@ -523,8 +523,8 @@
         }
 
         return '<div style="display:flex;gap:24px;flex-wrap:wrap;">'
-            + streakTable('🔥 On a roll (current weeks above target)', above, '#2e7d32')
-            + streakTable('🧊 Stuck below (current weeks missing target)', below, '#c62828')
+            + streakTable('On a roll (current weeks above target)', above, 'tone-good')
+            + streakTable('Stuck below (current weeks missing target)', below, 'tone-bad')
             + '</div>';
     }
 
@@ -533,7 +533,7 @@
         const agg = tipResult.perTipAggregate;
 
         if (!perUse.length) {
-            return '<p style="color:var(--text-secondary);font-style:italic;">No tip-effectiveness data yet. Tips need to be issued (via coaching emails) and have at least one full week of metric data on either side of the issue date.</p>';
+            return '<p class="text-secondary" style="font-style:italic;">No tip-effectiveness data yet. Tips need to be issued (via coaching emails) and have at least one full week of metric data on either side of the issue date.</p>';
         }
 
         // Aggregated leaderboard: tips with ≥ MIN_TIP_USAGE_FOR_AGGREGATE uses.
@@ -544,15 +544,15 @@
         let html = '';
 
         if (eligibleAgg.length) {
-            html += '<h4 style="margin:0 0 8px;color:var(--green-text);">🏆 Tips that moved the needle (avg delta across reps)</h4>';
-            html += '<p style="color:var(--text-secondary);font-size:0.85em;margin:0 0 8px;">Only tips used ' + MIN_TIP_USAGE_FOR_AGGREGATE + '+ times are shown. Delta = avg metric value in the ' + TIP_WINDOW_WEEKS + ' weeks after the tip was issued, vs. the ' + TIP_WINDOW_WEEKS + ' weeks before.</p>';
+            html += '<h4 class="tone-good" style="margin:0 0 8px;">Tips that moved the needle (avg delta across reps)</h4>';
+            html += '<p class="text-secondary" style="font-size:0.85em;margin:0 0 8px;">Only tips used ' + MIN_TIP_USAGE_FOR_AGGREGATE + '+ times are shown. Delta = avg metric value in the ' + TIP_WINDOW_WEEKS + ' weeks after the tip was issued, vs. the ' + TIP_WINDOW_WEEKS + ' weeks before.</p>';
             html += '<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:20px;">';
             html += '<thead><tr style="background:var(--green-soft);">';
-            html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #2e7d32;">Tip</th>';
-            html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #2e7d32;">Metric</th>';
-            html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #2e7d32;">Uses</th>';
-            html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #2e7d32;">% improved</th>';
-            html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #2e7d32;">Avg delta</th>';
+            html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Tip</th>';
+            html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Metric</th>';
+            html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Uses</th>';
+            html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">% improved</th>';
+            html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Avg delta</th>';
             html += '</tr></thead><tbody>';
             topMovers.forEach(function (a) {
                 html += '<tr style="border-bottom:1px solid var(--border);">';
@@ -566,13 +566,13 @@
             html += '</tbody></table>';
 
             if (bottomMovers.length && bottomMovers[0].avgDelta < 0) {
-                html += '<h4 style="margin:0 0 8px;color:var(--red-text);">⚠️ Tips that haven\'t helped (avg delta negative)</h4>';
+                html += '<h4 class="tone-bad" style="margin:0 0 8px;">Tips that haven\'t helped (avg delta negative)</h4>';
                 html += '<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:20px;">';
                 html += '<thead><tr style="background:var(--red-soft);">';
-                html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #c62828;">Tip</th>';
-                html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #c62828;">Metric</th>';
-                html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #c62828;">Uses</th>';
-                html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #c62828;">Avg delta</th>';
+                html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Tip</th>';
+                html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Metric</th>';
+                html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Uses</th>';
+                html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Avg delta</th>';
                 html += '</tr></thead><tbody>';
                 bottomMovers.forEach(function (a) {
                     if (a.avgDelta >= 0) return;
@@ -586,27 +586,27 @@
                 html += '</tbody></table>';
             }
         } else {
-            html += '<p style="color:var(--text-secondary);font-style:italic;margin-bottom:20px;">Not enough tip-usage history yet to surface aggregate winners (need ' + MIN_TIP_USAGE_FOR_AGGREGATE + '+ uses per tip).</p>';
+            html += '<p class="text-secondary" style="font-style:italic;margin-bottom:20px;">Not enough tip-usage history yet to surface aggregate winners (need ' + MIN_TIP_USAGE_FOR_AGGREGATE + '+ uses per tip).</p>';
         }
 
         // Per-rep recent log: 15 most recent tip applications with measurable outcomes.
         const recent = perUse.slice().sort(function (a, b) { return b.usedAt - a.usedAt; }).slice(0, 15);
-        html += '<h4 style="margin:16px 0 8px;color:#1565c0;">📋 Recent tip outcomes (per rep)</h4>';
+        html += '<h4 class="section-title" style="margin:16px 0 8px;">Recent tip outcomes (per rep)</h4>';
         html += '<table style="width:100%;border-collapse:collapse;font-size:0.9em;">';
-        html += '<thead><tr style="background:#e3f2fd;">';
-        html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #1565c0;">Rep</th>';
-        html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #1565c0;">Metric</th>';
-        html += '<th style="text-align:left;padding:8px;border-bottom:2px solid #1565c0;">Issued</th>';
-        html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #1565c0;">Before → After</th>';
-        html += '<th style="text-align:right;padding:8px;border-bottom:2px solid #1565c0;">Delta</th>';
+        html += '<thead><tr style="background:var(--bg-surface-raised);">';
+        html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Rep</th>';
+        html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Metric</th>';
+        html += '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border-strong);">Issued</th>';
+        html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Before → After</th>';
+        html += '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border-strong);">Delta</th>';
         html += '</tr></thead><tbody>';
         recent.forEach(function (u) {
             const dStr = new Date(u.usedAt).toISOString().slice(0, 10);
             html += '<tr style="border-bottom:1px solid var(--border);">';
             html += '<td style="padding:8px;">' + escapeHtml(u.name) + '</td>';
             html += '<td style="padding:8px;">' + escapeHtml(metricLabel(u.metricKey)) + '</td>';
-            html += '<td style="padding:8px;color:var(--text-secondary);">' + dStr + '</td>';
-            html += '<td style="padding:8px;text-align:right;color:var(--text-secondary);">'
+            html += '<td class=\"text-secondary\" style=\"padding:8px;\">' + dStr + '</td>';
+            html += '<td class=\"text-secondary\" style=\"padding:8px;text-align:right;\">'
                 + escapeHtml(fmt(u.metricKey, u.baseline)) + ' → ' + escapeHtml(fmt(u.metricKey, u.followup))
                 + '</td>';
             html += '<td style="padding:8px;text-align:right;">' + deltaCell(u.metricKey, u.delta) + '</td>';
@@ -624,8 +624,8 @@
         const teamFilter = teamRoster();
 
         if (!weeklyPeriods.length) {
-            container.innerHTML = '<div style="padding:24px;background:#fff3cd;border-left:4px solid #ffc107;border-radius:4px;">'
-                + '<strong>⚠️ No weekly data yet.</strong>'
+            container.innerHTML = '<div class="callout callout-warn" style="padding:24px;">'
+                + '<strong>No weekly data yet.</strong>'
                 + '<p style="margin:6px 0 0;">Upload some weekly PowerBI data to see volatility, streaks, and tip effectiveness.</p>'
                 + '</div>';
             return;
@@ -645,23 +645,23 @@
             : 'Showing all ' + repNames.length + ' reps across ' + weeklyPeriods.length + ' weekly upload(s).';
 
         let html = '';
-        html += '<div style="background:var(--bg-surface);padding:16px;border-radius:8px;margin-bottom:16px;border-left:4px solid #9c27b0;">';
-        html += '<h3 style="margin:0 0 4px;color:#6a1b9a;">📊 Patterns & Stability</h3>';
-        html += '<p style="margin:0;color:var(--text-secondary);font-size:0.9em;">' + escapeHtml(scopeLabel) + '</p>';
+        html += '<div class="card" style="margin-bottom:16px;">';
+        html += '<h3 class="section-title" style="margin:0 0 4px;">Patterns & Stability</h3>';
+        html += '<p class="text-secondary" style="margin:0;font-size:0.9em;">' + escapeHtml(scopeLabel) + '</p>';
         html += '</div>';
 
-        html += '<div style="background:var(--bg-surface);padding:16px;border-radius:8px;margin-bottom:16px;">';
-        html += '<h3 style="margin:0 0 12px;color:#6a1b9a;">📈 Consistency (week-to-week volatility)</h3>';
+        html += '<div class="card" style="margin-bottom:16px;">';
+        html += '<h3 class="section-title" style="margin:0 0 12px;">Consistency (week-to-week volatility)</h3>';
         html += renderVolatilityTable(volatility, null);
         html += '</div>';
 
-        html += '<div style="background:var(--bg-surface);padding:16px;border-radius:8px;margin-bottom:16px;">';
-        html += '<h3 style="margin:0 0 12px;color:#6a1b9a;">🔥 Streaks (consecutive weeks vs target)</h3>';
+        html += '<div class="card" style="margin-bottom:16px;">';
+        html += '<h3 class="section-title" style="margin:0 0 12px;">Streaks (consecutive weeks vs target)</h3>';
         html += renderStreaksTable(streaks, null);
         html += '</div>';
 
-        html += '<div style="background:var(--bg-surface);padding:16px;border-radius:8px;">';
-        html += '<h3 style="margin:0 0 12px;color:#6a1b9a;">💡 Tip effectiveness</h3>';
+        html += '<div class="card">';
+        html += '<h3 class="section-title" style="margin:0 0 12px;">Tip effectiveness</h3>';
         html += renderTipEffectiveness(tipResult);
         html += '</div>';
 

@@ -170,23 +170,19 @@
     }
 
     function _renderScopeSelector(active) {
-        var html = '<div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">';
-        html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em;">Compare:</label>';
+        var html = '<div class="sub-nav" role="tablist" style="margin-bottom: 10px; align-items: center;">';
+        html += '<label style="font-weight: 600; color: var(--text-secondary); font-size: 0.9em; margin-right: 4px;">Compare:</label>';
 
         MATCHUP_SCOPES.forEach(function (s) {
             var available = _periodsForScope(s.key);
             var isActive = active === s.key;
             var disabled = available.length === 0;
-            html += '<button type="button" class="matchup-scope-btn" data-scope="' + s.key + '"' +
+            html += '<button type="button" role="tab" data-scope="' + s.key + '"' +
+                ' class="matchup-scope-btn' + (isActive ? ' is-active' : '') + '"' +
+                (isActive ? ' aria-selected="true"' : '') +
                 (disabled ? ' disabled' : '') +
                 ' title="' + (disabled ? 'No ' + s.label.toLowerCase() + ' upload covers enough of the centre' : 'Newest: ' + _escapeHtml(available[0].label)) + '"' +
-                ' style="padding: 6px 14px; border-radius: 6px; font-size: 0.9em; cursor: ' + (disabled ? 'not-allowed' : 'pointer') + ';' +
-                ' font-weight: ' + (isActive ? '700' : '500') + ';' +
-                ' border: 2px solid ' + (isActive ? '#e65100' : 'var(--border)') + ';' +
-                ' background: ' + (isActive ? '#e65100' : 'var(--bg-surface)') + ';' +
-                ' color: ' + (isActive ? '#ffffff' : (disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')) + ';' +
-                ' box-shadow: ' + (isActive ? '0 0 0 3px rgba(230,81,0,0.25)' : 'none') + ';' +
-                ' opacity: ' + (disabled ? '0.55' : '1') + ';">' + s.label + '</button>';
+                '>' + s.label + '</button>';
         });
 
         html += '</div>';
@@ -506,11 +502,11 @@
         var SCOPE_NOUN = { ytd: 'year-to-date file', month: 'month', week: 'week' };
         var SCOPE_PICKED = { ytd: 'YTD', month: 'Monthly', week: 'Weekly' };
 
-        var html = '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        var html = '<div class="card" style="margin-bottom: 20px; padding: 15px;">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Movement: ' +
             _escapeHtml(mv.previous.label) + ' &rarr; ' + _escapeHtml(mv.current.label) +
             (fellBack
-                ? ' <span style="color: #e65100; font-size: 0.78em; font-weight: 600;">(months, not ' +
+                ? ' <span class="tone-warn" style="font-size: 0.78em; font-weight: 600;">(months, not ' +
                   _escapeHtml(SCOPE_PICKED[scope] || scope) + ')</span>'
                 : '') +
             '</h4>';
@@ -523,8 +519,7 @@
            and it says explicitly that the rest of the page did follow the
            selection, because that is the part being doubted. */
         if (fellBack) {
-            html += '<p style="margin: 0 0 12px 0; padding: 8px 10px; border-left: 3px solid #e65100; ' +
-                'background: rgba(230,81,0,0.08); border-radius: 0 4px 4px 0; color: #e65100; font-size: 0.85em;">' +
+            html += '<p class="callout callout-warn tone-warn" style="margin: 0 0 12px 0; padding: 8px 10px; font-size: 0.85em;">' +
                 _escapeHtml(SCOPE_PICKED[scope] || scope) + ' is selected above, but there is only one ' +
                 _escapeHtml(SCOPE_NOUN[scope] || scope) + ' on record, so there is nothing to compare it ' +
                 'against. This panel alone is showing the last two full months instead. Everything else on ' +
@@ -548,36 +543,36 @@
         html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.88em;">';
         html += '<thead><tr style="background: var(--bg-surface-raised);">';
         ['Place', 'Team', 'Move', 'Avg KPI', 'Change', 'Scored'].forEach(function (h, i) {
-            html += '<th style="padding: 6px 8px; border-bottom: 2px solid #ddd; text-align: ' + (i === 1 ? 'left' : 'center') + '; font-size: 0.9em;">' + h + '</th>';
+            html += '<th style="padding: 6px 8px; border-bottom: 2px solid var(--border-strong); text-align: ' + (i === 1 ? 'left' : 'center') + '; font-size: 0.9em;">' + h + '</th>';
         });
         html += '</tr></thead><tbody>';
 
         mv.teams.forEach(function (t, idx) {
             var isMine = data && data.myLabel && t.name === data.myLabel;
-            var bg = isMine ? 'rgba(21,101,192,0.10)' : (idx % 2 === 0 ? 'var(--bg-surface-raised)' : 'transparent');
+            var bg = isMine ? 'var(--brand-soft)' : (idx % 2 === 0 ? 'var(--bg-surface-raised)' : 'transparent');
 
             var moveHtml;
             if (t.placeDelta === 0) {
                 moveHtml = '<span style="color: var(--text-tertiary);">-</span>';
             } else {
                 var up = t.placeDelta > 0;
-                moveHtml = '<span style="color: ' + (up ? '#2e7d32' : '#c62828') + '; font-weight: bold;">' +
+                moveHtml = '<span class="' + (up ? 'tone-good' : 'tone-bad') + '" style="font-weight: bold;">' +
                     (up ? '&#9650;' : '&#9660;') + Math.abs(t.placeDelta) + '</span>';
             }
 
             // Rating change is the substance; place can move because another team
             // moved, so it is shown but never on its own.
             var rd = t.ratingDelta;
-            var rdColor = Math.abs(rd) < 0.005 ? 'var(--text-tertiary)' : (rd > 0 ? '#2e7d32' : '#c62828');
+            var rdTone = Math.abs(rd) < 0.005 ? 'text-faint' : (rd > 0 ? 'tone-good' : 'tone-bad');
             var rdText = Math.abs(rd) < 0.005 ? 'no change' : (rd > 0 ? '+' : '') + rd.toFixed(2);
 
             html += '<tr style="background: ' + bg + '; border-bottom: 1px solid var(--border);">';
             html += '<td style="padding: 6px 8px; text-align: center; font-weight: bold;">' + t.curPlace + '</td>';
             html += '<td style="padding: 6px 8px; font-weight: ' + (isMine ? 'bold' : 'normal') + ';">' +
-                _escapeHtml(t.name) + (isMine ? ' <span style="color:#1565c0;">(you)</span>' : '') + '</td>';
+                _escapeHtml(t.name) + (isMine ? ' <span class="tone-accent">(you)</span>' : '') + '</td>';
             html += '<td style="padding: 6px 8px; text-align: center;">' + moveHtml + '</td>';
             html += '<td style="padding: 6px 8px; text-align: center;">' + t.curAvgRating.toFixed(2) + '</td>';
-            html += '<td style="padding: 6px 8px; text-align: center; color: ' + rdColor + ';">' + rdText + '</td>';
+            html += '<td style="padding: 6px 8px; text-align: center;"><span class="' + rdTone + '">' + rdText + '</span></td>';
             html += '<td style="padding: 6px 8px; text-align: center; color: var(--text-secondary);">' + t.count + '</td>';
             html += '</tr>';
         });
@@ -622,7 +617,7 @@
                 : 'No supervisors are assigned. Go to <strong>Settings &gt; Team Members</strong> and type a supervisor name (e.g. "Nicole P") next to their agents to set up matchups.';
             container.innerHTML = periodControls +
                 '<div style="padding: 30px; text-align: center;">' +
-                '<h3 style="color: #e65100;">🥊 Team Matchup</h3>' +
+                '<h3 style="color: var(--text-primary);">Team Matchup</h3>' +
                 '<p style="color: var(--text-secondary); max-width: 560px; margin: 0 auto;">' + _why + '</p>' +
                 '<p style="color: var(--text-tertiary); font-size: 0.85em; margin-top: 10px;">Source: ' + _escapeHtml(data.source) + '</p>' +
                 '</div>';
@@ -637,8 +632,8 @@
         html += periodControls;
 
         // Header
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #e65100;">';
-        html += '<strong>🥊 Team Matchup</strong>: ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
+        html += '<div class="card" style="margin-bottom: 20px; padding: 15px;">';
+        html += '<strong>Team Matchup</strong>: ' + data.totalEmployees + ' employees across ' + data.teamNames.length + ' teams';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + '</span>';
         html += '</div>';
 
@@ -685,17 +680,17 @@
     }
 
     function _renderHeadToHead(myStats, rivalStats, data) {
-        var html = '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 12px; border: 2px solid #e65100; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">';
+        var html = '<div class="card" style="margin-bottom: 20px; padding: 20px;">';
 
         // Team names header
         html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">';
         html += '<div style="text-align: center; flex: 1;">';
-        html += '<div style="font-size: 1.3em; font-weight: bold; color: #1565c0;">My Team</div>';
+        html += '<div class="text-primary" style="font-size: 1.3em; font-weight: bold;">My Team</div>';
         html += '<div style="font-size: 0.85em; color: var(--text-secondary);">' + myStats.count + ' agents</div>';
         html += '</div>';
-        html += '<div style="font-size: 1.5em; font-weight: bold; color: #e65100; padding: 0 20px;">VS</div>';
+        html += '<div class="text-faint" style="font-size: 1.5em; font-weight: bold; padding: 0 20px;">VS</div>';
         html += '<div style="text-align: center; flex: 1;">';
-        html += '<div style="font-size: 1.3em; font-weight: bold; color: var(--red-text);">' + _escapeHtml(rivalStats.name) + '</div>';
+        html += '<div class="text-primary" style="font-size: 1.3em; font-weight: bold;">' + _escapeHtml(rivalStats.name) + '</div>';
         html += '<div style="font-size: 0.85em; color: var(--text-secondary);">' + rivalStats.count + ' agents</div>';
         html += '</div>';
         html += '</div>';
@@ -715,22 +710,22 @@
                 tie = Math.abs(myVal - rivalVal) < 0.01;
             }
 
-            var myColor = tie ? '#666' : (myWins ? '#2e7d32' : '#c62828');
-            var rivalColor = tie ? '#666' : (myWins ? '#c62828' : '#2e7d32');
-            var myBg = tie ? '#f5f5f5' : (myWins ? '#e8f5e9' : '#fbe9e7');
-            var rivalBg = tie ? '#f5f5f5' : (myWins ? '#fbe9e7' : '#e8f5e9');
+            var myTone = tie ? 'text-secondary' : (myWins ? 'tone-good' : 'tone-bad');
+            var rivalTone = tie ? 'text-secondary' : (myWins ? 'tone-bad' : 'tone-good');
+            var myBg = tie ? 'var(--bg-surface-raised)' : (myWins ? 'var(--green-soft)' : 'var(--red-soft)');
+            var rivalBg = tie ? 'var(--bg-surface-raised)' : (myWins ? 'var(--red-soft)' : 'var(--green-soft)');
             var icon = tie ? '🤝' : (myWins ? '✅' : '❌');
 
             html += '<div style="display: flex; align-items: center; margin-bottom: 8px; gap: 8px;">';
             // My team value
             html += '<div style="flex: 1; text-align: right; padding: 8px 12px; background: ' + myBg + '; border-radius: 6px;">';
-            html += '<span style="font-weight: bold; color: ' + myColor + ';">' + _formatMetricDisplay(m.formatKey, myVal) + '</span>';
+            html += '<span class="' + myTone + '" style="font-weight: bold;">' + _formatMetricDisplay(m.formatKey, myVal) + '</span>';
             html += '</div>';
             // Metric label
             html += '<div style="width: 110px; text-align: center; font-size: 0.85em; font-weight: 600; color: var(--text-secondary);">' + icon + ' ' + m.label + '</div>';
             // Rival value
             html += '<div style="flex: 1; text-align: left; padding: 8px 12px; background: ' + rivalBg + '; border-radius: 6px;">';
-            html += '<span style="font-weight: bold; color: ' + rivalColor + ';">' + _formatMetricDisplay(m.formatKey, rivalVal) + '</span>';
+            html += '<span class="' + rivalTone + '" style="font-weight: bold;">' + _formatMetricDisplay(m.formatKey, rivalVal) + '</span>';
             html += '</div>';
             html += '</div>';
         });
@@ -747,9 +742,9 @@
             if (myWins) myWinsTotal++; else rivalWinsTotal++;
         });
 
-        var recordColor = myWinsTotal > rivalWinsTotal ? '#2e7d32' : (myWinsTotal < rivalWinsTotal ? '#c62828' : '#666');
+        var recordTone = myWinsTotal > rivalWinsTotal ? 'tone-good' : (myWinsTotal < rivalWinsTotal ? 'tone-bad' : 'text-secondary');
         html += '<div style="text-align: center; margin-top: 12px; padding: 10px; background: var(--bg-surface-raised); border-radius: 8px;">';
-        html += '<span style="font-size: 1.2em; font-weight: bold; color: ' + recordColor + ';">';
+        html += '<span class="' + recordTone + '" style="font-size: 1.2em; font-weight: bold;">';
         html += myWinsTotal + 'W - ' + rivalWinsTotal + 'L';
         if (tiesTotal > 0) html += ' - ' + tiesTotal + 'T';
         html += '</span>';
@@ -820,8 +815,7 @@
 
         if (!notes.length) return '';
 
-        var html = '<div style="margin: 0 0 14px 0; padding: 10px 12px; border-left: 4px solid #e65100;' +
-            ' background: rgba(230,81,0,0.08); border-radius: 0 6px 6px 0;">';
+        var html = '<div class="callout callout-warn" style="margin: 0 0 14px 0; padding: 10px 12px;">';
         notes.forEach(function (n, i) {
             html += '<p style="margin: ' + (i ? '8px' : '0') + ' 0 0 0; color: var(--text-secondary);' +
                 ' font-size: 0.82em; line-height: 1.5;">' + n + '</p>';
@@ -843,7 +837,7 @@
         var rankedTeams = allTeams.filter(function (t) { return t.rankable; });
         var sortedTeams = rankedTeams.concat(allTeams.filter(function (t) { return !t.rankable; }));
 
-        var html = '<div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        var html = '<div class="card" style="margin-bottom: 20px; padding: 20px;">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Team Power Rankings</h4>';
         html += _renderRankingCaveats(data, allTeams);
 
@@ -872,7 +866,7 @@
 
         sortedTeams.forEach(function (team, idx) {
             var isMyTeam = team.name === 'My Team';
-            var rowBg = isMyTeam ? '#e8eaf6' : (idx % 2 === 0 ? '#fff' : '#fafafa');
+            var rowBg = isMyTeam ? 'var(--brand-soft)' : (idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-raised)');
             var fontWeight = isMyTeam ? 'bold' : 'normal';
 
             // Placed teams number from one. A team below the scorecard floor is
@@ -886,14 +880,14 @@
             // everybody. Left as a bare headcount when nothing was left out.
             var agentsCell = team.thinCount
                 ? team.scoredCount + ' of ' + team.count +
-                  '<br><span style="font-size: 0.78em; color: #c62828; font-weight: normal;">' +
+                  '<br><span class="tone-bad" style="font-size: 0.78em; font-weight: normal;">' +
                   team.thinCount + ' too thin</span>'
                 : String(team.count);
 
             html += '<tr style="background: ' + rowBg + '; border-bottom: 1px solid var(--border); font-weight: ' + fontWeight +
                 (team.rankable ? '' : '; opacity: 0.72') + ';">';
             html += '<td style="padding: 8px; text-align: center;">' + placeCell + '</td>';
-            html += '<td style="padding: 8px;">' + (isMyTeam ? '<span style="color: #1565c0;">★ </span>' : '') + _escapeHtml(team.name) + '</td>';
+            html += '<td style="padding: 8px;">' + (isMyTeam ? '<span class="tone-accent">★ </span>' : '') + _escapeHtml(team.name) + '</td>';
             html += '<td style="padding: 8px; text-align: center;">' + agentsCell + '</td>';
             html += '<td style="padding: 8px; text-align: center;">' + (team.avgRating ? team.avgRating.toFixed(2) : '--') + '</td>';
             html += '<td style="padding: 8px; text-align: center;">' + (team.totalComposite !== Infinity ? team.totalComposite.toFixed(1) : '--') + '</td>';
@@ -910,8 +904,8 @@
                 // as a team that played and drew everything.
                 html += '<span style="color: var(--text-tertiary);">--</span>';
             } else {
-                var wColor = team.wins > team.losses ? '#2e7d32' : (team.wins < team.losses ? '#c62828' : '#666');
-                html += '<span style="color: ' + wColor + '; font-weight: bold;">' + team.wins + 'W-' + team.losses + 'L</span>';
+                var wTone = team.wins > team.losses ? 'tone-good' : (team.wins < team.losses ? 'tone-bad' : 'text-secondary');
+                html += '<span class="' + wTone + '" style="font-weight: bold;">' + team.wins + 'W-' + team.losses + 'L</span>';
             }
             html += '</td>';
             html += '</tr>';
@@ -920,9 +914,7 @@
         html += '</tbody></table>';
 
         html += '<div style="margin-top: 12px;">';
-        html += '<button type="button" id="matchupDiagBtn" style="padding: 5px 12px; border-radius: 6px;' +
-            ' font-size: 0.82em; cursor: pointer; border: 1px solid var(--border);' +
-            ' background: var(--bg-surface-raised); color: var(--text-secondary);">' +
+        html += '<button type="button" id="matchupDiagBtn" class="btn-ghost" style="font-size: 0.82em;">' +
             (_showRankingDiagnostic ? 'Hide' : 'Show') + ' ranking diagnostic</button>';
         html += '</div>';
 
@@ -951,7 +943,7 @@
         html += '</tr></thead><tbody>';
         rows.forEach(function (cells, idx) {
             var isHi = highlightIdx === idx;
-            html += '<tr style="background: ' + (isHi ? 'rgba(230,81,0,0.12)' : (idx % 2 === 0 ? 'transparent' : 'var(--bg-surface)')) +
+            html += '<tr style="background: ' + (isHi ? 'var(--yellow-soft)' : (idx % 2 === 0 ? 'transparent' : 'var(--bg-surface)')) +
                 '; border-bottom: 1px solid var(--border);' + (isHi ? ' font-weight: 600;' : '') + '">';
             cells.forEach(function (c, i) {
                 html += '<td style="padding: 5px 8px; text-align: ' + (i === 0 ? 'left' : 'center') + ';">' + c + '</td>';
@@ -1012,7 +1004,7 @@
         html += _diagTable(
             ['Team', 'Scored', 'Avg Score', 'By call volume', 'Avg Rank', 'Avg KPIs measured', 'Under ' + MIN_MEASURED_FOR_STANDING, 'Thin and perfect'],
             teamRows.map(function (t) {
-                var thinColor = t.thinPerfect > 0 ? '#c62828' : 'var(--text-tertiary)';
+                var thinTone = t.thinPerfect > 0 ? 'tone-bad' : 'text-faint';
 
                 // Flag the gap rather than leaving two numbers side by side for
                 // someone to subtract. A team whose score falls once its own call
@@ -1022,7 +1014,7 @@
                     var drop = t.avg - t.callWeighted;
                     cw = t.callWeighted.toFixed(3);
                     if (drop >= 0.1) {
-                        cw = '<span style="color: #c62828; font-weight: bold;">' + cw + '</span>' +
+                        cw = '<span class="tone-bad" style="font-weight: bold;">' + cw + '</span>' +
                             '<span style="color: var(--text-tertiary); font-size: 0.9em;"> (' + drop.toFixed(2) + ' lower)</span>';
                     }
                 }
@@ -1035,7 +1027,7 @@
                     t.avgRank != null ? t.avgRank.toFixed(1) : '-',
                     t.avgMc.toFixed(2),
                     String(t.thin),
-                    '<span style="color: ' + thinColor + '; font-weight: bold;">' + t.thinPerfect + '</span>'
+                    '<span class="' + thinTone + '" style="font-weight: bold;">' + t.thinPerfect + '</span>'
                 ];
             }),
             0
@@ -1061,7 +1053,7 @@
                     var st = _standingOf(data, r);
                     var isThin = (st.measuredCount || 0) < MIN_MEASURED_FOR_STANDING;
                     var mcCell = isThin
-                        ? '<span style="color: #c62828; font-weight: bold;">' + (st.measuredCount || 0) + ' of 5</span>'
+                        ? '<span class="tone-bad" style="font-weight: bold;">' + (st.measuredCount || 0) + ' of 5</span>'
                         : (st.measuredCount || 0) + ' of 5';
                     return [
                         _escapeHtml(r.name),
@@ -1086,7 +1078,7 @@
             html += '<p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 0.82em;">' +
                 'Every scored associate carries a supervisor label, so nothing is missing from the averages above.</p>';
         } else {
-            html += '<p style="margin: 0 0 8px 0; color: #c62828; font-size: 0.82em; line-height: 1.5;">' +
+            html += '<p class="tone-bad" style="margin: 0 0 8px 0; font-size: 0.82em; line-height: 1.5;">' +
                 unassigned.length + ' scored associate' + (unassigned.length === 1 ? '' : 's') +
                 ' matched no supervisor, so they sit in nobody\'s Avg Score. ' +
                 'If these belong to one team, that team is being scored on the members that did match.</p>';
@@ -1125,7 +1117,7 @@
                         String(t.agents.length),
                         String(got),
                         gap > 0
-                            ? '<span style="color: #c62828; font-weight: bold;">' + gap + ' unmatched</span>'
+                            ? '<span class="tone-bad" style="font-weight: bold;">' + gap + ' unmatched</span>'
                             : '<span style="color: var(--text-tertiary);">-</span>'
                     ];
                 })
@@ -1151,11 +1143,10 @@
         if (members.length === 0) return '';
 
         var isMyTeam = teamName === 'My Team';
-        var borderColor = isMyTeam ? '#1565c0' : '#e65100';
-        var headerBg = isMyTeam ? '#e3f2fd' : '#fff3e0';
+        var headerBg = isMyTeam ? 'var(--brand-soft)' : 'var(--bg-surface-raised)';
 
         var html = '<div style="margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">';
-        html += '<div style="padding: 12px 16px; background: ' + headerBg + '; border-left: 4px solid ' + borderColor + ';">';
+        html += '<div style="padding: 12px 16px; background: ' + headerBg + '; border-bottom: 1px solid var(--border);">';
         html += '<strong>' + _escapeHtml(teamName) + '</strong> <span style="color: var(--text-secondary); font-size: 0.85em;">(' + members.length + ' agents)</span>';
         html += '</div>';
 
@@ -1176,8 +1167,8 @@
         var sorted = members.slice().sort(function (a, b) { return a.compositeScore - b.compositeScore; });
 
         sorted.forEach(function (r, idx) {
-            var statusColor = r.trackStatusValue === 'on-track-exceptional' ? '#2e7d32' :
-                r.trackStatusValue === 'on-track-successful' ? '#f57f17' : '#c62828';
+            var statusTone = r.trackStatusValue === 'on-track-exceptional' ? 'tone-good' :
+                r.trackStatusValue === 'on-track-successful' ? 'tone-warn' : 'tone-bad';
 
             html += '<tr style="border-bottom: 1px solid var(--border); background: ' + (idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-raised)') + ';">';
             html += '<td style="padding: 5px 8px; text-align: center; font-weight: bold;">' + (idx + 1) + '</td>';
@@ -1188,15 +1179,15 @@
                     ? 'Under 4 weeks in seat, so reliability is not counted yet'
                     : 'Reliability scored on ' + st.seat.scaledHours + ' hours, ' + st.seat.hours + ' scaled to the whole period') + '"'
                 : '';
-            html += '<td' + seatTitle + ' style="padding: 5px 8px; text-align: center; color: ' + statusColor + '; font-weight: bold;">' +
-                (st.ratingAverage != null ? st.ratingAverage.toFixed(2) : '--') + (st.seat ? '*' : '') + '</td>';
-            html += '<td style="padding: 5px 8px; text-align: center;">#' + r.rank + ' <span style="font-size: 0.75em; color: #888;">of ' + data.totalEmployees + '</span></td>';
+            html += '<td' + seatTitle + ' style="padding: 5px 8px; text-align: center; font-weight: bold;"><span class="' + statusTone + '">' +
+                (st.ratingAverage != null ? st.ratingAverage.toFixed(2) : '--') + (st.seat ? '*' : '') + '</span></td>';
+            html += '<td style="padding: 5px 8px; text-align: center;">#' + r.rank + ' <span class="text-faint" style="font-size: 0.75em;">of ' + data.totalEmployees + '</span></td>';
 
             MATCHUP_METRICS.forEach(function (m) {
                 var val = m.isTopLevel ? r[m.key] : (r.values ? r.values[m.key] : null);
                 var metricRank = r.metricRanks?.[m.key] || '?';
                 var display = val !== null && val !== undefined ? _formatMetricDisplay(m.formatKey, val) : '--';
-                html += '<td style="padding: 5px 8px; text-align: center;">' + display + ' <span style="font-size: 0.72em; color: #888;">#' + metricRank + '</span></td>';
+                html += '<td style="padding: 5px 8px; text-align: center;">' + display + ' <span class="text-faint" style="font-size: 0.72em;">#' + metricRank + '</span></td>';
             });
 
             html += '</tr>';

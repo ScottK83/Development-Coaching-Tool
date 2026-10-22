@@ -1069,6 +1069,13 @@ textarea:focus-visible {
     border-color: var(--border-strong) !important;
 }
 
+/* A tab with nothing behind it yet (Teams with no monthly file). */
+.sub-nav button:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed;
+    background: transparent !important;
+}
+
 /* --- Cards/panels --- */
 .panel {
     padding: var(--space-5);
@@ -2139,13 +2146,28 @@ textarea:focus-visible {
 [data-theme] .tone-info { color: var(--brand-text) !important; }
 [data-theme] .tone-accent { color: var(--brand-text) !important; }
 
-/* A numeric figure that leads its card. */
-[data-theme] .stat {
+/* A numeric figure that leads its card. No colour of its own, so a tone
+   class beside it (class="stat tone-good") is the one that shows. */
+.stat {
     font-size: 20px;
     font-weight: 650;
     letter-spacing: -0.01em;
     line-height: 1.2;
-    color: var(--text-primary) !important;
+}
+
+/* A small button, for row actions inside a card or table. */
+.btn-sm,
+button.btn-sm {
+    min-height: 26px;
+    padding: 3px 10px;
+    font-size: 0.86em;
+}
+
+/* A tab row inside a card: no rule under it. */
+.sub-nav.sub-nav-inline {
+    border-bottom: none !important;
+    margin-bottom: var(--space-3);
+    padding-bottom: 0;
 }
 
 /* A callout: a tinted box with a matching edge, the bot's subtle-plus-edge

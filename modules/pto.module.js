@@ -25,16 +25,16 @@ var PAYROLL_TRC_MAP = {
 
 var ALL_TRC_LABELS = ['PTO', 'PTOST', 'PTO Unsched', 'STD', 'FMLA', 'Bereavement', 'Parental Leave', 'No Pay'];
 
-var TRC_COLORS = {
-    'PTO':             { bg: '#e8f5e9', text: '#1b5e20' },
-    'PTOST':           { bg: '#e3f2fd', text: '#0d47a1' },
-    'PTO Unsched':     { bg: '#fff3e0', text: '#e65100' },
-    'STD':             { bg: '#e0f2f1', text: '#004d40' },
-    'FMLA':            { bg: '#fce4ec', text: '#880e4f' },
-    'Bereavement':     { bg: '#ede7f6', text: '#4a148c' },
-    'Parental Leave':  { bg: '#e8eaf6', text: '#1a237e' },
-    'No Pay':          { bg: '#efebe9', text: '#3e2723' }
+// A code is a category, not a state, so every code wears the neutral kit
+// pill. Unscheduled is the one that counts against the attendance policy,
+// so it alone is amber.
+var TRC_PILL_CLASS = {
+    'PTO Unsched': 'pill pill-warn'
 };
+
+function trcPillClass(trc) {
+    return TRC_PILL_CLASS[trc] || 'pill';
+}
 
 // Track currently selected employee for event delegation
 var currentPtoEmployee = '';
@@ -433,8 +433,8 @@ function renderBalancePanel(employeeName) {
     var data = getAssociateData(store, storeKey);
     var bal = calculatePtoBalance(store, storeKey);
 
-    var remainColor = bal.remaining > 16 ? '#1b5e20' : bal.remaining >= 8 ? '#e65100' : '#b71c1c';
-    var remainBg = bal.remaining > 16 ? '#e8f5e9' : bal.remaining >= 8 ? '#fff3e0' : '#fce4ec';
+    var remainTone = bal.remaining > 16 ? 'good' : bal.remaining >= 8 ? 'warn' : 'bad';
+    var remainBg = { good: 'var(--green-soft)', warn: 'var(--yellow-soft)', bad: 'var(--red-soft)' }[remainTone];
 
     // Count unscheduled
     var unschedHours = 0;
@@ -448,27 +448,27 @@ function renderBalancePanel(employeeName) {
     });
 
     panel.innerHTML = `
-        <div style="margin-bottom:20px;padding:16px;background:var(--bg-surface);border-radius:10px;border:1px solid #d0dce5;">
+        <div class="card" style="margin-bottom:20px;padding:16px;">
             <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:12px;">
                 <div style="flex:0 0 auto;">
-                    <label style="font-size:0.8em;color:var(--text-secondary);display:block;margin-bottom:2px;">Carryover Hours</label>
+                    <label class="text-secondary" style="font-size:0.8em;display:block;margin-bottom:2px;">Carryover Hours</label>
                     <input type="number" id="ptoCarryover" value="${data.carryoverHours || 0}" min="0" step="1"
-                        style="width:90px;padding:6px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.95em;text-align:center;">
+                        style="width:90px;padding:6px 8px;font-size:0.95em;text-align:center;">
                 </div>
                 <div style="flex:0 0 auto;">
-                    <label style="font-size:0.8em;color:var(--text-secondary);display:block;margin-bottom:2px;">Annual Allotment</label>
+                    <label class="text-secondary" style="font-size:0.8em;display:block;margin-bottom:2px;">Annual Allotment</label>
                     <input type="number" id="ptoAllotment" value="${data.annualAllotment != null ? data.annualAllotment : DEFAULT_ANNUAL_ALLOTMENT}" min="0" step="1"
-                        style="width:90px;padding:6px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.95em;text-align:center;">
+                        style="width:90px;padding:6px 8px;font-size:0.95em;text-align:center;">
                 </div>
                 <div style="flex:0 0 auto;padding:6px 16px;border-radius:8px;background:${remainBg};text-align:center;">
-                    <div style="font-size:0.75em;color:var(--text-secondary);">PTO Remaining</div>
-                    <div style="font-size:1.3em;font-weight:700;color:${remainColor};">${bal.remaining}h</div>
+                    <div class="text-secondary" style="font-size:0.75em;">PTO Remaining</div>
+                    <div class="tone-${remainTone}" style="font-size:1.3em;font-weight:700;">${bal.remaining}h</div>
                 </div>
-                <div style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;color:var(--text-secondary);">
+                <div class="text-secondary" style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;">
                     Used: <strong>${bal.used}h</strong> of ${bal.carryover + bal.allotment}h
                 </div>
             </div>
-            ${unschedHours > 0 ? `<div style="padding:6px 12px;background:#fff3e0;border-radius:6px;font-size:0.85em;color:#e65100;">
+            ${unschedHours > 0 ? `<div class="callout callout-warn" style="padding:6px 12px;font-size:0.85em;">
                 Unscheduled PTO: <strong>${unschedHours.toFixed(1)}h</strong> across <strong>${unschedDays}</strong> day${unschedDays !== 1 ? 's' : ''}
             </div>` : ''}
         </div>`;
@@ -514,7 +514,7 @@ function renderEmployeeEntries(employeeName) {
         .sort((a, b) => a.date.localeCompare(b.date));
 
     if (!entries.length) {
-        container.innerHTML = '<p style="color:var(--text-tertiary);text-align:center;padding:20px;">No payroll entries. Upload a timecard Excel above.</p>';
+        container.innerHTML = '<p class="text-faint" style="text-align:center;padding:20px;">No payroll entries. Upload a timecard Excel above.</p>';
         return;
     }
 
@@ -534,50 +534,50 @@ function renderEntriesTable(container, entries, storeKey) {
 
     let html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">';
     Object.entries(totals).forEach(([trc, hrs]) => {
-        const color = TRC_COLORS[trc] || { bg: '#f5f5f5', text: '#333' };
-        html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:${color.bg};color:${color.text};">${escapeHtml(trc)}: ${hrs.toFixed(1)}h</span>`;
+        html += `<span class="${trcPillClass(trc)}" style="padding:5px 12px;font-size:0.85em;">${escapeHtml(trc)}: ${hrs.toFixed(1)}h</span>`;
     });
-    html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:var(--bg-surface-raised);color:var(--text-primary);">Total: ${totalHours.toFixed(1)}h</span>`;
+    html += `<span class="pill" style="padding:5px 12px;font-size:0.85em;">Total: ${totalHours.toFixed(1)}h</span>`;
     if (unschedHours > 0) {
-        html += `<span style="display:inline-block;padding:5px 12px;border-radius:16px;font-size:0.85em;font-weight:600;background:#fff3e0;color:#e65100;">Unsched: ${unschedHours.toFixed(1)}h</span>`;
+        html += `<span class="pill pill-warn" style="padding:5px 12px;font-size:0.85em;">Unsched: ${unschedHours.toFixed(1)}h</span>`;
     }
     html += '</div>';
 
     // Add entry button
     html += `<div style="margin-bottom:10px;">
-        <button type="button" id="ptoAddEntryBtn" style="padding:6px 14px;border:1px dashed #5a2c8a;background:#f8f0ff;color:#5a2c8a;border-radius:6px;font-size:0.85em;cursor:pointer;">+ Add Entry</button>
+        <button type="button" id="ptoAddEntryBtn" class="btn-secondary" style="padding:6px 14px;font-size:0.85em;">+ Add Entry</button>
     </div>`;
 
     // Table
-    html += `<table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+    html += `<table class="data-table" style="font-size:0.9em;">
         <thead>
-            <tr style="background:var(--bg-surface-raised);text-align:left;">
-                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Date</th>
-                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Code</th>
-                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Hours</th>
-                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;">Status</th>
-                <th style="padding:8px 10px;border-bottom:2px solid #dee2e6;width:40px;"></th>
+            <tr>
+                <th>Date</th>
+                <th>Code</th>
+                <th>Hours</th>
+                <th>Status</th>
+                <th style="width:40px;"></th>
             </tr>
         </thead>
         <tbody>`;
 
     entries.forEach(e => {
-        const color = TRC_COLORS[e.trc] || { bg: '#f5f5f5', text: '#333' };
         const dateStr = formatDateDisplay(e.date);
-        const statusColor = (e.status || '').toLowerCase().includes('approved') ? '#1b5e20' : '#e65100';
-        const rowBorder = e.unscheduled ? 'border-left:3px solid #e65100;' : '';
-        const unschedLabel = e.unscheduled ? '<span style="display:inline-block;padding:2px 6px;border-radius:8px;font-size:0.78em;font-weight:600;background:#fff3e0;color:#e65100;">UNSCHED</span>' : '';
+        const statusTone = (e.status || '').toLowerCase().includes('approved') ? 'tone-good' : 'tone-warn';
+        // The amber edge sits on the first cell: the dark layer forces a
+        // row's own border colour.
+        const rowEdge = e.unscheduled ? 'box-shadow:inset 3px 0 0 var(--yellow);' : '';
+        const unschedLabel = e.unscheduled ? '<span class="pill pill-warn" style="padding:2px 6px;font-size:0.78em;">UNSCHED</span>' : '';
 
-        html += `<tr style="border-bottom:1px solid #f0f0f0;${rowBorder}" data-entry-id="${escapeHtml(e.id)}">
-            <td style="padding:7px 10px;">${escapeHtml(dateStr)}</td>
+        html += `<tr data-entry-id="${escapeHtml(e.id)}">
+            <td style="padding:7px 10px;${rowEdge}">${escapeHtml(dateStr)}</td>
             <td style="padding:7px 10px;" class="pto-edit-trc" data-id="${escapeHtml(e.id)}" title="Click to change">
-                <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.88em;font-weight:600;background:${color.bg};color:${color.text};cursor:pointer;">${escapeHtml(e.trc)}</span>
+                <span class="${trcPillClass(e.trc)}" style="padding:2px 8px;font-size:0.88em;cursor:pointer;">${escapeHtml(e.trc)}</span>
                 ${unschedLabel}
             </td>
             <td style="padding:7px 10px;" class="pto-edit-hours" data-id="${escapeHtml(e.id)}" title="Click to edit">
                 <span style="cursor:pointer;border-bottom:1px dashed var(--border);">${e.hours}</span>
             </td>
-            <td style="padding:7px 10px;color:${statusColor};font-size:0.88em;">${escapeHtml(e.status || '')}</td>
+            <td class="${statusTone}" style="padding:7px 10px;font-size:0.88em;">${escapeHtml(e.status || '')}</td>
             <td style="padding:7px 10px;text-align:center;">
                 <button type="button" class="pto-delete-entry" data-id="${escapeHtml(e.id)}" title="Delete entry"
                     style="background:none;border:none;color:var(--red-text);cursor:pointer;font-size:1.1em;padding:2px 6px;">&#x2715;</button>
@@ -683,7 +683,7 @@ function startEditHours(cell, entryId) {
     input.min = '0';
     input.step = '0.25';
     input.value = entry.hours;
-    input.style.cssText = 'width:60px;padding:3px 6px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;text-align:center;';
+    input.style.cssText = 'width:60px;padding:3px 6px;font-size:0.9em;text-align:center;';
 
     cell.innerHTML = '';
     cell.appendChild(input);
@@ -726,7 +726,8 @@ function showAddEntryForm() {
     var today = window.DevCoachModules?.sharedUtils?.formatLocalDate?.() || new Date().toISOString().slice(0, 10);
     var form = document.createElement('div');
     form.id = 'ptoAddEntryForm';
-    form.style.cssText = 'padding:12px 16px;background:#f8f0ff;border:1px solid #d0b8e8;border-radius:8px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;';
+    form.className = 'card-sunken';
+    form.style.cssText = 'padding:12px 16px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;';
 
     var trcOptions = ALL_TRC_LABELS.map(function(label) {
         return '<option value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</option>';
@@ -734,24 +735,24 @@ function showAddEntryForm() {
 
     form.innerHTML = `
         <div>
-            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Date</label>
-            <input type="date" id="ptoNewDate" value="${today}" style="padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;">
+            <label class="text-secondary" style="font-size:0.78em;display:block;">Date</label>
+            <input type="date" id="ptoNewDate" value="${today}" style="padding:5px 8px;font-size:0.9em;">
         </div>
         <div>
-            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Code</label>
-            <select id="ptoNewTrc" style="padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;">${trcOptions}</select>
+            <label class="text-secondary" style="font-size:0.78em;display:block;">Code</label>
+            <select id="ptoNewTrc" style="padding:5px 8px;font-size:0.9em;">${trcOptions}</select>
         </div>
         <div>
-            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Hours</label>
-            <input type="number" id="ptoNewHours" value="8" min="0" step="0.25" style="width:70px;padding:5px 8px;border:1px solid #c0cdd8;border-radius:5px;font-size:0.9em;text-align:center;">
+            <label class="text-secondary" style="font-size:0.78em;display:block;">Hours</label>
+            <input type="number" id="ptoNewHours" value="8" min="0" step="0.25" style="width:70px;padding:5px 8px;font-size:0.9em;text-align:center;">
         </div>
         <div>
-            <label style="font-size:0.78em;color:var(--text-secondary);display:block;">Unsched?</label>
+            <label class="text-secondary" style="font-size:0.78em;display:block;">Unsched?</label>
             <input type="checkbox" id="ptoNewUnsched" style="margin-top:6px;">
         </div>
         <div style="display:flex;gap:6px;">
-            <button type="button" id="ptoSaveNewEntry" style="padding:6px 14px;background:#5a2c8a;color:#fff;border:none;border-radius:5px;font-size:0.85em;cursor:pointer;">Save</button>
-            <button type="button" id="ptoCancelNewEntry" style="padding:6px 14px;background:var(--bg-surface-sunken);color:var(--text-primary);border:1px solid var(--border);border-radius:5px;font-size:0.85em;cursor:pointer;">Cancel</button>
+            <button type="button" id="ptoSaveNewEntry" class="btn-primary" style="padding:6px 14px;font-size:0.85em;">Save</button>
+            <button type="button" id="ptoCancelNewEntry" class="btn-ghost" style="padding:6px 14px;font-size:0.85em;">Cancel</button>
         </div>`;
 
     var addBtn = document.getElementById('ptoAddEntryBtn');

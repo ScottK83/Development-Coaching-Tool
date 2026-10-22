@@ -130,18 +130,26 @@
     // STATUS DISPLAY
     // ============================================
 
+    // A class, not an inline colour: the dark layer repaints a div's or span's
+    // inline text colour, and only the kit's tone classes get past it.
+    const STATUS_TONE_CLASSES = ['tone-good', 'tone-bad', 'text-secondary'];
+    function applyStatusTone(el, type) {
+        if (!el || !el.classList) return;
+        STATUS_TONE_CLASSES.forEach(c => el.classList.remove(c));
+        el.classList.add(type === 'success' ? 'tone-good' : type === 'error' ? 'tone-bad' : 'text-secondary');
+    }
+
     function setCallListeningSyncStatus(message, type = 'info') {
         const statusEl = document.getElementById('callListeningSyncStatus');
-        const color = type === 'success' ? '#2e7d32' : type === 'error' ? '#b71c1c' : '#546e7a';
         if (statusEl) {
-            statusEl.style.color = color;
+            applyStatusTone(statusEl, type);
             statusEl.textContent = message;
         }
 
         const footerSyncStatus = document.getElementById('syncStatusFooter');
         if (footerSyncStatus) {
             footerSyncStatus.textContent = `Sync: ${message || 'unknown'}`;
-            footerSyncStatus.style.color = color;
+            applyStatusTone(footerSyncStatus, type);
         }
     }
 
@@ -162,13 +170,7 @@
         if (!statusEl) return;
 
         statusEl.textContent = message;
-        if (type === 'success') {
-            statusEl.style.color = '#2e7d32';
-        } else if (type === 'error') {
-            statusEl.style.color = '#c62828';
-        } else {
-            statusEl.style.color = '#546e7a';
-        }
+        applyStatusTone(statusEl, type);
     }
 
     // ============================================

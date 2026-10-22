@@ -22,8 +22,10 @@
      * how they end up disagreeing.
      */
 
-    var ACCENT = '#e65100';
-    var ACCENT_BG = '#fff3e0';
+    // The chosen chip is the raised pill the sub-nav uses; the accent is kept
+    // for a page's one main action.
+    var CHIP_ON = 'border:1px solid var(--border-strong); background:var(--bg-active); color:var(--text-primary);';
+    var CHIP_OFF = 'border:1px solid var(--border); background:transparent; color:var(--text-secondary);';
 
     function _escapeHtml(str) {
         var mod = window.DevCoachModules && window.DevCoachModules.sharedUtils;
@@ -64,14 +66,14 @@
     function chip(item, chosenId, chipClass) {
         var on = item.id === chosenId;
         var usable = item.available !== false;
-        return '<button type="button" class="' + chipClass + '" data-period-id="' + _escapeHtml(item.id) + '"' +
+        return '<button type="button" class="' + chipClass + (on ? ' is-active' : '') + '"' +
+            (on ? ' aria-pressed="true"' : '') +
+            ' data-period-id="' + _escapeHtml(item.id) + '"' +
             (usable ? '' : ' disabled') +
             ' title="' + _escapeHtml(chipTitle(item)) + '"' +
-            ' style="padding:5px 12px; border:1px solid ' + (on ? ACCENT : 'var(--border)') + '; border-radius:999px;' +
+            ' style="padding:5px 12px; ' + (on ? CHIP_ON : CHIP_OFF) + ' border-radius:999px;' +
             ' font-size:0.82em; font-weight:600;' +
-            ' cursor:' + (usable ? 'pointer' : 'not-allowed') + '; opacity:' + (usable ? '1' : '0.45') + ';' +
-            ' background:' + (on ? ACCENT_BG : 'var(--bg-surface-raised)') + ';' +
-            ' color:' + (on ? ACCENT : 'var(--text-secondary)') + ';">' +
+            ' cursor:' + (usable ? 'pointer' : 'not-allowed') + '; opacity:' + (usable ? '1' : '0.45') + ';">' +
             _escapeHtml(item.label) + '</button>';
     }
 

@@ -919,7 +919,7 @@
             if (gaps.length) {
                 const shown = gaps.slice(0, MAX_RANGE_GAPS_SHOWN);
                 const chips = shown.map(g =>
-                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))}. ${fmtShort(parseLocalDate(g.endDate))}</span>`
+                    `<span style="display:inline-block; padding:2px 8px; margin:2px 4px 2px 0; background:var(--bg-surface); border:1px solid var(--yellow); border-radius:10px; font-size:0.9em; white-space:nowrap;">${fmtShort(parseLocalDate(g.startDate))}. ${fmtShort(parseLocalDate(g.endDate))}</span>`
                 ).join('');
                 const more = gaps.length > shown.length
                     ? `<div style="margin-top:4px;">+ ${gaps.length - shown.length} more.</div>`
@@ -973,8 +973,8 @@
     const CHIP_STYLE_ID = 'uploadGapChipStyles';
     const GAP_STATUS_ID = 'uploadWizardGapStatus';
     const CHIP_BASE_STYLE = 'display:inline-block; padding:3px 9px; margin:2px 4px 2px 0; ' +
-        'background:var(--bg-surface, var(--bg-surface)); color:var(--text-primary, var(--text-primary)); ' +
-        'border:1px solid var(--yellow, #e0a800); border-radius:10px; font-size:0.82em; ' +
+        'background:var(--bg-surface); color:var(--text-primary); ' +
+        'border:1px solid var(--yellow); border-radius:10px; font-size:0.82em; ' +
         'white-space:nowrap; cursor:pointer; font-family:inherit;';
 
     function _escapeHtml(str) {
@@ -1002,9 +1002,9 @@
         const el = document.createElement('style');
         el.id = CHIP_STYLE_ID;
         el.textContent =
-            `.${CHIP_CLASS}:hover { background: var(--yellow, #e0a800) !important; color: #2b2000 !important; }` +
-            `.${CHIP_CLASS}:focus { outline: 3px solid var(--brand, #0d6efd) !important; outline-offset: 2px; }` +
-            `.${CHIP_CLASS}:focus-visible { outline: 3px solid var(--brand, #0d6efd) !important; outline-offset: 2px; }`;
+            `.${CHIP_CLASS}:hover { background: var(--yellow-soft) !important; color: var(--yellow-text) !important; }` +
+            `.${CHIP_CLASS}:focus { outline: 3px solid var(--brand-text) !important; outline-offset: 2px; }` +
+            `.${CHIP_CLASS}:focus-visible { outline: 3px solid var(--brand-text) !important; outline-offset: 2px; }`;
         document.head.appendChild(el);
     }
 
@@ -1065,9 +1065,9 @@
         el.textContent = text || '';
         if (!el.style) return;
         el.style.display = text ? 'block' : 'none';
-        el.style.color = tone === 'bad'
-            ? 'var(--red-text, #b3261e)'
-            : 'var(--text-primary, var(--text-primary))';
+        // A class, not an inline colour: the dark layer repaints a div's inline
+        // text colour, and only the kit's tone classes get past it.
+        el.className = tone === 'bad' ? 'tone-bad' : 'text-primary';
     }
 
     /* Put a chip's period into the picker.
@@ -1186,10 +1186,10 @@
         // Colors come from the theme variables so the banner stays legible in
         // both light and dark mode. Hardcoded hex reads as invisible text
         // once the dark theme swaps the surface underneath it.
-        const HEAD = 'font-weight:bold; margin-bottom:6px; color:var(--yellow-text, #6c4400);';
-        const BODY = 'font-size:0.85em; margin-bottom:6px; color:var(--text-primary, var(--text-primary));';
+        const HEAD = 'font-weight:bold; margin-bottom:6px;';
+        const BODY = 'font-size:0.85em; margin-bottom:6px;';
         const RULE = 'margin-top:12px; padding-top:10px; border-top:1px solid var(--border);';
-        const FAINT = 'margin-top:6px; font-size:0.8em; color:var(--yellow-text, #6c4400);';
+        const FAINT = 'margin-top:6px; font-size:0.8em;';
 
         const weekChips = chipsFor(weeks, weekChipText);
         const monthChips = chipsFor(monthOptions, monthChipText);
@@ -1209,12 +1209,12 @@
         else if (ytd && ytd.isStale) tally.push(`YTD ${ytd.daysBehind} days old`);
         const anyChips = !!(weekChips || monthChips || quarterChips || priorChips);
         const header =
-            `<div style="${HEAD}">📋 Coverage${gaps.year ? ` for ${gaps.year}` : ''}: ${tally.join(' · ')}</div>` +
+            `<div class="tone-warn" style="${HEAD}">Coverage${gaps.year ? ` for ${gaps.year}` : ''}: ${tally.join(' · ')}</div>` +
             (anyChips ? `<div style="${BODY}">Click any chip to load that period into the picker below.</div>` : '');
 
         // YTD leads, because it is the only one here that turns something off.
         const ytdBlock = !ytdProblem ? '' :
-            `<div style="${HEAD}">${ytd.isMissing
+            `<div class="tone-warn" style="${HEAD}">${ytd.isMissing
                 ? `🚫 No YTD on file for ${ytd.year}`
                 : `🕓 Your YTD closed in ${ytd.closedMonth}`}</div>` +
             `<div style="${BODY}">${ytd.isMissing
@@ -1226,10 +1226,10 @@
             `<div style="${BODY}">YTD is the one period with no chip. It needs the end date it covers, which only you know, so pick "YTD (pick end date)" from the dropdown below and set that date.</div>`;
 
         const more = totalMissing > shownCount
-            ? `<div style="${FAINT}">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
+            ? `<div class="tone-warn" style="${FAINT}">+ ${totalMissing - shownCount} older week${totalMissing - shownCount === 1 ? '' : 's'} not shown.</div>`
             : '';
         const gapBlock = !totalMissing ? '' :
-            `<div style="${HEAD}">⚠️ ${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>` +
+            `<div class="tone-warn" style="${HEAD}">${totalMissing} week${totalMissing === 1 ? '' : 's'} never uploaded</div>` +
             `<div style="${BODY}">Week-over-week trends skip these gaps. Click one to load it into the picker below.</div>` +
             `<div>${weekChips}</div>${more}`;
 
@@ -1238,16 +1238,16 @@
         // month rebuilt from weeks and a month uploaded whole are ranked by the
         // same code.
         const priorMore = (gaps.priorCount || 0) > priorWeeks.length
-            ? `<div style="${FAINT}">+ ${gaps.priorCount - priorWeeks.length} older week${gaps.priorCount - priorWeeks.length === 1 ? '' : 's'} not shown.</div>`
+            ? `<div class="tone-warn" style="${FAINT}">+ ${gaps.priorCount - priorWeeks.length} older week${gaps.priorCount - priorWeeks.length === 1 ? '' : 's'} not shown.</div>`
             : '';
         // firstCoveredDate is null when the store is empty, and formatting that
         // rendered a heading reading "Nothing uploaded before Invalid Date" on
         // exactly the install least able to interpret it.
         const startHead = gaps.firstCoveredDate
-            ? `📅 Nothing uploaded before ${fmtLong(parseLocalDate(gaps.firstCoveredDate))}`
-            : '📅 Nothing uploaded yet this year';
+            ? `Nothing uploaded before ${fmtLong(parseLocalDate(gaps.firstCoveredDate))}`
+            : 'Nothing uploaded yet this year';
         const startBlock = !(gaps.priorCount || months.length) ? '' :
-            `<div style="${HEAD}">${startHead}</div>` +
+            `<div class="tone-warn" style="${HEAD}">${startHead}</div>` +
             (months.length
                 ? `<div style="${BODY}">${andList(months)} ${months.length === 1 ? 'has' : 'have'} no data at all, so ${months.length === 1 ? 'it is' : 'they are'} blank in trends, month rebuilds and the rankings trajectory.</div>`
                 : '') +
@@ -1261,7 +1261,7 @@
                 : '');
 
         const quarterBlock = !quarterOptions.length ? '' :
-            `<div style="${HEAD}">📆 ${quarterOptions.length} completed quarter${quarterOptions.length === 1 ? '' : 's'} with no quarterly upload</div>` +
+            `<div class="tone-warn" style="${HEAD}">${quarterOptions.length} completed quarter${quarterOptions.length === 1 ? '' : 's'} with no quarterly upload</div>` +
             `<div style="${BODY}">${quarterOptions.map(q => {
                 const miss = q.monthsMissing || [];
                 return miss.length >= 3
@@ -1271,7 +1271,7 @@
             `<div>${quarterChips}</div>`;
 
         const status = `<div id="${GAP_STATUS_ID}" role="status" aria-live="polite" ` +
-            `style="display:none; ${RULE} font-size:0.85em; font-weight:bold; color:var(--text-primary, var(--text-primary));"></div>`;
+            `style="display:none; ${RULE} font-size:0.85em; font-weight:bold;"></div>`;
 
         const blocks = [ytdBlock, gapBlock, startBlock, quarterBlock].filter(Boolean);
 

@@ -252,10 +252,10 @@ Please generate the email now.`;
     function buildIndividualTrendHeaderHtml(employeeName, descriptor, currentEmp, prevEmp, thirdEmp) {
         return `
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
-<h5 style="margin-top: 0; margin-bottom: 0; color: #f5576c;">Individual Coaching Insights for ${_esc(employeeName)} (${descriptor.shortLabel})</h5>
-<button type="button" class="trend-back-to-team-btn" style="border: 1px solid #f2c3cc; background: #fff7fa; color: #9c2746; border-radius: 999px; padding: 7px 12px; font-size: 0.85em; font-weight: 700; cursor: pointer;">← Back to Team</button>
+<h5 style="margin-top: 0; margin-bottom: 0; color: var(--text-primary);">Individual Coaching Insights for ${_esc(employeeName)} (${descriptor.shortLabel})</h5>
+<button type="button" class="trend-back-to-team-btn btn-ghost" style="font-size: 0.85em;">← Back to Team</button>
 </div>
-<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">
+<div class="card-sunken text-secondary" style="margin-bottom: 12px; padding: 10px; font-size: 0.9em;">
 <strong>Confidence:</strong> ${thirdEmp ? 'High' : 'Medium'} • Current window: ${currentEmp.periodsIncluded} ${currentEmp.periodsIncluded === 1 ? 'period' : 'periods'} • Comparison window: ${prevEmp.periodsIncluded}
 </div>`;
     }
@@ -296,21 +296,22 @@ Please generate the email now.`;
             ? `${weakest.label} is getting worse by ${Math.abs(weakest.delta).toFixed(1)}${moved(weakest, 'declining')}.`
             : 'No meaningful declines detected this cycle.';
 
-        return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #f2d5dd; border-radius: 8px; background: #fff9fb;">
-            <div style="font-weight: 700; color: #9c2746; margin-bottom: 8px;">Quick Summary (${descriptor.shortLabel})</div>
-            <div style="display: grid; gap: 6px; font-size: 0.92em; color: #3b4a5a;">
+        return `<div class="card-sunken" style="margin-bottom: 15px; padding: 12px;">
+            <div class="text-primary" style="font-weight: 700; margin-bottom: 8px;">Quick Summary (${descriptor.shortLabel})</div>
+            <div style="display: grid; gap: 6px; font-size: 0.92em;">
                 <div><strong>Improvement:</strong> ${_esc(improvementText)}</div>
                 <div><strong>Downfall:</strong> ${_esc(downfallText)}</div>
             </div>
         </div>`;
     }
 
-    function buildIndividualTrendItemsSectionHtml(title, titleColor, itemBorderColor, itemBgColor, items) {
+    // tone: 'good' | 'warn' | 'bad' | 'info', the kit's state colours.
+    function buildIndividualTrendItemsSectionHtml(title, tone, items) {
         if (!items.length) return '';
         let html = `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
+        html += `<div class="tone-${tone}" style="font-weight: 600; margin-bottom: 8px;">${title}</div>`;
         items.forEach(item => {
-            html += `<div style="padding: 10px; border-left: 3px solid ${itemBorderColor}; background: ${itemBgColor}; margin-bottom: 6px; border-radius: 4px;">${item}</div>`;
+            html += `<div class="callout callout-${tone}" style="padding: 10px; margin-bottom: 6px;">${item}</div>`;
         });
         html += `</div>`;
         return html;
@@ -319,13 +320,12 @@ Please generate the email now.`;
     function buildIndividualTrendCoachingImpactHtml(coachingImpact) {
         if (!coachingImpact) return '';
 
-        const impactColor = coachingImpact.status === 'positive' ? '#2e7d32' : coachingImpact.status === 'negative' ? '#c62828' : '#ef6c00';
-        const impactBg = coachingImpact.status === 'positive' ? '#e8f5e9' : coachingImpact.status === 'negative' ? '#ffebee' : '#fff3e0';
+        const impactTone = coachingImpact.status === 'positive' ? 'good' : coachingImpact.status === 'negative' ? 'bad' : 'warn';
         const impactLabel = coachingImpact.status === 'positive' ? 'Coaching approach is working' : coachingImpact.status === 'negative' ? 'Coaching approach may need adjustment' : 'Mixed coaching impact';
 
         let html = `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: ${impactColor}; margin-bottom: 8px;">📌 Coaching Impact Score</div>`;
-        html += `<div style="padding: 10px; border-left: 3px solid ${impactColor}; background: ${impactBg}; margin-bottom: 6px; border-radius: 4px;">`;
+        html += `<div class="tone-${impactTone}" style="font-weight: 600; margin-bottom: 8px;">Coaching Impact Score</div>`;
+        html += `<div class="callout callout-${impactTone}" style="padding: 10px; margin-bottom: 6px;">`;
         html += `<strong>${coachingImpact.score}/100</strong> • ${impactLabel} (based on ${coachingImpact.metricCount} coached metrics since ${new Date(coachingImpact.generatedAt).toLocaleDateString()})`;
         if (coachingImpact.details.length) {
             html += `<div style="margin-top: 6px;">${coachingImpact.details.join(' • ')}</div>`;
@@ -371,23 +371,23 @@ Please generate the email now.`;
         let html = `<div style="background: var(--bg-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border);">`;
         html += buildIndividualTrendHeaderHtml(employeeName, buckets.descriptor, currentEmp, prevEmp, thirdEmp);
         html += buildIndividualTrendBriefSummaryHtml(currentEmp, prevEmp, buckets.descriptor, context);
-        html += buildIndividualTrendItemsSectionHtml('🚨 Attention Needed:', '#e53935', '#e53935', '#ffebee', warnings);
-        html += buildIndividualTrendItemsSectionHtml('✨ Wins & Strengths:', '#43a047', '#43a047', '#e8f5e9', wins);
+        html += buildIndividualTrendItemsSectionHtml('Attention Needed:', 'bad', warnings);
+        html += buildIndividualTrendItemsSectionHtml('Wins & Strengths:', 'good', wins);
         html += buildIndividualTrendCoachingImpactHtml(coachingImpact);
 
         if (rationale.length > 0) {
             html += `<div style="margin-bottom: 15px;">`;
-            html += `<div style="font-weight: 600; color: #455a64; margin-bottom: 8px;">🧩 Why these insights fired</div>`;
+            html += `<div class="text-secondary" style="font-weight: 600; margin-bottom: 8px;">Why these insights fired</div>`;
             rationale.slice(0, 3).forEach(item => {
-                html += `<div style="padding: 10px; border-left: 3px solid #607d8b; background: #eceff1; margin-bottom: 6px; border-radius: 4px;">${item}</div>`;
+                html += `<div class="callout" style="padding: 10px; margin-bottom: 6px;">${item}</div>`;
             });
             html += `</div>`;
         }
 
         html += buildIndividualTrendNoSignalsHtml(employeeName, warnings, wins);
 
-        html += `<div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #ff9800;">`;
-        html += `<strong>💡 Next Step:</strong> Click "Generate Individual Coaching Email" to create a personalized development email with specific tips and action items.`;
+        html += `<div class="callout callout-info" style="margin-top: 15px; padding: 12px;">`;
+        html += `<strong>Next Step:</strong> Click "Generate Individual Coaching Email" to create a personalized development email with specific tips and action items.`;
         html += `</div>`;
         html += `</div>`;
 
@@ -458,8 +458,8 @@ Please generate the email now.`;
     }
 
     function buildGroupTrendHeaderHtml(buckets) {
-        let html = `<h5 style="margin-top: 0; color: #764ba2;">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
-        html += `<div style="margin-bottom: 12px; padding: 10px; background: #f7f9fc; border-radius: 6px; border-left: 4px solid #607d8b; color: #455a64; font-size: 0.9em;">`;
+        let html = `<h5 style="margin-top: 0; color: var(--text-primary);">Team-Wide Trend Analysis (${buckets.descriptor.shortLabel})</h5>`;
+        html += `<div class="card-sunken text-secondary" style="margin-bottom: 12px; padding: 10px; font-size: 0.9em;">`;
         html += `<strong>Confidence:</strong> ${buckets.thirdKeys.length ? 'High' : 'Medium'} • Current window periods: ${buckets.currentKeys.length} • Comparison window periods: ${buckets.previousKeys.length}`;
         html += `</div>`;
         return html;
@@ -468,14 +468,14 @@ Please generate the email now.`;
     function buildGroupTrendSummaryCardsHtml(teamInsights) {
         let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">`;
 
-        html += `<div style="padding: 15px; background: linear-gradient(135deg, #e53935 0%, #ef5350 100%); color: white; border-radius: 8px; text-align: center;">`;
-        html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
-        html += `<div style="font-size: 0.9em; opacity: 0.95;">At Risk (3-period decline)</div>`;
+        html += `<div class="callout callout-bad" style="padding: 15px; text-align: center;">`;
+        html += `<div class="tone-bad" style="font-size: 2em; font-weight: bold;">${teamInsights.atRisk.length}</div>`;
+        html += `<div class="text-secondary" style="font-size: 0.9em;">At Risk (3-period decline)</div>`;
         html += `</div>`;
 
-        html += `<div style="padding: 15px; background: linear-gradient(135deg, #fb8c00 0%, #ffa726 100%); color: white; border-radius: 8px; text-align: center;">`;
-        html += `<div style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
-        html += `<div style="font-size: 0.9em; opacity: 0.95;">Declining (needs attention)</div>`;
+        html += `<div class="callout callout-warn" style="padding: 15px; text-align: center;">`;
+        html += `<div class="tone-warn" style="font-size: 2em; font-weight: bold;">${teamInsights.declining.length}</div>`;
+        html += `<div class="text-secondary" style="font-size: 0.9em;">Declining (needs attention)</div>`;
         html += `</div>`;
         html += `</div>`;
 
@@ -487,27 +487,28 @@ Please generate the email now.`;
         const improvements = teamInsights.improving;
         const improvementExamples = improvements.slice(0, 3);
         const downfallExamples = downfalls.slice(0, 3);
-        const chipsHtml = (names, borderColor) => {
+        const chipsHtml = (names) => {
             if (!names.length) return '';
-            return `<span style="display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle;">${names.map(name => `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" style="border: 1px solid ${borderColor}; background: var(--bg-surface); color: #1f2f46; border-radius: 999px; padding: 2px 8px; font-size: 0.8em; font-weight: 700; cursor: pointer;">${_esc(name)}</button>`).join('')}</span>`;
+            return `<span style="display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle;">${names.map(name => `<button type="button" class="trend-drilldown-btn btn-secondary" data-trend-associate="${_escAttr(name)}" style="border-radius: 999px; padding: 2px 8px; min-height: 0; font-size: 0.8em;">${_esc(name)}</button>`).join('')}</span>`;
         };
 
-        return `<div style="margin-bottom: 15px; padding: 12px; border: 1px solid #d4e3fb; border-radius: 8px; background: #f8fbff;">
-            <div style="font-weight: 700; color: #2f4f87; margin-bottom: 8px;">Team Summary (${descriptor.shortLabel})</div>
-            <div style="display: grid; gap: 6px; font-size: 0.92em; color: #3b4a5a;">
-                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} improving${improvementExamples.length ? ` (${chipsHtml(improvementExamples, '#43a047')})` : ''}.</div>
-                <div><strong>Downfalls:</strong> ${downfalls.length} associate${downfalls.length === 1 ? '' : 's'} need attention${downfallExamples.length ? ` (${chipsHtml(downfallExamples, '#fb8c00')})` : ''}.</div>
+        return `<div class="card-sunken" style="margin-bottom: 15px; padding: 12px;">
+            <div class="text-primary" style="font-weight: 700; margin-bottom: 8px;">Team Summary (${descriptor.shortLabel})</div>
+            <div style="display: grid; gap: 6px; font-size: 0.92em;">
+                <div><strong>Improvements:</strong> ${improvements.length} associate${improvements.length === 1 ? '' : 's'} improving${improvementExamples.length ? ` (${chipsHtml(improvementExamples)})` : ''}.</div>
+                <div><strong>Downfalls:</strong> ${downfalls.length} associate${downfalls.length === 1 ? '' : 's'} need attention${downfallExamples.length ? ` (${chipsHtml(downfallExamples)})` : ''}.</div>
             </div>
         </div>`;
     }
 
-    function buildGroupTrendNamedSectionHtml(title, titleColor, bgColor, borderColor, names) {
+    // tone: 'good' | 'warn' | 'bad' | 'info', the kit's state colours.
+    function buildGroupTrendNamedSectionHtml(title, tone, names) {
         if (!names.length) return '';
         let html = `<div style="margin-bottom: 15px;">`;
-        html += `<div style="font-weight: 600; color: ${titleColor}; margin-bottom: 8px;">${title}</div>`;
-        html += `<div style="padding: 12px; background: ${bgColor}; border-radius: 6px; border-left: 4px solid ${borderColor}; display: flex; gap: 8px; flex-wrap: wrap;">`;
+        html += `<div class="tone-${tone}" style="font-weight: 600; margin-bottom: 8px;">${title}</div>`;
+        html += `<div class="callout callout-${tone}" style="padding: 12px; display: flex; gap: 8px; flex-wrap: wrap;">`;
         names.forEach(name => {
-            html += `<button type="button" class="trend-drilldown-btn" data-trend-associate="${_escAttr(name)}" title="Open ${_esc(name)} trend detail" style="border: 1px solid ${borderColor}; background: var(--bg-surface); color: #1f2f46; border-radius: 999px; padding: 6px 10px; font-size: 0.86em; font-weight: 600; cursor: pointer;">${_esc(name)}</button>`;
+            html += `<button type="button" class="trend-drilldown-btn btn-secondary" data-trend-associate="${_escAttr(name)}" title="Open ${_esc(name)} trend detail" style="border-radius: 999px; padding: 6px 10px; font-size: 0.86em;">${_esc(name)}</button>`;
         });
         html += `</div></div>`;
         return html;
@@ -550,17 +551,17 @@ Please generate the email now.`;
         html += buildGroupTrendHeaderHtml(buckets);
         html += buildGroupTrendSummaryCardsHtml(teamInsights);
         html += buildGroupTrendBriefSummaryHtml(teamInsights, buckets.descriptor);
-        html += buildGroupTrendNamedSectionHtml('🚨 At Risk - Need Immediate Coaching:', '#e53935', '#ffebee', '#e53935', teamInsights.atRisk);
-        html += buildGroupTrendNamedSectionHtml('⚠️ Declining - Watch Closely:', '#fb8c00', '#fff3e0', '#fb8c00', teamInsights.declining);
-        html += buildGroupTrendNamedSectionHtml('🎉 Improving - Recognize Progress:', '#43a047', '#e8f5e9', '#43a047', teamInsights.improving);
-        html += buildGroupTrendNamedSectionHtml('✅ Consistent Performers:', '#1e88e5', '#e3f2fd', '#1e88e5', teamInsights.consistent);
+        html += buildGroupTrendNamedSectionHtml('At Risk - Need Immediate Coaching:', 'bad', teamInsights.atRisk);
+        html += buildGroupTrendNamedSectionHtml('Declining - Watch Closely:', 'warn', teamInsights.declining);
+        html += buildGroupTrendNamedSectionHtml('Improving - Recognize Progress:', 'good', teamInsights.improving);
+        html += buildGroupTrendNamedSectionHtml('Consistent Performers:', 'info', teamInsights.consistent);
 
-        html += `<div style="margin-top: 8px; margin-bottom: 15px; padding: 10px; background: #f7f9fc; border-radius: 6px; border: 1px solid #d9e2ef; color: #455a64; font-size: 0.9em;">`;
+        html += `<div class="card-sunken text-secondary" style="margin-top: 8px; margin-bottom: 15px; padding: 10px; font-size: 0.9em;">`;
         html += `<strong>Drill Down:</strong> click any associate above to jump into individual ${buckets.descriptor.shortLabel} insights.`;
         html += `</div>`;
 
-        html += `<div style="margin-top: 15px; padding: 12px; background: #e1f5fe; border-radius: 6px; border-left: 4px solid #0288d1;">`;
-        html += `<strong>💡 Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;
+        html += `<div class="callout callout-info" style="margin-top: 15px; padding: 12px;">`;
+        html += `<strong>Next Step:</strong> Click "Generate Group Email" to create a team-wide communication highlighting trends, celebrating wins, and sharing helpful tips for common opportunities.`;
         html += `</div>`;
         html += `</div>`;
 

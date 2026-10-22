@@ -197,26 +197,27 @@
             const active = plan.id === ctx.plan.id;
             const sent = Boolean(outreach.getSentEntry(sentLog, plan.id, ctx.stamp, employeeName));
 
-            const bg = active ? 'linear-gradient(135deg,#7c4dff,#4527a0)' : (sent ? '#e8f5e9' : '#e2e8f0');
-            const color = active ? '#fff' : (sent ? '#2e7d32' : 'var(--text-secondary)');
+            // The row is a sub-nav: the chosen day is its raised pill, and a
+            // day already sent reads green under its tick.
+            const classes = 'day-post-btn' + (active ? ' is-active' : '') + (sent ? ' tone-good' : '');
             const mark = sent ? '✓ ' : '';
             const tip = `${plan.label}. ${plan.styleLabel || ''}`.trim();
 
-            return `<button type="button" class="day-post-btn" data-day="${plan.id}" title="${escapeHtml(tip)}" ` +
-                `style="padding:9px 16px; border:none; border-radius:8px; font-weight:700; font-size:0.9em; cursor:pointer; background:${bg}; color:${color};">` +
+            return `<button type="button" class="${classes}" data-day="${plan.id}" title="${escapeHtml(tip)}"` +
+                `${active ? ' aria-selected="true"' : ''}>` +
                 `${mark}${shortDay(plan.id)}</button>`;
         }).join('');
 
         const sentBanner = ctx.sentEntry
-            ? `<div style="margin-bottom:12px; padding:10px 14px; background:#e8f5e9; border-left:4px solid #2e7d32; border-radius:6px; color:#2e7d32; font-size:0.9em;">` +
+            ? `<div class="callout callout-good" style="margin-bottom:12px; padding:10px 14px; font-size:0.9em;">` +
                 `You already sent ${escapeHtml(who)} a ${escapeHtml(ctx.plan.label)} this week` +
                 (ctx.sentEntry.at ? `, ${escapeHtml(new Date(ctx.sentEntry.at).toLocaleString())}` : '') +
-                `. <button type="button" id="dayPostUnsend" style="background:none; border:1px solid #2e7d32; border-radius:6px; padding:2px 10px; margin-left:6px; cursor:pointer; color:#2e7d32;">Undo</button>` +
+                `. <button type="button" id="dayPostUnsend" class="btn-secondary" style="min-height:0; padding:2px 10px; margin-left:6px;">Undo</button>` +
             `</div>`
             : '';
 
         const warning = ctx.coverage.warning
-            ? `<div style="margin-bottom:12px; font-size:0.85em; color:#ef6c00;">⚠️ ${escapeHtml(ctx.coverage.warning)}</div>`
+            ? `<div class="tone-warn" style="margin-bottom:12px; font-size:0.85em;">⚠️ ${escapeHtml(ctx.coverage.warning)}</div>`
             : '';
 
         let bodyHtml;
@@ -227,9 +228,9 @@
         if (!ctx.periodCheck.ok) {
             // The period itself is missing, which is not the same as this
             // associate having no numbers. Say which one it is.
-            bodyHtml = `<div style="padding:28px; text-align:center; color:var(--text-secondary); background:var(--bg-surface); border:1px solid #ef6c00; border-radius:10px;">` +
+            bodyHtml = `<div class="callout callout-warn" style="padding:28px; text-align:center; border-radius:10px;">` +
                 `<div style="font-size:2.2em; margin-bottom:8px;">📭</div>` +
-                `<div style="font-weight:700; color:#ef6c00; font-size:1.05em;">${escapeHtml(ctx.periodCheck.reason)}</div>` +
+                `<div class="tone-warn" style="font-weight:700; font-size:1.05em;">${escapeHtml(ctx.periodCheck.reason)}</div>` +
                 `<div style="font-size:0.92em; margin-top:8px;">${escapeHtml(ctx.periodCheck.detail)}</div>` +
                 `<div style="font-size:0.88em; margin-top:10px; color:var(--text-tertiary);">Pick a different window in <strong>Covering</strong> above, or upload the period this one is missing.</div>` +
             `</div>`;
@@ -252,21 +253,21 @@
 
             bodyHtml = `<textarea id="dayPostText" style="width:100%; min-height:230px; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:0.92em; line-height:1.6; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(message)}</textarea>` +
                 `<div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">` +
-                    `<button type="button" id="dayPostCopy" style="flex:1; min-width:140px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">📋 Copy</button>` +
-                    `<button type="button" id="dayPostRegen" style="background:var(--bg-surface-raised); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:10px 16px; cursor:pointer;">🔄 Regenerate</button>` +
-                    `<button type="button" id="dayPostSent" style="background:${ctx.sentEntry ? '#c8e6c9' : '#e3f2fd'}; color:${ctx.sentEntry ? '#2e7d32' : '#1565c0'}; border:1px solid ${ctx.sentEntry ? '#81c784' : '#90caf9'}; border-radius:6px; padding:10px 16px; cursor:pointer; font-weight:bold;">${ctx.sentEntry ? '↩ Mark unsent' : '✓ Mark sent'}</button>` +
+                    `<button type="button" id="dayPostCopy" class="btn-primary" style="flex:1; min-width:140px; padding:10px 16px;">Copy</button>` +
+                    `<button type="button" id="dayPostRegen" class="btn-secondary" style="padding:10px 16px;">Regenerate</button>` +
+                    `<button type="button" id="dayPostSent" class="${ctx.sentEntry ? 'btn-ghost tone-good' : 'btn-secondary'}" style="padding:10px 16px;">${ctx.sentEntry ? 'Mark unsent' : 'Mark sent'}</button>` +
                 `</div>` +
                 (hasNoteEditor ? `<div style="margin-top:12px;">${ctx.pulse.teamNoteEditorHtml('dayPost')}</div>` : '');
         }
 
         container.innerHTML = `<div style="margin-bottom:14px;">` +
-                `<h3 style="color:#4527a0; margin:0 0 6px 0;">📮 Posts for ${escapeHtml(employeeName)}</h3>` +
+                `<h3 style="margin:0 0 6px 0;">Posts for ${escapeHtml(employeeName)}</h3>` +
                 `<p style="color:var(--text-secondary); margin:0; font-size:0.9em;">` +
                     `<strong>${escapeHtml(ctx.plan.label)}</strong>, over ${escapeHtml(ctx.periods?.latestLabel || 'the selected period')}. ` +
                     `Pick any day; you don't have to wait for it.` +
                 `</p>` +
             `</div>` +
-            `<div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">${buttons}</div>` +
+            `<div class="sub-nav" style="margin-bottom:16px;">${buttons}</div>` +
             sentBanner + warning + bodyHtml;
 
         container.querySelectorAll('.day-post-btn').forEach(btn => {

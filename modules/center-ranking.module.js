@@ -39,7 +39,7 @@
             var sup = sups[empName];
             if (sup && SUPERVISOR_COLORS[sup]) return SUPERVISOR_COLORS[sup].dot;
         } catch (_e) { /* localStorage parse failure — fall through to default */ }
-        return '#90a4ae';
+        return 'var(--text-tertiary)';
     }
 
     function _escapeHtml(str) {
@@ -207,12 +207,12 @@
                 pair('#' + mv.curRank + ' both');
         }
         var up = mv.delta > 0;
-        var color = mv.scoreChanged ? (up ? '#2e7d32' : '#c62828') : 'var(--text-tertiary)';
+        var tone = mv.scoreChanged ? (up ? 'tone-good' : 'tone-bad') : 'text-faint';
         var title = '#' + mv.prevRank + ' in ' + was + ', #' + mv.curRank + ' in ' + now + '. ' +
             (mv.scoreChanged
                 ? 'KPIs met ' + mv.prevKpisMet + '→' + mv.curKpisMet + ', score ' + mv.prevScoreSum + '→' + mv.curScoreSum
                 : 'Same score (' + mv.curKpisMet + ' KPIs, ' + mv.curScoreSum + '), position shifted among tied people, not performance');
-        return '<span style="color: ' + color + '; font-weight: ' + (mv.scoreChanged ? 'bold' : 'normal') + '; white-space: nowrap;"' +
+        return '<span class="' + tone + '" style="font-weight: ' + (mv.scoreChanged ? 'bold' : 'normal') + '; white-space: nowrap;"' +
             ' title="' + title + '">' + (up ? '&#9650;' : '&#9660;') + Math.abs(mv.delta) +
             (mv.scoreChanged ? '' : '<span style="opacity:0.7;">*</span>') + '</span>' +
             pair('#' + mv.prevRank + '&rarr;' + mv.curRank);
@@ -432,11 +432,11 @@
 
     // Colour by the share of MEASURED KPIs met, so 4/4 reads like 5/5 rather than
     // like 4/5. Identical to the old thresholds when all five were measured.
-    function _kpiMetColor(kpisMet, measuredCount, dark) {
+    function _kpiMetTone(kpisMet, measuredCount) {
         var rate = measuredCount > 0 ? kpisMet / measuredCount : 0;
-        if (rate >= 0.8) return dark ? '#66bb6a' : '#2e7d32';
-        if (rate >= 0.6) return dark ? '#ffa726' : '#e65100';
-        return dark ? '#ef5350' : '#c62828';
+        if (rate >= 0.8) return 'tone-good';
+        if (rate >= 0.6) return 'tone-warn';
+        return 'tone-bad';
     }
 
     // Pull the extra metric values off the raw employee row. Survey-backed
@@ -1191,18 +1191,18 @@
         return MONTH_ABBREV[word] || (word.length > 5 ? word.slice(0, 5) : word);
     }
 
-    function _deltaColor(pt) {
+    function _deltaTone(pt) {
         // A move with no score change behind it is greyed, everywhere. The centre
         // compresses into few scoring buckets, so people reshuffle on tiebreakers
         // alone and colouring that green invites congratulating nobody's work.
-        if (!pt.scoreChanged) return 'var(--text-tertiary)';
-        return pt.delta > 0 ? (_isDark() ? '#66bb6a' : '#2e7d32') : (_isDark() ? '#ef5350' : '#c62828');
+        if (!pt.scoreChanged) return 'text-faint';
+        return pt.delta > 0 ? 'tone-good' : 'tone-bad';
     }
 
     function _deltaMarkup(pt) {
         if (!Number.isFinite(pt.delta)) return '';
         if (pt.delta === 0) return ' <span style="color: var(--text-tertiary);">-</span>';
-        return ' <span style="color: ' + _deltaColor(pt) + ';">' +
+        return ' <span class="' + _deltaTone(pt) + '">' +
             (pt.delta > 0 ? '&#9650;' : '&#9660;') + Math.abs(pt.delta) +
             (pt.scoreChanged ? '' : '<span style="opacity:0.7;">*</span>') + '</span>';
     }
@@ -1224,9 +1224,9 @@
         if (!series || series.length < 2) return '';
         var chips = series.map(function (pt) {
             return '<span title="' + _escapeHtml(_pointTitle(pt)) + '" style="font-size: 0.72em; ' +
-                'padding: 1px 4px; border-radius: 3px; background: rgba(127,127,127,0.13); white-space: nowrap;">' +
+                'padding: 1px 4px; border-radius: 3px; background: var(--bg-active); white-space: nowrap;">' +
                 (pt.inProgress
-                    ? '<span style="color: #e65100;">' + _escapeHtml(_shortPeriodLabel(pt.label)) + '</span>'
+                    ? '<span class="tone-warn">' + _escapeHtml(_shortPeriodLabel(pt.label)) + '</span>'
                     : _escapeHtml(_shortPeriodLabel(pt.label))) +
                 ' <strong>' + pt.rank + '</strong>' + _deltaMarkup(pt) + '</span>';
         });
@@ -1318,9 +1318,9 @@
         if (reference && Number.isFinite(reference.rank)) {
             var ry = y(reference.rank);
             svg += '<line x1="' + padL + '" y1="' + ry + '" x2="' + (W - padR) + '" y2="' + ry +
-                '" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="5 4" />';
+                '" stroke="var(--brand-text)" stroke-width="1.5" stroke-dasharray="5 4" />';
             svg += '<text x="' + (W - padR) + '" y="' + (ry - 5) + '" text-anchor="end" ' +
-                'font-size="10" fill="#1565c0">#' + reference.rank + ' ' + _escapeHtml(reference.label) + '</text>';
+                'font-size="10" fill="var(--brand-text)">#' + reference.rank + ' ' + _escapeHtml(reference.label) + '</text>';
         }
 
         /* Two lines, drawn as one run per unbroken stretch of months so a gap in
@@ -1349,15 +1349,15 @@
             flush();
         };
 
-        drawRuns(function (pt) { return pt.overallRank; }, '#8e6bbf', 2, '4 3');
-        drawRuns(function (pt) { return pt.rank; }, '#1565c0', 2, null);
+        drawRuns(function (pt) { return pt.overallRank; }, 'var(--text-secondary)', 2, '4 3');
+        drawRuns(function (pt) { return pt.rank; }, 'var(--brand-text)', 2, null);
 
         // Hollow markers for the year line, so the two are told apart without
         // relying on colour alone.
         columns.forEach(function (col, i) {
             if (!col.point || !Number.isFinite(col.point.overallRank)) return;
             svg += '<circle cx="' + x(i) + '" cy="' + y(col.point.overallRank) + '" r="3.5" ' +
-                'fill="var(--bg-surface)" stroke="#8e6bbf" stroke-width="2" />';
+                'fill="var(--bg-surface)" stroke="var(--text-secondary)" stroke-width="2" />';
         });
 
         columns.forEach(function (col, i) {
@@ -1371,13 +1371,13 @@
                 return;
             }
             var pt = col.point;
-            var fill = pt.trackStatusValue === 'on-track-exceptional' ? '#2e7d32'
-                : pt.trackStatusValue === 'on-track-successful' ? '#1565c0' : '#c62828';
+            var fill = pt.trackStatusValue === 'on-track-exceptional' ? 'var(--green)'
+                : pt.trackStatusValue === 'on-track-successful' ? 'var(--brand)' : 'var(--red)';
             svg += '<circle cx="' + x(i) + '" cy="' + y(pt.rank) + '" r="4.5" fill="' + fill + '" />';
             svg += '<text x="' + x(i) + '" y="' + (y(pt.rank) - 9) + '" text-anchor="middle" ' +
                 'font-size="10" font-weight="bold" fill="var(--text-primary)">' + pt.rank + '</text>';
             svg += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle" ' +
-                'font-size="10" fill="' + (col.inProgress ? '#e65100' : 'var(--text-secondary)') + '">' +
+                'font-size="10" fill="' + (col.inProgress ? 'var(--yellow-text)' : 'var(--text-secondary)') + '">' +
                 _escapeHtml(_shortPeriodLabel(col.label)) + '</text>';
         });
 
@@ -1402,7 +1402,7 @@
         if (row.scoreKey !== 'associateOverall') return '';
         if (pt.associateOverallSource !== 'overallExperience') return '';
         return '<span title="Rep sat was blank or zero this month, so this is Overall Experience"' +
-            ' style="color: #e65100; font-weight: 700;"> OE</span>';
+            ' class="tone-warn" style="font-weight: 700;"> OE</span>';
     }
 
     function _trajectoryMetricValue(pt, row) {
@@ -1413,10 +1413,10 @@
 
     function _scoreDot(score) {
         if (score === null || score === undefined) return '';
-        var bg = score === 3 ? '#2e7d32' : score === 2 ? '#1565c0' : '#c62828';
-        return '<span style="display: inline-block; width: 15px; height: 15px; line-height: 15px; ' +
-            'border-radius: 50%; font-size: 0.62em; font-weight: bold; color: #fff; background: ' + bg +
-            '; text-align: center; margin-right: 3px;">' + score + '</span>';
+        var tone = score === 3 ? 'pill-good' : score === 2 ? 'pill-info' : 'pill-bad';
+        return '<span class="' + tone + '" style="display: inline-block; width: 15px; height: 15px; line-height: 15px; ' +
+            'border-radius: 50%; font-size: 0.62em; font-weight: bold; ' +
+            'text-align: center; margin-right: 3px;">' + score + '</span>';
     }
 
 
@@ -1848,11 +1848,11 @@
 
         html += '<div style="flex: 0 0 auto; margin: 0 0 8px 0; font-size: 0.8em; color: var(--text-secondary); ' +
             'display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">' +
-            '<span><span style="display:inline-block;width:16px;height:0;border-top:2px solid #1565c0;' +
+            '<span><span style="display:inline-block;width:16px;height:0;border-top:2px solid var(--brand-text);' +
             'vertical-align:middle;margin-right:5px;"></span>Rank that month</span>' +
-            '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed #8e6bbf;' +
+            '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed var(--text-secondary);' +
             'vertical-align:middle;margin-right:5px;"></span>Year to date, as of that month</span>' +
-            (reference ? '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed #1565c0;' +
+            (reference ? '<span><span style="display:inline-block;width:16px;height:0;border-top:2px dashed var(--brand-text);' +
                 'vertical-align:middle;margin-right:5px;"></span>' + _escapeHtml(reference.label) + ' (the card figure)</span>' : '') +
             '</div>';
 
@@ -1880,9 +1880,9 @@
             html += '<th style="' + th + (pt ? '' : ' color: var(--text-tertiary);') + '"' +
                 (span ? ' title="' + _escapeHtml(col.label) + ' covers ' + span + '"' : '') + '>' +
                 _escapeHtml(_shortPeriodLabel(col.label)) +
-                (col.inProgress ? ' <span style="color:#e65100;">(so far)</span>' : '') +
-                (span ? '<div style="font-weight: 400; font-size: 0.86em; color: ' +
-                    (offCalendar ? '#e65100' : 'var(--text-tertiary)') + ';">' + span + '</div>' : '') +
+                (col.inProgress ? ' <span class="tone-warn">(so far)</span>' : '') +
+                (span ? '<div class="' + (offCalendar ? 'tone-warn' : 'text-faint') +
+                    '" style="font-weight: 400; font-size: 0.86em;">' + span + '</div>' : '') +
                 '</th>';
         });
         html += '</tr></thead><tbody>';
@@ -1904,8 +1904,8 @@
         // Said once, at the top, so the empty columns below are already explained.
         var missing = columns.filter(function (col) { return !col.point && col.reason; });
         if (missing.length) {
-            html += '<tr><td colspan="' + (columns.length + 1) + '" style="' + stick +
-                ' padding: 6px; font-size: 0.76em; color: #e65100; border-bottom: 1px solid var(--border);">' +
+            html += '<tr><td colspan="' + (columns.length + 1) + '" class="tone-warn" style="' + stick +
+                ' padding: 6px; font-size: 0.76em; border-bottom: 1px solid var(--border);">' +
                 'No ranking for ' + missing.map(function (col) {
                     return _escapeHtml(_shortPeriodLabel(col.label)) + ' (' + _escapeHtml(col.reason) + ')';
                 }).join(', ') + '.</td></tr>';
@@ -1930,10 +1930,10 @@
             var partial = pt.overallSource === 'rebuilt' && pt.overallCoversFrom &&
                 String(pt.overallCoversFrom).slice(5) !== '01';
             var note = partial
-                ? '<div style="font-size: 0.7em; color: #e65100;">from ' +
+                ? '<div class="tone-warn" style="font-size: 0.7em;">from ' +
                   _escapeHtml(_shortPeriodLabel(_pcMonthLabel(pt.overallCoversFrom))) + ' only</div>'
                 : '';
-            return '<strong style="color: #8e6bbf;">#' + pt.overallRank + '</strong>' +
+            return '<strong class="text-secondary">#' + pt.overallRank + '</strong>' +
                 '<span style="color: var(--text-tertiary); font-size: 0.85em;"> of ' + pt.overallTotal + '</span>' + note;
         }, true);
 
@@ -1949,8 +1949,7 @@
             var d = prev - pt.overallRank;
             if (d === 0) return '<span style="color: var(--text-tertiary);">-</span>';
             var up = d > 0;
-            return '<span style="font-weight: 600; color: ' +
-                (up ? (_isDark() ? '#66bb6a' : '#2e7d32') : (_isDark() ? '#ef5350' : '#c62828')) + ';">' +
+            return '<span class="' + (up ? 'tone-good' : 'tone-bad') + '" style="font-weight: 600;">' +
                 (up ? '&#9650;' : '&#9660;') + Math.abs(d) + '</span>' +
                 '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + prev + '&rarr;' + pt.overallRank + '</div>';
         });
@@ -1958,14 +1957,14 @@
         html += bodyRow('Move', function (pt) {
             if (!Number.isFinite(pt.delta)) return '<span style="color: var(--text-tertiary);" title="Nothing before this to measure against">&middot;</span>';
             if (pt.delta === 0) return '<span style="color: var(--text-tertiary);">-</span>';
-            return '<span style="color: ' + _deltaColor(pt) + '; font-weight: 600;">' +
+            return '<span class="' + _deltaTone(pt) + '" style="font-weight: 600;">' +
                 (pt.delta > 0 ? '&#9650;' : '&#9660;') + Math.abs(pt.delta) + '</span>' +
                 '<div style="font-size: 0.72em; color: var(--text-tertiary);">#' + pt.sharedPrevRank +
                 '&rarr;' + pt.sharedRank + '</div>';
         });
 
         html += bodyRow('KPIs met', function (pt) {
-            return '<span style="font-weight: 600; color: ' + _kpiMetColor(pt.kpisMet, pt.measuredCount, _isDark()) + ';">' +
+            return '<span class="' + _kpiMetTone(pt.kpisMet, pt.measuredCount) + '" style="font-weight: 600;">' +
                 pt.kpisMet + '/' + pt.measuredCount + '</span>';
         });
 
@@ -1975,10 +1974,9 @@
         });
 
         html += bodyRow('Band', function (pt) {
-            var c = pt.trackStatusValue === 'on-track-exceptional' ? '#2e7d32'
-                : pt.trackStatusValue === 'on-track-successful' ? '#1565c0' : '#c62828';
-            return '<span style="display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 0.72em; ' +
-                'font-weight: bold; color: #fff; background: ' + c + ';">' + _escapeHtml(pt.trackLabel) + '</span>';
+            var c = pt.trackStatusValue === 'on-track-exceptional' ? 'pill-good'
+                : pt.trackStatusValue === 'on-track-successful' ? 'pill-info' : 'pill-bad';
+            return '<span class="pill ' + c + '" style="font-size: 0.72em;">' + _escapeHtml(pt.trackLabel) + '</span>';
         });
 
         html += '<tr><td colspan="' + (columns.length + 1) + '" style="' + stick + ' padding: 10px 6px 4px 6px; ' +
@@ -2009,7 +2007,7 @@
             '<div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 6px;">' +
             'This is the picture that goes in the email. Right-click it to copy if the button will not.</div>' +
             '<div id="rankTrajectoryImage" style="overflow: auto; border: 1px solid var(--border); ' +
-            'border-radius: 8px; background: #fff; padding: 6px;"></div></div>';
+            'border-radius: 8px; background: var(--bg-surface-sunken); padding: 6px;"></div></div>';
 
         // The fixed-width strip closes first so the ladder gets the modal's own
         // width instead of the year table's. It stays inside the scroller, so a
@@ -4039,22 +4037,16 @@
             '<div style="flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">' +
             buildTrajectoryHtml(name) + '</div>' +
             '<div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">' +
-                '<button id="rankTrajectoryEmail" style="padding: 8px 16px; background: #2e7d32; color: white; ' +
-                'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
+                '<button id="rankTrajectoryEmail" class="btn-primary">' +
                 (_emailWindow().scope === 'ytd' ? 'Email year to date summary' : 'Email month over month summary') +
                 '</button>' +
                 (monthlyMail
-                    ? '<button id="rankTrajectoryMonthEmail" style="padding: 8px 16px; background: #00695c; color: white; ' +
-                      'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">' +
+                    ? '<button id="rankTrajectoryMonthEmail" class="btn-secondary">' +
                       'Email ' + _escapeHtml(monthlyMail.monthLabel) + ' summary</button>'
                     : '') +
-                '<button id="rankTrajectoryCopyImage" style="padding: 8px 16px; background: #5b3f8c; color: white; ' +
-                'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Copy picture</button>' +
-                '<button id="rankTrajectorySaveImage" style="padding: 8px 16px; background: var(--bg-surface-raised); ' +
-                'color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; ' +
-                'font-size: 0.9em;">Save picture</button>' +
-                '<button id="rankTrajectoryFind" style="padding: 8px 16px; background: #1565c0; color: white; ' +
-                'border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em;">Find in table</button>' +
+                '<button id="rankTrajectoryCopyImage" class="btn-secondary">Copy picture</button>' +
+                '<button id="rankTrajectorySaveImage" class="btn-secondary">Save picture</button>' +
+                '<button id="rankTrajectoryFind" class="btn-ghost">Find in table</button>' +
                 '<span style="color: var(--text-tertiary); font-size: 0.78em;">Goes to ' +
                 _escapeHtml(_apsEmailFor(name)) + '. The picture is copied, paste it into the draft.</span>' +
             '</div>';
@@ -4114,7 +4106,7 @@
         if (!row) return;
         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
         row.style.transition = 'background 0.3s';
-        row.style.background = _isDark() ? '#1e3a5f' : '#bbdefb';
+        row.style.background = 'var(--brand-soft)';
         setTimeout(function () { row.style.background = ''; }, 2000);
     }
 
@@ -4197,8 +4189,7 @@
         html += _renderRankingPeriodSelector(currentSelectValue);
 
         // Header
-        html += '<div style="margin-bottom: 20px; padding: 15px; background: ' + (_isDark() ? '#12243a' : '#e3f2fd') +
-            '; border-radius: 8px; border-left: 4px solid #1565c0;">';
+        html += '<div class="card" style="margin-bottom: 20px; padding: 15px;">';
         html += '<strong>Center Rankings</strong>, ' + data.totalEmployees + ' employees scored';
         html += '<br><span style="color: var(--text-secondary); font-size: 0.85em;">Source: ' + _escapeHtml(data.source) + ' | Ranked by KPIs Met &rarr; Score Sum &rarr; KPI Rank Total &rarr; Tiebreaker</span>';
 
@@ -4225,18 +4216,18 @@
                 '</strong>, out of ' + data.totalEmployees +
                 ', a different window from the movement column, not just a different count.';
             if (_mom.fellBack) {
-                html += ' <span style="color: #e65100;">Only one ' + (SCOPE_NOUN[_mom.requestedScope] || _mom.requestedScope) +
+                html += ' <span class="tone-warn">Only one ' + (SCOPE_NOUN[_mom.requestedScope] || _mom.requestedScope) +
                     ' is available, so there is nothing to compare it against, showing months instead.</span>';
             }
             // A comparison that stops short of today explains itself, rather than
             // looking like uploads went missing.
             if (_mom.skippedInProgress) {
-                html += ' <span style="color: #e65100;">' + _escapeHtml(_mom.skippedInProgress.label) +
+                html += ' <span class="tone-warn">' + _escapeHtml(_mom.skippedInProgress.label) +
                     ' is still in progress' +
                     (_mom.skippedInProgress.weekCount ? ' (' + _mom.skippedInProgress.weekCount + ' weeks so far)' : '') +
                     ', so it is set aside, half a month against a full one moves people on sample size, not performance.</span>';
             } else if (_mom.comparingInProgress) {
-                html += ' <span style="color: #e65100;">' + _escapeHtml(_mom.current.label) +
+                html += ' <span class="tone-warn">' + _escapeHtml(_mom.current.label) +
                     ' is not finished yet, so it is being compared against a full month, expect movement that is partly sample size.</span>';
             }
             html += '</span>';
@@ -4244,7 +4235,7 @@
             // Without this, a June-to-July comparison shown in September just looks
             // stale, when in fact August was skipped for covering a fraction of the centre.
             if (_mom.skippedPartial && _mom.skippedPartial.length) {
-                html += '<br><span style="color: #e65100; font-size: 0.85em;">Skipped ' +
+                html += '<br><span class="tone-warn" style="font-size: 0.85em;">Skipped ' +
                     _mom.skippedPartial.map(function (s) {
                         return _escapeHtml(s.label) + ', only ' + s.count + ' associates uploaded';
                     }).join(', ') +
@@ -4262,7 +4253,7 @@
             ? { previous: _mom.previous.label, current: _mom.current.label + (_mom.current.inProgress ? ' (so far)' : ''), total: _mom.total }
             : null;
         if (teamRanks.length > 0) {
-            html += '<div style="margin-bottom: 20px; padding: 15px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+            html += '<div class="card" style="margin-bottom: 20px; padding: 15px;">';
             html += '<h4 style="margin-top: 0; color: var(--text-primary);">Your Team</h4>';
             /* The headline rank and the movement ranks are measured over different
                WINDOWS as well as different populations, and the window is the half
@@ -4285,12 +4276,9 @@
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">';
 
             teamRanks.forEach(function (r) {
-                var statusColor = r.trackStatusValue === 'on-track-exceptional' ? (_isDark() ? '#66bb6a' : '#2e7d32') :
-                    r.trackStatusValue === 'on-track-successful' ? (_isDark() ? '#9ccc65' : '#8bc34a') :
-                    (_isDark() ? '#ef5350' : '#c62828');
-                var statusBg = r.trackStatusValue === 'on-track-exceptional' ? (_isDark() ? '#0d2a1a' : '#e8f5e9') :
-                    r.trackStatusValue === 'on-track-successful' ? (_isDark() ? '#16240f' : '#f1f8e9') :
-                    (_isDark() ? '#2a1210' : '#fbe9e7');
+                // The band is the card's state: its tint and edge, and the rank's colour.
+                var statusTone = r.trackStatusValue === 'on-track-exceptional' ? 'good' :
+                    r.trackStatusValue === 'on-track-successful' ? 'info' : 'bad';
                 // Share of the rest of the centre this person finished ahead of.
                 // The old line printed this same percentile under a "top N%" label,
                 // which inverted it: #9 of 126 read "top 94%" and last place read
@@ -4299,15 +4287,14 @@
                     ? Math.round(((data.totalEmployees - r.rank) / (data.totalEmployees - 1)) * 100)
                     : 100;
 
-                html += '<div class="ranking-card" data-employee="' + _escapeHtml(r.name) + '" style="padding: 12px 16px; background: ' + statusBg + '; border-radius: 8px; border-left: 4px solid ' + statusColor + '; cursor: pointer;">';
+                html += '<div class="ranking-card callout callout-' + statusTone + '" data-employee="' + _escapeHtml(r.name) + '" style="padding: 12px 16px; border-radius: 8px; cursor: pointer;">';
                 html += '<div class="ranking-card-name" style="font-weight: bold; font-size: 1.05em; text-decoration: underline;">' + _escapeHtml(r.name) + '</div>';
                 html += '<div style="margin-top: 4px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">';
-                html += '<span style="font-size: 1.3em; font-weight: bold; color: ' + statusColor + ';">#' + r.rank + '</span>';
+                html += '<span class="tone-' + statusTone + '" style="font-size: 1.3em; font-weight: bold;">#' + r.rank + '</span>';
                 // The window, hard against the number it belongs to, before
                 // anything else gets a chance to be read instead.
-                html += '<span style="display: inline-block; padding: 1px 6px; border-radius: 4px; ' +
-                    'background: #1565c0; color: #fff; font-size: 0.62em; font-weight: 700; ' +
-                    'letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;">' +
+                html += '<span class="pill pill-info" style="font-size: 0.62em; font-weight: 700; ' +
+                    'letter-spacing: 0.04em; text-transform: uppercase;">' +
                     _escapeHtml(_teamPeriodName) + '</span>';
                 html += '<span style="color: var(--text-secondary); font-size: 0.85em;">of ' + data.totalEmployees +
                     ', better than ' + aheadOf + '%</span>';
@@ -4333,8 +4320,7 @@
                             _cardMv.curScoreSum + ' in both)</div>';
                     } else {
                         var _up = _cardMv.delta > 0;
-                        html += '<div style="margin-top: 4px; font-size: 0.85em; font-weight: 600; color: ' +
-                            (_up ? (_isDark() ? '#66bb6a' : '#2e7d32') : (_isDark() ? '#ef5350' : '#c62828')) + ';">' +
+                        html += '<div class="' + (_up ? 'tone-good' : 'tone-bad') + '" style="margin-top: 4px; font-size: 0.85em; font-weight: 600;">' +
                             (_up ? '&#9650; Up ' : '&#9660; Down ') + Math.abs(_cardMv.delta) +
                             ', #' + _cardMv.prevRank + ' in ' + _was + ', #' + _cardMv.curRank + ' in ' + _now +
                             '<span style="font-weight: 400; color: var(--text-secondary);"> (KPIs met ' +
@@ -4346,17 +4332,17 @@
                 // against where they have actually been rather than in isolation.
                 html += _renderTimelineStrip(_timelineFor(r.name));
 
-                var kpiColor = _kpiMetColor(r.kpisMet, r.measuredCount, _isDark());
+                var kpiTone = _kpiMetTone(r.kpisMet, r.measuredCount);
                 html += '<div style="margin-top: 4px; font-size: 0.85em; color: var(--text-secondary);">' + _escapeHtml(r.trackLabel) + ', Score: ' + r.scoreSum + '/' + (r.measuredCount * 3) + ' (KPI: ' + r.kpiScore.toFixed(1) + ')</div>';
                 // Denominator is what was actually measured. Printing "4/5 KPIs met"
                 // beside "Score: 12/12" said the same record two incompatible ways.
-                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span style="font-weight: 700; color: ' + kpiColor + ';">' +
+                html += '<div style="margin-top: 2px; font-size: 0.85em;"><span class="' + kpiTone + '" style="font-weight: 700;">' +
                     r.kpisMet + '/' + r.measuredCount + ' KPIs met</span>' +
                     (r.measuredCount < FULL_KPI_COUNT
                         ? '<span style="color: var(--text-tertiary); font-weight: 400;">, ' +
                           (FULL_KPI_COUNT - r.measuredCount) + ' not measured</span>'
                         : '') + '</div>';
-                html += '<div style="font-size: 0.8em; color: #888;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
+                html += '<div class="text-faint" style="font-size: 0.8em;">Rank Total: ' + r.kpiRankTotal + ' | TB: ' + r.tiebreaker.toFixed(3) + '</div>';
                 html += '</div>';
             });
 
@@ -4368,7 +4354,7 @@
         _currentSort = { key: 'rank', dir: 'asc' };
 
         // Full ranking table
-        html += '<div id="centerRankingTableWrapper" style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.08);">';
+        html += '<div id="centerRankingTableWrapper" class="card" style="padding: 20px;">';
         html += '<h4 style="margin-top: 0; color: var(--text-primary);">Full Center Rankings</h4>';
         html += '<p style="margin: 0 0 12px 0; color: var(--text-secondary); font-size: 0.85em;">Click any column header to sort. ' +
             'The <strong>Rank</strong> column is ' + _escapeHtml(_selectedPeriodPhrase(data)) +
@@ -4437,10 +4423,10 @@
             return sortDir === 'asc' ? (aVal - bVal) : (bVal - aVal);
         });
 
-        var thStyle = 'padding: 6px 3px; text-align: center; border-bottom: 2px solid #ddd; cursor: pointer; user-select: none; font-size: 0.85em;';
+        var thStyle = 'padding: 6px 3px; text-align: center; border-bottom: 2px solid var(--border-strong); cursor: pointer; user-select: none; font-size: 0.85em;';
         var arrow = function(key) {
             if (key !== sortKey) return ' <span style="opacity: 0.3;">&#8597;</span>';
-            return sortDir === 'asc' ? ' <span style="color: #1565c0;">&#9650;</span>' : ' <span style="color: #1565c0;">&#9660;</span>';
+            return sortDir === 'asc' ? ' <span class="tone-accent">&#9650;</span>' : ' <span class="tone-accent">&#9660;</span>';
         };
 
         var _tableMovement = _movementByName();
@@ -4475,24 +4461,26 @@
             var isTeam = data.teamMembers.has(r.name);
             var supColor = _getSupervisorColor(r.name);
             var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            var defaultBg = isDark ? (idx % 2 === 0 ? '#1a1f2e' : 'transparent') : (idx % 2 === 0 ? '#fafafa' : '#fff');
-            var rowBg = supColor || (isTeam ? (isDark ? '#0d2a1a' : '#e8f5e9') : defaultBg);
+            var defaultBg = idx % 2 === 0 ? 'var(--bg-surface-raised)' : 'transparent';
+            var rowBg = supColor || (isTeam ? 'var(--green-soft)' : defaultBg);
             var fontWeight = (isTeam || supColor) ? 'bold' : 'normal';
 
             // Status colors
-            var statusColor, statusBg, statusText;
+            var statusPill, statusText;
             if (r.trackStatusValue === 'on-track-exceptional') {
-                statusColor = '#fff'; statusBg = '#2e7d32'; statusText = 'Exceptional';
+                statusPill = 'pill-good'; statusText = 'Exceptional';
             } else if (r.trackStatusValue === 'on-track-successful') {
-                statusColor = '#fff'; statusBg = '#1565c0'; statusText = 'Successful';
+                statusPill = 'pill-info'; statusText = 'Successful';
             } else {
-                statusColor = '#fff'; statusBg = '#c62828'; statusText = 'Off Track';
+                statusPill = 'pill-bad'; statusText = 'Off Track';
             }
 
-            var scoreColor = function (s) {
-                if (s === 3) return '#2e7d32';
-                if (s === 2) return '#1565c0';
-                return '#c62828';
+            // Text on a ranking row is forced to the body colour by the row's own
+            // dark rule, so a tone goes on a span inside the cell, not the cell.
+            var scoreTone = function (s) {
+                if (s === 3) return 'good';
+                if (s === 2) return 'info';
+                return 'bad';
             };
 
             // Rank cell formatting per spec
@@ -4500,7 +4488,7 @@
             if (r.rank <= 26) { rankBg = '#1F4E79'; rankColor = '#FFFFFF'; }
             else if (r.rank >= 105) { rankBg = '#c62828'; rankColor = '#FFFFFF'; }
 
-            var teamBorder = isTeam ? 'outline: 2px solid #2e7d32; outline-offset: -2px; ' : '';
+            var teamBorder = isTeam ? 'outline: 2px solid var(--green); outline-offset: -2px; ' : '';
             html += '<tr class="ranking-row" data-employee="' + _escapeHtml(r.name) + '" style="' + teamBorder + 'background: ' + rowBg + '; border-bottom: 1px solid var(--border); font-weight: ' + fontWeight + ';">';
 
             // Rank
@@ -4517,7 +4505,7 @@
                 '" title="Open ' + _escapeHtml(r.name) + '’s year" ' +
                 'style="padding: 4px 3px; white-space: nowrap; cursor: pointer;">';
             if (isTeam) {
-                html += '<span style="color: #1565c0;">&#9733; </span>';
+                html += '<span class="tone-accent">&#9733; </span>';
             } else if (supColor) {
                 var _dotColor = _getSupervisorDotColor(r.name);
                 html += '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + _dotColor + ';box-shadow:0 0 0 1px rgba(0,0,0,0.25);margin-right:5px;vertical-align:middle;"></span>';
@@ -4526,17 +4514,18 @@
                 _escapeHtml(r.name) + '</span></td>';
 
             // KPIs Met
-            var kpiMetColor = _kpiMetColor(r.kpisMet, r.measuredCount, false);
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + kpiMetColor + ';">' + r.kpisMet + '/' + r.measuredCount + '</td>';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;"><span class="' +
+                _kpiMetTone(r.kpisMet, r.measuredCount) + '">' + r.kpisMet + '/' + r.measuredCount + '</span></td>';
 
             // Score Sum
             html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;">' + r.scoreSum + '</td>';
 
             // KPI Score
-            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold; color: ' + scoreColor(Math.round(r.kpiScore)) + ';">' + r.kpiScore.toFixed(1) + '</td>';
+            html += '<td style="padding: 4px 3px; text-align: center; font-weight: bold;"><span class="tone-' +
+                scoreTone(Math.round(r.kpiScore)) + '">' + r.kpiScore.toFixed(1) + '</span></td>';
 
             // Status badge
-            html += '<td style="padding: 4px 3px; text-align: center;"><span style="display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 0.72em; font-weight: bold; color: ' + statusColor + '; background: ' + statusBg + ';">' + statusText + '</span></td>';
+            html += '<td style="padding: 4px 3px; text-align: center;"><span class="pill ' + statusPill + '" style="font-size: 0.72em;">' + statusText + '</span></td>';
 
             // Individual metric cells
             var metricPairs = [
@@ -4554,17 +4543,18 @@
                 var rankTitle = mp.rankKey === 'associateOverall' && r.cxRankThin
                     ? ' title="Fewer than 3 surveys, so placed against the field without joining it, the same as on the year card"'
                     : '';
-                var rankTextColor = metricRank <= 10 ? '#2e7d32' : metricRank <= Math.round(data.totalEmployees * 0.5) ? '#666' : '#c62828';
+                var rankTone = metricRank <= 10 ? 'tone-good' : metricRank <= Math.round(data.totalEmployees * 0.5) ? 'text-secondary' : 'tone-bad';
                 var scoreBadge = mp.score !== null
-                    ? '<span style="display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; font-size: 0.7em; font-weight: bold; color: white; background: ' + scoreColor(mp.score) + '; text-align: center; margin-right: 3px;">' + mp.score + '</span>'
+                    ? '<span class="pill-' + scoreTone(mp.score) + '" style="display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; font-size: 0.7em; font-weight: bold; text-align: center; margin-right: 3px;">' + mp.score + '</span>'
                     : '';
                 var surveyBadge = '';
                 if (mp.rankKey === 'associateOverall' && r.surveyTotal > 0) {
-                    surveyBadge = ' <span style="font-size: 0.68em; color: #888;">(' + r.surveyTotal + ')</span>';
+                    surveyBadge = ' <span class="text-faint" style="font-size: 0.68em;">(' + r.surveyTotal + ')</span>';
                 }
-                var cellColor = mp.score !== null ? scoreColor(mp.score) : '#333';
-                html += '<td style="padding: 4px 3px; text-align: center; color: ' + cellColor + '; white-space: nowrap;">' +
-                    scoreBadge + display + surveyBadge + ' <span' + rankTitle + ' style="font-size: 0.72em; color: ' + rankTextColor + ';">#' + metricRank + '</span></td>';
+                // The value stays in the body colour: the score badge in front of it
+                // already carries the 3/2/1.
+                html += '<td style="padding: 4px 3px; text-align: center; white-space: nowrap;">' +
+                    scoreBadge + display + surveyBadge + ' <span' + rankTitle + ' class="' + rankTone + '" style="font-size: 0.72em;">#' + metricRank + '</span></td>';
             });
 
             html += '</tr>';

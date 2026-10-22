@@ -984,8 +984,8 @@ ${praiseRule(Boolean(transcriptSection), 'The message')}
                 <span class="call-history-meta" style="display: block;">Saved: ${safeEscapeHtml(createdAt)}${transcriptTag}</span>
             </button>
             <div class="flex-row" style="margin-top: 8px;">
-                <button type="button" data-call-action="copy-verint" data-entry-id="${safeEscapeHtml(entry.id)}">📝 Copy Verint</button>
-                <button type="button" data-call-action="delete" data-entry-id="${safeEscapeHtml(entry.id)}">✕ Delete</button>
+                <button type="button" class="btn-secondary" data-call-action="copy-verint" data-entry-id="${safeEscapeHtml(entry.id)}">Copy Verint</button>
+                <button type="button" class="btn-danger" data-call-action="delete" data-entry-id="${safeEscapeHtml(entry.id)}">Delete</button>
             </div>
         </li>`;
     }
