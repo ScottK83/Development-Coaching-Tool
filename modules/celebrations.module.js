@@ -1131,30 +1131,36 @@
     // The placing itself is not said. A near miss is past the bar by
     // definition, and Scott, 2026-10-14: "I only want them to see if they're
     // top 15." How far the door is, is the part worth hearing.
+    //
+    // And the number gets its credit first. A near miss only exists on a
+    // number already beating its goal (the gate above), and "Keep an eye on
+    // Positive Word. At 99.4% you are 5 spots away from the top 15" read as a
+    // warning about a near perfect score (Scott, 2026-10-21: "That sounds
+    // rough at almost 100%").
     var NEAR_MISS_LINES = [
         function(m, v, rank, away, spots, bar) {
-            return 'One more thing: you are ' + away + ' ' + spots + ' away from the top ' + bar
-                + ' in the Call Center on ' + m + ', at ' + v + '.';
-        },
-        function(m, v, rank, away, spots, bar) {
-            return 'Worth knowing: ' + m + ' at ' + v + ' is ' + away + ' ' + spots
+            return m + ' at ' + v + ' is a great number, and you are ' + away + ' ' + spots
                 + ' away from the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return m + ' is close. At ' + v + ' you are ' + away + ' ' + spots
-                + ' off the top ' + bar + ' in the Call Center.';
-        },
-        function(m, v, rank, away, spots, bar) {
-            return 'You are knocking on the door in ' + m + ': ' + v + ' is ' + away + ' ' + spots
+            return 'Love your ' + m + ' at ' + v + '. You are just ' + away + ' ' + spots
                 + ' away from the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'Keep an eye on ' + m + '. At ' + v + ' you are ' + away + ' ' + spots
+            return m + ' at ' + v + ' is strong work, and it has you ' + away + ' ' + spots
                 + ' away from the top ' + bar + ' in the Call Center.';
         },
         function(m, v, rank, away, spots, bar) {
-            return 'Almost there on ' + m + '. At ' + v + ', the top ' + bar
-                + ' in the Call Center is ' + away + ' ' + spots + ' up.';
+            return 'You are knocking on the door in ' + m + ': ' + v + ' is a great number, ' + away + ' ' + spots
+                + ' away from the top ' + bar + ' in the Call Center.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return 'Nice work on ' + m + ' at ' + v + '. You are ' + away + ' ' + spots
+                + ' away from the top ' + bar + ' in the Call Center.';
+        },
+        function(m, v, rank, away, spots, bar) {
+            return 'Almost there on ' + m + '. At ' + v + ' you are doing great, and only ' + away + ' ' + spots
+                + ' away from the top ' + bar + ' in the Call Center.';
         }
     ];
 

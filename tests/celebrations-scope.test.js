@@ -1071,6 +1071,18 @@ suite('celebrations: knocking on the door of the top 15', (t) => {
         Array.from(lines).every(l => l.indexOf('2 spots') > -1));
     t.check('and every one names the bar',
         Array.from(lines).every(l => l.indexOf('top 15') > -1));
+
+    // A near miss is always on a number beating its goal, so it never reads
+    // as a warning, and the number is credited before the gap (Scott,
+    // 2026-10-21, on "Keep an eye on Positive Word. At 99.4%...": "That
+    // sounds rough at almost 100%").
+    t.check('none reads as a warning',
+        Array.from(lines).every(l => !/keep an eye|watch out|careful|one more thing/i.test(l)));
+    t.check('every one credits the number before the gap',
+        Array.from(lines).every(l => {
+            const praise = l.search(/great|love your|strong|nice work|doing great|knocking on the door/i);
+            return praise > -1 && praise < l.indexOf('2 spots');
+        }));
 });
 
 suite('celebrations: a near miss on a failing number is not a near miss', (t) => {
