@@ -153,7 +153,7 @@
                 <div id="contestStandings"></div>
                 <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
                     <p style="margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.9em;">This is the graphic. Post to Teams copies the words that go with it.</p>
-                    <div style="overflow-x: auto;"><div id="contestGraphicExport" style="width: 900px;"></div></div>
+                    <div style="overflow-x: auto;"><div id="contestGraphicExport" data-theme="light" style="width: 900px;"></div></div>
                 </div>
             </div>
             <div style="padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">

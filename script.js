@@ -7076,7 +7076,7 @@ function renderTrendVisualizations() {
                             : String(Math.round(value * 10) / 10);
                         ctx.save();
                         ctx.font = 'bold 10px sans-serif';
-                        ctx.fillStyle = '#333';
+                        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#e6e8ee';
                         ctx.textAlign = 'center';
                         ctx.fillText(label, bar.x, bar.y - 4);
                         ctx.restore();
@@ -7095,8 +7095,8 @@ function renderTrendVisualizations() {
                 datasets: [{
                     label: metric.label || metricKey,
                     data: data.map(d => d.value),
-                    backgroundColor: 'rgba(60, 120, 200, 0.6)',
-                    borderColor: 'rgba(60, 120, 200, 1)',
+                    backgroundColor: 'rgba(76, 102, 229, 0.55)',
+                    borderColor: 'rgba(76, 102, 229, 1)',
                     borderWidth: 2
                 }]
             },
@@ -7398,6 +7398,15 @@ async function initApp() {
     // The sidebar goes in before the last page comes back, so the restore
     // marks its item (restyle, 2026-10-21).
     window.DevCoachModules?.sidebar?.mount?.();
+
+    // Charts take the theme: muted axis words, hairline grid, the page font.
+    // Chart.js defaults to dark grey on white, which vanishes on the dark page.
+    if (window.Chart?.defaults) {
+        const themeCss = getComputedStyle(document.documentElement);
+        window.Chart.defaults.color = themeCss.getPropertyValue('--text-secondary').trim() || '#a3aab8';
+        window.Chart.defaults.borderColor = themeCss.getPropertyValue('--border').trim() || '#252a34';
+        window.Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    }
 
     // Restore last viewed section/sub-section on refresh
     restoreLastViewedSection();

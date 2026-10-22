@@ -143,7 +143,7 @@ suite('metricMovement — arrow markup', (t) => {
     const good = mm.arrowHtml('aht', 'improving');
     t.check('improving AHT renders a green down-arrow', good.includes('▼') && good.includes('green'));
     const bad = mm.arrowHtml('aht', 'declining');
-    t.check('declining AHT renders a red up-arrow', bad.includes('▲') && bad.includes('#e53935'));
+    t.check('declining AHT renders a red up-arrow', bad.includes('▲') && bad.includes('var(--red)'));
     const soft = mm.arrowHtml('aht', 'declining', { badColor: '#f9a825', stillOnTarget: true });
     t.check('caller can soften the colour when still on target',
         soft.includes('#f9a825') && soft.includes('still on target'));

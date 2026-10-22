@@ -982,8 +982,9 @@
                 datasets: [{
                     label: metric.label || metricKey,
                     data: data.map(function(d) { return d.value; }),
-                    backgroundColor: 'rgba(255, 152, 0, 0.6)',
-                    borderColor: 'rgba(255, 152, 0, 1)',
+                    // The accent, as every chart in the app (restyle, 2026-10-21).
+                    backgroundColor: 'rgba(76, 102, 229, 0.55)',
+                    borderColor: 'rgba(76, 102, 229, 1)',
                     borderWidth: 2
                 }]
             },

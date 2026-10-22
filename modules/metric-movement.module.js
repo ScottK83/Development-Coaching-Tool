@@ -165,7 +165,7 @@
         }
         var color = d.arrowIsGood
             ? (opts.goodColor || 'var(--green-text)')
-            : (opts.badColor || '#e53935');
+            : (opts.badColor || 'var(--red)');
         var title = d.arrowIsGood
             ? 'Improving. ' + d.movementWord
             : 'Getting worse. ' + d.movementWord;

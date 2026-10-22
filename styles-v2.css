@@ -9,8 +9,13 @@
     box-sizing: border-box;
 }
 
-/* --- Design tokens --- */
-:root {
+/* --- Design tokens ---
+   The light set. The page itself is always dark; these apply to an image
+   export's clone (data-theme="light" on its root) and to the Teams cards on
+   screen, which carry data-theme="light" so they show exactly what will be
+   posted. */
+:root,
+[data-theme="light"] {
     /* Colors - muted, sophisticated palette */
     --bg-app: #f5f5f7;
     --bg-surface: #ffffff;
@@ -155,153 +160,32 @@
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* Override inline white/light backgrounds in dark mode */
-[data-theme="dark"] [style*="background:#fff"],
-[data-theme="dark"] [style*="background: #fff"],
-[data-theme="dark"] [style*="background: white"] {
-    background: var(--bg-surface) !important;
-    color: var(--text-primary) !important;
-}
+/* The page's text colour.
 
-[data-theme="dark"] [style*="background:#f0f9ff"],
-[data-theme="dark"] [style*="background: #f0f9ff"],
-[data-theme="dark"] [style*="background:#f1f5f9"],
-[data-theme="dark"] [style*="background: #f1f5f9"] {
-    background: var(--bg-surface-raised) !important;
-}
-
-[data-theme="dark"] [style*="border: 1px solid #e"],
-[data-theme="dark"] [style*="border:1px solid #e"],
-[data-theme="dark"] [style*="border: 1px solid #d"],
-[data-theme="dark"] [style*="border:1px solid #d"],
-[data-theme="dark"] [style*="border: 1px solid #c"],
-[data-theme="dark"] [style*="border:1px solid #c"] {
-    border-color: var(--border) !important;
-}
-
-[data-theme="dark"] [style*="color:#1a"],
-[data-theme="dark"] [style*="color: #1a"] {
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] [style*="color: #666"] {
-    color: var(--text-secondary) !important;
-}
-
-/* DARK MODE: Nuclear text and background readability.
-   Every element gets dark background + light text.
-   This overrides ALL inline styles app-wide. */
-[data-theme="dark"] {
+   A dark layer used to sit here that forced every element's text and
+   background with !important, to paper over inline light colours. The pages
+   use tokens now (restyle 3-5/6, 2026-10-21), so it is gone, and the status
+   colours it was flattening to grey show again. */
+[data-theme="dark"] body {
     color: var(--text-primary);
 }
 
-[data-theme="dark"] body,
-[data-theme="dark"] .container,
-[data-theme="dark"] main,
-[data-theme="dark"] section,
-[data-theme="dark"] div,
-[data-theme="dark"] span,
-[data-theme="dark"] p,
-[data-theme="dark"] li,
-[data-theme="dark"] label,
-[data-theme="dark"] small,
-[data-theme="dark"] strong,
-[data-theme="dark"] td,
-[data-theme="dark"] th,
-[data-theme="dark"] pre,
-[data-theme="dark"] code,
-[data-theme="dark"] h1, [data-theme="dark"] h2,
-[data-theme="dark"] h3, [data-theme="dark"] h4,
-[data-theme="dark"] h5, [data-theme="dark"] h6 {
-    color: var(--text-primary) !important;
+/* A light island on the dark page (the Teams cards): its own text colour, so
+   what it inherits from the dark page never lands on its white. */
+[data-theme="light"] {
+    color: var(--text-primary);
 }
 
-/* Override EVERY inline light background in the entire app */
-[data-theme="dark"] [style*="background: #f"],
-[data-theme="dark"] [style*="background:#f"],
-[data-theme="dark"] [style*="background: #e"],
-[data-theme="dark"] [style*="background:#e"],
-[data-theme="dark"] [style*="background: #d"],
-[data-theme="dark"] [style*="background: white"],
-[data-theme="dark"] [style*="background: #fff"],
-[data-theme="dark"] [style*="background:#fff"] {
-    background: var(--bg-surface-raised) !important;
-}
-[data-theme="dark"] [style*="background: #fff3e0"],
-[data-theme="dark"] [style*="background:#fff3e0"] { background: #2a2013 !important; }
-[data-theme="dark"] [style*="background: #e3f2fd"],
-[data-theme="dark"] [style*="background:#e3f2fd"] { background: var(--brand-soft) !important; }
-
-/* Force all table content readable - !important to beat inline styles */
-[data-theme="dark"] table,
-[data-theme="dark"] table td,
-[data-theme="dark"] table th,
-[data-theme="dark"] table tr,
-[data-theme="dark"] table tr td,
-[data-theme="dark"] table tr th {
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
-}
-
-/* All table rows — override ANY inline background */
-[data-theme="dark"] table tr[style] {
-    background: var(--bg-surface) !important;
-}
-
-/* Team member rows — indigo-tinted highlight */
-[data-theme="dark"] table tr[style*="background: #e8eaf6"] {
-    background: var(--brand-soft) !important;
-    color: var(--text-primary) !important;
-}
-
-/* Ranking names */
-.ranking-card-name {
-    color: #1a1a2e;
-}
-.ranking-name-cell {
-    color: #1a1a2e;
-}
+/* Ranking names: the body colour, underlined quietly. */
+.ranking-card-name,
+.ranking-name-cell,
 .ranking-row td {
-    color: #1a1a2e;
+    color: var(--text-primary);
 }
 
-[data-theme="dark"] .ranking-card-name {
-    color: var(--text-primary) !important;
-    text-decoration-color: var(--text-secondary) !important;
+.ranking-card-name {
+    text-decoration-color: var(--text-secondary);
 }
-[data-theme="dark"] .ranking-name-cell,
-[data-theme="dark"] .ranking-row td {
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] .ranking-row {
-    background: var(--bg-surface) !important;
-}
-[data-theme="dark"] .ranking-row:nth-child(even) {
-    background: var(--bg-surface-raised) !important;
-}
-
-[data-theme="dark"] div[style*="background: #fff8e1"],
-[data-theme="dark"] div[style*="background:#fff8e1"],
-[data-theme="dark"] div[style*="background: #fbe9e7"] {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] td[style*="background: #fff8e1"],
-[data-theme="dark"] td[style*="background:#fff8e1"] { background: var(--yellow-soft) !important; color: var(--yellow-text) !important; }
-
-/* Header/team-avg rows */
-[data-theme="dark"] table tr[style*="background: #f5f5f5"],
-[data-theme="dark"] table tr[style*="background: #ede7f6"],
-[data-theme="dark"] table tr[style*="background:#ede7f6"] {
-    background: var(--bg-active) !important;
-    color: var(--text-primary) !important;
-}
-
-/* Nuclear option: any span/div/td with a hard-coded dark color */
-[data-theme="dark"] [style*="color: #1565c0"],
-[data-theme="dark"] [style*="color:#1565c0"] { color: var(--brand-text) !important; }
-[data-theme="dark"] [style*="color: #4a148c"] { color: var(--text-primary) !important; }
-[data-theme="dark"] [style*="color: #7a4f00"] { color: var(--yellow-text) !important; }
 
 [data-theme="dark"] textarea,
 [data-theme="dark"] input,
@@ -329,135 +213,6 @@ progress {
     background: var(--brand-soft);
     color: var(--text-primary);
 }
-
-/* Override all inline-styled buttons in dark mode */
-[data-theme="dark"] button[style*="background:linear-gradient"],
-[data-theme="dark"] button[style*="background: linear-gradient"] {
-    background: var(--brand) !important;
-    border-color: var(--brand-hover) !important;
-    color: var(--text-inverse) !important;
-}
-
-[data-theme="dark"] button[style*="background:#4338ca"] {
-    background: var(--brand) !important;
-}
-
-[data-theme="dark"] button[style*="background:#f1f5f9"],
-[data-theme="dark"] button[style*="background: #f1f5f9"],
-[data-theme="dark"] button[style*="background: #ccc"] {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-secondary) !important;
-    border-color: var(--border) !important;
-}
-
-/* Inner tab buttons (Celebrations/Morning Pulse toggle) */
-[data-theme="dark"] #celebrationsInnerNav button {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-secondary) !important;
-    border-color: var(--border) !important;
-}
-
-[data-theme="dark"] #celebrationsInnerNav button[style*="gradient"] {
-    background: var(--brand) !important;
-    color: var(--text-inverse) !important;
-    border-color: var(--brand-hover) !important;
-}
-
-/* View toggle (Current/History) */
-[data-theme="dark"] #celebViewCurrent,
-[data-theme="dark"] #celebViewHistory {
-    border-color: var(--border) !important;
-}
-
-[data-theme="dark"] #celebViewCurrent[style*="gradient"],
-[data-theme="dark"] #celebViewHistory[style*="gradient"] {
-    background: var(--brand) !important;
-    color: var(--text-inverse) !important;
-}
-
-[data-theme="dark"] #celebViewCurrent:not([style*="gradient"]),
-[data-theme="dark"] #celebViewHistory:not([style*="gradient"]) {
-    background: var(--bg-surface) !important;
-    color: var(--text-secondary) !important;
-}
-
-/* Widgets toggled via JS .style.display: the browser re-serializes the inline
-   colors to rgb(...), so the [style*="#f..."] overrides above stop matching.
-   These widgets have to be targeted by id instead. */
-[data-theme="dark"] #storageQuotaWidget {
-    background: var(--bg-surface-raised) !important;
-    border-color: var(--border) !important;
-}
-[data-theme="dark"] #storageQuotaWidget #storageQuotaLabel {
-    color: var(--text-secondary) !important;
-}
-[data-theme="dark"] #storageQuotaWidget > div > div:first-child {
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] #uploadSuccessMessage {
-    background: var(--green-soft) !important;
-    border-color: var(--green-text) !important;
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] #uploadSuccessMessage h3,
-[data-theme="dark"] #uploadSuccessMessage p,
-[data-theme="dark"] #uploadSuccessMessage strong {
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] #uploadColumnInspector {
-    background: var(--bg-surface-raised) !important;
-    border-color: var(--border) !important;
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] #uploadColumnInspector div,
-[data-theme="dark"] #uploadColumnInspector li,
-[data-theme="dark"] #uploadColumnInspector ul {
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] #uploadColumnInspectorMeta,
-[data-theme="dark"] #uploadColumnInspectorFooter {
-    color: var(--text-secondary) !important;
-}
-
-[data-theme="dark"] #uploadUndoBanner {
-    background: var(--yellow-soft) !important;
-    border-color: var(--yellow-text) !important;
-}
-[data-theme="dark"] #uploadUndoBanner > div:first-child {
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] #uploadUndoBanner #uploadUndoBtn {
-    background: var(--orange) !important;
-    color: var(--text-inverse) !important;
-}
-[data-theme="dark"] #uploadUndoBanner #uploadUndoDismissBtn {
-    background: transparent !important;
-    color: var(--text-secondary) !important;
-    border-color: var(--border-strong) !important;
-}
-
-[data-theme="dark"] #uploadWizardSummary {
-    background: var(--bg-surface-raised) !important;
-    border-left-color: var(--brand) !important;
-    color: var(--text-primary) !important;
-}
-[data-theme="dark"] #uploadWizardDailyWeekSummary {
-    background: var(--bg-surface-raised) !important;
-    border-left-color: var(--yellow-text) !important;
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] [style*="background:#e2e8f0"] {
-    background: var(--bg-surface-raised) !important;
-}
-[data-theme="dark"] [style*="background:#f0f9ff"],
-[data-theme="dark"] [style*="background: #f0f9ff"] { background: var(--brand-soft) !important; }
-[data-theme="dark"] [style*="background:#fff3e0"],
-[data-theme="dark"] [style*="background: #fff3e0"] { background: var(--orange-soft) !important; }
-[data-theme="dark"] [style*="background:#e3f2fd"],
-[data-theme="dark"] [style*="background: #e3f2fd"] { background: var(--brand-soft) !important; }
 
 /* Data validation preview */
 .validation-success {
@@ -583,9 +338,7 @@ header h1 {
    The Downloader Bot's layout (2026-10-21): a dark sidebar on the left with
    every page under its group, the page on the canvas beside it with its
    title at the top, and a quiet status line along the bottom.
-   sidebar.module.js builds the sidebar and wraps .container in .app-shell.
-   Colours on the sidebar's words are !important because the dark layer
-   above forces every div and span to the body text colour. */
+   sidebar.module.js builds the sidebar and wraps .container in .app-shell. */
 body:has(.app-shell) {
     padding: 0;
 }
@@ -2092,11 +1845,10 @@ textarea:focus-visible {
    system the way the Downloader Bot's do. Every value is a token, so the
    same markup also renders right in an image export's light clone.
 
-   Tone colours are written with [data-theme] in front and !important,
-   because the dark layer near the top of this file forces every div and
-   span to the body text colour with !important; this is the one way past
-   it. Green means on target, amber means watch, red means missed. The
-   accent means "this is the thing to do", never decoration.
+   Tone colours are written with [data-theme] in front and !important, so a
+   class wins over any inline colour left on the same element. Green means
+   on target, amber means watch, red means missed. The accent means "this is
+   the thing to do", never decoration.
    ========================================================================== */
 
 /* A card: the bot's surface with a hairline edge. */
@@ -2319,284 +2071,8 @@ button.btn-sm {
     color: var(--text-primary) !important;
 }
 
-/* ============================================
-   MORNING PULSE - Dark Mode Overrides
-   ============================================ */
-
-/* Pulse cards: visible separation from dark page background */
-[data-theme="dark"] .pulse-card,
-[data-theme="dark"] .pulse-card[style] {
-    background: var(--bg-surface) !important;
-    border-color: var(--border-strong) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-[data-theme="dark"] .pulse-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-/* Summary bar: dark gradient instead of light */
-[data-theme="dark"] [style*="background:linear-gradient(135deg, #f5f7fa"],
-[data-theme="dark"] [style*="background: linear-gradient(135deg, #f5f7fa"] {
-    background: linear-gradient(135deg, var(--brand-soft) 0%, var(--bg-hover) 100%) !important;
-    border: 1px solid var(--border-strong);
-}
-
-/* Summary bar "Team Pulse" title */
-[data-theme="dark"] [style*="background:linear-gradient(135deg,
-[data-theme="dark"] [style*="background: linear-gradient(135deg {
-    color: var(--text-primary) !important;
-}
-
-/* Summary bar status colors - brighter for dark bg */
-[data-theme="dark"] [style*="background:linear-gradient(135deg, #f5f7fa"] [style*="color:#e53935"] {
-    color: var(--red-text) !important;
-}
-[data-theme="dark"] [style*="background:linear-gradient(135deg, #f5f7fa"] [style*="color:#fb8c00"] {
-    color: var(--yellow-text) !important;
-}
-[data-theme="dark"] [style*="background:linear-gradient(135deg {
-    color: var(--green-text) !important;
-}
-[data-theme="dark"] [style*="background:linear-gradient(135deg, #f5f7fa"] [style*="color:#1e88e5"] {
-    color: #7bb8f0 !important;
-}
-[data-theme="dark"] [style*="background:linear-gradient(135deg, #f5f7fa"] [style*="color:#78909c"] {
-    color: #90a4ae !important;
-}
-
-/* Summary bar associate count and upload note */
-[data-theme="dark"] [style*="background:linear-gradient(135deg {
-    color: var(--text-secondary) !important;
-}
-[data-theme="dark"] [style*="color:#1a237e"] {
-    color: var(--brand-text) !important;
-}
-
-/* Controls bar (period type / period key selectors) */
-[data-theme="dark"] [style*="background:#fff"][style*="border:1px solid #e0e7ff"],
-[data-theme="dark"] [style*="background:#fff"][style*="border: 1px solid #e0e7ff"] {
-    background: var(--bg-surface) !important;
-    border-color: var(--border-strong) !important;
-}
-
-/* Control select dropdowns */
-[data-theme="dark"] #pulsePeriodTypeSelect,
-[data-theme="dark"] #pulsePeriodKeySelect {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
-}
-
-/* Biggest improvement callout */
-[data-theme="dark"] .pulse-card [style*="background:#e8f5e9"][style*="border-left:3px solid #4caf50"] {
-    background: var(--green-soft) !important;
-    border-left-color: var(--green) !important;
-    color: var(--green-text) !important;
-}
-[data-theme="dark"] .pulse-card [style*="background:#e8f5e9"][style*="border-left:3px solid #4caf50"] strong {
-    color: var(--green-text) !important;
-}
-
-/* Focus section (needs attention - orange) */
-[data-theme="dark"] .pulse-card [style*="background:#fff3e0"][style*="border-left:3px solid #ff9800"] {
-    background: var(--orange-soft) !important;
-    border-left-color: var(--orange) !important;
-    color: var(--yellow-text) !important;
-}
-[data-theme="dark"] .pulse-card [style*="background:#fff3e0"][style*="border-left:3px solid #ff9800"] strong {
-    color: var(--yellow-text) !important;
-}
-
-/* Focus section (on track - green) */
-[data-theme="dark"] .pulse-card [style*="background:#e8f5e9"][style*="border-left:3px solid #4caf50"][style*="font-size:0.85em"] {
-    background: var(--green-soft) !important;
-    border-left-color: var(--green) !important;
-    color: var(--green-text) !important;
-}
-
-/* Badge pills - dark-safe background variants */
-[data-theme="dark"] .pulse-card [style*="background:#eceff1"],
-[data-theme="dark"] .pulse-card [style*="background: #eceff1"] {
-    background: var(--bg-active) !important;
-}
-
-/* Check-in / High-Five / Review buttons - slightly brighter in dark mode */
-[data-theme="dark"] .pulse-checkin-btn,
-[data-theme="dark"] .pulse-highfive-btn,
-[data-theme="dark"] .pulse-review-btn {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-[data-theme="dark"] .pulse-checkin-btn:hover {
-    filter: brightness(1.15);
-}
-[data-theme="dark"] .pulse-highfive-btn:hover {
-    filter: brightness(1.15);
-}
-[data-theme="dark"] .pulse-review-btn:hover {
-    filter: brightness(1.15);
-}
-
-/* Pulse modal - dark background */
-[data-theme="dark"] #pulseCheckinModal > div[style] {
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-strong);
-}
-[data-theme="dark"] #pulseCheckinModal h3 {
-    color: var(--brand-text) !important;
-}
-[data-theme="dark"] #pulseCheckinModal textarea {
-    background: var(--bg-surface-sunken) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
-}
-[data-theme="dark"] #pulseCheckinModal #pulseCheckinClose {
-    color: var(--text-secondary) !important;
-}
-[data-theme="dark"] #pulseCheckinModal #pulseCheckinRegenerate {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
-}
-
-/* Morning Pulse header text */
-[data-theme="dark"] h3[style*="color:#1a237e"] {
-    color: var(--brand-text) !important;
-}
-[data-theme="dark"] .pulse-card [style*="color:#e53935"][title="Declining"] {
-    color: var(--red) !important;
-}
-
-/* ============================================
-   COMPREHENSIVE DARK MODE — ALL MODULES
-   Covers every inline color pattern found in JS
-   ============================================ */
-
-/* --- Light backgrounds → dark surface --- */
-[data-theme="dark"] [style*="background: #c8f7c5"] { background: var(--green-soft) !important; }
-[data-theme="dark"] [style*="background: #eef8f0"] { background: var(--green-soft) !important; }
-[data-theme="dark"] [style*="background: #f1f8e9"] { background: var(--green-soft) !important; }
-[data-theme="dark"] [style*="background: #fff0f0"] { background: var(--red-soft) !important; }
-[data-theme="dark"] [style*="background: #fff5f5"],
-[data-theme="dark"] [style*="background:#fff5f5"] { background: var(--red-soft) !important; }
-[data-theme="dark"] [style*="background: #fff7f7"] { background: var(--red-soft) !important; }
-[data-theme="dark"] [style*="background: #fff3cd"],
-[data-theme="dark"] [style*="background:#fff3cd"] { background: var(--yellow-soft) !important; }
-[data-theme="dark"] [style*="background: #f0de87"] { background: var(--yellow-soft) !important; }
-[data-theme="dark"] [style*="background: #fff8f2"] { background: var(--orange-soft) !important; }
-[data-theme="dark"] [style*="background: #ede7f6"],
-[data-theme="dark"] [style*="background:#ede7f6"] { background: #1f1530 !important; }
-[data-theme="dark"] [style*="background: #f3e5f5"] { background: #1f1530 !important; }
-[data-theme="dark"] [style*="background: #f4effc"] { background: #1f1530 !important; }
-[data-theme="dark"] [style*="background: #f5f3ff"] { background: #1f1530 !important; }
-[data-theme="dark"] [style*="background: #faf7ff"] { background: #1f1530 !important; }
-[data-theme="dark"] [style*="background: #e1f5fe"] { background: var(--brand-soft) !important; }
-[data-theme="dark"] [style*="background: #f4f9ff"] { background: var(--bg-surface-raised) !important; }
-[data-theme="dark"] [style*="background: #f5f9ff"] { background: var(--bg-surface-raised) !important; }
-[data-theme="dark"] [style*="background: #f8fbff"] { background: var(--bg-surface-raised) !important; }
-[data-theme="dark"] [style*="background: #f7f9fc"] { background: var(--bg-surface-raised) !important; }
-[data-theme="dark"] [style*="background: #eceff1"],
-[data-theme="dark"] [style*="background:#eceff1"] { background: var(--bg-surface-raised) !important; }
-[data-theme="dark"] [style*="background: #eee"] { background: var(--bg-surface-raised) !important; }
-[data-theme="dark"] [style*="background: #ddd"] { background: var(--bg-active) !important; }
-
-/* --- Dark text colors → light for dark mode --- */
-[data-theme="dark"] [style*="color: #1e293b"] { color: var(--text-primary) !important; }
-[data-theme="dark"] [style*="color: #334155"],
-[data-theme="dark"] [style*="color:#334155"] { color: var(--text-primary) !important; }
-[data-theme="dark"] [style*="color: #475569"] { color: var(--text-secondary) !important; }
-[data-theme="dark"] [style*="color:#607d8b"] { color: var(--text-secondary) !important; }
-[data-theme="dark"] [style*="color: #888"] { color: var(--text-tertiary) !important; }
-[data-theme="dark"] [style*="color:#90a4ae"] { color: var(--text-tertiary) !important; }
-[data-theme="dark"] [style*="color: #455a64"],
-[data-theme="dark"] [style*="color:#455a64"] { color: var(--text-secondary) !important; }
-[data-theme="dark"] [style*="color: #37474f"],
-[data-theme="dark"] [style*="color:#37474f"] { color: var(--text-primary) !important; }
-[data-theme="dark"] [style*="color: #1b5e20"] { color: var(--green) !important; }
-[data-theme="dark"] [style*="color: #16a34a"] { color: var(--green) !important; }
-[data-theme="dark"] [style*="color: #00695c"],
-[data-theme="dark"] [style*="color:#00695c"] { color: #5eead4 !important; }
-[data-theme="dark"] [style*="color: #dc2626"] { color: var(--red) !important; }
-[data-theme="dark"] [style*="color: #721c24"] { color: var(--red-text) !important; }
-[data-theme="dark"] [style*="color: #e65100"],
-[data-theme="dark"] [style*="color:#e65100"] { color: var(--orange) !important; }
-[data-theme="dark"] [style*="color: #6a1b9a"],
-[data-theme="dark"] [style*="color:#6a1b9a"] { color: #c084fc !important; }
-[data-theme="dark"] [style*="color: #9c27b0"] { color: #c084fc !important; }
-[data-theme="dark"] [style*="color: #4a148c"] { color: #c084fc !important; }
-[data-theme="dark"] [style*="color: #1976d2"] { color: var(--brand-text) !important; }
-
-/* --- Colored action buttons keep colors but darken for contrast --- */
-[data-theme="dark"] button[style*="background: #28a745"] { background: #22863a !important; }
-[data-theme="dark"] button[style*="background: #dc3545"] { background: #b91c1c !important; }
-[data-theme="dark"] button[style*="background: #6c757d"] { background: #4b5563 !important; }
-[data-theme="dark"] button[style*="background: #607d8b"] { background: #475569 !important; }
-[data-theme="dark"] button[style*="background: #999"] { background: #4b5563 !important; color: var(--text-primary) !important; }
-
-/* --- Status badges preserve meaning but use dark variants --- */
-[data-theme="dark"] span[style*="background: #2e7d32"] { background: #166534 !important; }
-[data-theme="dark"] span[style*="background: #c62828"],
-[data-theme="dark"] span[style*="background:#c62828"] { background: #991b1b !important; }
-[data-theme="dark"] span[style*="background: #f57c00"] { background: #c2410c !important; }
-[data-theme="dark"] span[style*="background: #ef6c00"] { background: #c2410c !important; }
-
-/* --- Form sections with light backgrounds --- */
-[data-theme="dark"] .form-section,
-[data-theme="dark"] .form-section[style] {
-    background: var(--bg-surface) !important;
-    border-color: var(--border) !important;
-    color: var(--text-primary) !important;
-}
-
-/* --- Border-left accent bars --- */
-[data-theme="dark"] [style*="border-left: 4px solid #2196F3"] { border-left-color: var(--brand) !important; }
-[data-theme="dark"] [style*="border-left: 4px solid #4caf50"] { border-left-color: var(--green) !important; }
-[data-theme="dark"] [style*="border-left: 4px solid #ff9800"] { border-left-color: var(--orange) !important; }
-
-/* --- Rankings supervisor row colors for dark mode --- */
-[data-theme="dark"] .ranking-row[style*="background: #e8eaf6"] { background: #0d2137 !important; }
-[data-theme="dark"] .ranking-row[style*="background: #f3e5f5"] { background: #1f0f24 !important; }
-[data-theme="dark"] .ranking-row[style*="background: #fff3e0"],
-[data-theme="dark"] .ranking-row[style*="background:#fff3e0"] { background: #2a1d08 !important; }
-
-[data-theme="dark"] textarea[style*="background: white"] {
-    background: var(--bg-surface-raised) !important;
-    color: var(--text-primary) !important;
-}
-
-/* --- Prompt / summary output boxes ---
-   These containers have their display toggled by JS. Writing to element.style
-   re-serializes the inline style attribute,
-turning "background: #f0f9ff" into
-   "background: rgb(240,
-249,
-255)",
-#midYearText { color: #1e293b !important; }
-[data-theme="dark"] #onOffCheckinOutput,
-[data-theme="dark"] #midYearOutput {
-    background: var(--bg-surface-raised) !important;
-    border-color: var(--border-strong) !important;
-}
-[data-theme="dark"] #onOffCheckinText,
-[data-theme="dark"] #midYearText { color: var(--text-primary) !important; }
-
-[data-theme="dark"] #verintSummarySection {
-    background: var(--bg-surface-raised) !important;
-    border-color: var(--border-strong) !important;
-}
-[data-theme="dark"] #verintSummaryOutput {
-    background: var(--bg-surface-sunken) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border) !important;
-}
-
-/* --- Debug panel --- */
-[data-theme="dark"] #debugSection pre,
-[data-theme="dark"] #debugSection code {
-    background: var(--bg-surface-sunken) !important;
-    color: var(--text-primary) !important;
-}
-
-/* --- Modal/dialog overlays --- */
+/* Safety nets for dialogs and the toast built in JS: a surface, the body
+   text colour and a strong edge, whatever the markup says. */
 [data-theme="dark"] .devcoach-dialog-backdrop > div,
 [data-theme="dark"] .modal-overlay > div {
     background: var(--bg-surface) !important;
@@ -2604,93 +2080,23 @@ turning "background: #f0f9ff" into
     border-color: var(--border-strong) !important;
 }
 
-/* --- Trend charts area --- */
-[data-theme="dark"] #trendChartContainer canvas {
-    filter: brightness(0.9);
-}
-
-/* --- Score cells in on/off tracker --- */
-[data-theme="dark"] td[style*="background: #c8f7c5"] { background: var(--green-soft) !important; color: var(--green-text) !important; }
-[data-theme="dark"] td[style*="background: #fff8e1"],
-[data-theme="dark"] td[style*="background:#fff8e1"] { background: var(--yellow-soft) !important; color: var(--yellow-text) !important; }
-[data-theme="dark"] td[style*="background: #f0de87"] { background: var(--yellow-soft) !important; color: var(--yellow-text) !important; }
-
-/* --- Reliability module status colors --- */
-[data-theme="dark"] [style*="background: #4CAF50"],
-[data-theme="dark"] [style*="background: #4caf50"] { background: #166534 !important; }
-[data-theme="dark"] [style*="background: #ff1a1a"] { background: #991b1b !important; }
-[data-theme="dark"] [style*="background: #00b050"] { background: #166534 !important; }
-
-/* --- Toast notifications --- */
 [data-theme="dark"] #toastNotification {
     background: var(--bg-surface-raised) !important;
     color: var(--text-primary) !important;
     border: 1px solid var(--border-strong) !important;
 }
 
-/* --- Matchup module cards --- */
-[data-theme="dark"] [style*="background: #7c4dff"] { background: #5b21b6 !important; }
-[data-theme="dark"] [style*="background: #9c27b0"] { background: #7e22ce !important; }
-
-/* --- Ensure all section headers readable --- */
-[data-theme="dark"] [style*="border-left: 4px solid"] {
-    background: var(--bg-surface) !important;
+[data-theme="dark"] #debugSection pre,
+[data-theme="dark"] #debugSection code {
+    background: var(--bg-surface-sunken) !important;
     color: var(--text-primary) !important;
 }
-
-/* --- Additional text colors found by full audit --- */
-[data-theme="dark"] [style*="color: #546e7a"],
-[data-theme="dark"] [style*="color:#546e7a"] { color: var(--text-secondary) !important; }
-[data-theme="dark"] [style*="color: #2f4f87"] { color: var(--brand-text) !important; }
-[data-theme="dark"] [style*="color: #3f5168"] { color: var(--text-secondary) !important; }
-[data-theme="dark"] [style*="color:#8a5300"] { color: var(--yellow-text) !important; }
-[data-theme="dark"] [style*="color: #856404"],
-[data-theme="dark"] [style*="color:#856404"] { color: var(--yellow-text) !important; }
-[data-theme="dark"] [style*="color:#842029"] { color: var(--red-text) !important; }
-[data-theme="dark"] [style*="color: #8d6e00"] { color: var(--yellow-text) !important; }
-[data-theme="dark"] [style*="color:#8d1f1f"] { color: var(--red-text) !important; }
-[data-theme="dark"] [style*="color: #5e35b1"],
-[data-theme="dark"] [style*="color:#5e35b1"] { color: var(--brand-text) !important; }
-[data-theme="dark"] [style*="color: #0d47a1"],
-[data-theme="dark"] [style*="color:#0d47a1"] { color: var(--brand-text) !important; }
-[data-theme="dark"] [style*="color: #8a6d1f"] { color: var(--yellow-text) !important; }
-[data-theme="dark"] [style*="color: #1e40af"],
-[data-theme="dark"] [style*="color:#1e40af"] { color: var(--brand-text) !important; }
-[data-theme="dark"] [style*="color:#b8860b"] { color: var(--yellow-text) !important; }
-[data-theme="dark"] [style*="color: #f57f17"],
-[data-theme="dark"] [style*="color:#f57f17"] { color: var(--yellow) !important; }
-[data-theme="dark"] [style*="color: #e53935"],
-[data-theme="dark"] [style*="color:#e53935"] { color: var(--red) !important; }
-[data-theme="dark"] [style*="color: #ff9800"] { color: var(--orange) !important; }
-[data-theme="dark"] [style*="color: #2196F3"] { color: var(--brand-text) !important; }
-[data-theme="dark"] [style*="color: #9c27b0"] { color: #c084fc !important; }
-
-/* --- Semantic backgrounds the nuclear override incorrectly flattens --- */
-[data-theme="dark"] [style*="background: #fff3cd"],
-[data-theme="dark"] [style*="background:#fff3cd"] { background: var(--yellow-soft) !important; }
-[data-theme="dark"] [style*="background: #f8d7da"],
-[data-theme="dark"] [style*="background:#f8d7da"] { background: var(--red-soft) !important; }
-
-/* --- Borders not caught by nuclear (starts with #a, #b, #4, #6, #8) --- */
-[data-theme="dark"] [style*="border"][style*="#6a1b9a"] { border-color: var(--brand-muted) !important; }
-[data-theme="dark"] [style*="border"][style*="#b2dfdb"] { border-color: var(--border) !important; }
-[data-theme="dark"] [style*="border"][style*="#bbf7d0"] { border-color: var(--green) !important; }
-[data-theme="dark"] [style*="border"][style*="#fecaca"] { border-color: var(--red) !important; }
-[data-theme="dark"] [style*="border"][style*="#a5d6a7"] { border-color: var(--green) !important; }
-[data-theme="dark"] [style*="border"][style*="#81c784"] { border-color: var(--green) !important; }
-[data-theme="dark"] [style*="border"][style*="#ffe0b2"] { border-color: var(--orange) !important; }
-[data-theme="dark"] [style*="border"][style*="#ffe08a"] { border-color: var(--yellow) !important; }
-[data-theme="dark"] [style*="border"][style*="#4caf50"] { border-color: var(--green) !important; }
-[data-theme="dark"] [style*="border"][style*="#c62828"] { border-color: var(--red) !important; }
-[data-theme="dark"] [style*="border"][style*="#2196F3"] { border-color: var(--brand) !important; }
-[data-theme="dark"] [style*="border"][style*="#28a745"] { border-color: var(--green) !important; }
-[data-theme="dark"] [style*="border"][style*="#1976D2"] { border-color: var(--brand) !important; }
 
 /* --- Scrollbars for dark mode --- */
 [data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
 [data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-surface-sunken); }
 [data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #4b5e7a; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
 /* ==========================================================================
    Placement highlighting in the team shout-out
