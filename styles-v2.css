@@ -1787,39 +1787,48 @@ textarea:focus-visible {
     color: var(--brand-text);
     font-weight: 600;
     margin-top: var(--space-1);
-}/* --- Upload buttons --- */
+}
+
+/* --- Upload buttons ---
+   One primary, the upload done most (metrics); the rest are secondary, as
+   the bot keeps one accent button per page. They were five colours. */
 .btn-upload-metrics,
 .btn-upload-sentiment,
 .btn-upload-verint,
 .btn-upload-payroll,
 .btn-upload-pto {
     flex: 1;
-    min-width: 180px;
-    max-width: 280px;
-    padding: var(--space-4);
-    color: var(--text-inverse);
-    border: none;
-    border-radius: var(--radius-lg);
+    min-width: 170px;
+    max-width: 260px;
+    min-height: 40px;
+    padding: var(--space-2) var(--space-4);
+    color: var(--text-primary);
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.9em;
-    transition: all 0.15s ease;
+    font-size: 0.93em;
     box-shadow: none;
 }
 
-.btn-upload-metrics { background: var(--green); }
-.btn-upload-sentiment { background: #0891b2; }
-.btn-upload-verint { background: #7c3aed; }
-.btn-upload-payroll { background: #047857; }
-.btn-upload-pto { background: var(--red); }
+.btn-upload-metrics {
+    color: var(--text-inverse);
+    background: var(--brand);
+    border-color: var(--brand);
+}
 
-.btn-upload-metrics:hover,
 .btn-upload-sentiment:hover,
 .btn-upload-verint:hover,
 .btn-upload-payroll:hover,
 .btn-upload-pto:hover {
-    transform: none;
-    filter: brightness(0.92);
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+}
+
+.btn-upload-metrics:hover {
+    background: var(--brand-hover);
+    border-color: var(--brand-hover);
 }
 
 .upload-container {
@@ -2066,7 +2075,164 @@ textarea:focus-visible {
     margin-bottom: var(--space-1);
     font-size: 0.85em;
     color: var(--text-secondary);
-}/* --- Responsive --- */
+}
+
+
+/* ==========================================================================
+   KIT: the shared page pieces (restyle, 2026-10-21)
+
+   What a page uses instead of inline colours, so every page reads as one
+   system the way the Downloader Bot's do. Every value is a token, so the
+   same markup also renders right in an image export's light clone.
+
+   Tone colours are written with [data-theme] in front and !important,
+   because the dark layer near the top of this file forces every div and
+   span to the body text colour with !important; this is the one way past
+   it. Green means on target, amber means watch, red means missed. The
+   accent means "this is the thing to do", never decoration.
+   ========================================================================== */
+
+/* A card: the bot's surface with a hairline edge. */
+.card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) 18px;
+}
+
+.card + .card {
+    margin-top: var(--space-3);
+}
+
+/* A box inside a card: an input-like well for numbers, lists, previews. */
+.card-sunken {
+    background: var(--bg-surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+}
+
+[data-theme] .card-title,
+[data-theme] .section-title {
+    margin: 0 0 var(--space-2) 0;
+    font-size: 1em;
+    font-weight: 650;
+    letter-spacing: -0.005em;
+    color: var(--text-primary) !important;
+}
+
+[data-theme] .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary) !important;
+}
+
+/* Text colours. */
+[data-theme] .text-primary { color: var(--text-primary) !important; }
+[data-theme] .text-secondary { color: var(--text-secondary) !important; }
+[data-theme] .text-faint { color: var(--text-tertiary) !important; }
+[data-theme] .tone-good { color: var(--green-text) !important; }
+[data-theme] .tone-warn { color: var(--yellow-text) !important; }
+[data-theme] .tone-bad { color: var(--red-text) !important; }
+[data-theme] .tone-info { color: var(--brand-text) !important; }
+[data-theme] .tone-accent { color: var(--brand-text) !important; }
+
+/* A numeric figure that leads its card. */
+[data-theme] .stat {
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--text-primary) !important;
+}
+
+/* A callout: a tinted box with a matching edge, the bot's subtle-plus-edge
+   pairing. Plain .callout is neutral. */
+.callout {
+    padding: 10px var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface-raised);
+    color: var(--text-primary);
+    line-height: var(--leading-normal);
+}
+
+.callout-good {
+    background: var(--green-soft);
+    border-color: rgba(74, 222, 128, 0.35);
+}
+
+.callout-warn {
+    background: var(--yellow-soft);
+    border-color: rgba(245, 184, 67, 0.35);
+}
+
+.callout-bad {
+    background: var(--red-soft);
+    border-color: rgba(248, 113, 113, 0.45);
+}
+
+.callout-info {
+    background: var(--brand-soft);
+    border-color: rgba(143, 163, 255, 0.35);
+}
+
+/* A pill: a small label or count. Neutral unless a tone is named. */
+[data-theme] .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+    background: var(--bg-active);
+    color: var(--text-secondary) !important;
+}
+
+[data-theme] .pill-good { background: var(--green-soft); color: var(--green-text) !important; }
+[data-theme] .pill-warn { background: var(--yellow-soft); color: var(--yellow-text) !important; }
+[data-theme] .pill-bad { background: var(--red-soft); color: var(--red-text) !important; }
+[data-theme] .pill-info,
+[data-theme] .pill-accent { background: var(--brand-soft); color: var(--brand-text) !important; }
+
+.divider {
+    height: 1px;
+    margin: var(--space-3) 0;
+    background: var(--border);
+    border: none;
+}
+
+/* A plain data table, the bot's: header in small muted type, hairline rows. */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.93em;
+}
+
+[data-theme] .data-table th {
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-tertiary) !important;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.data-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table tbody tr:hover td {
+    background: var(--bg-hover);
+}
+
+/* --- Responsive --- */
 @media (max-width: 768px) {
     body {
         padding: var(--space-2);
