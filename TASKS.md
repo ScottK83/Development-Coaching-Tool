@@ -1,6 +1,8 @@
 # Tasks
 
 ## Open
+- Data pipeline plan, waiting for Scott's approval and his four answers: `audit/2026-10-21-data-pipeline-plan.md`. Phases: 1 fix the wrong numbers (Snapshot, Year to date, Pace label); 2 upload checks; 3 repair stored data and hide superseded periods; 4 one period control everywhere; 5 one answer for each number.
+- Later, from the same read: two cloud syncs run side by side and R2 is never pruned (needs a worker deploy from home); undo after an upload leaves archived dailies, the auto YTD and center averages changed.
 - Scott to review the restyle on the live site; tweak what he flags.
 - Restyle leftovers, optional: the Calls page keeps three primary buttons (its three main steps); Settings Save buttons are secondary; kit wishes not built yet (row tints on table rows, a progress meter, a .chip class); baseline/outputs.txt will differ (regenerate with node tests/baseline.js if it matters).
 - Rankings emails (Center > Rankings): still carry more than 2 emojis, a reliability "Met." line, and "off by 20s" instead of "20 seconds".
