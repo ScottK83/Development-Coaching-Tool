@@ -802,6 +802,10 @@
                 var requiredToExceed = null;
                 var meetAchievable = null;
                 var exceedAchievable = null;
+                // Whether the arithmetic allows it at all, apart from reach.
+                var meetPossible = null;
+                var exceedPossible = null;
+                var bestSoFar = null;
                 var currentlyMeeting, currentlyExceeding;
                 var budgetRemaining = null;
                 var exceedBudgetRemaining = null;
@@ -826,6 +830,9 @@
                     requiredToExceed = calculateRequiredAverage(currentValue, weekInfo.weeksCompleted, weekInfo.weeksRemaining, exceedTarget, volume);
                     meetAchievable = requiredToMeet !== null ? isWithinReach(empName, metricKey, requiredToMeet, weekInfo.yearKeys) : null;
                     exceedAchievable = requiredToExceed !== null ? isWithinReach(empName, metricKey, requiredToExceed, weekInfo.yearKeys) : null;
+                    meetPossible = requiredToMeet !== null ? isAchievable(metricKey, requiredToMeet) : null;
+                    exceedPossible = requiredToExceed !== null ? isAchievable(metricKey, requiredToExceed) : null;
+                    bestSoFar = bestPeriodValue(empName, metricKey, weekInfo.yearKeys);
                 }
 
                 empResult.metrics[metricKey] = {
@@ -836,6 +843,9 @@
                     requiredToExceed: requiredToExceed,
                     meetAchievable: meetAchievable,
                     exceedAchievable: exceedAchievable,
+                    meetPossible: meetPossible,
+                    exceedPossible: exceedPossible,
+                    bestSoFar: bestSoFar,
                     currentlyMeeting: currentlyMeeting,
                     currentlyExceeding: currentlyExceeding,
                     isReverse: isReverse,
@@ -857,6 +867,26 @@
             weekInfo: weekInfo,
             employees: results
         };
+    }
+
+    /*
+     * A required average past the best period so far still prints its number.
+     *
+     * Scott, 2026-10-21: "How is it not possible for Christi to raise her
+     * adherence by .8 points?" Her year needed 96.5% a week from here, against
+     * a best period of 96.4%. "Not achievable" hid the one number worth
+     * coaching to. Only a target the arithmetic rules out (over 100%, under
+     * zero) says Not possible.
+     */
+    function _outOfReachCell(metricKey, required, possible, bestSoFar, tfSuffix) {
+        if (possible === false) {
+            return '<span class="tone-bad" style="font-size: 0.85em;">Not possible</span>';
+        }
+        var best = (bestSoFar !== null && bestSoFar !== undefined)
+            ? 'Stretch: best so far ' + _formatMetricDisplay(metricKey, bestSoFar)
+            : 'Stretch';
+        return '<span class="tone-bad" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, required) + tfSuffix + '</span>' +
+            '<br><span class="text-faint" style="font-size: 0.8em;">' + best + '</span>';
     }
 
     /**
@@ -1050,7 +1080,7 @@
                 } else if (m.requiredToMeet !== null && m.meetAchievable) {
                     html += '<span class="tone-warn" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + tfSuffix + '</span>';
                 } else if (m.requiredToMeet !== null && !m.meetAchievable) {
-                    html += '<span class="tone-bad" style="font-size: 0.85em;">Not achievable</span>';
+                    html += _outOfReachCell(metricKey, m.requiredToMeet, m.meetPossible, m.bestSoFar, tfSuffix);
                 } else {
                     html += '<span class="text-faint">N/A</span>';
                 }
@@ -1072,7 +1102,7 @@
                 } else if (m.requiredToExceed !== null && m.exceedAchievable) {
                     html += '<span class="tone-info" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + tfSuffix + '</span>';
                 } else if (m.requiredToExceed !== null && !m.exceedAchievable) {
-                    html += '<span class="tone-bad" style="font-size: 0.85em;">Not achievable</span>';
+                    html += _outOfReachCell(metricKey, m.requiredToExceed, m.exceedPossible, m.bestSoFar, tfSuffix);
                 } else {
                     html += '<span class="text-faint">N/A</span>';
                 }
@@ -1088,14 +1118,18 @@
             var meetingCount = 0;
             var exceedingCount = 0;
             var belowCount = 0;
-            var notAchievableCount = 0;
+            var stretchCount = 0;
+            var notPossibleCount = 0;
             metricKeys.forEach(function (mk) {
                 var mm = emp.metrics[mk];
                 if (mm.currentlyExceeding) exceedingCount++;
                 else if (mm.currentlyMeeting) meetingCount++;
                 else {
                     belowCount++;
-                    if (!mm.isCumulative && mm.requiredToMeet !== null && !mm.meetAchievable) notAchievableCount++;
+                    if (!mm.isCumulative && mm.requiredToMeet !== null && !mm.meetAchievable) {
+                        if (mm.meetPossible === false) notPossibleCount++;
+                        else stretchCount++;
+                    }
                 }
             });
 
@@ -1109,8 +1143,11 @@
             if (belowCount > 0) {
                 html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + belowCount + ' Below</span>';
             }
-            if (notAchievableCount > 0) {
-                html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + notAchievableCount + ' Not Achievable</span>';
+            if (stretchCount > 0) {
+                html += '<span class="pill pill-warn" style="padding: 4px 12px;">' + stretchCount + ' Stretch</span>';
+            }
+            if (notPossibleCount > 0) {
+                html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + notPossibleCount + ' Not possible</span>';
             }
             html += '</div>';
 

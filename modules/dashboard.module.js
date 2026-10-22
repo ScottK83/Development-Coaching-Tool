@@ -59,9 +59,13 @@
     // reliability is total hours for the year, not a weekly rate
     var SKIP_ON_DASHBOARD = { transfersCount: true, reliability: true };
 
-    function evaluateEmployee(emp) {
+    // Judged against the year's target as printed, the way Numbers and Rankings
+    // judge it. This asked window.DevCoachModules.metrics, which nothing ever
+    // registered, and fell back to the registry's year-less target compared
+    // raw, so 92.96 adherence was a miss here and "93%, met" everywhere else.
+    function evaluateEmployee(emp, year) {
         var registry = window.METRICS_REGISTRY || {};
-        var metrics = window.DevCoachModules?.metrics || {};
+        var profiles = window.DevCoachModules?.metricProfiles;
         var missed = [];
         var metCount = 0;
         var totalMetrics = 0;
@@ -85,9 +89,9 @@
             if (isNaN(num) || value === undefined || value === null || value === '') continue;
 
             totalMetrics++;
-            var target = def.target;
-            var meetingTarget = metrics.isMetricMeetingTarget
-                ? metrics.isMetricMeetingTarget(key, num, target.value)
+            var target = profiles?.getYearTarget?.(key, year) || def.target;
+            var meetingTarget = typeof profiles?.valueMeetsTarget === 'function'
+                ? profiles.valueMeetsTarget(key, num, target)
                 : (target.type === 'min' ? num >= target.value : num <= target.value);
 
             if (meetingTarget) {
@@ -131,9 +135,9 @@
     }
 
     function formatMetricPill(m) {
-        var metrics = window.DevCoachModules?.metrics || {};
-        var display = metrics.formatMetricValue ? metrics.formatMetricValue(m.key, m.value) : String(m.value);
-        var targetDisplay = metrics.formatMetricValue ? metrics.formatMetricValue(m.key, m.targetValue) : String(m.targetValue);
+        var format = typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay : function (key, v) { return String(v); };
+        var display = format(m.key, m.value);
+        var targetDisplay = format(m.key, m.targetValue);
         var prefix = m.targetType === 'min' ? '\u2265' : '\u2264';
 
         return '<span class="pill pill-bad" style="padding: 3px 8px; margin: 2px 3px; font-size: 0.8em;">' +
@@ -281,8 +285,10 @@
             });
         }
 
-        // Evaluate all employees
-        var evaluated = employees.map(evaluateEmployee);
+        // Evaluate all employees, against the targets of the year the file covers
+        var endText = weekKey.split('|')[1] || weekKey.split('|')[0] || '';
+        var year = parseInt(endText.slice(0, 4), 10) || new Date().getFullYear();
+        var evaluated = employees.map(function(emp) { return evaluateEmployee(emp, year); });
 
         // Separate into needs-coaching vs meeting-all
         var needCoaching = evaluated.filter(function(e) { return !e.meetsAll; });
@@ -319,7 +325,11 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.dashboard = {
         initializeDashboard: initializeDashboard,
-        coachNow: coachNow
+        coachNow: coachNow,
+        // Exported so how a person is judged, and how a miss prints, can be
+        // checked without a DOM.
+        evaluateEmployee: evaluateEmployee,
+        formatMetricPill: formatMetricPill
     };
     window.initializeDashboard = initializeDashboard;
 })();

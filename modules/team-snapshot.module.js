@@ -9,12 +9,14 @@
 
     var STORAGE_PREFIX = (window.DevCoachConstants && window.DevCoachConstants.STORAGE_PREFIX) || 'devCoachingTool_';
 
-    // Key metrics to show in snapshot
+    // Key metrics to show in snapshot. No reliability (Scott, 2026-10-22: "Take
+    // it off."): the snapshot is posted to the team chat, so the column named
+    // each person's hours missed in front of everyone, and on a week or month
+    // it graded that period's hours against the whole year's allowance.
     var SNAPSHOT_METRICS = [
         'totalCalls', 'scheduleAdherence',
         'transfers', 'transfersCount', 'aht', 'acw',
         'overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions',
-        'reliability',
         'cxRepOverall', 'fcr', 'overallExperience'
     ];
 
@@ -32,8 +34,7 @@
         overallSentiment: 'Sent',
         positiveWord: '+Word',
         negativeWord: '-Word',
-        managingEmotions: 'Emot',
-        reliability: 'Rel'
+        managingEmotions: 'Emot'
     };
 
     var SURVEY_WEIGHTED_SNAP = { cxRepOverall: true, fcr: true, overallExperience: true };
@@ -93,12 +94,47 @@
         return wCount > 0 ? wSum / wCount : null;
     }
 
-    function getMetrics() {
-        return window.DevCoachModules?.metrics || {};
-    }
-
     function getRegistry() {
         return window.METRICS_REGISTRY || {};
+    }
+
+    // The target, direction and format checks. These used to be asked of
+    // window.DevCoachModules.metrics, which nothing ever registered, so every
+    // check quietly did nothing: every cell read "Below Target", AHT, ACW and
+    // transfers counted higher as better, numbers printed raw, and Focus of the
+    // Day always named Schedule Adherence (Scott, 2026-10-21: "I'm highly
+    // skeptical of the way this looks").
+    function periodYear(periodKey) {
+        var parts = String(periodKey || '').split('|');
+        var year = parseInt(String(parts[1] || parts[0] || '').slice(0, 4), 10);
+        return Number.isInteger(year) ? year : new Date().getFullYear();
+    }
+
+    // The year's target, falling back to the registry's year-less one.
+    function targetFor(metricKey, year) {
+        var profiles = window.DevCoachModules?.metricProfiles;
+        return profiles?.getYearTarget?.(metricKey, year) || getRegistry()[metricKey]?.target || null;
+    }
+
+    // Judged as printed, like every other surface, so "93.0%" is never below 93.
+    function meetsTarget(metricKey, value, year) {
+        var target = targetFor(metricKey, year);
+        if (!target) return null;
+        var profiles = window.DevCoachModules?.metricProfiles;
+        if (typeof profiles?.valueMeetsTarget === 'function') return profiles.valueMeetsTarget(metricKey, value, target);
+        return target.type === 'max' ? value <= target.value : value >= target.value;
+    }
+
+    function isReverse(metricKey) {
+        return typeof window.isReverseMetric === 'function' ? Boolean(window.isReverseMetric(metricKey)) : false;
+    }
+
+    function formatValue(metricKey, value) {
+        var num = parseFloat(value);
+        if (!Number.isFinite(num)) return '--';
+        return typeof window.formatMetricDisplay === 'function'
+            ? window.formatMetricDisplay(metricKey, num)
+            : String(Math.round(num * 10) / 10);
     }
 
     function escapeHtml(text) {
@@ -211,12 +247,16 @@
     }
 
     /**
-     * Get team members filter for a period
+     * The team filter, ignoring a one person pick in Who.
+     *
+     * The snapshot is a team post (Scott, 2026-10-22: "the whole team"). With
+     * one person picked, Who narrowed it to that person, and Team Avg became an
+     * average of one that matched their numbers whoever was picked.
      */
     function getTeamFilterContext() {
         var teamFilter = window.DevCoachModules?.teamFilter;
         if (teamFilter?.getTeamSelectionContext) {
-            return teamFilter.getTeamSelectionContext();
+            return teamFilter.getTeamSelectionContext({ ignoreTeamScope: true });
         }
         return { isFiltering: false, selectedSet: null };
     }
@@ -285,8 +325,7 @@
             overallSentiment: avg.sentiment ?? avg.overallSentiment,
             positiveWord: avg.positiveWord,
             negativeWord: avg.negativeWord,
-            managingEmotions: avg.managingEmotions,
-            reliability: avg.reliability
+            managingEmotions: avg.managingEmotions
         };
 
         SNAPSHOT_METRICS.forEach(function(key) {
@@ -332,7 +371,6 @@
         if (centerAvgs.positiveWord !== undefined) storageAvg.positiveWord = centerAvgs.positiveWord;
         if (centerAvgs.negativeWord !== undefined) storageAvg.negativeWord = centerAvgs.negativeWord;
         if (centerAvgs.managingEmotions !== undefined) storageAvg.managingEmotions = centerAvgs.managingEmotions;
-        if (centerAvgs.reliability !== undefined) storageAvg.reliability = centerAvgs.reliability;
         storageAvg.lastUpdated = new Date().toISOString();
 
         try {
@@ -341,7 +379,10 @@
                 ? JSON.stringify(readAvg('callCenterAverages') ?? null)
                 : localStorage.getItem(STORAGE_PREFIX + 'callCenterAverages');
             var all = raw ? JSON.parse(raw) : {};
-            all[periodKey] = storageAvg;
+            // Merged, not replaced: the period's stored entry also holds
+            // averages these inputs never show (hold time, reliability), and
+            // replacing it dropped them for every other screen.
+            all[periodKey] = Object.assign({}, all[periodKey] || {}, storageAvg);
             window.DevCoachModules?.storage?.saveWithSizeCheck?.('callCenterAverages', all);
         } catch(e) {
             console.error('Failed to save center averages from snapshot:', e);
@@ -356,7 +397,7 @@
         var employees = getEmployeesForPeriod(periodKey, source);
         var filterContext = getTeamFilterContext();
         var centerAvgs = readCenterAvgInputs();
-        var metrics = getMetrics();
+        var year = periodYear(periodKey);
 
         // Filter to team members if filter is set
         if (filterContext.isFiltering) {
@@ -390,32 +431,28 @@
                 // a count. With every row estimated the column drops out.
                 if (metricKey === 'totalCalls' && emp.callsEstimated) hasValue = false;
 
-                var registry = getRegistry();
-                var target = registry[metricKey]?.target;
-                var meetsTarget = false;
                 var centerAvg = centerAvgs[metricKey];
                 var aboveAvg = null;
-
-                if (hasValue && target) {
-                    meetsTarget = metrics.isMetricMeetingTarget?.(metricKey, numValue, target.value) || false;
-                }
+                // true, false, or null for a metric with no target (Calls),
+                // which is shown plain rather than shaded as a miss.
+                var meets = hasValue ? meetsTarget(metricKey, numValue, year) : null;
 
                 var avgDelta = null;
                 if (hasValue && centerAvg !== undefined && !isNaN(centerAvg)) {
-                    var isReverse = metrics.isReverseMetric?.(metricKey) || false;
-                    aboveAvg = isReverse ? (numValue <= centerAvg) : (numValue >= centerAvg);
+                    var reverse = isReverse(metricKey);
+                    aboveAvg = reverse ? (numValue <= centerAvg) : (numValue >= centerAvg);
                     // Delta: positive = good direction, negative = bad direction
-                    avgDelta = isReverse ? (centerAvg - numValue) : (numValue - centerAvg);
+                    avgDelta = reverse ? (centerAvg - numValue) : (numValue - centerAvg);
                 }
 
-                var displayValue = hasValue ? metrics.formatMetricValue?.(metricKey, numValue) || String(numValue) : 'N/A';
+                var displayValue = hasValue ? formatValue(metricKey, numValue) : 'N/A';
 
                 return {
                     metricKey: metricKey,
                     value: numValue,
                     displayValue: displayValue,
                     hasValue: hasValue,
-                    meetsTarget: meetsTarget,
+                    meetsTarget: meets,
                     aboveAvg: aboveAvg,
                     avgDelta: avgDelta
                 };
@@ -435,7 +472,8 @@
             rows: rows,
             centerAvgs: centerAvgs,
             periodKey: periodKey,
-            source: source
+            source: source,
+            year: year
         };
     }
 
@@ -445,13 +483,11 @@
 
     function determineFocusMetric(snapshotData) {
         var registry = getRegistry();
-        var metrics = getMetrics();
         var metricMissCount = {};
 
         // Only consider metrics that have a defined target
         SNAPSHOT_METRICS.forEach(function(key) {
-            var def = registry[key];
-            if (!def?.target) return; // skip metrics with no target
+            if (!targetFor(key, snapshotData.year)) return; // skip metrics with no target
             metricMissCount[key] = { total: 0, missing: 0 };
         });
 
@@ -545,10 +581,10 @@
                 var indicator = '';
 
                 if (cell.hasValue) {
-                    if (cell.meetsTarget) {
+                    if (cell.meetsTarget === true) {
                         bg = '#dcfce7'; // green
                         color = '#166534';
-                    } else {
+                    } else if (cell.meetsTarget === false) {
                         bg = '#fee2e2'; // red
                         color = '#991b1b';
                     }
@@ -597,26 +633,23 @@
                 return '<td style="padding: 5px 4px; text-align: center; font-size: 0.75em; font-weight: 700; ' +
                     'color: #7c3aed; background: #f5f3ff; border-bottom: 2px solid #c4b5fd;">--</td>';
             }
-            var metrics = getMetrics();
-            var display = metrics.formatMetricValue?.(key, avg) || String(Math.round(avg * 10) / 10);
+            var display = formatValue(key, avg);
 
             // Check target
-            var def = registry[key];
-            var target = def?.target;
-            var meetsTarget = target ? (metrics.isMetricMeetingTarget?.(key, avg, target.value) || false) : null;
+            var teamMeets = meetsTarget(key, avg, snapshotData.year);
 
             // Check vs center avg
             var centerVal = centerAvgs[key];
-            var isReverse = metrics.isReverseMetric?.(key) || false;
+            var reverse = isReverse(key);
             var beatsCenterAvg = (hasCenterAvgs && centerVal !== undefined && !isNaN(centerVal))
-                ? (isReverse ? avg <= centerVal : avg >= centerVal)
+                ? (reverse ? avg <= centerVal : avg >= centerVal)
                 : null;
 
             // Determine colors: green if meets target, red if not, purple if no target
             var bg, color;
-            if (meetsTarget === true) {
+            if (teamMeets === true) {
                 bg = '#dcfce7'; color = '#166534';
-            } else if (meetsTarget === false) {
+            } else if (teamMeets === false) {
                 bg = '#fee2e2'; color = '#991b1b';
             } else {
                 bg = '#f5f3ff'; color = '#7c3aed';
@@ -642,8 +675,7 @@
         if (hasCenterAvgs) {
             var centerCells = visibleMetrics.map(function(key) {
                 var val = centerAvgs[key];
-                var metrics = getMetrics();
-                var display = (val !== undefined && !isNaN(val)) ? (metrics.formatMetricValue?.(key, val) || String(val)) : '--';
+                var display = (val !== undefined && !isNaN(val)) ? formatValue(key, val) : '--';
                 return '<td style="padding: 5px 4px; text-align: center; font-size: 0.75em; font-weight: 700; ' +
                     'color: #1565c0; background: #e3f2fd; border-bottom: 2px solid #90caf9;">' + escapeHtml(display) + '</td>';
             }).join('');
@@ -653,12 +685,10 @@
 
         // Build target row
         var targetCells = visibleMetrics.map(function(key) {
-            var def = registry[key];
-            var target = def?.target;
+            var target = targetFor(key, snapshotData.year);
             if (!target) return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: var(--text-secondary); background: var(--bg-surface-sunken);">--</td>';
             var prefix = target.type === 'min' ? '\u2265' : '\u2264';
-            var unit = def?.unit || '';
-            var valStr = unit === 'sec' ? target.value + 's' : unit === 'hrs' ? target.value + 'h' : target.value + '%';
+            var valStr = formatValue(key, target.value);
             return '<td style="padding: 4px; text-align: center; font-size: 0.7em; color: var(--text-secondary); ' +
                 'background: #f1f5f9; border-bottom: 1px solid var(--border);">' + prefix + valStr + '</td>';
         }).join('');
@@ -753,7 +783,6 @@
         if (!container) return;
 
         var registry = getRegistry();
-        var metrics = getMetrics();
         var centerAvgs = snapshotData.centerAvgs;
         var hasCenterAvgs = Object.keys(centerAvgs).length > 0;
         var now = new Date();
@@ -844,11 +873,11 @@
                 return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; font-weight: 700; ' +
                     'color: #7c3aed; background: #f5f3ff; border-top: 3px solid #7c3aed;">--</td>';
             }
-            var display = metrics.formatMetricValue?.(key, avg) || String(Math.round(avg * 10) / 10);
+            var display = formatValue(key, avg);
             var centerVal = centerAvgs[key];
-            var isReverse = metrics.isReverseMetric?.(key) || false;
-            var beats = isReverse ? (avg <= centerVal) : (avg >= centerVal);
-            var delta = isReverse ? (centerVal - avg) : (avg - centerVal);
+            var reverse = isReverse(key);
+            var beats = reverse ? (avg <= centerVal) : (avg >= centerVal);
+            var delta = reverse ? (centerVal - avg) : (avg - centerVal);
             var unit = registry[key]?.unit || '%';
             var deltaAbs = Math.abs(delta);
             var deltaStr;
@@ -876,7 +905,7 @@
         // Center avg row (reference)
         var centerCells = visibleMetrics.map(function(key) {
             var val = centerAvgs[key];
-            var display = (val !== undefined && !isNaN(val)) ? (metrics.formatMetricValue?.(key, val) || String(val)) : '--';
+            var display = (val !== undefined && !isNaN(val)) ? formatValue(key, val) : '--';
             return '<td style="padding: 6px 4px; text-align: center; font-size: 0.85em; font-weight: 600; ' +
                 'color: #1565c0; background: #e3f2fd; border-top: 2px solid #90caf9;">' + escapeHtml(display) + '</td>';
         }).join('');
@@ -887,8 +916,7 @@
             var avg = computeTeamMetricValue(snapshotData.rows, key);
             if (avg === null) return;
             var centerVal = centerAvgs[key];
-            var isReverse = metrics.isReverseMetric?.(key) || false;
-            var beats = isReverse ? (avg <= centerVal) : (avg >= centerVal);
+            var beats = isReverse(key) ? (avg <= centerVal) : (avg >= centerVal);
             if (beats) aboveCount++; else belowCount++;
         });
 
@@ -1134,10 +1162,7 @@
             var firstName = emp.firstName || emp.name?.split(',')[0]?.trim() || emp.name || 'Unknown';
             var cells = SNAPSHOT_METRICS.map(function(key) {
                 var val = emp[key];
-                var metrics = getMetrics();
-                var display = (val !== undefined && val !== null && val !== '' && !isNaN(parseFloat(val)))
-                    ? (metrics.formatMetricValue?.(key, val) || String(val))
-                    : '--';
+                var display = (val !== undefined && val !== null && val !== '') ? formatValue(key, val) : '--';
                 return '<td style="padding: 5px 4px; text-align: center; font-size: 0.82em; ' +
                     'border-bottom: 1px solid var(--border);">' + escapeHtml(display) + '</td>';
             }).join('');
@@ -1148,7 +1173,13 @@
         // Center avg input row
         var centerRow = buildCenterAvgInputRow();
 
-        gridContainer.innerHTML = '<div style="overflow-x: auto;">' +
+        // The Who bar says every tab is about the picked person; this one is not.
+        var pickedOne = window.DevCoachModules?.teamScope?.getActiveScope?.();
+        var wholeTeamNote = pickedOne
+            ? '<p class="text-secondary" style="margin: 0 0 8px; font-size: 0.85em;">The snapshot always covers your whole team.</p>'
+            : '';
+
+        gridContainer.innerHTML = wholeTeamNote + '<div style="overflow-x: auto;">' +
             '<table style="width: 100%; border-collapse: collapse;">' +
             '<thead><tr><th style="padding: 6px 8px; text-align: left; font-size: 0.75em; font-weight: 600; color: var(--text-secondary); ' +
             'border-bottom: 2px solid var(--border-strong);">Name</th>' + headerCells + '</tr></thead>' +
@@ -1266,7 +1297,11 @@
         getEmployeesForPeriod: getEmployeesForPeriod,
         // Pure, and the one place a team figure is computed. Exported for the
         // same reason, the way celebrations exports meetsCelebrationTarget.
-        computeTeamMetricValue: computeTeamMetricValue
+        computeTeamMetricValue: computeTeamMetricValue,
+        // Exported so how each cell is judged, and what Focus of the Day
+        // picks, can be checked without a DOM.
+        assembleSnapshotData: assembleSnapshotData,
+        determineFocusMetric: determineFocusMetric
     };
 
     // Convenience globals

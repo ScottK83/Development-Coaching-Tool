@@ -1,7 +1,11 @@
 # Data pipeline plan (parse, store, deliver)
 
 Written 2026-10-21 from Scott's notes on the Snapshot and Pace pages, a read of the code, and the R2 backup
-(`state/latest.json`, pulled 2026-10-21 23:13). Status: **waiting for Scott's approval. Nothing below is built yet.**
+(`state/latest.json`, pulled 2026-10-21 23:13). Status: **approved 2026-10-22. Phase 1 done 2026-10-22; Phase 2 next.**
+
+Scott's answers (2026-10-22): 1. the Snapshot always shows the whole team; 2. take Rel off the shared snapshot;
+3. hide superseded periods, never delete; 4. he can re-pull Feb 23-Mar 1, Mar 2-8, May, May 18-24 and Jun 1-7, so
+Phase 2 must let a saved week or month be replaced.
 
 ## What Scott saw, and why
 
