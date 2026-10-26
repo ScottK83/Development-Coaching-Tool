@@ -42,8 +42,42 @@
 
     const ASSISTANCE_OFFERED = /anything else (?:i can (?:help|do|assist)|you need)|is there anything else|any questions anything i can answer|do you have any questions|before (?:i let you go|we (?:hang up|wrap up))/i;
 
-    const NEXT_STEPS = /what happens is|will be on hold until|you will get an email back|you'?ll (?:receive|get) (?:an|the) email|case number|review those documents|next step|within \d+ (?:hours|business days|days)|you(?:'?ll| will) (?:see|receive|get)/i;
-    const PROCESS_EXPLAINED = /the reason (?:is|for that)|what that means|this is (?:how|what)|so that (?:means|way)|the way (?:it|that) works|this plan (?:works|has)|it'?ll be (?:included|applied)|will be applied to your/i;
+    const NEXT_STEPS_OWN = /what happens is|will be on hold until|you will get an email back|you'?ll (?:receive|get) (?:an|the) email|case number|review those documents|next step|within \d+ (?:hours|business days|days)|you(?:'?ll| will) (?:see|receive|get)/i;
+
+    // Plus "that is due on October nineteenth", read the way call-transcript
+    // reads it. Built on first use, since this file can load first.
+    let nextStepsPattern = null;
+    function nextStepsRule() {
+        if (nextStepsPattern) return nextStepsPattern;
+        const due = window.DevCoachModules?.callTranscript?.DUE_DATE;
+        if (!due) return NEXT_STEPS_OWN;
+        nextStepsPattern = new RegExp(`${NEXT_STEPS_OWN.source}|${due.source}`, 'i');
+        return nextStepsPattern;
+    }
+
+    // The branded greeting, from call-transcript, so the form and the reader
+    // never disagree about the same opening line.
+    const GREETING_OWN = /thank(?:s| you) for (?:calling|being a valued customer)|my name is|this is \w+ speaking/i;
+    function greeting() {
+        return window.DevCoachModules?.callTranscript?.GREETING_PATTERN || GREETING_OWN;
+    }
+
+    // A rate plan call, not a payment plan or budget billing call. "\bplan\b"
+    // read "it says i have a payment plan" as a rate plan call and asked a
+    // payment arrangement call for four rate plan disclosures.
+    const NOT_RATE_PLANS = /\b(?:payment|budget(?: billing)?|installment|extension)\s+(?:plans?|arrangements?)\b/gi;
+    function talksRatePlans(text) {
+        return /\bplans?\b/i.test(String(text || '').replace(NOT_RATE_PLANS, ' '));
+    }
+
+    // The advisor talking a payment program through by name has dealt with
+    // it, whether she offered it or it was already on the account. Not rate
+    // plans: "your rate plan is the fixed plan" to a customer asking for a
+    // cheaper one names the plan and offers nothing.
+    const PROGRAM_NAMED = /payment (?:arrangement|plan|extension)|budget billing|assistance program|energy support|auto ?pay|paperless/i;
+    // "So what happened was" is how the floor explains an account. A real
+    // call walked the customer through it that way and was marked thin.
+    const PROCESS_EXPLAINED = /the reason (?:is|for that)|what that means|what happened (?:was|is|there)|that'?s why (?:you|your|it)|this is (?:how|what)|so that (?:means|way)|the way (?:it|that) works|this plan (?:works|has)|it'?ll be (?:included|applied)|will be applied to your/i;
 
     const RESOLUTION = /you'?re all set|all set on our end|that'?s (?:all )?(?:taken care of|done|set up)|i(?:'?ve| have) (?:credited|refunded|updated|submitted|processed)|your (?:order|account|service) is (?:set|created|started)/i;
     const CUSTOMER_ASSENT = /sounds good|that'?s good|perfect|great thank you|thank you|that works|okay perfect/i;
@@ -57,7 +91,7 @@
             key: 'greeting',
             label: 'Branded greeting and advisor name',
             applies: () => true,
-            pattern: /thank(?:s| you) for (?:calling|being a valued customer)|my name is|this is \w+ speaking/i
+            get pattern() { return greeting(); }
         },
         {
             key: 'verification',
@@ -84,25 +118,25 @@
         {
             key: 'rateQuoted',
             label: 'Rates quoted for the plans discussed',
-            applies: (text) => /\bplan\b/i.test(text),
+            applies: talksRatePlans,
             pattern: /cents per kilowatt hour|per kilowatt hour|kilowatt/i
         },
         {
             key: 'planFlexibility',
             label: 'Plan can be changed, and when a change takes effect',
-            applies: (text) => /\bplan\b/i.test(text),
+            applies: talksRatePlans,
             pattern: /change your plan .{0,30}anytime|no fee to do so|applied for the next bill cycle|we can change it later/i
         },
         {
             key: 'effectiveDate',
             label: 'When the chosen plan takes effect',
-            applies: (text) => /\bplan\b/i.test(text),
+            applies: talksRatePlans,
             pattern: /effective the start of service|will appear on your next bill|effective (?:on|from)/i
         },
         {
             key: 'whereToFind',
             label: 'Where the customer can review it themselves',
-            applies: (text) => /\bplan\b/i.test(text),
+            applies: talksRatePlans,
             pattern: /(?:a ?t ?s|a ?p ?s|aps)\.?\s?(?:dot )?com|on the (?:app|website|portal)|once you are registered/i
         },
         {
@@ -181,7 +215,9 @@
 
         const detail = missed.length
             ? `Heard ${heard.length} of ${applicable.length}. Not heard: ${missed.map(item => item.label.toLowerCase()).join('; ')}.`
-            : `All ${applicable.length} disclosures that applied to this call were covered.`;
+            : (applicable.length === 1
+                ? 'The one disclosure that applied to this call was covered.'
+                : `All ${applicable.length} disclosures that applied to this call were covered.`);
 
         return Object.assign(
             check('disclosures', 'Did advisor cover all required disclosures and scripts?',
@@ -194,13 +230,13 @@
 
     function checkProcessExplained(turns, agentText) {
         const explained = PROCESS_EXPLAINED.test(agentText);
-        const nextSteps = NEXT_STEPS.test(agentText);
+        const nextSteps = nextStepsRule().test(agentText);
 
         if (explained && nextSteps) {
             return check('process', 'Was the process accurately explained?',
                 VERDICT.met,
                 'The customer was told how it works and what happens next. This checks that the explanation was complete, not that every figure in it was right, so give the numbers your own ear.',
-                quoteFor(turns, NEXT_STEPS));
+                quoteFor(turns, nextStepsRule()));
         }
 
         if (!nextSteps) {
@@ -212,7 +248,7 @@
         return check('process', 'Was the process accurately explained?',
             VERDICT.opportunity,
             'Next steps were given but the reasoning behind them was thin. Say why, not just what.',
-            quoteFor(turns, NEXT_STEPS));
+            quoteFor(turns, nextStepsRule()));
     }
 
     function checkResolved(turns, agentText, customerText) {
@@ -272,7 +308,7 @@
             });
         }
 
-        if (PROGRAM_CONTEXT.test(agentText) && !OFFERING.test(agentText)) {
+        if (PROGRAM_CONTEXT.test(agentText) && !OFFERING.test(agentText) && !PROGRAM_NAMED.test(agentText)) {
             items.push({ label: 'Solution/Program Offering Missed', evidence: 'No plan, program or self service option was offered.' });
         }
 

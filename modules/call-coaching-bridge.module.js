@@ -1469,7 +1469,8 @@ Requirements:
             ? 'One thing worth trying:'
             : `${actions.length === 2 ? 'Two' : 'A few'} things worth trying:`;
 
-        const closing = 'Try those out, and I will listen again soon to see how it is going. Come find me if you want to talk any of it through.';
+        const tryIt = actions.length === 1 ? 'Give that a try, and I will' : (actions.length ? 'Try those out, and I will' : 'I will');
+        const closing = `${tryIt} listen again soon to see how it is going. Come find me if you want to talk any of it through.`;
 
         // What went well, before any of the coaching. A message that only
         // ever says what to fix teaches people that the good calls go

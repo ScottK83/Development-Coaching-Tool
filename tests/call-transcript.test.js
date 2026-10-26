@@ -390,7 +390,10 @@ suite('call transcript: a good call reads as a good call', (t) => {
 
     t.check('no heavy coaching points on a call this clean', analysis.stats.heavyIssues === 0);
     t.check('leads with praise', /Outstanding call/.test(analysis.headline));
-    t.check('praise names the call length', /18:24/.test(analysis.headline));
+    // Said the way a person says it, not as a stopwatch reading. (With this
+    // year's handle time goal loaded the same call is too long to headline
+    // as outstanding: tests/call-reader-accuracy.test.js.)
+    t.check('praise names the call length', /18 minutes/.test(analysis.headline));
 
     const draft = callTranscript.buildStrengthsDraft(analysis);
     t.check('the headline opens the draft', draft.startsWith('Outstanding call'));

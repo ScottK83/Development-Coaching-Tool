@@ -215,8 +215,12 @@
         /^Kudos\/Compliments\s*$/m,
         /^Call Opportunities\s*$/m,
         /This message is for the designated recipient/,
-        // The evaluator's own name is signed under the transcript.
-        /^[A-Z][a-z'-]+,\s*[A-Z][a-z'-]+\s*$/m
+        // The next panel on the Verint page, picked up when the copy runs
+        // past the transcript. It reached a Copilot prompt on a real call.
+        /^1:1 Meeting Template\s*$/m,
+        // The evaluator's own name is signed under the transcript, double
+        // barrelled surnames included ("Martinez-Sharp, Christi").
+        /^[A-Z][a-z']+(?:-[A-Z]?[a-z']+)*,\s*[A-Z][a-z'-]+\s*$/m
     ];
 
     function toIsoDate(month, day, year) {
@@ -764,13 +768,24 @@
 
     /* ── Behaviour rules ── */
 
+    // The branded greeting, shared with the QA form so the two never disagree.
+    // The form used a narrower copy, and on a real call it marked the greeting
+    // missing while this rule praised it: "thank you for being a part of APS,
+    // this is Christie, how may I assist you" fitted neither of its shapes.
+    const GREETING_PATTERN = /thank(?:s| you) for (?:calling|choosing|being (?:a |an )?(?:part of|valued|loyal))|my name is|this is \w+(?:,)? (?:speaking|how)|how (?:can|may) i (?:help|assist)/i;
+
+    // An amount and the date it is due is the next step on a billing call.
+    // "that bill of three o nine twenty is due on october nineteenth" closed a
+    // real call that was coached for giving no next steps.
+    const DUE_DATE = /\bdue (?:on |by )?(?:the )?(?:january|february|march|april|may|june|july|august|september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|\d{1,2}(?:st|nd|rd|th)?\b|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth|twenty|thirtieth|thirty)\b)/i;
+
     // Present in the associate's speech = a strength worth naming out loud.
     // `missing` (when set) is the coaching line to use when it never shows up.
     const STRENGTH_RULES = [
         {
             key: 'greeting',
             praise: 3,
-            pattern: /thank(?:s| you) for (?:calling|being a valued customer)|my name is|this is \w+ (?:speaking|how)|how (?:can|may) i help you/i,
+            pattern: GREETING_PATTERN,
             made: 'Clean open. You named APS and gave your own name straight away, which sets the tone for everything after it.',
             missing: 'The greeting and your name did not make it in up front. Worth leading with both so the customer knows right away who they are working with.',
             missingWeight: 4
@@ -819,7 +834,11 @@
         {
             key: 'education',
             praise: 5,
-            pattern: /you can also|for future reference|next time you can|on the (?:app|website|portal)|online you can|once you are registered|self.?serv|take advantage of/i,
+            // Pointing the customer to it, not mentioning it. A bare "self
+            // service" matched "it looks like somebody did self service to
+            // enroll a payment arrangement", which is the advisor explaining
+            // how the account got that way, and praised it as teaching.
+            pattern: /you can also|for future reference|next time(?:,)? you can|on the (?:app|website|portal)|online you can|once you(?:'re| are) registered|(?:use|try|go through) (?:the )?self.?serv|take advantage of/i,
             made: 'Nice add. You showed them a faster way to handle this themselves next time.'
         },
         {
@@ -839,7 +858,7 @@
         {
             key: 'nextSteps',
             praise: 6,
-            pattern: /next step|you (?:will|'ll) (?:receive|see|get|be)|within (?:\d+|twenty.four|forty.eight) (?:hours|business days|days)|i'?ll follow up|follow up with you|in \d+ (?:to \d+ )?(?:business )?days|by (?:monday|tuesday|wednesday|thursday|friday|the end of)|what happens is/i,
+            pattern: new RegExp(`${/next step|you (?:will|'ll) (?:receive|see|get|be)|within (?:\d+|twenty.four|forty.eight) (?:hours|business days|days)|i'?ll follow up|follow up with you|in \d+ (?:to \d+ )?(?:business )?days|by (?:monday|tuesday|wednesday|thursday|friday|the end of)|what happens is/.source}|${DUE_DATE.source}`, 'i'),
             made: 'Clear next steps with a time frame attached. That is what stops the second call.',
             missing: 'Tell the customer exactly what happens next and by when, even when the answer is not the one they wanted.',
             missingWeight: 7
@@ -1012,6 +1031,40 @@
         }
 
         return gaps.sort((a, b) => b.silence - a.silence);
+    }
+
+    // Well over means half again: an eight minute call on a seven minute goal
+    // is an ordinary call, and handle time is an average, not a ceiling.
+    const LONG_CALL_FACTOR = 1.5;
+
+    /**
+     * The call's length, this year's handle time goal, and the seconds that
+     * sat on hold or in quiet. Null when either the length or the goal is
+     * unknown: the goal comes from metric-profiles, never a number here.
+     */
+    function callLength(meta, turns, gaps) {
+        const profiles = window.DevCoachModules?.metricProfiles;
+        if (typeof profiles?.getYearTarget !== 'function') return null;
+
+        const year = Number(String(meta?.callDate || '').slice(0, 4)) || new Date().getFullYear();
+        const goal = Number(profiles.getYearTarget('aht', year)?.value);
+        if (!Number.isFinite(goal) || goal <= 0) return null;
+
+        const stamps = (turns || []).map(turn => turn.at).filter(at => typeof at === 'number');
+        const seconds = Number(meta?.durationSeconds) || (stamps.length ? Math.max(...stamps) : 0);
+        if (!seconds) return null;
+
+        const idle = (gaps || []).reduce((sum, gap) => sum + Math.max(0, gap.silence || 0), 0);
+        return { seconds, goal, idle };
+    }
+
+    // The headlines buildHeadline writes, so the email can tell its own
+    // opening apart from a supervisor's.
+    const HEADLINE_STARTS = ['Outstanding call.', 'Really strong call', 'Solid call, and there are a few things in here you should keep doing.'];
+
+    function isAutoHeadline(line) {
+        const text = String(line || '').trim();
+        return HEADLINE_STARTS.some(start => text.startsWith(start));
     }
 
     function bullet(text, quote) {
@@ -1370,6 +1423,24 @@
             });
         }
 
+        // How long the call ran against this year's handle time goal. An 18
+        // minute call came back "Outstanding call ... polish rather than
+        // problems" because nothing here looked at length, on a goal of about
+        // seven. Only said when it is well over, and the time that sat on
+        // hold or quiet is named, because that is the part she can win back.
+        const length = callLength(meta, turns, gaps);
+        if (length && length.seconds > length.goal * LONG_CALL_FACTOR) {
+            const idle = length.idle >= 60
+                ? ` About ${spokenDuration(length.idle)} of that was on hold or in quiet stretches, which is the easiest time to win back.`
+                : '';
+            improvements.push({
+                key: 'callLength',
+                weight: 6,
+                text: `This call ran about ${spokenDuration(length.seconds)}, and the handle time goal is about ${spokenDuration(length.goal)}.${idle}`,
+                quote: ''
+            });
+        }
+
         const longestDeadAir = gaps.find(gap => !gap.announced);
         if (longestDeadAir) {
             improvements.push({
@@ -1442,7 +1513,7 @@
             redFlags,
             // A call that gave an account away does not open with "Solid
             // call", however much else went well on it.
-            headline: redFlag ? '' : buildHeadline(earnedStrengths, heavyIssues, meta),
+            headline: redFlag ? '' : buildHeadline(earnedStrengths, heavyIssues, meta, length),
             // The drafts are capped so the email stays focused; the full lists
             // stay on the result so nothing is dropped without a trace.
             strengths: strengths.slice(0, MAX_STRENGTH_BULLETS),
@@ -1470,9 +1541,18 @@
      * A strong call should read as a strong call. The headline is the line the
      * associate will actually remember, so it only fires when it is earned.
      */
-    function buildHeadline(strengthCount, heavyIssues, meta) {
-        const lengthNote = meta && meta.durationLabel ? ` across ${meta.durationLabel} on the phone` : '';
+    function buildHeadline(strengthCount, heavyIssues, meta, length) {
+        const seconds = length?.seconds || meta?.durationSeconds || 0;
+        const lengthNote = seconds ? ` across ${spokenDuration(seconds)} on the phone` : '';
+        // A call well over the handle time goal is not the one to show
+        // everybody, however much else went right on it.
+        const longCall = Boolean(length && length.seconds > length.goal * LONG_CALL_FACTOR);
 
+        if (longCall) {
+            return strengthCount >= 3 && heavyIssues <= 1
+                ? 'Solid call, and there are a few things in here you should keep doing.'
+                : '';
+        }
         if (strengthCount >= 7 && !heavyIssues) {
             return `Outstanding call. You hit nearly every behavior we coach to${lengthNote}, and the notes below are polish rather than problems. This is the call I would use to show someone else what good looks like.`;
         }
@@ -1729,6 +1809,12 @@
         // acknowledged" using the same empathy definition scored here, rather
         // than keeping a second copy of the pattern that can drift from it.
         strengthPattern,
+        // Shared with the QA form and the scorecard, so a greeting or a due
+        // date is read the same way everywhere.
+        GREETING_PATTERN,
+        DUE_DATE,
+        isAutoHeadline,
+        callLength,
         buildStrengthsDraft,
         buildImprovementsDraft,
         DRAFT_HINTS,

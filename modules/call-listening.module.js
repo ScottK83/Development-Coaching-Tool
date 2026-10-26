@@ -194,7 +194,7 @@ ${transcript}
         // named employee's performance, which gets refused: the supervisor did
         // the listening, the notes below are theirs, and nothing here is asking
         // a model to form a judgement about anybody.
-        return `I have already listened to this call and written my notes. I am not asking you to assess ${preferredName}, rate the call, or decide what she should improve. I have done that part. What I need is the wording: turn my notes into a message in my voice.
+        return `I have already listened to this call and written my notes. I am not asking you to assess ${preferredName}, rate the call, or decide what ${preferredName} should improve. I have done that part. What I need is the wording: turn my notes into a message in my voice.
 
 Call details:
 ${buildCallDetailLines(entry)}
@@ -722,6 +722,29 @@ ${praiseRule(Boolean(transcriptSection), 'The message')}
      * i have the last four")`, already ended its sentence before the quote, so
      * a full stop after the bracket is one too many.
      */
+    /**
+     * A point's quote from the call, kept only when it reads cleanly.
+     *
+     * Analyze closes a point with what was said, `("and the last four digits
+     * of your social please")`, which is what lets her find the moment. Speech
+     * to text also hands over `("thank you okay one second it looks like
+     * somebody did - self service to enroll - a payment arrangement on
+     * july...")`, and in an email that reads as a machine talking. A long,
+     * broken or clipped quote is dropped from the email; the notes keep it.
+     */
+    const TRAILING_QUOTE = /\s*\("([^"]*)"\)\s*$/;
+    const MAX_EMAIL_QUOTE_WORDS = 20;
+
+    function emailQuote(point) {
+        const text = String(point || '');
+        const match = text.match(TRAILING_QUOTE);
+        if (!match) return text;
+        const quote = match[1].trim();
+        const words = quote.split(/\s+/).filter(Boolean).length;
+        const broken = /\s-\s|^-|-$|\.\.\.|…/.test(quote);
+        return (!quote || broken || words > MAX_EMAIL_QUOTE_WORDS) ? text.replace(TRAILING_QUOTE, '') : text;
+    }
+
     function sentence(text) {
         const trimmed = String(text || '').trim();
         if (!trimmed) return '';
@@ -822,7 +845,13 @@ ${praiseRule(Boolean(transcriptSection), 'The message')}
         // Scott's own opening, which says why the email is coming and which
         // call it is about. She takes dozens a week, so feedback that does
         // not say which one is feedback she cannot check.
-        lines.push(`${callEmailOpening(moment)} ${openerFor(tone, workCount)}`);
+        //
+        // When the praise opens with Analyze's own headline ("Solid call,
+        // and there are a few things in here you should keep doing"), the
+        // headline already says how the call went, and the opener saying it
+        // again read as two people introducing the same email.
+        const headlineLeads = Boolean(well.lead && window.DevCoachModules?.callTranscript?.isAutoHeadline?.(well.lead));
+        lines.push(headlineLeads ? callEmailOpening(moment) : `${callEmailOpening(moment)} ${openerFor(tone, workCount)}`);
 
         if (wellCount) {
             lines.push('');
@@ -831,7 +860,7 @@ ${praiseRule(Boolean(transcriptSection), 'The message')}
                 : 'Here is what stood out:');
             if (well.bullets.length) {
                 lines.push('');
-                well.bullets.forEach((point) => lines.push(`- ${sentence(point)}`));
+                well.bullets.forEach((point) => lines.push(`- ${sentence(emailQuote(point))}`));
             }
         }
 
@@ -847,7 +876,7 @@ ${praiseRule(Boolean(transcriptSection), 'The message')}
                     : 'Here is what I want you to work on:'));
             if (work.bullets.length) {
                 lines.push('');
-                work.bullets.forEach((point) => lines.push(`- ${sentence(point)}`));
+                work.bullets.forEach((point) => lines.push(`- ${sentence(emailQuote(point))}`));
             }
         }
 

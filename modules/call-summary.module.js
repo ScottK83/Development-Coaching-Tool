@@ -96,7 +96,13 @@
         // call that only explained budget billing was recapped as setting up a
         // payment arrangement, on exactly the calls where the customer is
         // already unsure what budget billing is.
-        { key: 'arrangement', label: 'set up a payment arrangement', pattern: /payment (?:arrangement|plan|extension)|extend(?:ed)? (?:your|the) due date/i },
+        //
+        // And talking about one is not setting one up. A real call explained
+        // an arrangement the customer had made online weeks before, and the
+        // recap told Copilot she "set up a payment arrangement". Setting one
+        // up takes the advisor doing it; anything else is going over it.
+        { key: 'arrangement', label: 'set up a payment arrangement', pattern: /(?:i(?:'?ve| have| can| will|'ll| went ahead and)|let me|we can|i'?m (?:going to|gonna)) (?:go ahead and )?(?:set(?:ting)? (?:up|you up|that up|it up)|put (?:you on|in)|add(?:ed)?|creat(?:e|ed))\b.{0,30}?payment (?:arrangement|plan|extension)|(?:set|setting) up (?:a|the|your|that) payment (?:arrangement|plan|extension) for you|extend(?:ed)? (?:your|the) due date/i },
+        { key: 'arrangementDiscussed', label: 'went over the payment arrangement', pattern: /payment (?:arrangement|plan|extension)/i, unless: 'arrangement' },
         { key: 'budgetBilling', label: 'went over budget billing', pattern: /\bbudget bill/i },
         { key: 'setUpService', label: 'got the service set up', pattern: /service is (?:set|created|started)|got you set up|set up your service|start date/i },
         { key: 'changedPlan', label: 'changed the plan', pattern: /changed your plan|switched you to|applied .{0,25}plan/i },
@@ -255,7 +261,7 @@
     // `at` is the turn's place in the whole call, so an action placed by the
     // verification read and one found by pattern sort against each other.
     function findActions(turns, verification) {
-        return AGENT_ACTIONS
+        const found = AGENT_ACTIONS
             .map(action => {
                 if (action.key === 'verified' && verification?.ok) {
                     const first = verification.identityAsks?.[0];
@@ -266,7 +272,12 @@
                     && !(action.not && action.not.test(turn.text)));
                 return index < 0 ? null : { ...action, at: index };
             })
-            .filter(Boolean)
+            .filter(Boolean);
+        // An action that only stands in for a stronger one ("went over the
+        // arrangement" when she set it up) steps aside for it.
+        const keys = new Set(found.map(action => action.key));
+        return found
+            .filter(action => !(action.unless && keys.has(action.unless)))
             .sort((a, b) => a.at - b.at);
     }
 
@@ -371,7 +382,11 @@
         sentences.push(`${articleFor(lengthBit)} ${lengthBit}${topicBit}${momentBit}.`);
 
         if (summary.openingAsk) {
-            sentences.push(`The customer opened with: "${summary.openingAsk}".`);
+            // The quote's own full stop stands in for the sentence's, so it
+            // never reads `this month.".`; an ellipsis closes it as it is.
+            const ask = String(summary.openingAsk).trim();
+            const asked = /(?:\.\.\.|…)$/.test(ask) ? ask : ask.replace(/[.!?]+$/, '');
+            sentences.push(`The customer opened with: "${asked}"${/(?:\.\.\.|…)$/.test(asked) ? '' : '.'}`);
         }
 
         if (summary.actions.length) {
