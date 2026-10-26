@@ -90,9 +90,10 @@ suite('sub-sections: every Trends tab can actually be shown', (t) => {
         t.check(`${id}: ${result.ok ? result.why : 'reachable via a mount target'}`, result.ok || named);
     });
 
-    // The four views inside Center > Trends sit in the Trends group's markup.
+    // The views inside Center > Trends sit in the Trends group's markup:
+    // Team summary, Year over Year, Patterns, and What's working (2026-10-26).
     const inner = listFrom('TRENDS_INNER_SUB_SECTIONS');
-    t.check('the Trends views are still readable', inner.length === 3);
+    t.check('the Trends views are still readable', inner.length === 4);
     inner.forEach(id => {
         const result = reachable(id, 'trendsAnalysisSection', []);
         t.check(`${id}: ${result.why}`, result.ok);

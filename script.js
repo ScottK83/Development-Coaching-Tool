@@ -2141,6 +2141,16 @@ function bindNavigationHandlers() {
         var container = document.getElementById('subSectionTaPatterns');
         if (stab?.render && container) stab.render(container);
     });
+    document.getElementById('innerNavTrWorking')?.addEventListener('click', () => {
+        showTrendsInnerSubSection('subSectionTaWorking', 'innerNavTrWorking');
+        const container = document.getElementById('subSectionTaWorking');
+        try {
+            window.DevCoachModules?.whatsWorking?.render?.(container);
+        } catch (error) {
+            logAppError('What\'s working failed to render', error);
+            if (container) container.innerHTML = '<p class="text-secondary">Could not build this page. The diagnostics have the detail.</p>';
+        }
+    });
     document.getElementById('subNavTaIntelligence')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaTrendIntelligence', 'subNavTaIntelligence');
         ensureTrendIntelligenceMountedInTrends();
@@ -9949,8 +9959,13 @@ function renderCallListeningTrends(employeeName) {
         return;
     }
 
+    // The saved scorecards first, as Scott left them (corrections and all),
+    // then the patterns read off the transcripts.
+    const cards = window.DevCoachModules?.whatsWorking?.buildAssociateCallsHtml?.(
+        employeeName, entries, window.DevCoachModules?.callScorecard?.LINES || [], escapeHtml
+    ) || '';
     const summary = bridge.collectFindings({ associateName: employeeName, history: entries });
-    const html = trends.buildTrendHtml(summary, escapeHtml);
+    const html = cards + trends.buildTrendHtml(summary, escapeHtml);
     container.innerHTML = html;
     container.style.display = html ? 'block' : 'none';
 }

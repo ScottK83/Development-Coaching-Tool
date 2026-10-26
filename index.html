@@ -831,6 +831,7 @@ Box 2 - Future Improvement Areas:
                             <button type="button" id="innerNavTrReports" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">Team summary</button>
                             <button type="button" id="innerNavTrYoY" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">Year over Year</button>
                             <button type="button" id="innerNavTrPatterns" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">Patterns</button>
+                            <button type="button" id="innerNavTrWorking" class="btn-secondary" style="font-size: 0.85em; padding: 6px 14px;">What's working</button>
                         </div>
                         <div id="subSectionTaMetricTrends" style="display: block;">
                             <h3 style="margin-top: 0;">Team trend summary</h3>
@@ -842,6 +843,10 @@ Box 2 - Future Improvement Areas:
                         </div>
                         <div id="subSectionTaYoY" style="display: none;"></div>
                         <div id="subSectionTaPatterns" style="display: none;"></div>
+                        <!-- The team against the center over weeks, whether the
+                             coaching that went out moved anything, which tips
+                             land, and what the scored calls show. -->
+                        <div id="subSectionTaWorking" style="display: none;"></div>
                     </div>
                     <div id="subSectionTaTrendIntelligence" style="display: none;"></div>
                 </div>
@@ -1912,6 +1917,9 @@ Box 2 - Future Improvement Areas:
                 'modules/dashboard.module.js',
                 'modules/upload-wizard.module.js',
                 'modules/metric-stability.module.js',
+                // Reads the uploads, the coaching log and the saved call
+                // scorecards when its tab opens.
+                'modules/whats-working.module.js',
                 'modules/contest.module.js',
                 'modules/contest-ui.module.js',
                 // Main Application

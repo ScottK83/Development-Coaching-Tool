@@ -638,7 +638,6 @@
 
         const volatility = computeVolatility(weeklyPeriods, repNames);
         const streaks = computeStreaks(weeklyPeriods, repNames);
-        const tipResult = computeTipEffectiveness(weeklyPeriods);
 
         const scopeLabel = teamFilter && teamFilter.length
             ? 'Showing your team (' + teamFilter.length + ' reps) across ' + weeklyPeriods.length + ' weekly upload(s).'
@@ -660,9 +659,12 @@
         html += renderStreaksTable(streaks, null);
         html += '</div>';
 
+        // Which tips land moved to What's working (2026-10-26). This table
+        // counted every drafted message as a tip given and credited a tip
+        // with any week the whole floor improved; the new one counts what
+        // went out and judges it against the team.
         html += '<div class="card">';
-        html += '<h3 class="section-title" style="margin:0 0 12px;">Tip effectiveness</h3>';
-        html += renderTipEffectiveness(tipResult);
+        html += '<p class="text-secondary" style="margin:0;">Which tips land is on the What\'s working tab now, counted from what was sent and judged against how the rest of the team moved.</p>';
         html += '</div>';
 
         container.innerHTML = html;

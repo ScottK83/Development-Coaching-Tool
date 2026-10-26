@@ -83,11 +83,106 @@
         return null;
     }
 
+    // A week with no calls has no handle, hold or wrap time and no transfers,
+    // and a survey metric nobody answered reads as 0%. Neither is a number to
+    // measure coaching by: a 0 second handle time read as a huge improvement.
+    var CALL_METRICS = { aht: true, acw: true, holdTime: true, transfers: true };
+
+    function _measurable(emp, metricKey) {
+        if (CALL_METRICS[metricKey]) {
+            var calls = parseFloat(emp.totalCalls);
+            if (isFinite(calls) && calls <= 0) return false;
+            // A 0 second handle time is always no calls. A 0 second hold
+            // with calls is a real result and stays.
+            if (metricKey === 'aht' && parseFloat(emp.aht) === 0) return false;
+        }
+        var helpers = window.DevCoachModules && window.DevCoachModules.metricsRegistryHelpers;
+        if (helpers && helpers.getSurveyWeight) {
+            var weight = helpers.getSurveyWeight(metricKey, emp);
+            if (weight !== null && !(weight > 0)) return false;
+        }
+        return true;
+    }
+
     function _value(key, name, metricKey) {
         var emp = _employeeIn(key, name);
-        if (!emp) return null;
+        if (!emp || !_measurable(emp, metricKey)) return null;
         var v = parseFloat(emp[metricKey]);
         return isFinite(v) ? v : null;
+    }
+
+    /* ── The three week window ──
+     *
+     * One week after is noisy for any single person; three weeks after says
+     * whether a change held. The three weeks are combined the app's one way,
+     * buildEmployeeAggregateForPeriod (calls and surveys weighted, never a
+     * plain average of rates), and judged against how the rest of the team
+     * moved over the same three weeks.
+     */
+    var LONG_WINDOW_WEEKS = 3;
+
+    function _aggregate(name, keys, cache) {
+        if (typeof buildEmployeeAggregateForPeriod !== 'function' || !keys.length) return null;
+        var ck = 'agg|' + name + '|' + keys.join(',');
+        if (cache[ck] === undefined) {
+            var agg = null;
+            try { agg = buildEmployeeAggregateForPeriod(name, keys); } catch (e) { agg = null; }
+            cache[ck] = agg && agg.periodsIncluded === keys.length ? agg : null;
+        }
+        return cache[ck];
+    }
+
+    function _longValue(name, metricKey, keys, cache) {
+        var agg = _aggregate(name, keys, cache);
+        if (!agg) return null;
+        // The window has to have calls (or surveys) behind it, week by week.
+        for (var i = 0; i < keys.length; i++) {
+            if (_value(keys[i], name, metricKey) === null) return null;
+        }
+        var v = parseFloat(agg[metricKey]);
+        return isFinite(v) ? v : null;
+    }
+
+    function _teamDeltaLong(metricKey, fromKey, windowKeys, exclude, cache) {
+        var ck = 'long|' + metricKey + '|' + fromKey + '|' + windowKeys.join(',');
+        if (cache[ck] !== undefined) return cache[ck];
+        var mm = _mm();
+        var from = _weeklyData()[fromKey];
+        var deltas = [];
+        if (mm && from && from.employees) {
+            from.employees.forEach(function (emp) {
+                if (!emp || !emp.name || emp.name === exclude) return;
+                var a = _value(fromKey, emp.name, metricKey);
+                var b = _longValue(emp.name, metricKey, windowKeys, cache);
+                if (a === null || b === null) return;
+                var d = mm.performanceDelta(metricKey, b, a);
+                if (d !== null) deltas.push(d);
+            });
+        }
+        cache[ck] = deltas.length >= 3 ? _median(deltas) : null;
+        return cache[ck];
+    }
+
+    function _longOutcome(name, metricKey, before, baselineKey, windowKeys, cache) {
+        var mm = _mm();
+        if (before === null || windowKeys.length < LONG_WINDOW_WEEKS) {
+            return { verdict3: 'pending', afterValue3: null, delta3: null, teamDelta3: null, beatTeam3: null };
+        }
+        var after = _longValue(name, metricKey, windowKeys, cache);
+        if (after === null) {
+            return { verdict3: 'pending', afterValue3: null, delta3: null, teamDelta3: null, beatTeam3: null };
+        }
+        var resolved = mm.resolveDirection(metricKey, after, before);
+        var teamDelta = _teamDeltaLong(metricKey, baselineKey, windowKeys, name, cache);
+        return {
+            verdict3: resolved.direction === 'improving' ? 'moved'
+                : resolved.direction === 'declining' ? 'went backwards'
+                : 'held flat',
+            afterValue3: after,
+            delta3: resolved.delta,
+            teamDelta3: teamDelta,
+            beatTeam3: teamDelta === null ? null : resolved.delta > teamDelta
+        };
     }
 
     /* ── The join ── */
@@ -176,6 +271,8 @@
 
                     var before = _value(baselineKey, name, metricKey);
                     var after = outcomeKey ? _value(outcomeKey, name, metricKey) : null;
+                    var windowKeys = idx > -1 ? keys.slice(idx + 1, idx + 1 + LONG_WINDOW_WEEKS) : [];
+                    var long = _longOutcome(name, metricKey, before, baselineKey, windowKeys, cache);
 
                     var base = {
                         employee: name,
@@ -195,8 +292,13 @@
                         // with its sample size rather than as a rate alone.
                         suggestions: (entry.suggestions || []).filter(function (s) {
                             return s && s.metricKey === metricKey && s.id;
-                        })
+                        }),
+                        // Where it came from (call, today, coach, trend) and,
+                        // for a call, the scorecard lines it was about.
+                        source: entry.source || '',
+                        behaviors: entry.behaviors || []
                     };
+                    Object.assign(base, long);
 
                     if (before === null || after === null) {
                         out.push(Object.assign(base, {
@@ -289,7 +391,8 @@
             if (o.verdict === 'pending') return;
             var r = rows[o.metricKey] || (rows[o.metricKey] = {
                 metricKey: o.metricKey, label: o.label,
-                total: 0, moved: 0, backwards: 0, flat: 0, beatTeam: 0, comparable: 0, reachedTarget: 0
+                total: 0, moved: 0, backwards: 0, flat: 0, beatTeam: 0, comparable: 0, reachedTarget: 0,
+                total3: 0, moved3: 0, beatTeam3: 0, comparable3: 0
             });
             r.total++;
             if (o.verdict === 'moved') r.moved++;
@@ -297,6 +400,11 @@
             else r.flat++;
             if (o.beatTeam !== null) { r.comparable++; if (o.beatTeam) r.beatTeam++; }
             if (o.reachedTarget) r.reachedTarget++;
+            if (o.verdict3 && o.verdict3 !== 'pending') {
+                r.total3++;
+                if (o.verdict3 === 'moved') r.moved3++;
+                if (o.beatTeam3 !== null && o.beatTeam3 !== undefined) { r.comparable3++; if (o.beatTeam3) r.beatTeam3++; }
+            }
         });
         return Object.keys(rows)
             .map(function (k) {
@@ -304,6 +412,7 @@
                 r.moveRate = r.total ? r.moved / r.total : 0;
                 // Only meaningful with enough comparable events behind it.
                 r.beatTeamRate = r.comparable >= 3 ? r.beatTeam / r.comparable : null;
+                r.beatTeamRate3 = r.comparable3 >= 3 ? r.beatTeam3 / r.comparable3 : null;
                 return r;
             })
             .sort(function (a, b) { return b.total - a.total || b.moveRate - a.moveRate; });
