@@ -137,7 +137,7 @@ suite('celebrate voice: the channel post is short enough to read', (t) => {
     t.check('what is left over is counted, not dropped', /\nPlus 3 more Top 15 finishes!/.test(kristin));
     t.equal('one more is a finish, not finishes', cel.moreLine([{ rank: 7 }]), 'Plus 1 more Top 10 finish!');
     t.equal('and leftover top spots stay top spots', cel.moreLine([{ rank: 1 }, { rank: 1 }]),
-        'Plus 2 more #1 spots in the Call Center!');
+        'Plus 2 more that are the best in the Call Center!');
     t.equal('nothing left over says nothing', cel.moreLine([]), '');
 
     const single = cel.generateShoutOut(team()[0], '', DONE_WEEK);
@@ -154,8 +154,8 @@ suite('celebrate voice: the public post names placings, never counts', (t) => {
     // "Tied for #1 in the Call Center. (one of 17 associates at 100.0%)" shrank
     // a #1 in front of the team, and "Top 10! (one of 2...)" said a tie twice.
     t.check('no tie count in public', !/one of \d+ associates/.test(publicText));
-    t.check('a shared spot still says it is shared', publicText.indexOf('Tied for #1 in the Call Center') > -1);
-    t.check('and the placings are there', publicText.indexOf('#1 in the Call Center') > -1
+    t.check('a shared spot still says it is shared', publicText.indexOf('Tied for the best in the Call Center') > -1);
+    t.check('and the placings are there', publicText.indexOf('the best in the Call Center') > -1
         && publicText.indexOf('4th best in the Call Center') > -1);
     t.check('numbers drop a trailing .0', publicText.indexOf('100.0%') === -1 && publicText.indexOf('93%') > -1);
 });
@@ -257,10 +257,10 @@ suite('celebrate voice: no robotic stems', (t) => {
 
 suite('celebrate voice: one post never hands two people the same tail', (t) => {
     const { cel } = load(t);
-    const tail = /#1 in the Call Center[.,]? ?(.*)$/;
+    const tail = /The best in the Call Center[.,]? ?(.*)$/;
     for (let i = 0; i < DRAWS; i++) {
         const post = cel.generateAllShoutOuts(team(), '', i % 2 ? DONE_WEEK : RUNNING_WEEK);
-        const tails = post.split('\n').filter((l) => /^• .*#1 in the Call Center/.test(l) && !/Tied for/.test(l))
+        const tails = post.split('\n').filter((l) => /^• .*The best in the Call Center/.test(l) && !/Tied for/.test(l))
             .map((l) => (tail.exec(l) || [])[1]);
         if (new Set(tails).size !== tails.length) {
             t.check('every solo tail in a post is different, but got ' + JSON.stringify(tails), false);
@@ -286,4 +286,40 @@ suite('celebrate voice: the date is said the way a person says it', (t) => {
     const top = post.split('\n');
     t.equal('the date sits straight under the heading', top[1], 'Oct 5 to 11');
     t.check('with no calendar emoji', post.indexOf('📅') === -1);
+});
+
+/* Scott, 2026-10-26: "Any time I send a message, I want to make sure it has a
+   natural speaking tone." "#1" is written, not said; "4th best in the Call
+   Center. Top 5!" says the placing twice; "They set the bar" under @Ada reads
+   as somebody else; "That's #1 out of 124 associates" closed 1,666 DMs. */
+suite('celebrate voice: placings are said, once, and never as "#1"', (t) => {
+    const { cel } = load(t);
+    for (let i = 0; i < DRAWS; i++) {
+        const week = i % 2 ? DONE_WEEK : RUNNING_WEEK;
+        const post = cel.generateAllShoutOuts(team(), '', week);
+        if (/#\d/.test(post)) { t.check('no "#" placing in the team post: ' + post, false); return; }
+        if (/(best in the Call Center|the best in the Call Center)[.!]? Top \d+!/.test(post)) {
+            t.check('no badge repeating the placing: ' + post, false); return;
+        }
+        const solo = post.split('\n').filter((l) => /The best in the Call Center/.test(l));
+        if (solo.some((l) => /\b(they|them|their|theirs)\b/i.test(l))) {
+            t.check('no "they" about an @name: ' + solo.join(' | '), false); return;
+        }
+        const one = cel.generateShoutOut(team()[0], '', week);
+        if (/#\d/.test(one)) { t.check('no "#" placing in the single shout-out: ' + one, false); return; }
+        const dm = cel.generateDirectMessage(team()[0], '', week);
+        if (/#\d/.test(dm)) { t.check('no "#" placing in the DM: ' + dm, false); return; }
+    }
+    t.check('the post, the shout-out and the DM say placings out loud', true);
+});
+
+suite('celebrate voice: a DM does not say the same idea twice', (t) => {
+    const { cel } = load(t);
+    let doubled = '';
+    for (let i = 0; i < 200 && !doubled; i++) {
+        const dm = cel.generateDirectMessage(team()[0], '', i % 2 ? DONE_WEEK : RUNNING_WEEK);
+        if ((dm.match(/hear(d)? (it|this) from me/gi) || []).length > 1) doubled = dm;
+        if ((dm.match(/reach(ing)? out/gi) || []).length > 1) doubled = dm;
+    }
+    t.check('"hear it from me" and "reach out" once at most' + (doubled ? ': ' + doubled : ''), !doubled);
 });

@@ -168,13 +168,13 @@ suite('celebrations: tie counts come off the real rankings', (t) => {
     // follow it said so a second time and shrank a #1 in front of the whole
     // team. Scott, 2026-10-14.
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
-    t.check('the post says the top spot is shared', post.indexOf('Tied for #1 in the Call Center') > -1);
+    t.check('the post says the top spot is shared', post.indexOf('Tied for the best in the Call Center') > -1);
     t.check('without counting the tie in public', post.indexOf('one of 3 associates') === -1);
-    t.check('and still calls the solo win out across the center', post.indexOf('#1 in the Call Center') > -1);
+    t.check('and still calls the solo win out across the center', post.indexOf('The best in the Call Center') > -1);
     // The tail is picked from a pool now, so the placing is what gets asserted;
     // the wording around it is deliberately free to vary.
     t.check('and says nobody else reached it, however it words it',
-        /#1 in the Call Center[.,—]/.test(post));
+        /The best in the Call Center[.,]/.test(post));
 });
 
 suite('celebrations: numbers that read the same are tied', (t) => {
@@ -208,7 +208,7 @@ suite('celebrations: numbers that read the same are tied', (t) => {
 
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
     t.check('the post never claims the center was unmatched', post.indexOf('Nobody else in the Call Center') === -1);
-    t.check('it says the spot is shared instead', post.indexOf('Tied for #1 in the Call Center') > -1);
+    t.check('it says the spot is shared instead', post.indexOf('Tied for the best in the Call Center') > -1);
     t.check('and the number reads simply', post.indexOf('100%') > -1 && post.indexOf('100.0%') === -1);
     t.check('without a tie count in public', post.indexOf('one of 3 associates') === -1);
 });
@@ -375,7 +375,7 @@ suite('celebrations: the field is only named where it cannot become a podium', (
 
     // One-to-one, so there is nobody to be measured against in the room.
     const dm = celebrations.generateDirectMessage(person, 'Jul 27 - Aug 2, 2026');
-    t.check('the private message says how many they beat', dm.indexOf('better than 43 of 50 associates') > -1);
+    t.check('the private message says how many they beat', /better than 43 of 50 associates|ahead of 43 of the 50 associates/.test(dm));
     // Said the way a person writes it, with no calendar emoji (two emojis a
     // message, Scott, 2026-10-13).
     t.check('and leads with the period it covers', dm.indexOf('Jul 27 to Aug 2') > -1);
@@ -499,9 +499,9 @@ suite('celebrations: the post says where in the building they landed', (t) => {
     // The placing is the half that makes the number mean something, and it is
     // what people repeat to each other anyway.
     t.equal('a solo top spot is named as such',
-        celebrations.centerPlacement({ rank: 1, tiedCount: 1 }), '#1 in the Call Center');
+        celebrations.centerPlacement({ rank: 1, tiedCount: 1 }), 'the best in the Call Center');
     t.equal('a shared one says so',
-        celebrations.centerPlacement({ rank: 1, tiedCount: 3 }), 'tied for #1 in the Call Center');
+        celebrations.centerPlacement({ rank: 1, tiedCount: 3 }), 'tied for the best in the Call Center');
     t.equal('sixth is sixth best',
         celebrations.centerPlacement({ rank: 6, tiedCount: 1 }), '6th best in the Call Center');
     t.equal('and a shared sixth still says shared',
@@ -599,8 +599,8 @@ suite('celebrations: a big week does not read as a form letter', (t) => {
     for (let run = 0; run < 40; run++) {
         const lines = celebrations.generateAllShoutOuts([person], '')
             .split('\n')
-            .filter(l => l.indexOf('#1 in the Call Center') > -1)
-            .map(l => l.slice(l.indexOf('#1 in the Call Center')));
+            .filter(l => l.indexOf('The best in the Call Center') > -1)
+            .map(l => l.slice(l.indexOf('The best in the Call Center')));
         if (lines.length !== 3) { sawRepeat = true; break; }
         if (new Set(lines).size !== lines.length) { sawRepeat = true; break; }
     }
@@ -610,9 +610,9 @@ suite('celebrations: a big week does not read as a form letter', (t) => {
     // stated on every one shown, and the one left off is still counted.
     const post = celebrations.generateAllShoutOuts([person], '');
     t.equal('every line shown still names the placing',
-        (post.match(/#1 in the Call Center/g) || []).length, 3);
+        (post.match(/The best in the Call Center/g) || []).length, 3);
     t.check('and the fourth is counted, not dropped',
-        post.indexOf('Plus 1 more #1 spot in the Call Center!') > -1);
+        post.indexOf('Plus 1 more that is the best in the Call Center!') > -1);
 
     // A pool that runs out has to keep going rather than hand back nothing.
     const rotate = celebrations.rotator(['a', 'b']);
@@ -898,7 +898,7 @@ suite('celebrations: the post does not read the same twice', (t) => {
     // Variation in the frame only. Everything that is a fact is on every one.
     t.check('the number survives every rewording', lines.every(l => l.indexOf('97.6') > -1));
     t.check('so does the placing', lines.every(l => l.indexOf('2nd best in the Call Center') > -1));
-    t.check('and so does the tier badge', lines.every(l => l.indexOf('Top 5!') > -1));
+    t.check('and never a tier badge saying it twice', lines.every(l => l.indexOf('Top 5!') === -1));
 });
 
 suite('celebrations: a rewording never drops a fact', (t) => {
@@ -919,7 +919,7 @@ suite('celebrations: a rewording never drops a fact', (t) => {
         const post = celebrations.generateAllShoutOuts(people, 'Aug 17, 2026 - Aug 20, 2026');
         if (post.indexOf('@Sabrina') === -1) { t.check('every run mentions Sabrina', false); return; }
         if (post.indexOf('@Esperanza') === -1) { t.check('every run mentions Esperanza', false); return; }
-        if (post.indexOf('#1 in the Call Center') === -1) { t.check('every run states the top spot', false); return; }
+        if (post.indexOf('The best in the Call Center') === -1) { t.check('every run states the top spot', false); return; }
         if (post.indexOf('6th best in the Call Center') === -1) { t.check('every run states the placing', false); return; }
         if (post.indexOf('98.6') === -1) { t.check('every run states the number', false); return; }
         if (post.indexOf('\n\n\n') > -1) { t.check('no run leaves a double gap', false); return; }
@@ -1126,7 +1126,7 @@ suite('celebrations: the bar reaches fifteen', (t) => {
 
     const post = celebrations.generateAllShoutOuts(result.celebrations, '', '2026-08-17|2026-08-21');
     t.check('the post says where in the building she landed', post.indexOf('12th best in the Call Center') > -1);
-    t.check('and carries the badge with it', post.indexOf('Top 15!') > -1);
+    t.check('and does not say it twice with a badge', post.indexOf('Top 15!') === -1);
 
     // The bar moved; the gate did not. A placing past it is still nothing.
     const past = loadNearMiss(t, 93.4, 16);
@@ -1176,7 +1176,7 @@ suite('celebrations: what somebody did is a bulleted list', (t) => {
     // two emojis a message, the opener's and the sign-off's (Scott,
     // 2026-10-13). The words say which kind of line it is.
     t.check('the top spot is a plain bullet', post.indexOf('\u2022 \uD83E\uDD47') === -1
-        && detail.some(l => /^\u2022 [^\n]*#1 in the Call Center/.test(l)));
+        && detail.some(l => /^\u2022 [^\n]*The best in the Call Center/.test(l)));
     t.check('so is the perfect survey week', post.indexOf('\u2022 \uD83D\uDCAF') === -1
         && detail.some(l => l.indexOf('\u2022 PERFECT') === 0));
 
