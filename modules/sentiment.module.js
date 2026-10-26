@@ -748,17 +748,20 @@
         const posUsedPhrases = positive.phrases
             .filter(p => p.value > 0 && !containsCurseWords(p.phrase))
             .sort((a, b) => b.value - a.value);
+        // Words for the section markers, not emojis: a ✓, ⬆, 📝 and ✅ on
+        // every heading put six or more in one summary (Scott, 2026-10-13: two
+        // a message). And no spaced hyphen standing in for a dash.
         if (posUsedPhrases.length > 0) {
-            section += `✓ DOING WELL - You used these positive words/phrases:\n`;
+            section += `Doing well: you used these positive words and phrases\n`;
             posUsedPhrases.slice(0, SENTIMENT_TOP_WINS_COUNT).forEach(p => {
-                section += `  • "${censorCurseWords(p.phrase)}" - ${p.value} calls\n`;
+                section += `  • "${censorCurseWords(p.phrase)}" on ${p.value} call${p.value === 1 ? '' : 's'}\n`;
             });
             if (posUsedPhrases.length > SENTIMENT_TOP_WINS_COUNT) {
                 section += `  [... and ${posUsedPhrases.length - SENTIMENT_TOP_WINS_COUNT} more positive phrases]\n`;
             }
         } else {
-            section += `✓ DOING WELL:\n`;
-            section += `  • No strong positive phrases detected in this period\n`;
+            section += `Doing well:\n`;
+            section += `  • No strong positive phrases came up in this period yet\n`;
         }
         section += `\n`;
 
@@ -766,24 +769,26 @@
             .filter(p => p.value === 0 && !containsCurseWords(p.phrase))
             .sort((a, b) => a.value - b.value);
         if (posUnusedPhrases.length > 0) {
-            section += `⬆ INCREASE YOUR SCORE - Try using these phrases more often:\n`;
+            section += `To bring your score up, try working these in more often:\n`;
             posUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
                 section += `  • "${censorCurseWords(p.phrase)}"\n`;
             });
         }
         section += `\n`;
 
-        section += `📝 SCRIPTED OPENING (with positive language):\n`;
-        section += `  "Hello! Thank you for calling. My name is ${escapeHtml(associateName)}. I'm here to\n`;
-        section += `   help you and I appreciate the opportunity to assist you today."\n\n`;
+        // Said the way somebody on the floor would say them, not "I appreciate
+        // the opportunity to assist you today" (tone audit, 2026-10-25).
+        section += `An opening with positive language:\n`;
+        section += `  "Thanks for calling, this is ${escapeHtml(associateName)}. I'm happy to\n`;
+        section += `   help you today."\n\n`;
 
-        section += `📝 OWNERSHIP STATEMENT (take responsibility):\n`;
-        section += `  "I understand this is important to you. I'm going to take ownership of\n`;
-        section += `   this and personally ensure we get this resolved for you."\n\n`;
+        section += `Taking ownership:\n`;
+        section += `  "I understand this is important to you. I'll take care of this and make\n`;
+        section += `   sure we get it resolved for you."\n\n`;
 
-        section += `📝 SCRIPTED CLOSING (with positive language):\n`;
-        section += `  "I truly appreciate you taking the time to work with me on this. We've\n`;
-        section += `   accomplished great things together today, and I'm delighted we could help."\n\n`;
+        section += `A closing with positive language:\n`;
+        section += `  "Thanks for working through this with me. I'm glad we could get it\n`;
+        section += `   taken care of for you today."\n\n`;
 
         return section;
     }
@@ -800,20 +805,20 @@
         const custNegative = negative.phrases.filter(p => p.speaker === 'C' && p.value > 0 && !containsCurseWords(p.phrase));
 
         if (assocNegative.length === 0) {
-            section += `✓ EXCELLENT - Minimal negative language in your calls\n`;
-            section += `  • You're avoiding negative words effectively\n`;
+            section += `Excellent: hardly any negative language in your calls\n`;
+            section += `  • You're steering clear of negative words really well\n`;
         } else {
-            section += `⚠ PHRASES YOU USED - These came out in your calls, avoid them:\n`;
+            section += `These came out in your calls, and they're worth swapping out:\n`;
             assocNegative.sort((a, b) => b.value - a.value).forEach(p => {
-                section += `  • "${censorCurseWords(p.phrase)}" - used ${p.value} times\n`;
+                section += `  • "${censorCurseWords(p.phrase)}", used ${timesWord(p.value)}\n`;
             });
         }
         section += `\n`;
 
         if (assocNegativeUnused.length > 0) {
-            section += `🛡 WATCH OUT - Database phrases you haven't used yet (prevent bad habits):\n`;
+            section += `Ones you haven't used, and worth keeping that way:\n`;
             assocNegativeUnused.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-                section += `  • "${censorCurseWords(p.phrase)}" - Don't let this slip in\n`;
+                section += `  • "${censorCurseWords(p.phrase)}"\n`;
             });
         }
         section += `\n`;
@@ -828,11 +833,11 @@
             'no': 'Yes, I can',
             'unable': 'I\'m able to help you',
             'don\'t': 'Do',
-            'sorry but': 'I apologize and here\'s how I\'ll fix this',
-            'unfortunately': 'Great news - here\'s what we can do'
+            'sorry but': 'I apologize, and here\'s how I\'ll fix this',
+            'unfortunately': 'Here\'s what we can do'
         };
 
-        section += `✅ POSITIVE ALTERNATIVES - Say these instead:\n`;
+        section += `What to say instead:\n`;
         if (assocNegative.length > 0) {
             assocNegative.sort((a, b) => b.value - a.value).slice(0, 3).forEach(p => {
                 const phrase = p.phrase.toLowerCase().replace(/[^a-z0-9\s]/g, '');
@@ -849,17 +854,17 @@
         section += `\n`;
 
         if (custNegative.length > 0) {
-            section += `📌 CUSTOMER CONTEXT - They said (understand their frustration):\n`;
+            section += `What customers said, so you can see where the frustration came from:\n`;
             custNegative.sort((a, b) => b.value - a.value).slice(0, SENTIMENT_CUSTOMER_CONTEXT_COUNT).forEach(p => {
-                section += `  • "${censorCurseWords(p.phrase)}" - detected ${p.value} times\n`;
+                section += `  • "${censorCurseWords(p.phrase)}", ${timesWord(p.value)}\n`;
             });
-            section += `  → Acknowledge their concern, don't make excuses\n`;
+            section += `  → Acknowledge their concern first, then get to the fix\n`;
         }
         section += `\n`;
 
-        section += `📝 SCRIPTED RESPONSE (when customer is frustrated):\n`;
-        section += `  "I hear your frustration, and I completely understand. I'm committed to\n`;
-        section += `   finding a solution for you right now. Let me see what I can do for you."\n\n`;
+        section += `When a customer is frustrated:\n`;
+        section += `  "I hear you, and I understand why you're frustrated. Let's see what I\n`;
+        section += `   can do to fix this for you right now."\n\n`;
 
         return section;
     }
@@ -875,36 +880,35 @@
         const emotionUnusedPhrases = emotions.phrases.filter(p => p.value === 0 && !containsCurseWords(p.phrase));
 
         if (emotionUsedPhrases.length === 0 || emotions.percentage <= SENTIMENT_EMOTION_LOW_THRESHOLD) {
-            section += `✓ STRONG PERFORMANCE - You're managing customer emotions effectively\n`;
-            section += `  • Low emotion escalation (${emotions.percentage}%) - Calming presence detected\n`;
+            section += `Strong work: you're keeping customers calm\n`;
+            section += `  • Emotions ran high on only ${emotions.percentage}% of calls, and that's your calm coming through\n`;
         } else {
-            section += `📌 EMOTION INDICATORS DETECTED - Customer emotional phrases in calls:\n`;
+            section += `Where customers got emotional on your calls:\n`;
             emotionUsedPhrases.sort((a, b) => b.value - a.value).forEach(p => {
-                section += `  • "${censorCurseWords(p.phrase)}" - detected in ${p.value} calls\n`;
+                section += `  • "${censorCurseWords(p.phrase)}" on ${p.value} call${p.value === 1 ? '' : 's'}\n`;
             });
         }
         section += `\n`;
 
         if (emotionUnusedPhrases.length > 0) {
-            section += `🛡 WATCH OUT - Emotion phrases to prevent (haven't shown up yet):\n`;
+            section += `Ones that haven't come up, and worth keeping that way:\n`;
             emotionUnusedPhrases.slice(0, SENTIMENT_BOTTOM_COUNT).forEach(p => {
-                section += `  • "${censorCurseWords(p.phrase)}" - Avoid letting this develop\n`;
+                section += `  • "${censorCurseWords(p.phrase)}"\n`;
             });
         }
         section += `\n`;
 
-        section += `✅ TECHNIQUES TO MASTER - How to manage emotions:\n`;
-        section += `  • Acknowledge their feelings first: "I can hear the frustration in your voice"\n`;
-        section += `  • Show you understand: "If I were in your position, I'd feel the same way"\n`;
-        section += `  • Don't interrupt or talk over them - let them finish\n`;
-        section += `  • Take action, not excuses: "Here's exactly what I'm going to do..."\n`;
-        section += `  • Follow up: "I'll personally make sure this gets resolved for you"\n`;
+        section += `What helps when emotions run high:\n`;
+        section += `  • Acknowledge their feelings first: "I can hear how frustrating this is"\n`;
+        section += `  • Show you understand: "I'd feel the same way in your shoes"\n`;
+        section += `  • Let them finish before you jump in\n`;
+        section += `  • Get to the fix: "Here's what I'm going to do..."\n`;
+        section += `  • Follow through: "I'll make sure this gets taken care of for you"\n`;
         section += `\n`;
 
-        section += `📝 SCRIPTED RESPONSE (when emotion is high):\n`;
-        section += `  "I completely understand your frustration. I'm listening to you, and I want\n`;
-        section += `   you to know I'm going to take personal ownership of this. Let me get this\n`;
-        section += `   resolved for you right now. Here's what I can do..."\n\n`;
+        section += `When emotions are high:\n`;
+        section += `  "I understand, and I'm listening. I'm going to take care of this for\n`;
+        section += `   you. Here's what I can do..."\n\n`;
 
         return section;
     }
@@ -945,6 +949,9 @@
        the gap is stated as a number and left to stand.
        ══════════════════════════════════════════════════════════════════════ */
 
+    // "Positive Language is at 95%, with an 86% goal, and that's at goal."
+    // It read "95.0% against a 86% goal, met": a ".0", the wrong article and
+    // a one-word verdict (tone audit, 2026-10-25).
     function sentimentStandingLine(label, report, goal) {
         const pct = Number(report && report.percentage);
         if (!Number.isFinite(pct)) {
@@ -952,8 +959,14 @@
         }
         const met = pct >= goal;
         const gap = Math.round((goal - pct) * 10) / 10;
-        const verdict = met ? 'met' : gap + ' points under';
-        return '  ' + label + ': ' + pct.toFixed(1) + '% against a ' + goal + '% goal, ' + verdict;
+        const shown = String(Math.round(pct * 10) / 10);
+        const verdict = met ? 'and that\'s at goal' : gap + (gap === 1 ? ' point' : ' points') + ' to go';
+        return '  ' + label + ' is at ' + shown + '%, with ' + sentimentGoalPhrase(goal) + ', ' + verdict + '.';
+    }
+
+    // "on 1 call", "used once": "used 1 times" read unproofed.
+    function timesWord(n) {
+        return n === 1 ? 'once' : n + ' times';
     }
 
     function sentimentFocusPick(reports, goals) {
@@ -1094,8 +1107,8 @@
             out += '  All three are at goal for this period. Keep doing what is working.\n\n';
         } else {
             const gap = Math.round(focus.gap * 10) / 10;
-            out += '  ' + focus.label + '. It is the widest gap of the three, '
-                + gap + ' points under a ' + focus.goal + '% goal.\n';
+            out += '  ' + focus.label + ' is the one to work on. It is the furthest of the three from goal, with '
+                + gap + (gap === 1 ? ' point' : ' points') + ' to go to ' + sentimentGoalPhrase(focus.goal) + '.\n';
 
             const phrases = sentimentFocusPhrases(focus.report, { negative: focus.isNegative });
             if (phrases.lines.length) {
