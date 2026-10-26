@@ -325,6 +325,21 @@ function withSupport(t, store, name, coaching, calls) {
     return { qr, ctx: qr.buildContext(name, 2026) };
 }
 
+/* Tone audit 2026-10-25: "...2 calls reviewed, on average handle time, rep
+   satisfaction" had no "and" before the last one, and it feeds the year-end
+   prompt. */
+suite('quarter review: the work done together names its metrics with an "and"', (t) => {
+    t.pinClock('2026-09-22');
+    const { qr, ctx } = withSupport(t, IMPROVING, 'Jordan Reyes',
+        { 'Jordan Reyes': [{ generatedAt: '2026-05-06T10:00:00Z', metricsCoached: ['aht', 'cxRepOverall', 'scheduleAdherence'] }] },
+        { 'Jordan Reyes': [{ listenedOn: '2026-03-02' }, { listenedOn: '2026-07-15' }] });
+    const tp = qr.buildTalkingPoints(ctx);
+    const section = (tp.sections || []).find((s) => s.id === 'together');
+    const line = section ? section.lines[0] : '';
+    t.check('there is a line on the work together', !!line);
+    t.check('the last metric is joined with "and": ' + line, /, on [a-z ]+, [a-z ]+, and [a-z ]+\.$/.test(line));
+});
+
 suite('quarter review: coaching held and calls reviewed reach the record', (t) => {
     t.pinClock('2026-09-22');
     const { qr, ctx } = withSupport(t, IMPROVING, 'Jordan Reyes',

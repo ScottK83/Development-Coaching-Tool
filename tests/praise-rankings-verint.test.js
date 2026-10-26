@@ -396,4 +396,9 @@ suite('praise verint: a session logged with a label finds its week by the day it
     const out = verintFor(api, session(['scheduleAdherence'], 'Week ending 08/09/2026'));
     t.check('the newest week on or before the session is read',
         /I recognized Zed for their strong performance in Average Handle Time\./.test(out.text));
+    // One metric is not "these areas", and the header carries no spaced
+    // hyphen standing in for a dash (tone audit, 2026-10-25).
+    t.check('one win is "there", not "these areas"',
+        /keep up the great work there\./.test(out.text) && !/these areas/.test(out.text));
+    t.check('no spaced hyphen in the header', !/^Coaching [Ss]ession with Zed - /.test(out.text) && /^Coaching session with Zed on /.test(out.text));
 });

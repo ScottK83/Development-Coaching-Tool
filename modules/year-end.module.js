@@ -143,7 +143,7 @@ Write polished text that I can paste into these two manager review boxes:
 2) Identify 1-2 areas for future improvement, based on this year's performance
 
 Requirements:
-- Professional, warm, and human - not robotic and not overly corporate
+- Professional, warm and human, never robotic or overly corporate
 - Align with goals in business, development, and APS principles
 - Be clear about how the year went overall, in plain language, without grading it
 - Use the associate self-review/context above when relevant, but do not copy it verbatim
@@ -235,10 +235,13 @@ Box 2 - Future Improvement Areas:
      */
     function buildVerbalSummary(preferredName, reviewYear, performanceRating, meritDetails, bonusAmount, opening) {
         var filled = function (v) { return String(v == null ? '' : v).trim(); };
+        // Said, not read off the form: "Your merit increase details are: 3%
+        // effective 1 March." was the form's label spoken aloud (tone audit,
+        // 2026-10-25).
         var details = [];
-        if (filled(performanceRating)) details.push(`Your overall performance rating is: ${filled(performanceRating)}.`);
-        if (filled(meritDetails)) details.push(`Your merit increase details are: ${filled(meritDetails)}.`);
-        if (filled(bonusAmount)) details.push(`Your incentive/bonus amount is: ${filled(bonusAmount)}.`);
+        if (filled(performanceRating)) details.push(`Your overall performance rating${filled(reviewYear) ? ' for ' + filled(reviewYear) : ''} is ${filled(performanceRating)}.`);
+        if (filled(meritDetails)) details.push(`Your merit increase is ${filled(meritDetails)}.`);
+        if (filled(bonusAmount)) details.push(`Your incentive bonus is ${filled(bonusAmount)}.`);
         return fillOpening(opening, preferredName, reviewYear) + (details.length ? '\n\n' + details.join('\n') : '');
     }
 

@@ -133,7 +133,9 @@ suite('review voice: the Year-End prompt keeps hours out', (t) => {
 suite('review voice: the verbal summary never reads "Not provided" aloud', (t) => {
     const M = loadModules(t);
     const full = M.yearEnd.buildVerbalSummary('Faith', 2026, 'Meets expectations', '3% effective 1 March', '$1,200');
-    t.check('every filled line is there', /rating is: Meets expectations\.\nYour merit increase details are: 3% effective 1 March\.\nYour incentive\/bonus amount is: \$1,200\.$/.test(full));
+    t.check('every filled line is there', /rating for 2026 is Meets expectations\.\nYour merit increase is 3% effective 1 March\.\nYour incentive bonus is \$1,200\.$/.test(full));
+    // Said, not read off the form (tone audit, 2026-10-25).
+    t.check('no form label read aloud', !/ is: |details are|bonus amount/.test(full));
     const noBonus = M.yearEnd.buildVerbalSummary('Faith', 2026, 'Meets expectations', '3% effective 1 March', '');
     t.check('a blank bonus leaves its line out', !/bonus/.test(noBonus) && /merit increase/.test(noBonus));
     t.check('and nothing says Not provided', !/Not provided/i.test(noBonus));
@@ -165,7 +167,7 @@ suite('review voice: the verbal summary never reads "Not provided" aloud', (t) =
     els.yearEndPerformanceRatingInput.value = 'Meets expectations';
     yec.generateYearEndVerbalSummary();
     const out = els.yearEndVerbalSummaryOutput.value;
-    t.check('with a rating it builds', /rating is: Meets expectations\./.test(out));
+    t.check('with a rating it builds', /rating (for 2026 )?is Meets expectations\./.test(out));
     t.check('blank merit and bonus are left out, not read as Not provided', !/Not provided|merit|bonus/i.test(out));
     t.check('and the supervisor is told which lines went', toasts.some((m) => /merit increase and incentive\/bonus lines were left out/.test(m)));
 

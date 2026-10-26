@@ -22,7 +22,7 @@ suite('year-end opening: the speech opens with the year\'s own words', (t) => {
     const speech = yearEnd.buildVerbalSummary('Alyssa', '2026', 'Successful', '3% to $58,760', '$1,250', custom);
     t.check('the saved opening leads', speech.startsWith('Alyssa, 2026 was a year we can be proud of.'));
     t.check('the old fixed text is not in it', speech.indexOf('JD Power') === -1);
-    t.check('the rating still follows', speech.indexOf('Your overall performance rating is: Successful.') > -1);
+    t.check('the rating still follows', speech.indexOf('Your overall performance rating for 2026 is Successful.') > -1);
 
     const fallback = yearEnd.buildVerbalSummary('Alyssa', '2026', 'Successful', '', '', '   ');
     t.check('a blank opening falls back to the default', fallback.startsWith('Alyssa, as we close out 2026,'));

@@ -1928,7 +1928,12 @@
         var named = sup.metricsCoached
             .filter(function (k) { return discussed.indexOf(k) >= 0; })
             .map(function (k) { return _label(k).toLowerCase(); });
-        return _cap(parts.join(' and ')) + (named.length ? ', on ' + named.join(', ') : '') + '.';
+        // "on average handle time, rep satisfaction" had no "and" before the
+        // last one (tone audit, 2026-10-25).
+        var namedText = named.length <= 1 ? (named[0] || '')
+            : named.length === 2 ? named.join(' and ')
+            : named.slice(0, -1).join(', ') + ', and ' + named[named.length - 1];
+        return _cap(parts.join(' and ')) + (named.length ? ', on ' + namedText : '') + '.';
     }
 
     /* The opener when nothing is at goal and nothing outside the two focus

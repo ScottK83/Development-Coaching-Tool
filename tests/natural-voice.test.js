@@ -72,6 +72,20 @@ suite('natural voice: the Copilot email prompts ask for numbers said out loud', 
     });
 });
 
+suite('natural voice: a default tip never repeats its metric as a label', (t) => {
+    // Under "Tip:" the registry's fallback read "Tip: Average Handle Time:
+    // Focus on efficiency..." (tone audit, 2026-10-25).
+    const text = src('modules/metrics-registry.module.js');
+    const doubled = (text.match(/defaultTip: "[A-Z][A-Za-z ]+: /g) || []);
+    t.equal('no default tip opens "Label: "', doubled.join(' | '), '');
+});
+
+suite('natural voice: the year-end prompt and speech carry no dash or form label', (t) => {
+    const text = literals(src('modules/year-end.module.js'));
+    t.check('no "human - not robotic"', !/human - not/.test(text));
+    t.check('no form label read aloud', !/details are: |amount is: |rating is: /.test(text));
+});
+
 suite('natural voice: the Friday week progress is sentences, not a dashboard', (t) => {
     const text = literals(src('modules/daily-outreach.module.js'));
     ['Where you landed', 'Where you stand', 'Better than ${priorName}:', 'Slid a little:', 'Worth a push']
