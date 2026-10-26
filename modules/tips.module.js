@@ -540,62 +540,113 @@ overallExperience,If there's something they can set up so this doesn't happen ag
 overallExperience,When a call runs long, thank them for sticking with you. 'Thanks for hanging in there with me on that' goes a long way.
 overallExperience,End on what you did for them, not on the policy: 'You're all set, the payment is posted and your next bill will show it.'`;
 
+/*
+ * Edits and deletions of the built-in tips.
+ *
+ * Both are keyed by the tip's own text as the CSV ships it, normalized, so a
+ * saved change follows its tip when the CSV is reordered or grows. They used
+ * to be keyed by the tip's position inside its metric, and any tip added or
+ * removed above one re-pointed the change at a different tip.
+ *
+ *   modifiedServerTips  { metricKey: { "<tip key>": "edited text" } }
+ *   deletedServerTips   { metricKey: ["<tip key>", ...] }
+ *
+ * A key that is only digits is an old position. A position no longer says
+ * which tip it meant, so it is left in the store untouched but not applied to
+ * whatever tip sits there now. (The real backup held none when this changed.)
+ *
+ * They are applied in exactly one place, buildServerTips. They used to be
+ * applied when the pool loaded and again, by position, every time a tip was
+ * read, so deleting one tip removed two.
+ */
+function tipEditKey(text) {
+    return String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function isOldPositionKey(key) {
+    return /^\d+$/.test(String(key));
+}
+
+let parsedEmbeddedTips = null;
+
+/** The CSV as shipped: { metricKey: [tip, ...] } in file order. Parsed once. */
+function parseEmbeddedTips() {
+    if (parsedEmbeddedTips) return parsedEmbeddedTips;
+    const byMetric = {};
+    EMBEDDED_TIPS_CSV.split('\n').map(line => line.trim()).filter(line => line).slice(1).forEach((line) => {
+        const match = line.match(/^([^,]+),"?([^"]*)"?$/);
+        if (!match) return;
+        const metric = match[1].trim();
+        if (!byMetric[metric]) byMetric[metric] = [];
+        byMetric[metric].push(match[2].trim());
+    });
+    parsedEmbeddedTips = byMetric;
+    return byMetric;
+}
+
+/**
+ * A tip store as an independent copy, or the fallback when it is missing or
+ * unreadable. These live in IndexedDB, so they are read through the storage
+ * module and never from localStorage, which only ever held a stale copy.
+ * A copy, because in IndexedDB mode readStore hands back the live cache.
+ */
+function readTipStore(key, fallback) {
+    try {
+        const value = window.DevCoachModules?.storage?.readStore?.(key);
+        if (value && typeof value === 'object') return JSON.parse(JSON.stringify(value));
+    } catch (e) {
+        console.warn('[tips] ' + key + ' is unreadable, treating it as empty:', e.message);
+    }
+    return fallback;
+}
+
+/**
+ * The built-in pool with Scott's edits and deletions applied, once.
+ * `simple` is { metricKey: [tip] }; `withIndex` adds each tip's position in
+ * the shipped CSV, which is what the tips manager's buttons carry.
+ */
+function buildServerTips() {
+    const shipped = parseEmbeddedTips();
+    const edits = readTipStore('modifiedServerTips', {});
+    const deletions = readTipStore('deletedServerTips', {});
+    const simple = {};
+    const withIndex = {};
+
+    Object.keys(shipped).forEach((metricKey) => {
+        const metricEdits = edits[metricKey] && typeof edits[metricKey] === 'object' && !Array.isArray(edits[metricKey])
+            ? edits[metricKey] : {};
+        const deleted = new Set((Array.isArray(deletions[metricKey]) ? deletions[metricKey] : [])
+            .filter(key => !isOldPositionKey(key))
+            .map(String));
+
+        withIndex[metricKey] = [];
+        shipped[metricKey].forEach((original, originalIndex) => {
+            const key = tipEditKey(original);
+            if (deleted.has(key)) return;
+            const edited = Object.prototype.hasOwnProperty.call(metricEdits, key) ? metricEdits[key] : null;
+            const tip = typeof edited === 'string' && edited.trim() ? edited : original;
+            withIndex[metricKey].push({ tip, originalIndex, key });
+        });
+        simple[metricKey] = withIndex[metricKey].map(item => item.tip);
+    });
+
+    return { simple, withIndex };
+}
+
+/** Saves the edited pool for the readers that take it from the store. */
+function saveBuiltPool() {
+    const built = buildServerTips();
+    if (Object.keys(built.simple).length > 0) {
+        window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', built.simple);
+    }
+    return built;
+}
+
 async function loadServerTips() {
     try {
-        const csv = EMBEDDED_TIPS_CSV;
-        const lines = csv.split('\n').map(line => line.trim()).filter(line => line);
-        const dataLines = lines.slice(1);
-
-        const tips = {};
-        const tipsWithOriginalIndex = {};
-
-        dataLines.forEach((line) => {
-            const match = line.match(/^([^,]+),"?([^"]*)"?$/);
-            if (match) {
-                const metric = match[1].trim();
-                const tip = match[2].trim();
-
-                if (!tips[metric]) {
-                    tips[metric] = [];
-                    tipsWithOriginalIndex[metric] = [];
-                }
-                const originalIndex = tips[metric].length;
-                tips[metric].push(tip);
-                tipsWithOriginalIndex[metric].push({ tip, originalIndex });
-            }
-        });
-
-        const modifiedServerTips = (window.DevCoachModules?.storage?.readStore?.('modifiedServerTips') ?? {});
-        Object.keys(modifiedServerTips).forEach(metricKey => {
-            if (tipsWithOriginalIndex[metricKey]) {
-                Object.keys(modifiedServerTips[metricKey]).forEach(index => {
-                    const originalIdx = parseInt(index, 10);
-                    const tipObj = tipsWithOriginalIndex[metricKey].find(t => t.originalIndex === originalIdx);
-                    if (tipObj) {
-                        tipObj.tip = modifiedServerTips[metricKey][index];
-                    }
-                });
-            }
-        });
-
-        const deletedServerTips = (window.DevCoachModules?.storage?.readStore?.('deletedServerTips') ?? {});
-        Object.keys(deletedServerTips).forEach(metricKey => {
-            if (tipsWithOriginalIndex[metricKey]) {
-                const deletedIndices = deletedServerTips[metricKey] || [];
-                tipsWithOriginalIndex[metricKey] = tipsWithOriginalIndex[metricKey].filter(
-                    item => !deletedIndices.includes(item.originalIndex)
-                );
-            }
-        });
-
-        window._serverTipsWithIndex = tipsWithOriginalIndex;
-
-        const simpleTips = {};
-        Object.keys(tipsWithOriginalIndex).forEach(metricKey => {
-            simpleTips[metricKey] = tipsWithOriginalIndex[metricKey].map(item => item.tip);
-        });
-
-        return simpleTips;
+        const built = buildServerTips();
+        window._serverTipsWithIndex = built.withIndex;
+        return built.simple;
     } catch (error) {
         console.error('Error loading tips:', error);
         window._serverTipsWithIndex = {};
@@ -964,20 +1015,30 @@ window.updateServerTip = async function(metricKey, index) {
         return;
     }
 
-    if (typeof index !== 'number' && isNaN(parseInt(index, 10))) {
+    // The button carries the tip's position in the shipped CSV; the change is
+    // saved under the tip's own text, which survives a reordered CSV.
+    const original = (parseEmbeddedTips()[metricKey] || [])[parseInt(index, 10)];
+    if (typeof original !== 'string') {
         console.error('Invalid index for server tip update:', index);
         showToast('⚠️ Could not update tip: that tip was not found.');
         return;
     }
 
-    let modifiedServerTips = readJsonSetting('modifiedServerTips');
-
-    if (!modifiedServerTips[metricKey]) {
+    const modifiedServerTips = readTipStore('modifiedServerTips', {});
+    const current = modifiedServerTips[metricKey];
+    if (!current || typeof current !== 'object' || Array.isArray(current)) {
         modifiedServerTips[metricKey] = {};
     }
 
-    modifiedServerTips[metricKey][index] = updatedTip;
+    const key = tipEditKey(original);
+    const cleaned = stripDashesFromTip(updatedTip);
+    if (cleaned === original) {
+        delete modifiedServerTips[metricKey][key];
+    } else {
+        modifiedServerTips[metricKey][key] = cleaned;
+    }
     window.DevCoachModules?.storage?.saveWithSizeCheck?.('modifiedServerTips', modifiedServerTips);
+    saveBuiltPool();
 
     showToast('✅ Server tip updated!');
 
@@ -989,17 +1050,25 @@ window.deleteServerTip = async function(metricKey, index) {
         return;
     }
 
-    let deletedServerTips = readJsonSetting('deletedServerTips');
+    const original = (parseEmbeddedTips()[metricKey] || [])[parseInt(index, 10)];
+    if (typeof original !== 'string') {
+        console.error('Invalid index for server tip delete:', index);
+        showToast('⚠️ Could not delete tip. Please refresh the page.');
+        return;
+    }
 
-    if (!deletedServerTips[metricKey]) {
+    const deletedServerTips = readTipStore('deletedServerTips', {});
+    if (!Array.isArray(deletedServerTips[metricKey])) {
         deletedServerTips[metricKey] = [];
     }
 
-    if (!deletedServerTips[metricKey].includes(index)) {
-        deletedServerTips[metricKey].push(index);
+    const key = tipEditKey(original);
+    if (!deletedServerTips[metricKey].includes(key)) {
+        deletedServerTips[metricKey].push(key);
     }
 
     window.DevCoachModules?.storage?.saveWithSizeCheck?.('deletedServerTips', deletedServerTips);
+    saveBuiltPool();
 
     showToast('🗑️ Server tip deleted');
 
@@ -1040,14 +1109,13 @@ window.deleteTip = async function(metricKey, index) {
 
 function initializeDefaultTips() {
     // Always refresh metricCoachingTips from the embedded CSV so edits
-    // to the tip library propagate to callers that read the stored copy.
-    // loadServerTips already layers user edits (modifiedServerTips) and
-    // deletions (deletedServerTips) on top of the CSV, so the refresh
-    // preserves customizations. User-authored tips live in a separate key
-    // (userCustomTips) and are untouched here.
+    // to the tip library propagate to callers that read the stored copy
+    // (the dashboard's tip of the day). buildServerTips layers Scott's edits
+    // and deletions on top of the CSV, so the refresh keeps them. User-authored
+    // tips live in a separate key (userCustomTips) and are untouched here.
     loadServerTips().then(serverTips => {
         if (Object.keys(serverTips).length > 0) {
-            window.DevCoachModules?.storage?.saveWithSizeCheck?.('metricCoachingTips', serverTips);
+            saveBuiltPool();
             return;
         }
         // Loudly, because a silent fallback to a different set of tips is how
@@ -1078,61 +1146,23 @@ function resolveMetricTipKey(metricName) {
     return match || name;
 }
 
-/**
- * Read a JSON-shaped setting, and survive it being unreadable.
- *
- * These stores are written by the tips manager and can be edited or corrupted
- * outside it. An unguarded JSON.parse threw out of a click handler and took the
- * whole action with it, which looks to the user like a button that does nothing.
- */
-function readJsonSetting(key) {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_PREFIX + key) || '{}') || {};
-    } catch (e) {
-        console.warn('[tips] ' + key + ' is unreadable, treating it as empty:', e.message);
-        return {};
-    }
-}
-
 function getMetricTips(metricNameOrKey) {
     const metricName = resolveMetricTipKey(metricNameOrKey);
-    // Load base tips (server/default)
-    const stored = (function(){var v=window.DevCoachModules?.storage?.readStore?.('metricCoachingTips');return v===undefined||v===null?null:JSON.stringify(v);})();
-    // Outside the try below, so a corrupt value used to throw straight out of
-    // getMetricTips and take the caller with it. Falling back to the built-in
-    // pool is the same thing an absent value does.
+    // Built from the CSV with Scott's edits and deletions applied once, the
+    // same list the tips manager shows. It used to read the saved pool, which
+    // already had them applied, and then apply them again by position, so one
+    // deletion removed two tips. Reading the CSV directly also means an edit
+    // shows straight away rather than after the next reload.
     // No second pool to fall back on. There used to be one, a stale five per
     // metric, and because it only appeared when the store was empty or corrupt
     // it made the app quietly serve different advice than the tip library
     // everyone was editing.
-    let allBaseTips = {};
-    if (stored) {
-        try { allBaseTips = JSON.parse(stored) || {}; }
-        catch (e) { console.error('[tips] metricCoachingTips is unreadable:', e.message); }
-    }
-    var baseTips = (allBaseTips[metricName] || []).slice();
-
-    // Apply server tip modifications (edits and deletions)
+    let baseTips = [];
     try {
-        const modifications = (window.DevCoachModules?.storage?.readStore?.('modifiedServerTips') ?? {});
-        const deletions = (window.DevCoachModules?.storage?.readStore?.('deletedServerTips') ?? {});
-        const metricMods = modifications[metricName] || {};
-        const metricDels = deletions[metricName] || [];
-
-        // Apply edits
-        Object.keys(metricMods).forEach(function(idx) {
-            var i = parseInt(idx, 10);
-            if (i >= 0 && i < baseTips.length) {
-                baseTips[i] = metricMods[idx];
-            }
-        });
-
-        // Remove deleted tips (iterate in reverse to preserve indices)
-        if (Array.isArray(metricDels)) {
-            var delsSet = new Set(metricDels.map(Number));
-            baseTips = baseTips.filter(function(_, i) { return !delsSet.has(i); });
-        }
-    } catch(e) { console.warn('[tips] Failed to apply tip deletions:', e.message); }
+        baseTips = (buildServerTips().simple[metricName] || []).slice();
+    } catch (e) {
+        console.error('[tips] Could not build the tip pool:', e.message);
+    }
 
     // Append user custom tips
     const userTips = loadUserTips();
