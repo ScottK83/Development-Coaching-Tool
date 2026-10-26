@@ -1028,6 +1028,10 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, pr
         const metricRecord = {
             metricKey: registryKey,
             label: metric.label,
+            // A survey metric nobody answered reads as 0%. It is not a
+            // number, so it is never ranked as the weakest: once the ranking
+            // was a share of the goal, "0% against 75" led every message.
+            measured: trendHasSurveysBehind(employeeData, registryKey),
             employeeValue,
             centerValue,
             target,
@@ -1060,26 +1064,38 @@ function analyzeTrendMetrics(employeeData, centerAverages, reviewYear = null, pr
     };
 }
 
+// A distance from goal in meaningful steps, the metric's own noise threshold
+// (metrics-registry METRIC_NOISE: 15 seconds of handle time, 2 points of Rep
+// Sat, half a point of transfers), so seconds and percentage points can be
+// ranked against each other. The raw gap added the two: handle time 14
+// seconds over (under one step) outranked Rep Sat 12 points under (six), and
+// the seconds metrics led nearly every message (tips audit, 2026-10-25). A
+// share of the goal was tried and over-weighted the small numbers: 9%
+// transfers against 6% read as 50% off and outranked a handle time 134
+// seconds over.
+function stepsFromGoal(metric, amount) {
+    const noise = typeof window.getMetricNoiseThreshold === 'function'
+        ? Number(window.getMetricNoiseThreshold(metric?.metricKey))
+        : NaN;
+    const step = Number.isFinite(noise) && noise > 0 ? noise : getMetricBandByUnit(metric?.metricKey);
+    return (Number(amount) || 0) / step;
+}
+
 // The riskiest metric, and the riskiest other one that is slipping. Split out
 // of analyzeTrendMetrics so a filtered list can be ranked the same way.
 function pickWeakestAndTrending(allMetrics) {
-    const list = Array.isArray(allMetrics) ? allMetrics : [];
+    const list = (Array.isArray(allMetrics) ? allMetrics : []).filter(m => m && m.measured !== false);
+    // Slipping as well as short adds a step.
+    const risk = (m) => stepsFromGoal(m, m.gapFromTarget) + (m.trendDirection === 'declining' ? 1 : 0);
     const weakest = list.length > 0
-        ? [...list].sort((a, b) => {
-            const riskA = (a.gapFromTarget || 0) + (a.trendDirection === 'declining' ? getMetricBandByUnit(a.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 }) : 0);
-            const riskB = (b.gapFromTarget || 0) + (b.trendDirection === 'declining' ? getMetricBandByUnit(b.metricKey, { percent: 2, sec: 15, hrs: 1, fallback: 2 }) : 0);
-            return riskB - riskA;
-        })[0]
+        ? [...list].sort((a, b) => risk(b) - risk(a))[0]
         : null;
 
+    const slipping = (m) => stepsFromGoal(m, m.gapFromTarget) + stepsFromGoal(m, Math.abs(m.trendDelta || 0));
     const decliningCandidates = list
         .filter(m => m.metricKey !== weakest?.metricKey)
         .filter(m => m.trendDirection === 'declining' || m.classification === 'Watch Area' || m.classification === 'Needs Focus')
-        .sort((a, b) => {
-            const riskA = (a.gapFromTarget || 0) + Math.abs(a.trendDelta || 0);
-            const riskB = (b.gapFromTarget || 0) + Math.abs(b.trendDelta || 0);
-            return riskB - riskA;
-        });
+        .sort((a, b) => slipping(b) - slipping(a));
 
     return {
         weakest,
@@ -2045,7 +2061,10 @@ function attachTrendTipsModalHandlers(options) {
             employeeId: employeeName,
             weekEnding: periodLabel,
             metricsCoached: metricsCoached,
-            aiAssisted: true
+            aiAssisted: true,
+            source: 'trend',
+            // One record per person per period, however often it is rebuilt.
+            dedupeKey: `trend:${periodLabel}`
         });
 
         showToast('✅ Coaching logged', 2000);
@@ -2268,9 +2287,11 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
 
     const priorities = [...metrics]
         .filter(m => m.classification === 'Needs Focus' || m.classification === 'Watch Area')
+        // In noise steps, the same scale as pickWeakestAndTrending, so the top
+        // priority here is the weakest metric there and its tips come with it.
         .sort((a, b) => {
-            const scoreA = (a.gapFromTarget || 0) + Math.max(0, -(a.trendDelta || 0));
-            const scoreB = (b.gapFromTarget || 0) + Math.max(0, -(b.trendDelta || 0));
+            const scoreA = stepsFromGoal(a, a.gapFromTarget) + stepsFromGoal(a, Math.max(0, -(a.trendDelta || 0)));
+            const scoreB = stepsFromGoal(b, b.gapFromTarget) + stepsFromGoal(b, Math.max(0, -(b.trendDelta || 0)));
             return scoreB - scoreA;
         })
         .slice(0, 4);

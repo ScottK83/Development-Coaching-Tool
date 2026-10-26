@@ -5700,12 +5700,18 @@
                 if (sentSet.has(idx)) {
                     sentSet.delete(idx);
                     outreach.clearSent(plan.id, stamp, repName);
+                    if (typeof removeTodayCoaching === 'function') removeTodayCoaching(repName, plan.id, stamp);
                     card.style.opacity = '1';
                     card.style.background = 'var(--bg-surface)';
                     btn.textContent = '✓ Sent';
                 } else {
                     sentSet.add(idx);
                     outreach.markSent(plan.id, stamp, repName, new Date().toISOString());
+                    // The tips that went out in this message, logged as coaching
+                    // so the weeks after can say whether they moved anything.
+                    if (typeof recordTodayCoaching === 'function') {
+                        recordTodayCoaching(repName, card.querySelector('.rmm-rep-text')?.value || '', plan.id, stamp);
+                    }
                     card.style.opacity = '0.55';
                     card.style.background = 'var(--green-soft)';
                     btn.textContent = 'Undo';

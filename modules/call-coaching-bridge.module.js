@@ -736,9 +736,18 @@
             .filter(metric => metric.evidence.length > 0)
             .sort((a, b) => {
                 // Classification first so a Needs Focus metric outranks a
-                // Watch Area one, then the size of the miss.
+                // Watch Area one, then the size of the miss in the metric's
+                // own noise steps (15 seconds of handle time, 2 points of Rep
+                // Sat). The raw gap added seconds to percentage points, so a
+                // few seconds of handle time outranked a real survey miss.
                 const rank = (metric) => metric.classification === 'Needs Focus' ? 0 : 1;
-                return rank(a) - rank(b) || (b.gapFromTarget || 0) - (a.gapFromTarget || 0);
+                const steps = (metric) => {
+                    const noise = typeof window.getMetricNoiseThreshold === 'function'
+                        ? Number(window.getMetricNoiseThreshold(metric.metricKey))
+                        : NaN;
+                    return (metric.gapFromTarget || 0) / (Number.isFinite(noise) && noise > 0 ? noise : 1);
+                };
+                return rank(a) - rank(b) || steps(b) - steps(a);
             })
             .slice(0, MAX_METRICS);
     }
@@ -921,7 +930,12 @@
             };
         });
 
-        const byScore = (a, b) => b.score - a.score || a.text.localeCompare(b.text);
+        // Ties used to break alphabetically, so every associate with the same
+        // finding got the same tips, and the generic fallback was always the
+        // two tips that sort first. A seed (the associate) spreads ties out
+        // while keeping one person's picks stable from one read to the next.
+        const tieKey = (item) => (options.seed ? suggestionId(`${options.seed}|${item.id}`) : item.text);
+        const byScore = (a, b) => b.score - a.score || tieKey(a).localeCompare(tieKey(b));
         const relevant = scored.filter(item => item.relevant).sort(byScore);
 
         // Two solid tips beat three with a filler in it. Padding the list to

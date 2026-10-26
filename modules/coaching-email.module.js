@@ -295,7 +295,7 @@
 
     // -- Coaching tip selection ------------------------------------------------
 
-    function chooseCoachingTip(metricConfig, usedTips) {
+    function chooseCoachingTip(metricConfig, usedTips, givenTips) {
         // The tip pool is keyed by metric key, not by display label. Passing the
         // label here meant every lookup missed and every coaching email fell
         // through to the registry's single defaultTip, so the whole pool went
@@ -303,13 +303,29 @@
         const tips = getMetricTips(metricConfig.key);
         let selectedTip = metricConfig.defaultTip;
         if (tips && tips.length > 0) {
-            const available = tips.filter(t => !usedTips.has(t));
+            // Not one already in this email, and not one this person has had
+            // before (2026-10-25: the Coach page picked at random with no
+            // memory, so the same tip could go to the same person twice).
+            const given = givenTips || new Set();
+            const fresh = tips.filter(t => !usedTips.has(t) && !given.has(t));
+            const available = fresh.length ? fresh : tips.filter(t => !usedTips.has(t));
             selectedTip = (available.length > 0
                 ? available[Math.floor(Math.random() * available.length)]
                 : tips[Math.floor(Math.random() * tips.length)]);
         }
         usedTips.add(selectedTip);
         return selectedTip;
+    }
+
+    // The tips the last Coach prompt carried, so the coaching log records the
+    // advice that went out and not only the metric.
+    let lastPromptTips = [];
+
+    function tipsGivenTo(employeeName) {
+        const history = (typeof coachingHistory !== 'undefined' ? coachingHistory : {})[employeeName] || [];
+        const given = new Set();
+        history.forEach(entry => (entry?.suggestions || []).forEach(item => { if (item?.text) given.add(item.text); }));
+        return given;
     }
 
     // -- Prompt metric data collection -----------------------------------------
@@ -458,8 +474,10 @@
 
         const measured = wins.length + opportunities.length;
         const topWins = wins.slice().sort((a, b) => b.margin - a.margin).slice(0, MAX_PROMPT_WINS);
+        const givenTips = tipsGivenTo(employeeRecord?.name);
         const topFocus = opportunities.slice().sort((a, b) => a.margin - b.margin).slice(0, MAX_PROMPT_FOCUS)
-            .map(entry => ({ ...entry, tip: chooseCoachingTip(METRICS_REGISTRY[entry.key], usedTips) }));
+            .map(entry => ({ ...entry, tip: chooseCoachingTip(METRICS_REGISTRY[entry.key], usedTips, givenTips) }));
+        lastPromptTips = topFocus.filter(entry => entry.tip).map(entry => ({ metricKey: entry.key, text: entry.tip }));
 
         // Scott, 2026-10-14: "in every piece of feedback ... provide positive
         // feedback." With nothing at goal, Copilot is handed the best true
@@ -702,11 +720,21 @@ Generate the coaching email for ${preferredName} now.`;
     // -- Recording & rendering coaching events ---------------------------------
 
     function recordAndRenderCoachingEvent(employeeName, weekEnding, coachedMetricKeys) {
+        const id = window.DevCoachModules?.callCoachingBridge?.suggestionId;
         recordCoachingEvent({
             employeeId: employeeName,
             weekEnding: weekEnding || 'this period',
             metricsCoached: coachedMetricKeys,
-            aiAssisted: true
+            aiAssisted: true,
+            // The tips the prompt carried, so the log can say whether a tip
+            // works and not only whether a topic does.
+            suggestions: typeof id === 'function'
+                ? lastPromptTips.map(tip => ({ id: id(tip.text), metricKey: tip.metricKey, text: tip.text }))
+                : [],
+            source: 'coach',
+            // One record per person per week, however many times the prompt
+            // is regenerated.
+            dedupeKey: `coach:${weekEnding || 'this period'}`
         });
         renderCoachingHistory(employeeName);
     }

@@ -265,7 +265,12 @@ suite('praise in every coaching email: trend prompt, no calls', (t) => {
    the way the quick check-in prompt does now. */
 suite('trend prompt: asks for a natural message, not a report', (t) => {
     const mt = loadMetricTrends(t);
-    const { metrics, weakest, trendingDown } = analyze(mt, RED, RED_BEFORE);
+    // Derek's sentiment numbers brought closer to goal, still short of it, so
+    // handle time is his biggest miss and its move is the praise: metrics are
+    // ranked in noise steps now (2026-10-26), and Positive Word 16 points
+    // under is a bigger miss than handle time 134 seconds over.
+    const AHT_LEADS = { ...RED, overallSentiment: 85, positiveWord: 80, negativeWord: 80, managingEmotions: 92 };
+    const { metrics, weakest, trendingDown } = analyze(mt, AHT_LEADS, { ...AHT_LEADS, aht: 600, reliability: 1 });
     const prompt = mt.buildTrendCoachingPrompt('Derek', weakest, trendingDown, ['Keep a quick reference sheet where you can see it'], [], '', null, metrics, { periodMeta: WEEK_META, weekKey: WEEK });
     t.check('no "AI Intelligence Layer" persona', !/Intelligence Layer|You are the/.test(prompt));
     t.check('no shouted section headings', !/===|^[A-Z][A-Z ]{6,}:?$/m.test(prompt));

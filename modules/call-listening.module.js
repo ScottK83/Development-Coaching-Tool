@@ -264,7 +264,13 @@ ${praiseRule(Boolean(transcriptSection), 'The message')}
         let points = (analysis.allImprovements || []).filter(item => item.severity !== 'red');
         const kept = points.filter(item => item.text && notes.includes(item.text));
         if (kept.length) points = kept;
-        return bridge.tipsForCall(points, { max: 5, perFinding: 2 });
+        // What this associate has been given before, from other calls, so the
+        // same finding stops returning the same two tips every time; and a
+        // seed so two associates with the same finding do not either.
+        const given = typeof alreadyGivenSuggestionIds === 'function'
+            ? alreadyGivenSuggestionIds(entry?.employeeName, { exceptCallPrint: bridge.callFingerprint?.(entry?.transcript || '') || '' })
+            : [];
+        return bridge.tipsForCall(points, { max: 5, perFinding: 2, alreadyGiven: given, seed: entry?.employeeName || '' });
     }
 
     // The rule each kind of red flag broke. The verification standard is

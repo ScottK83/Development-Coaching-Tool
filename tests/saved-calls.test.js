@@ -256,7 +256,11 @@ suite('saved calls: kept when it goes somewhere, once, and said out loud', (t) =
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 
     t.check('there is one way on to the log',
-        /function keepCallOnTheWayOut\(\) \{\s*return Boolean\(upsertCallListeningEntryFromForm\(false\)\);/.test(script));
+        /function keepCallOnTheWayOut\(options = \{\}\) \{\s*const kept = upsertCallListeningEntryFromForm\(false\);/.test(script));
+    // 2026-10-26: the two ways out that reach the associate or the coaching
+    // log also log the coaching, from the saved call, once per call.
+    t.check('a kept call that went out is logged as coaching',
+        /if \(kept && options\.coached\) recordCallCoaching\(kept, options\);/.test(script));
     t.check('the Save button under More still uses the same saver',
         /bindElementOnce\(saveBtn, 'click', \(\) => upsertCallListeningEntryFromForm\(true\)\)/.test(script));
 
@@ -271,13 +275,18 @@ suite('saved calls: kept when it goes somewhere, once, and said out loud', (t) =
         ['writeCallEmailInCopilot', /and the call saved/]
     ].forEach(([name, says]) => {
         const text = body(name);
-        t.check(`${name} keeps the call`, /keepCallOnTheWayOut\(\)/.test(text));
+        t.check(`${name} keeps the call`, /keepCallOnTheWayOut\((\{[^)]*\})?\)/.test(text));
         t.check(`and says so`, says.test(text));
     });
+    t.check('Verint logs the coaching', /keepCallOnTheWayOut\(\{ coached: true \}\)/.test(body('copyCallListeningVerintSummary')));
+    t.check('so does the email prompt', /keepCallOnTheWayOut\(\{ coached: true, aiAssisted: true \}\)/.test(body('writeCallEmailInCopilot')));
+    t.check('the summary does not: nothing has gone to anybody yet', /keepCallOnTheWayOut\(\)/.test(body('writeCallSummaryInCopilot')));
+    t.check('nor does Outlook save again, it logs the saved call',
+        /const kept = savedCallOnForm\(\);\s*if \(kept\) recordCallCoaching\(kept/.test(body('generateCallListeningOutlookEmail')));
 
     // A call copied out of the history is already saved.
     t.check('a call copied from the history is not saved again',
-        /if \(!entry\) \{\s*if \(redFlagNeedsListening\(\)\) return;\s*entry = buildUnsavedCallListeningEntry\(\);\s*if \(!entry\) return;\s*saved = keepCallOnTheWayOut\(\);/.test(body('copyCallListeningVerintSummary')));
+        /if \(!entry\) \{\s*if \(redFlagNeedsListening\(\)\) return;\s*entry = buildUnsavedCallListeningEntry\(\);\s*if \(!entry\) return;\s*saved = keepCallOnTheWayOut\(\{ coached: true \}\);/.test(body('copyCallListeningVerintSummary')));
 
     // Updated in place, never appended twice.
     const saver = body('upsertCallListeningEntryFromForm');

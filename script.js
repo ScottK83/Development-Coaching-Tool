@@ -558,14 +558,31 @@ function appendCoachingLogEntry(entry) {
     const day = String(entry.generatedAt || '').slice(0, 10);
     const metrics = [...(entry.metricsCoached || [])].sort().join(',');
     const entries = coachingHistory[entry.employeeId];
-    const existing = day && metrics
-        ? entries.findIndex(item => String(item?.generatedAt || '').slice(0, 10) === day
-            && [...(item?.metricsCoached || [])].sort().join(',') === metrics)
-        : -1;
+    // One record per thing that went out: a call's feedback copied to Verint
+    // and then emailed is one piece of coaching, not two, and a Today message
+    // marked sent, undone and sent again is one message.
+    const existing = entry.dedupeKey
+        ? entries.findIndex(item => item?.dedupeKey === entry.dedupeKey)
+        : (day && metrics
+            ? entries.findIndex(item => !item?.dedupeKey
+                && String(item?.generatedAt || '').slice(0, 10) === day
+                && [...(item?.metricsCoached || [])].sort().join(',') === metrics)
+            : -1);
 
     if (existing >= 0) entries[existing] = entry;
     else entries.push(entry);
 
+    saveCoachingHistory();
+}
+
+// Takes back a record that turned out not to have gone out (a Today message
+// marked sent, then undone).
+function removeCoachingLogEntry(employeeId, dedupeKey) {
+    const entries = coachingHistory[employeeId];
+    if (!employeeId || !dedupeKey || !Array.isArray(entries)) return;
+    const kept = entries.filter(item => item?.dedupeKey !== dedupeKey);
+    if (kept.length === entries.length) return;
+    coachingHistory[employeeId] = kept;
     saveCoachingHistory();
 }
 
@@ -1642,7 +1659,7 @@ function evaluateMetricsForCoaching(employeeData) {
  *   aiAssisted: true
  * });
  */
-function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssisted, suggestions }) {
+function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssisted, suggestions, behaviors, source, dedupeKey, callPrint }) {
     if (!employeeId) {
         console.warn('recordCoachingEvent: Missing employeeId');
         return;
@@ -1655,8 +1672,115 @@ function recordCoachingEvent({ employeeId, weekEnding, metricsCoached, aiAssiste
         // tip works rather than only whether a topic does.
         suggestions: Array.isArray(suggestions) ? suggestions : [],
         aiAssisted: !!aiAssisted,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        // Where it came from (call, today, coach, trend), the call scorecard
+        // lines it was about, and the key that keeps it to one record.
+        ...(source ? { source } : {}),
+        ...(Array.isArray(behaviors) && behaviors.length ? { behaviors } : {}),
+        ...(dedupeKey ? { dedupeKey } : {}),
+        ...(callPrint ? { callPrint } : {})
     });
+}
+
+/*
+ * COACHING, LOGGED WHEN IT GOES OUT
+ *
+ * The deep dive (2026-10-25) found the log could not say what works: the
+ * main Calls flow logged nothing, the Today page logged a tip every time a
+ * message was drafted (103 of 255 "tips given" were redrafts), and only the
+ * metric chips under More logged which tips were given. So:
+ *
+ *   Calls  logged when it goes to Verint, to Copilot for the email, or to
+ *          Outlook: the metrics the scorecard's missed lines move, the
+ *          lines, and the library tips the email prompt carried.
+ *   Today  logged when Scott marks a message sent: the tips actually in
+ *          the message, and their metrics. Undo takes it back out.
+ *
+ * Each is one record however many times it goes out (dedupeKey).
+ */
+const UNCOACHABLE_METRICS = { totalCalls: true, transfersCount: true, reliability: true };
+const MAX_CALL_METRICS_LOGGED = 3;
+
+function recordCallCoaching(entry, options = {}) {
+    if (!entry?.employeeName || !entry.id) return;
+    const card = entry.scorecard;
+    const metrics = (card?.missedMetrics || []).filter(key => !UNCOACHABLE_METRICS[key]).slice(0, MAX_CALL_METRICS_LOGGED);
+    const behaviors = (card?.lines || []).filter(item => item.verdict === 'missed').map(item => item.key);
+    if (!metrics.length && !behaviors.length) return;
+
+    const modules = window.DevCoachModules || {};
+    let suggestions = [];
+    try {
+        const analysis = modules.callTranscript?.analyzeTranscript?.(entry.transcript || '', { associateName: entry.employeeName });
+        const tips = modules.callListening?.tipsForEntry?.(entry, analysis?.ok ? analysis : null) || [];
+        suggestions = tips
+            .map(tip => ({
+                id: tip.id,
+                metricKey: (modules.callCoachingBridge?.metricsForFinding?.(tip.findingKey) || [])[0] || '',
+                text: tip.text
+            }))
+            .filter(item => item.id && item.metricKey);
+    } catch (error) {
+        logAppError('Call tips could not be logged with the coaching', error, { associateName: entry.employeeName });
+    }
+
+    recordCoachingEvent({
+        employeeId: entry.employeeName,
+        // The day of the call: coaching-outcomes measures from the last week
+        // ending on or before it.
+        weekEnding: entry.listenedOn || '',
+        metricsCoached: metrics,
+        aiAssisted: Boolean(options.aiAssisted),
+        suggestions,
+        behaviors,
+        source: 'call',
+        dedupeKey: `call:${entry.id}`,
+        callPrint: modules.callCoachingBridge?.callFingerprint?.(entry.transcript || '') || ''
+    });
+}
+
+// The tips the Today page put into messages this session, per associate, so
+// the ones that went out can be logged when the message is marked sent.
+const todayDraftedTips = {};
+
+function rememberTodayTip(employeeName, metricKey, tip) {
+    if (!employeeName || !metricKey || !tip) return;
+    const list = todayDraftedTips[employeeName] || (todayDraftedTips[employeeName] = []);
+    if (!list.some(item => item.metricKey === metricKey && item.tip === tip)) list.push({ metricKey, tip });
+}
+
+function tipWords(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function todayCoachingKey(planId, stamp) {
+    return `today:${planId || ''}|${stamp || ''}`;
+}
+
+function recordTodayCoaching(employeeName, messageText, planId, stamp) {
+    if (!employeeName) return;
+    const message = tipWords(messageText);
+    const sent = (todayDraftedTips[employeeName] || []).filter(item => {
+        const words = tipWords(item.tip);
+        return words && message.includes(words);
+    });
+    if (!sent.length) return;
+
+    const id = window.DevCoachModules?.callCoachingBridge?.suggestionId;
+    const latest = findLatestPeriodForAssociate(employeeName);
+    recordCoachingEvent({
+        employeeId: employeeName,
+        weekEnding: latest?.period?.metadata?.endDate || '',
+        metricsCoached: Array.from(new Set(sent.map(item => item.metricKey))).filter(key => !UNCOACHABLE_METRICS[key]),
+        aiAssisted: false,
+        suggestions: sent.map(item => ({ id: typeof id === 'function' ? id(item.tip) : tipWords(item.tip), metricKey: item.metricKey, text: item.tip })),
+        source: 'today',
+        dedupeKey: todayCoachingKey(planId, stamp)
+    });
+}
+
+function removeTodayCoaching(employeeName, planId, stamp) {
+    removeCoachingLogEntry(employeeName, todayCoachingKey(planId, stamp));
 }
 
 // ============================================
@@ -6247,9 +6371,21 @@ function selectSmartTip({ employeeId, metricKey, severity, tips }) {
 
     // Uncapped: knowing a tip was given eight months ago is the point of
     // keeping the history at all.
-    const updated = metricHistory.concat([{ tip: chosen, usedAt: new Date().toISOString() }]);
+    //
+    // A redraft the same day replaces the day's earlier pick rather than
+    // adding to it. Only one message a day goes to a person, and 103 of the
+    // first 255 entries here were redrafts minutes apart, each counted as a
+    // tip given. This is the no-repeat memory only; what was actually sent is
+    // logged with the coaching when the message is marked sent.
+    const nowIso = new Date().toISOString();
+    const today = nowIso.slice(0, 10);
+    const last = metricHistory[metricHistory.length - 1];
+    const updated = last && String(last.usedAt || '').slice(0, 10) === today
+        ? metricHistory.slice(0, -1).concat([{ tip: chosen, usedAt: nowIso }])
+        : metricHistory.concat([{ tip: chosen, usedAt: nowIso }]);
     history[employeeId] = { ...empHistory, [metricKey]: updated };
     saveTipUsageHistory(history);
+    rememberTodayTip(employeeId, metricKey, chosen);
 
     const prefixMap = {
         high: 'Try this today:',
@@ -7718,9 +7854,26 @@ function upsertCallListeningEntryFromForm(showSavedToast = false) {
 }
 
 // The three buttons that send a call somewhere keep it too. Returns whether
-// it was kept, for the toast that says so.
-function keepCallOnTheWayOut() {
-    return Boolean(upsertCallListeningEntryFromForm(false));
+// it was kept, for the toast that says so. The two that reach the associate
+// or the coaching log (`coached`) also log the coaching; the summary button
+// does not, because nothing has gone to anybody yet.
+function keepCallOnTheWayOut(options = {}) {
+    const kept = upsertCallListeningEntryFromForm(false);
+    if (kept && options.coached) recordCallCoaching(kept, options);
+    return Boolean(kept);
+}
+
+// The saved call that is on the form, without saving it again or asking for
+// anything missing. For the Outlook send, which sends Copilot's email and
+// may have no notes on the form at all.
+function savedCallOnForm() {
+    const draft = getCallListeningDraftFromForm();
+    if (!draft.employeeName) return null;
+    return window.DevCoachModules?.callListening?.findSameCall?.(
+        callListeningLogs[draft.employeeName] || [],
+        draft,
+        window.DevCoachModules?.callCoachingBridge?.callFingerprint
+    ) || null;
 }
 
 // The red flags for the Verint note. Confirmed after listening, in full: what
@@ -7829,7 +7982,9 @@ function copyCallListeningVerintSummary(entryId = null) {
         if (redFlagNeedsListening()) return;
         entry = buildUnsavedCallListeningEntry();
         if (!entry) return;
-        saved = keepCallOnTheWayOut();
+        saved = keepCallOnTheWayOut({ coached: true });
+    } else {
+        recordCallCoaching(entry);
     }
 
     const summaryText = buildCallListeningVerintSummary(entry);
@@ -8178,10 +8333,14 @@ function findLatestPeriodForAssociate(employeeName) {
  * Which tips this associate has already been sent, so the selector can stop
  * repeating advice that has already had its chance.
  */
-function alreadyGivenSuggestionIds(employeeName) {
+// `exceptCallPrint` leaves out the record for the call on screen, so its own
+// tips do not count as "already given" and change between Copy For Verint and
+// the email prompt.
+function alreadyGivenSuggestionIds(employeeName, options = {}) {
     const history = (typeof coachingHistory !== 'undefined' ? coachingHistory : {})[employeeName] || [];
     const ids = [];
     history.forEach(entry => {
+        if (options.exceptCallPrint && entry?.callPrint === options.exceptCallPrint) return;
         (entry?.suggestions || []).forEach(item => {
             if (item?.id) ids.push(item.id);
         });
@@ -9529,7 +9688,7 @@ function writeCallEmailInCopilot() {
         return;
     }
 
-    const saved = keepCallOnTheWayOut();
+    const saved = keepCallOnTheWayOut({ coached: true, aiAssisted: true });
     const to = currentCallRecipient();
     const source = entry.copilotSummary ? '' : ' No summary pasted, so it works from your notes.';
     const result = listening.copyPromptAndOpenCopilot?.({
@@ -9722,6 +9881,8 @@ function generateCallListeningOutlookEmail() {
     });
     if (delegatedResult?.ok) {
         lastSentCallEmail = bodyText;
+        const kept = savedCallOnForm();
+        if (kept) recordCallCoaching(kept, { aiAssisted: true });
         return;
     }
     if (delegatedResult?.reason === 'missing-body') {

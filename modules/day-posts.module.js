@@ -347,8 +347,13 @@
         container.querySelector('#dayPostSent')?.addEventListener('click', async () => {
             if (ctx.sentEntry) {
                 outreach.clearSent(ctx.plan.id, ctx.stamp, employeeName);
+                if (typeof removeTodayCoaching === 'function') removeTodayCoaching(employeeName, ctx.plan.id, ctx.stamp);
             } else {
                 outreach.markSent(ctx.plan.id, ctx.stamp, employeeName, new Date().toISOString());
+                // The tips in the message that went out, logged as coaching.
+                if (typeof recordTodayCoaching === 'function') {
+                    recordTodayCoaching(employeeName, container.querySelector('#dayPostText')?.value || '', ctx.plan.id, ctx.stamp);
+                }
             }
             await rerender();
         });
