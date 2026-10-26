@@ -183,7 +183,7 @@ suite('review voice: a strong year opens on the person and names everything at g
     t.check('box 1 opens with recognition by name',
         /^(Faith is having a great year, and it shows in every measure\.|There is a lot to recognize in Faith's year so far\.)/.test(notes.box1));
     t.check('a full score is said as one', /Rep satisfaction was a perfect 100% in every quarter this year\./.test(notes.box1));
-    t.check('not as a metric that merely held', !/Rep satisfaction held steady/.test(notes.box1));
+    t.check('not as a metric that merely held', !/Rep satisfaction (held steady|stayed level|stayed consistent)/.test(notes.box1));
     // Capped at four, the fifth strength simply vanished.
     t.check('the strengths past the third are named, with their numbers',
         /Average handle time \(398s\), first call resolution \(78%\), overall experience \(80%\) and transfers \(4%\) were also inside goal all year\./.test(notes.box1));
@@ -202,7 +202,7 @@ suite('review voice: handle time down every quarter is said, even inside the noi
 
     t.check('the lead sentence says it came down every quarter',
         /came down in each quarter this year/.test(qr.metricSentence(aht, ctx, 'lead')));
-    t.check('and never that it held steady', !/held steady/.test(qr.metricSentence(aht, ctx, 'lead')));
+    t.check('and never that it held steady', !/held steady|stayed level|stayed consistent/.test(qr.metricSentence(aht, ctx, 'lead')));
 
     const notes = qr.buildNotes(ctx);
     t.check('box 1 credits it to Eli',

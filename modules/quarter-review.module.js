@@ -161,6 +161,10 @@
         return options[h % options.length];
     }
 
+    // A metric that did not move, said a few ways (see metricSentence).
+    var STEADY_WORDS = ['held steady', 'stayed level', 'stayed consistent'];
+    var STEADY_YEAR_WORDS = ['held steady across the year', 'stayed level across the year', 'stayed consistent all year'];
+
     // The name a closing sentence uses for a metric the box has just named in
     // full. "Bring handle time down toward 426s" reads as speech; "bring
     // average handle time down toward 426s" reads as a report heading.
@@ -1005,8 +1009,13 @@
         }
 
         var path = _pathShape(m, points);
+        // "held steady" went out 83 times in 42 documents, three times in one
+        // document in 22 of them (tone audit, 2026-10-25). Picked off the
+        // metric and its numbers, so one document's metrics differ and a
+        // rebuilt note reads the same.
+        var steadySeed = m.metricKey + '|' + points.map(function (p) { return p.value; }).join(',');
         var movementWord;
-        if (path.kind === 'steady') movementWord = 'held steady';
+        if (path.kind === 'steady') movementWord = _pick(STEADY_WORDS, steadySeed);
         else if (path.kind === 'climbing') movementWord = m.isReverse ? 'came down in each quarter this year' : 'improved in each quarter this year';
         else if (path.kind === 'falling') movementWord = m.isReverse ? 'climbed in each quarter this year' : 'slipped in each quarter this year';
         else if (path.kind === 'rose') movementWord = m.isReverse ? 'came down this year' : 'improved this year';
@@ -1023,7 +1032,7 @@
                 // the year" about 95.2%, 95.0%, 95.7% claims two readings that
                 // were not taken.
                 var newest = points[points.length - 1];
-                lines.push(_cap(label) + ' held steady across the year, '
+                lines.push(_cap(label) + ' ' + _pick(STEADY_YEAR_WORDS, steadySeed) + ', '
                     + _display(m.metricKey, newest.value) + ' in ' + newest.name
                     + _goalTail(story, m, 'steady') + '.');
             } else {
@@ -1098,7 +1107,10 @@
             case 'always':
                 if (style === 'steady') return ', inside the ' + goal + ' goal';
                 if (style === 'brief') return ', both inside the ' + goal + ' goal';
-                if (style === 'support') return ', every quarter of it inside the ' + goal + ' goal';
+                if (style === 'support') {
+                    return _pick([', every quarter of it inside the ' + goal + ' goal',
+                        ', inside the ' + goal + ' goal in every quarter'], m.metricKey + '|' + lastName + '|' + goal + '|' + (last ? last.value : ''));
+                }
                 return ', and it has stayed inside the ' + goal + ' goal all year';
             case 'never':
                 var off = _movementAmount(m.metricKey, m.gap ? m.gap.size : 0);
