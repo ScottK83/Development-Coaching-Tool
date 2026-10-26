@@ -1238,6 +1238,27 @@ textarea:focus-visible {
     background: var(--yellow-soft);
 }
 
+/* The scorecard under the flag strip: a mark per line that corrects on a
+   click, and the numbers as pills. */
+.panel-section .call-score-table td {
+    padding: 5px 8px;
+    vertical-align: middle;
+}
+
+.panel-section .call-score-chip {
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+}
+
+.panel-section .call-score-numbers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: var(--space-2) 0;
+}
+
 /* The red flag box that has to be answered before anything goes out. */
 .panel-section .call-listen .call-alert-title {
     font-size: 1.1em;

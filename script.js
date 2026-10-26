@@ -7586,6 +7586,9 @@ function getCallListeningDraftFromForm() {
         // Scott's answer to the red flag after listening: 'valid',
         // 'dismissed', or '' when the call has none or it is unanswered.
         redFlagReview: callRedFlagRecord ? callRedFlagReview : '',
+        // The scorecard as Scott left it, corrections included. What the
+        // call trends and the coaching log add up.
+        scorecard: callScorecardForSave(),
         oscarUrl: (document.getElementById('callListeningOscarUrl')?.value || '').trim(),
         relevantInfo: (document.getElementById('callListeningRelevantInfo')?.value || '').trim(),
         managerNotes: (document.getElementById('callListeningManagerNotes')?.value || '').trim()
@@ -7608,6 +7611,12 @@ function validateCallListeningDraft(draft) {
     return true;
 }
 
+// A card's verdicts in one string, so a correction counts as a change to
+// save and a re-read that changed nothing does not.
+function scorecardVerdicts(card) {
+    return (card?.lines || []).map(item => `${item.key}:${item.verdict}`).join('|');
+}
+
 function isSameCallListeningDraftAsEntry(draft, existingEntry) {
     if (!existingEntry) return false;
     return existingEntry.listenedOn === draft.listenedOn
@@ -7618,6 +7627,7 @@ function isSameCallListeningDraftAsEntry(draft, existingEntry) {
         && (existingEntry.improvementAreas || '') === draft.improvementAreas
         && (existingEntry.copilotSummary || '') === (draft.copilotSummary || '')
         && (existingEntry.redFlagReview || '') === (draft.redFlagReview || '')
+        && scorecardVerdicts(existingEntry.scorecard) === scorecardVerdicts(draft.scorecard)
         && (existingEntry.oscarUrl || '') === draft.oscarUrl
         && (existingEntry.relevantInfo || '') === draft.relevantInfo
         && (existingEntry.managerNotes || '') === draft.managerNotes;
@@ -7764,11 +7774,16 @@ function buildCallListeningVerintSummary(entry) {
     // Notes drafted before the mishearing fix still quote "at&t", so they are
     // corrected on the way out as well.
     const section = (title, text) => (text ? ['', title, correct(text)] : []);
+    // The scorecard, as Scott left it. The coaching log is supervisor-only,
+    // so the score can sit here even though the associate's email leaves it
+    // out.
+    const scoreText = window.DevCoachModules?.callScorecard?.buildScorecardText?.(entry.scorecard) || '';
     const header = [
         `Call coaching: ${entry.employeeName || ''}`,
         moment ? `Call Taken: ${moment}` : `Call Date: ${entry.listenedOn || ''}`,
         ...(entry.callReference ? [`Call Reference: ${entry.callReference}`] : []),
-        ...(flags.length ? ['', ...flags] : [])
+        ...(flags.length ? ['', ...flags] : []),
+        ...(scoreText ? ['', scoreText] : [])
     ];
 
     // Copilot's summary, when Scott has pasted it back, is the version he read
@@ -7861,7 +7876,10 @@ function loadCallListeningEntryIntoForm(entryId) {
     // The red flag answer it was saved with, so a confirmed flag is not
     // asked about again and a set aside one stays out.
     pendingRedFlagReview = entry.redFlagReview || '';
+    // And the lines Scott corrected on its scorecard.
+    pendingScorecardCorrections = entry.scorecard?.corrections || {};
     renderCallFlagStrip(analysis);
+    renderCallScorecard(entry.transcript, associateName, analysis);
     if (analysis?.ok) {
         renderCallListeningReadPanels(entry.transcript, associateName, analysis);
         const summary = document.getElementById('callTranscriptAnalysisSummary');
@@ -9095,6 +9113,7 @@ function analyzeCallListeningTranscript(options) {
 
         renderCallListeningReadPanels(transcript, forName, analysis);
         renderCallFlagStrip(analysis);
+        renderCallScorecard(transcript, forName, analysis);
 
         if (summary) {
             summary.textContent = buildCallListeningAnalysisSummary(analysis, forName);
@@ -9203,6 +9222,154 @@ function renderCallRedFlagBox(record) {
         + `<button type="button" class="btn-primary" data-red-flag-review="valid">It's valid, document it</button>`
         + `<button type="button" data-red-flag-review="dismissed">Not valid, leave it out</button>`
         + `</div></div>`;
+}
+
+/*
+ * THE SCORECARD
+ *
+ * The same ten lines on every call, with the numbers under them (Scott,
+ * 2026-10-25: "real actual measurable feedback"). It sits under the flag
+ * strip, before the notes, and a click on a line corrects it. The corrected
+ * card is what is saved on the call, so the trends read what Scott
+ * confirmed. The card itself lives in call-scorecard.module.js.
+ *
+ * Corrections belong to one call. They survive a re-read of the same call
+ * (picking the associate re-reads it) and go when a different call is
+ * pasted, which is the fingerprint check below.
+ */
+let callScorecardCard = null;
+let callScorecardCorrections = {};
+let callScorecardFingerprint = '';
+// A saved call's corrections, waiting for the read that draws its card.
+let pendingScorecardCorrections = null;
+
+function callScorecardPrint(transcript) {
+    const print = window.DevCoachModules?.callCoachingBridge?.callFingerprint;
+    return typeof print === 'function' ? (print(transcript) || '') : String(transcript || '').trim();
+}
+
+function renderCallScorecard(transcript, associateName, analysis) {
+    const host = document.getElementById('callScorecard');
+    const scorecard = window.DevCoachModules?.callScorecard;
+    if (!host || !scorecard) return;
+
+    const print = callScorecardPrint(transcript);
+    if (pendingScorecardCorrections) {
+        callScorecardCorrections = pendingScorecardCorrections;
+        pendingScorecardCorrections = null;
+    } else if (print !== callScorecardFingerprint) {
+        callScorecardCorrections = {};
+    }
+    callScorecardFingerprint = print;
+
+    let card = null;
+    try {
+        card = analysis?.ok ? scorecard.buildScorecard(transcript, { associateName, analysis }) : null;
+    } catch (error) {
+        logAppError('Call scorecard failed to build', error, { associateName });
+    }
+    if (!card?.ok) {
+        callScorecardCard = null;
+        host.innerHTML = '';
+        host.style.display = 'none';
+        return;
+    }
+
+    callScorecardCard = scorecard.applyCorrections(card, callScorecardCorrections);
+    host.innerHTML = scorecard.buildScorecardHtml(callScorecardCard, escapeHtml);
+    host.style.display = 'block';
+}
+
+function resetCallScorecard() {
+    callScorecardCard = null;
+    callScorecardCorrections = {};
+    callScorecardFingerprint = '';
+    const host = document.getElementById('callScorecard');
+    if (host) {
+        host.innerHTML = '';
+        host.style.display = 'none';
+    }
+}
+
+/**
+ * The card as it is saved on the call: the verdicts, the corrections and the
+ * numbers. Not the quotes or the note texts, which the transcript already
+ * holds and a re-read brings back.
+ */
+function callScorecardForSave() {
+    const scorecard = window.DevCoachModules?.callScorecard;
+    if (!callScorecardCard || !scorecard) return null;
+    const score = scorecard.scoreOf(callScorecardCard);
+    return {
+        version: callScorecardCard.version,
+        met: score.met,
+        applied: score.applied,
+        lines: callScorecardCard.lines.map(item => ({ key: item.key, verdict: item.verdict, auto: item.auto, at: item.at || '' })),
+        corrections: scorecard.correctionsOf(callScorecardCard),
+        numbers: callScorecardCard.numbers,
+        missedMetrics: scorecard.missedMetrics(callScorecardCard)
+    };
+}
+
+// A bullet line's text, without the dash and without a trailing quote, so a
+// note Analyze wrote with a quote still matches the rule's words.
+function noteBulletCore(line) {
+    return String(line || '').replace(/^\s*[-*•]\s+/, '').replace(/\s*\("[^"]*"\)\s*$/, '').trim();
+}
+
+function noteHasPoint(text, point) {
+    const core = String(point || '').trim();
+    return Boolean(core) && String(text || '').split(/\r?\n/).some(line => noteBulletCore(line) === core);
+}
+
+function removeNotePoint(fieldId, point) {
+    const field = document.getElementById(fieldId);
+    const core = String(point || '').trim();
+    if (!field || !core) return;
+    field.value = field.value.split(/\r?\n/).filter(line => noteBulletCore(line) !== core).join('\n').trim();
+}
+
+function addNotePoint(fieldId, point) {
+    const field = document.getElementById(fieldId);
+    const core = String(point || '').trim();
+    if (!field || !core || noteHasPoint(field.value, core)) return;
+    const existing = field.value.trim();
+    field.value = existing ? `${existing}\n- ${core}` : `- ${core}`;
+}
+
+/**
+ * A line corrected, and the notes made to agree with it: Missed puts the
+ * coaching into What to work on and takes the praise out of What went well;
+ * Yes does the opposite; Didn't apply takes both out.
+ */
+function handleCallScorecardClick(event) {
+    const chip = event.target.closest('.call-score-chip');
+    const scorecard = window.DevCoachModules?.callScorecard;
+    if (!chip || !chip.dataset.scoreKey || !callScorecardCard || !scorecard) return;
+
+    const key = chip.dataset.scoreKey;
+    const item = callScorecardCard.lines.find(entry => entry.key === key);
+    if (!item) return;
+
+    const verdict = scorecard.nextVerdict(item.verdict);
+    callScorecardCorrections = Object.assign({}, callScorecardCorrections, { [key]: verdict });
+    if (verdict === item.auto) delete callScorecardCorrections[key];
+    callScorecardCard = scorecard.applyCorrections(callScorecardCard, callScorecardCorrections);
+
+    const { coach, praise } = scorecard.noteTextFor(item);
+    if (verdict === 'missed') {
+        addNotePoint('callListeningImprovements', coach);
+        removeNotePoint('callListeningStrengths', praise);
+    } else if (verdict === 'yes') {
+        removeNotePoint('callListeningImprovements', coach);
+        addNotePoint('callListeningStrengths', praise);
+    } else {
+        removeNotePoint('callListeningImprovements', coach);
+        removeNotePoint('callListeningStrengths', praise);
+    }
+
+    const host = document.getElementById('callScorecard');
+    if (host) host.innerHTML = scorecard.buildScorecardHtml(callScorecardCard, escapeHtml);
 }
 
 /**
@@ -9411,6 +9578,7 @@ function resetCallListeningReadPanels() {
     callMetricLedgerCallName = '';
     callMetricSummary = null;
     callExplanationRead = null;
+    resetCallScorecard();
     // A new call's red flag is a new question.
     callRedFlagRecord = null;
     callRedFlagReview = '';
@@ -10070,6 +10238,7 @@ function bindCallListeningSectionHandlers(employeeSelect, saveBtn, copyVerintBtn
     bindElementOnce(document.getElementById('callCopilotSummaryBtn'), 'click', writeCallSummaryInCopilot);
     bindElementOnce(document.getElementById('callCopilotEmailBtn'), 'click', writeCallEmailInCopilot);
     bindElementOnce(document.getElementById('callFlagStrip'), 'click', handleCallFlagStripClick);
+    bindElementOnce(document.getElementById('callScorecard'), 'click', handleCallScorecardClick);
     bindElementOnce(document.getElementById('checkTranscriptPasteBtn'), 'click', showTranscriptPasteDiagnosis);
     bindElementOnce(document.getElementById('summarizeCallInCopilotBtn'), 'click', summarizeCallInCopilot);
     bindElementOnce(document.getElementById('analyzeCallTranscriptBtn'), 'click', analyzeCallListeningTranscript);

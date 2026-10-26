@@ -596,6 +596,11 @@ Box 2 - Future Improvement Areas:
                                  to listen at. The detail behind each line is in
                                  the full read under More. -->
                             <div id="callFlagStrip" style="display: none; margin-top: var(--space-3);"></div>
+                            <!-- The scorecard: the same ten lines on every
+                                 call and the numbers under them. A click on a
+                                 line corrects it, and the corrected card is
+                                 what is saved with the call. -->
+                            <div id="callScorecard" style="display: none; margin-top: var(--space-3);"></div>
                         </div>
 
                         <div class="call-panel">
@@ -1865,6 +1870,9 @@ Box 2 - Future Improvement Areas:
                 'modules/call-word-choice.module.js',
                 'modules/call-summary.module.js',
                 'modules/call-time-ledger.module.js',
+                // Reads the reads above at call time, so it only has to load
+                // before script.js asks for it.
+                'modules/call-scorecard.module.js',
                 'modules/call-coaching-bridge.module.js',
                 'modules/call-trends.module.js',
                 'modules/call-listening.module.js',

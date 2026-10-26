@@ -26,29 +26,8 @@ const { suite, ROOT } = require('./harness');
  * transcript is kept in the repo.
  */
 
-const ARRANGEMENT_CALL = [
-    '00:04', 'good evening thank you for being a part of APS this is dana how may i assist you',
-    '00:09', 'hi so i got my bill by email and it says i have a payment plan but i have been paying the full amount so i do not know what is going on',
-    '00:31', 'okay can i get your first and last name',
-    '00:33', 'maria lopez',
-    '00:37', 'and the last four digits of your social please',
-    '00:40', 'four four one two',
-    '00:42', 'thank you okay one second it looks like somebody did self service to enroll a payment arrangement on july thirty first',
-    '01:32', 'right i tried to do that but i thought i paid the full amount and now it says i am behind',
-    '02:07', 'no you are current you are not behind so what happened was on july thirty first the payment arrangement was set up for three fifty eight eighty nine and you paid one sixty four eighty three that same day and the new bill has the last ninety seven dollars of the arrangement on it',
-    '03:01', 'so what would be the current bill then',
-    '03:05', 'so this is the last amount with the payment arrangement on it so that is the three o nine twenty',
-    '04:32', 'you had a past due balance of three fifty eight eighty nine for june and july and you set that up as an arrangement and you paid a hundred and sixty four dollars toward it and the bill that came out after that had ninety seven dollars of the arrangement in it and now this one is the last one',
-    '05:33', 'the ninety seven so the current bill will be two twelve that is confusing that is not what i thought i was paying',
-    '05:59', 'so the june bill is one sixty and the july bill is one ninety four',
-    '06:55', 'so that bill of three o nine twenty that is due on october nineteenth',
-    '07:02', 'okay so it is the two twelve and the ninety seven',
-    '07:07', 'yes',
-    '07:12', 'okay alright very good thank you for your time',
-    '07:19', 'you are welcome it is my pleasure',
-    '1:1 Meeting Template',
-    'Lopez-Garcia, Dana'
-].join('\n');
+// Written for these tests, not a real call. Shared with call-scorecard.test.js.
+const ARRANGEMENT_CALL = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'arrangement-call.txt'), 'utf8');
 
 const VERINT_EXPORT = fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'verint-export.txt'), 'utf8');
 

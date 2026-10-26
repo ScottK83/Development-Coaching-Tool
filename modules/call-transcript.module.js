@@ -981,6 +981,13 @@
         return rule ? rule.pattern : /$^/;
     }
 
+    // A rule's praise and its coaching line, for the scorecard to write into
+    // the notes when Scott corrects a line, in the same words Analyze uses.
+    function ruleText(key) {
+        const rule = STRENGTH_RULES.find(item => item.key === key);
+        return rule ? { made: rule.made || '', missing: rule.missing || '' } : null;
+    }
+
     function findQuote(turns, pattern, side) {
         const pool = side === 'customer'
             ? turns.filter(turn => turn.role === 'customer')
@@ -1815,6 +1822,7 @@
         DUE_DATE,
         isAutoHeadline,
         callLength,
+        ruleText,
         buildStrengthsDraft,
         buildImprovementsDraft,
         DRAFT_HINTS,

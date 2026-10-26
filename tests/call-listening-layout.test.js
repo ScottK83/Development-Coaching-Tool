@@ -95,6 +95,28 @@ suite('call listening layout: paste, good and bad, then Copilot and Verint', (t)
     t.check('and everything else comes after them', verint < more && email < more);
 });
 
+// The scorecard (2026-10-26, from the deep dive Scott approved): the same ten
+// lines on every call, on the main path under the flag strip. Its marks are
+// drawn on a read, so the page still has three buttons at rest.
+suite('call listening layout: the scorecard sits under the flags, before the notes', (t) => {
+    const section = callListeningSection();
+    const flags = section.indexOf('id="callFlagStrip"');
+    const card = section.indexOf('id="callScorecard"');
+    const good = section.indexOf('id="callListeningStrengths"');
+    const more = section.indexOf('<details class="call-fold call-more"');
+    t.check('there is a scorecard', card > -1);
+    t.check('under the flag strip', flags < card);
+    t.check('before the notes', card < good);
+    t.check('on the main path, not under More', card < more);
+    t.check('hidden until a call is read', /<div id="callScorecard"[^>]*style="display: none;/.test(section));
+    t.check('with no buttons of its own at rest', !/<div id="callScorecard"[^>]*>[^<]*<button/.test(section));
+
+    const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    t.check('a read draws it', /renderCallScorecard\(transcript, forName, analysis\)/.test(script));
+    t.check('a click on it corrects a line', /bindElementOnce\(document\.getElementById\('callScorecard'\), 'click', handleCallScorecardClick\)/.test(script));
+    t.check('and it is saved with the call', /scorecard: callScorecardForSave\(\)/.test(script));
+});
+
 suite('call listening layout: everything else is in one closed fold', (t) => {
     const section = callListeningSection();
     const folds = outermostFolds(section);
