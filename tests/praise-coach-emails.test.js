@@ -257,6 +257,28 @@ suite('praise in every coaching email: trend prompt, no calls', (t) => {
     t.check('with thanks, not a number, asked for', /open with real thanks for their effort/.test(prompt));
 });
 
+/* Tone audit 2026-10-25: the trend prompt's data could read "Average Handle
+   Time ... current 0s ... fell by 600 seconds vs previous, which is better".
+   A 0 second handle time is no calls (Scott, 2026-10-14), never a number to
+   hand Copilot and never a move. coachableTrendMetrics had no no-calls check. */
+suite('trend prompt: a week with no calls hands Copilot no 0s and no move', (t) => {
+    const mt = loadMetricTrends(t);
+    const { metrics, weakest, trendingDown } = analyze(mt, NO_CALLS, RED_BEFORE);
+    t.check('the call metrics are not coachable on a week with no calls',
+        !metrics.some((m) => ['aht', 'holdTime', 'acw', 'transfers'].includes(m.metricKey)));
+    const prompt = mt.buildTrendCoachingPrompt('Derek', weakest, trendingDown, [], [], '', null, metrics, { periodMeta: WEEK_META, weekKey: WEEK });
+    t.check('no 0 second time anywhere in the prompt', !ZERO_SECONDS.test(prompt));
+    t.check('no handle time move', !/Average Handle Time[^\n]*(fell|rose|down|up|better|worse)/.test(prompt));
+    t.check('no 0% transfers', !/Transfers[^\n]*\b0(\.0)?%/.test(prompt));
+
+    // The week before took no calls, this one did: a rise from nothing is
+    // not a slip.
+    const back = analyze(mt, RED, NO_CALLS);
+    const aht = back.metrics.find((m) => m.metricKey === 'aht');
+    t.check('handle time is still there this week', !!aht);
+    t.check('but with no move from a week of no calls', aht && (aht.trendDelta === null || aht.trendDelta === undefined));
+});
+
 suite('praise in every coaching email: follow-up email, all red', (t) => {
     const mt = loadMetricTrends(t);
     const { metrics, weakest, trendingDown } = analyze(mt, RED, RED_BEFORE);

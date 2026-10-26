@@ -1120,15 +1120,45 @@ function trendHasSurveysBehind(employee, metricKey) {
     return Number.isInteger(count) && count > 0;
 }
 
+/*
+ * No calls, and what was measured off them.
+ *
+ * Scott, 2026-10-14: "If they have 0 AHT, then they couldn't have taken
+ * calls." A week with no calls has no handle, hold or wrap time and no
+ * transfers to speak of, so none of those reaches a message: the trend prompt
+ * used to hand Copilot "Average Handle Time ... current 0s ... fell by 600
+ * seconds vs previous, which is better" (tone audit, 2026-10-25). The rows
+ * that are left carry tookNoCalls, so every later step still knows the week
+ * had nothing in it to praise but the effort. A week before with no calls is
+ * no baseline either: a rise from nothing is not a slip.
+ */
+const TREND_CALL_METRIC_KEYS = new Set(['aht', 'acw', 'holdTime', 'transfers']);
+
+function trendEmployeeTookNoCalls(employee) {
+    if (!employee) return false;
+    const pulse = window.DevCoachModules?.morningPulse;
+    if (typeof pulse?.tookNoCalls === 'function') return !!pulse.tookNoCalls(employee);
+    const aht = parseFloat(employee.aht);
+    if (Number.isFinite(aht)) return aht <= 0;
+    const calls = parseInt(employee.totalCalls, 10);
+    return Number.isFinite(calls) && calls <= 0;
+}
+
 function coachableTrendMetrics(allMetrics, employee, previousEmployee = null) {
-    return (Array.isArray(allMetrics) ? allMetrics : [])
-        .filter(m => m && m.metricKey !== 'reliability')
+    const list = (Array.isArray(allMetrics) ? allMetrics : []).filter(m => m && m.metricKey !== 'reliability');
+    const noCalls = employee ? trendEmployeeTookNoCalls(employee) : trendMetricsTookNoCalls(list);
+    const priorNoCalls = trendEmployeeTookNoCalls(previousEmployee);
+    return list
+        .filter(m => !(noCalls && TREND_CALL_METRIC_KEYS.has(m.metricKey)))
         .filter(m => !employee || trendHasSurveysBehind(employee, m.metricKey))
         .map(m => {
-            // A previous period nobody answered is no baseline: "up 80 pts"
-            // from an empty column is not a move.
-            if (!previousEmployee || trendHasSurveysBehind(previousEmployee, m.metricKey)) return m;
-            const quiet = { ...m, previousValue: null, trendDelta: null, trendDirection: 'stable' };
+            const marked = noCalls && !m.tookNoCalls ? { ...m, tookNoCalls: true } : m;
+            // A previous period nobody answered, or with no calls in it, is
+            // no baseline: "up 80 pts" from an empty column is not a move.
+            const emptyBefore = previousEmployee && (!trendHasSurveysBehind(previousEmployee, m.metricKey)
+                || (priorNoCalls && TREND_CALL_METRIC_KEYS.has(m.metricKey)));
+            if (!emptyBefore) return marked;
+            const quiet = { ...marked, previousValue: null, trendDelta: null, trendDirection: 'stable' };
             quiet.classification = classifyTrendMetric(quiet);
             return quiet;
         });
@@ -1461,7 +1491,7 @@ function isZeroTimeMetric(metric) {
 }
 
 function trendMetricsTookNoCalls(metrics) {
-    return (metrics || []).some(m => m?.metricKey === 'aht' && Number(m.employeeValue) <= 0);
+    return (metrics || []).some(m => m?.tookNoCalls === true || (m?.metricKey === 'aht' && Number(m.employeeValue) <= 0));
 }
 
 /*
