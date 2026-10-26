@@ -259,14 +259,17 @@
         supervisorRequest: ['escalat', 'supervisor', 'manager', 'own'],
         // Was mapped to a metric with no keywords, so a verification finding
         // could only ever return generic advice.
-        verification: ['verif', 'identity', 'date of birth', 'last four', 'security question'],
+        // The APS standard: name plus the last four of the social, a
+        // driver's license or the account password. Date of birth and
+        // security questions do not count, so they are not keywords either.
+        verification: ['verif', 'identity', 'last four', 'social', 'driver', 'password', 'authoriz'],
         explanation: ['explain', 'plain', 'example', 'make sense', 'own words', 'simple'],
         promise: ['promise', 'guarantee', 'expect', 'next step'],
         blame: ['blame', 'acknowledge', 'calm', 'what i can'],
         safety: ['safety', 'emergency', 'hazard'],
         emotionUnanswered: ['acknowledge', 'empath', 'frustrat', 'hear', 'calm', 'upset'],
         qaDisclosures: ['disclos', 'rate plan', 'deposit', 'quote', 'explain', 'cover'],
-        qaVerification: ['verif', 'identity', 'date of birth', 'last four'],
+        qaVerification: ['verif', 'identity', 'last four', 'social', 'driver', 'password', 'authoriz'],
         qaProcess: ['explain', 'next step', 'what happens', 'time frame'],
         qaResolved: ['resolv', 'first call', 'call back', 'follow through'],
         qaOffering: ['offer', 'plan', 'program', 'self serv', 'options'],
