@@ -57,6 +57,8 @@ suite('natural voice: morning pulse pools never scold, sound corporate or stitch
     t.check('no range in brackets after a move', !/\(\$\{range\}\)/.test(text));
     t.check('no "YTD at X, target Y" stacking', !/YTD (is )?(at|sitting at) \$\{ytdVal\}[^`]*target \$\{target\}/.test(text));
     t.check('no growth bullet list', !/Growing:|Slipped a bit:|Focus area: \$\{/.test(text));
+    t.check('no "(target X)" or "X vs Y" stacked in a pool line',
+        !/=> `[^`]*(\(target \$\{|\$\{val\} vs \$\{target\}|\$\{cur\} vs \$\{tgt\})/.test(text));
 });
 
 suite('natural voice: the Copilot email prompts ask for numbers said out loud', (t) => {
