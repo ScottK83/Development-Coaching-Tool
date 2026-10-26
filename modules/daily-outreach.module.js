@@ -439,36 +439,51 @@
                 : `Hey ${name}! Here's how ${nowName} went, next to ${priorName}.`);
 
         const blocks = [opener];
-        blocks.push(praiseLine(d, thisWeek && (!closing || open)));
+        // Still running: the present tense. Over: the past.
+        const ongoing = thisWeek && (!closing || open);
+        blocks.push(praiseLine(d, ongoing));
 
+        /* Sentences, not a dashboard. "Where you landed:", "Better than last
+         * week:", "Slid a little:" and "Worth a push next week:" read as
+         * headings over rows of numbers (Scott, 2026-10-26: "Any time I send
+         * a message, I want to make sure it has a natural speaking tone"). */
         if (standings.length) {
-            const dayText = thisWeek && d.daysIn > 0 ? ` (${d.daysIn} day${d.daysIn === 1 ? '' : 's'} in)` : '';
-            const heading = closing
-                ? (open ? 'Where you stand' : 'Where you landed')
-                : (thisWeek ? 'Where you are' : nowName.charAt(0).toUpperCase() + nowName.slice(1));
-            const parts = standings.map(s => `${s.label} ${s.latestText}`);
-            blocks.push(`${heading}${dayText}: ${joinList(parts)}.`);
+            const days = thisWeek && d.daysIn > 0 ? d.daysIn : 0;
+            const list = joinList(standings.map(s => `${s.label} at ${s.latestText}`));
+            let said;
+            if (!thisWeek) said = `${nowName.charAt(0).toUpperCase() + nowName.slice(1)} you had ${list}.`;
+            else if (closing && !open) said = `You finished the week with ${list}.`;
+            else if (closing) said = `${days ? `${days} day${days === 1 ? '' : 's'} in, you` : 'You'}'re standing at ${list}.`;
+            else said = `${days ? `${days} day${days === 1 ? '' : 's'} in, you` : 'Right now you'}'ve got ${list}.`;
+            blocks.push(said);
         }
 
         if (improved.length) {
-            blocks.push(`Better than ${priorName}: ${joinList(improved.map(i => `${i.label} ${i.deltaText}`))}.`);
+            const moves = improved.map((i, k) => (k === 0 ? `${i.label} ${ongoing ? 'is' : 'went'} ${i.deltaText}` : `${i.label} ${i.deltaText}`));
+            blocks.push(`Next to ${priorName}, ${joinList(moves)}. ${pickOne(['Nice work.', 'Love seeing that.', 'That\'s real progress.'])}`);
         } else if (d.hasBaseline && standings.length && !slipped.length) {
             blocks.push(`Holding steady against ${priorName}, no real slippage anywhere.`);
         }
 
         if (slipped.length) {
-            blocks.push(`Slid a little: ${joinList(slipped.map(s => `${s.label} ${s.deltaText}`))}.`);
+            blocks.push(slipped.slice(0, 2)
+                .map(s => `${s.label} ${ongoing ? 'has slipped' : 'slipped'} a little, ${s.deltaText}.`)
+                .join(' '));
         }
 
         if (d.focus) {
             // Next week, unless there is still a day of this one to spend on it.
-            const push = closing && !open ? 'Worth a push next week' : 'Worth a push';
+            const when = closing && !open ? 'next week' : (closing ? 'on the day that\'s left' : 'the rest of the week');
             const f = d.focus;
+            const lead = pickOne([
+                `${f.label} is the one I'd push on ${when}.`,
+                `If there's one thing to go after ${when}, it's ${f.label}.`
+            ]);
             if (f.yearText) {
                 const whose = nowName === 'this week' ? 'this week\'s' : nowName === 'last week' ? 'last week\'s' : 'that week\'s';
-                blocks.push(`${push}: ${f.label} for the year is ${f.yearText} against ${withArticle(f.targetText)} target, and ${whose} ${f.valueText} is exactly how we close that.`);
+                blocks.push(`${lead} The year is at ${f.yearText} against ${withArticle(f.targetText)} target, and ${whose} ${f.valueText} is exactly how we close that.`);
             } else {
-                blocks.push(`${push}: ${f.label} is ${f.valueText} against ${withArticle(f.targetText)} target.`);
+                blocks.push(`${lead} You're at ${f.valueText} against ${withArticle(f.targetText)} target, and I think you can get there.`);
             }
         }
 

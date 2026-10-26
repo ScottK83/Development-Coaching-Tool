@@ -28,13 +28,13 @@ suite('week progress: leads with this week against last week', (t) => {
     });
 
     t.check('it opens by naming the comparison', msg.indexOf('where this week stands next to last week') > -1);
-    t.check('it says how far into the week it is', msg.indexOf('(3 days in)') > -1);
+    t.check('it says how far into the week it is', msg.indexOf('3 days in') > -1);
     // Each number is said once (Scott, 2026-10-14, on walls of numbers):
     // where they are now, then what moved, in words, underneath.
-    t.check('where they are now, each number once', msg.indexOf('Where you are (3 days in): Adherence 96.2% and AHT 7:41.') > -1);
-    t.check('improvements are called out by name', msg.indexOf('Better than last week:') > -1);
-    t.check('and listed with an "and"', msg.indexOf('Adherence +3.1 and AHT 31s faster') > -1);
-    t.check('the growth area names the target', msg.indexOf('FCR is 68.0% against a 73.0% target') > -1);
+    t.check('where they are now, each number once', msg.indexOf('3 days in, you\'ve got Adherence at 96.2% and AHT at 7:41.') > -1);
+    t.check('improvements are called out by name', msg.indexOf('Next to last week, ') > -1);
+    t.check('and listed with an "and"', msg.indexOf('Adherence is +3.1 and AHT 31s faster') > -1);
+    t.check('the growth area names the target', msg.indexOf('You\'re at 68.0% against a 73.0% target') > -1 && /FCR/.test(msg));
 
     // The old midweek note was a nudge with no numbers in it. That was the
     // complaint, so the wording it used must not survive here.
@@ -52,8 +52,8 @@ suite('week progress: Friday closes the week out', (t) => {
     });
 
     t.check('Friday says it is closing the week', friday.indexOf('Closing out the week') > -1);
-    t.check('and reads as landed, not in flight', friday.indexOf('Where you landed') > -1);
-    t.check('the growth note points at next week', friday.indexOf('Worth a push next week') > -1);
+    t.check('and reads as landed, not in flight', friday.indexOf('You finished the week with') > -1);
+    t.check('the growth note points at next week', /(push on|go after) next week/.test(friday));
     t.check('and it signs off for the weekend', friday.indexOf('Have a good weekend') > -1);
 
     // The Friday message is usually written off a file that stops on Thursday,
@@ -69,10 +69,10 @@ suite('week progress: Friday closes the week out', (t) => {
 
     t.check('an open week is not something that went', stillOpen.indexOf('how it is going') > -1);
     t.check('and nothing in it already went', stillOpen.indexOf('how it went') === -1);
-    t.check('nobody has landed yet', stillOpen.indexOf('Where you landed') === -1);
-    t.check('they are standing in it', stillOpen.indexOf('Where you stand (4 days in)') > -1);
-    t.check('and the push is for the day that is left', stillOpen.indexOf('Worth a push:') > -1);
-    t.check('rather than for next week', stillOpen.indexOf('Worth a push next week') === -1);
+    t.check('nobody has landed yet', stillOpen.indexOf('You finished the week') === -1);
+    t.check('they are standing in it', stillOpen.indexOf('4 days in, you\'re standing at') > -1);
+    t.check('and the push is for the day that is left', stillOpen.indexOf('on the day that\'s left') > -1);
+    t.check('rather than for next week', stillOpen.indexOf('next week') === -1);
     t.check('it still closes the week out', stillOpen.indexOf('Closing out the week') > -1);
     t.check('and still sends them into the weekend', stillOpen.indexOf('Have a good weekend') > -1);
 
@@ -82,7 +82,7 @@ suite('week progress: Friday closes the week out', (t) => {
         outreach.buildWeekProgressText({
             firstName: 'Alyssa', tone: 'closing', daysIn: 5, hasBaseline: true, weekOpen: false,
             standings: STANDINGS, improved: [], slipped: [], focus: null
-        }).indexOf('Where you landed') > -1);
+        }).indexOf('You finished the week with') > -1);
 
     const midweek = outreach.buildWeekProgressText({
         firstName: 'Alyssa', tone: 'midweek', daysIn: 3, hasBaseline: true,
@@ -105,7 +105,7 @@ suite('week progress: honest when nothing moved, or nothing is comparable', (t) 
         firstName: 'Sam', tone: 'midweek', daysIn: 2, hasBaseline: true,
         standings: STANDINGS, improved: [], slipped: [{ label: 'FCR', deltaText: '-4.0' }], focus: null
     });
-    t.check('a dip is named, not hidden', slid.indexOf('Slid a little: FCR -4.0') > -1);
+    t.check('a dip is named, not hidden', slid.indexOf('FCR has slipped a little, -4.0.') > -1);
     t.check('and a week with a dip is not also called steady', slid.indexOf('Holding steady') === -1);
 
     // No last week to compare against: report position, drop the comparison.
@@ -113,7 +113,7 @@ suite('week progress: honest when nothing moved, or nothing is comparable', (t) 
         firstName: 'Sam', tone: 'midweek', daysIn: 1, hasBaseline: false,
         standings: [{ label: 'Adherence', latestText: '96.2%', baseText: '' }], improved: [], slipped: [], focus: null
     });
-    t.check('it still reports where they are', noBaseline.indexOf('Adherence 96.2%') > -1);
+    t.check('it still reports where they are', noBaseline.indexOf('Adherence at 96.2%') > -1);
     t.check('without inventing a last week', noBaseline.indexOf('was ') === -1);
 
     // No numbers at all is still a message: an opener, the effort, and the
@@ -143,15 +143,15 @@ suite('week progress: never calls last week "this week"', (t) => {
     // uploaded: that is a disclaimer, and associate copy carries none.
     t.check('it names the week it is about', stale.indexOf('Here\'s how last week went, next to the week before.') > -1);
     t.check('with no remark about files', !/file|landed in|uploaded/i.test(stale));
-    t.check('and calls the numbers last week\'s, not this week\'s', stale.indexOf('Last week: Adherence 96.2%') > -1);
-    t.check('so it never claims to be where you are now', stale.indexOf('Where you are') === -1);
+    t.check('and calls the numbers last week\'s, not this week\'s', stale.indexOf('Last week you had Adherence at 96.2%') > -1);
+    t.check('so it never claims to be where you are now', stale.indexOf('you\'ve got') === -1);
 
     const fresh = outreach.buildWeekProgressText({
         firstName: 'Alyssa', tone: 'midweek', daysIn: 3, hasBaseline: true, thisWeek: true,
         standings: STANDINGS, improved: [], slipped: [], focus: null
     });
     t.check('with a current file it does say this week', fresh.indexOf('where this week stands') > -1);
-    t.check('and reports where you are', fresh.indexOf('Where you are') > -1);
+    t.check('and reports where you are', fresh.indexOf('you\'ve got') > -1);
 
     // Omitting the flag entirely must mean "this week", so the common path
     // does not need to remember to pass it.
@@ -196,7 +196,7 @@ suite('week progress: praise leads, before any numbers', (t) => {
     });
     const blocks = sweep.split('\n\n');
     t.check('the line after the opener is praise', /clean sweep|as good as it gets/.test(blocks[1]));
-    t.check('and the numbers come after it', blocks.findIndex(b => b.indexOf('Where you are') === 0) > 1);
+    t.check('and the numbers come after it', blocks.findIndex(b => b.indexOf('2 days in, you\'ve got') === 0) > 1);
 
     const some = outreach.buildWeekProgressText({
         firstName: 'Ana', tone: 'midweek', daysIn: 2, hasBaseline: true,
@@ -260,9 +260,34 @@ suite('week progress: zero surveys, moves in words, slides only under target', a
     }
     t.equal('nobody surveyed, so rep satisfaction is never named', out.filter(m => /Rep Satisfaction/.test(m)).length, 0);
     t.equal('and no zero goes out', out.filter(m => /\b0(\.0)?%/.test(m)).length, 0);
-    t.check('an improvement is said in words', out.every(m => m.indexOf('After Call Work down 19 seconds') > -1));
+    t.check('an improvement is said in words', out.every(m => /Next to [^\n]*After Call Work (is )?down 19 seconds/.test(m)));
     t.equal('never with a minus sign', out.filter(m => /-\d+s\b/.test(m)).length, 0);
-    t.equal('hold time at 11s against 30s is not called a slide', out.filter(m => /Slid a little[^\n]*Hold Time/.test(m)).length, 0);
-    t.check('the focus is a metric short of target', out.every(m => /Worth a push: (Average Handle Time|Schedule Adherence)/.test(m)));
+    t.equal('hold time at 11s against 30s is not called a slide', out.filter(m => /Hold Time (has )?slipped/.test(m)).length, 0);
+    t.check('the focus is a metric short of target', out.every(m => /(Average Handle Time|Schedule Adherence) is the one I'd push on|go after the rest of the week, it's (Average Handle Time|Schedule Adherence)/.test(m)));
     t.check('two emojis at most', out.every(m => (m.match(/\p{Extended_Pictographic}/gu) || []).length <= 2));
+});
+
+suite('week progress: sentences, not a dashboard', (t) => {
+    const outreach = load(t);
+    // Scott, 2026-10-26: a natural speaking tone in every message. The old
+    // text read as headings over rows of numbers.
+    const headings = /Where you (landed|are|stand)\b|Better than [^\n]*:|Slid a little:|Worth a push|Side by side|Focus area:/;
+    const variants = [
+        { tone: 'midweek', daysIn: 3 },
+        { tone: 'closing', daysIn: 5 },
+        { tone: 'closing', daysIn: 4, weekOpen: true },
+        { tone: 'midweek', daysIn: 0, thisWeek: false }
+    ];
+    for (let i = 0; i < 20; i++) {
+        variants.forEach((v) => {
+            const msg = outreach.buildWeekProgressText(Object.assign({
+                firstName: 'Alyssa', hasBaseline: true, standings: STANDINGS,
+                improved: [{ label: 'AHT', deltaText: 'down 31 seconds' }],
+                slipped: [{ label: 'FCR', deltaText: 'down 4 points' }],
+                focus: { label: 'FCR', valueText: '68%', targetText: '73%', yearText: '70%' }
+            }, v));
+            t.check('no dashboard heading: ' + v.tone + ' ' + v.daysIn, !headings.test(msg));
+            t.check('no label: value row: ' + v.tone + ' ' + v.daysIn, !/^[A-Z][A-Za-z ]+: [\d+-]/m.test(msg));
+        });
+    }
 });

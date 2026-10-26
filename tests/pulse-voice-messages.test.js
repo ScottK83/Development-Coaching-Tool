@@ -343,7 +343,8 @@ suite('pulse voice: a rate jump needs real volume and a real move', async (t) =>
     const real = loadOne(t, { name: 'Sam Lee', totalCalls: 240, holdTime: 26, aht: 410 }, { name: 'Sam Lee', totalCalls: 240, holdTime: 66, aht: 412 },
         [M('holdTime', 'Hold Time', 26, 30, 'max', true), M('aht', 'Average Handle Time', 410, 426, 'max', true)]);
     const realDrawn = await drawHighFives(real, 60);
-    t.check('"Hold Time ... down 40 seconds (66s to 26s)"', realDrawn.every(m => /Hold Time[^\n]*down 40 seconds/.test(m) && m.indexOf('(66s to 26s)') > -1));
+    t.check('"Hold Time ... down 40 seconds, from 66 to 26"', realDrawn.every(m => /Hold Time[^\n]*down 40 seconds/.test(m) && m.indexOf('from 66 to 26') > -1));
+    t.equal('the range is said in the sentence, never in brackets', realDrawn.filter(m => /\(\d+s? to \d+s?\)/.test(m)).length, 0);
     t.equal('never "Hold Time at -40s"', realDrawn.filter(m => /at -\d|-40s/.test(m)).length, 0);
 });
 
@@ -449,7 +450,7 @@ suite('pulse voice: a September review on October 14 says September', async (t) 
     for (let i = 0; i < 60; i++) toughOut.push(await tough.generateMonthlyCheckinMessage('Sam Lee', 'm9', 'm8'));
     t.equal('nothing on target is not counted out loud', toughOut.filter(m => /\b0 of\b/.test(m)).length, 0);
     t.equal('and is not signed off as a solid month', toughOut.filter(m => /Solid month overall|even better month/.test(m)).length, 0);
-    t.check('the focus looks ahead to October', toughOut.every(m => /October|going forward|biggest opportunity/.test(m)));
+    t.check('the focus looks ahead to October', toughOut.every(m => /October|going forward|biggest opportunity/i.test(m)));
 });
 
 suite('pulse voice: growth says what moved, in the right tone', async (t) => {
@@ -464,7 +465,7 @@ suite('pulse voice: growth says what moved, in the right tone', async (t) => {
     t.equal('no rising chart over an all-decline message', out.filter(m => /📈/.test(m)).length, 0);
     t.equal('no "Keep climbing"', out.filter(m => /Keep climbing/.test(m)).length, 0);
     t.check('the weeks are named by their first day', out.every(m => /the week of Oct 5/.test(m) && /the week of Sep 28/.test(m)));
-    t.check('moves in words', out.every(m => /Average Handle Time: up 40 seconds \(480s to 520s\)/.test(m)));
+    t.check('moves in words', out.every(m => /Average Handle Time slipped 40 seconds, from 480 to 520\./.test(m) && !/^• |Growing:|Slipped a bit:|Focus area:/m.test(m)));
 
     const flat = loadOne(t, before, Object.assign({}, before), metrics);
     global.window.DevCoachModules.periodIndex = { currentIndex: () => ({}), weekLikeKeys: () => [W2, W1], keysOfType: () => [] };

@@ -61,28 +61,32 @@
     // `range` the two numbers it went between ("146s to 106s"). Scott,
     // 2026-10-14: "Hold Time at -40s" read as though hold time was minus forty
     // seconds. Every line here says the move the way a person would.
+    //
+    // The range rides inside the sentence, "down 202 seconds, from 617 to
+    // 415", where it used to trail in brackets, "(617s to 415s)", which reads
+    // as a footnote nobody says out loud (Scott, 2026-10-26).
     const JUMP_INTROS = [
-        (label, delta, range, when) => `Huge improvement in ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `Big move in ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `Love seeing ${label} move like that${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `${label} really stood out${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `You crushed it on ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `That swing in ${label} caught my eye${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `${label} moved in a serious way${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Not gonna lie, ${label} coming ${delta}${at(when)} made me do a double take. (${range})`,
-        (label, delta, range, when) => `Okay, ${label}! ${capFirst(delta)}${at(when)}. (${range})`,
-        (label, delta, range, when) => `Your ${label} went the right direction${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Seriously though, ${label} moving ${delta}${at(when)} is no joke. (${range})`,
-        (label, delta, range, when) => `Look at ${label} go${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `${label} took a real shift${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Gotta call out your ${label}${at(when)}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Huge improvement in ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `Big move in ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `Love seeing ${label} move like that${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `${label} really stood out${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `You crushed it on ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `That swing in ${label} caught my eye${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `${label} moved in a serious way${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Not gonna lie, ${label} coming ${delta}${at(when)}, from ${range}, made me do a double take.`,
+        (label, delta, range, when) => `Okay, ${label}! ${capFirst(delta)}${at(when)}, from ${range}.`,
+        (label, delta, range, when) => `Your ${label} went the right direction${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Seriously though, ${label} moving ${delta}${at(when)}, from ${range}, is no joke.`,
+        (label, delta, range, when) => `Look at ${label} go${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `${label} took a real shift${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Gotta call out your ${label}${at(when)}, ${delta}, from ${range}.`,
     ];
     const PLUS_SOLID = [
         (label, val) => `Plus you're solid on ${label} at ${val}.`,
         (label, val) => `And ${label} sitting at ${val} is great too.`,
         (label, val) => `${label} at ${val} is right where it needs to be.`,
         (label, val) => `Also, ${label} at ${val}? Nice.`,
-        (label, val) => `Oh and ${label} is cruising along at ${val}. No complaints there.`,
+        (label, val) => `${label} is cruising along at ${val} too, no complaints there.`,
         (label, val) => `Can't forget ${label} at ${val}, that's looking clean.`,
         (label, val) => `${label} holding steady at ${val} too. Solid.`,
         (label, val) => `Meanwhile ${label} is sitting pretty at ${val}.`,
@@ -250,9 +254,11 @@
             (label, val, center) => `Your ${label} at ${val} came in better than the center average of ${center}. That's a real strength.`,
             (label, val, center) => `${label} at ${val} beat the center average of ${center}. Nice work there.`,
         ],
+        // Still a miss, so it is named as close, never as good news
+        // (Scott, 2026-10-26).
         closest: [
-            (label, val, target) => `${label} was your closest to goal, at ${val} against the ${target} goal, and that's a good place to build from.`,
-            (label, val, target, gap) => `Your ${label} at ${val} came within ${gap} of the ${target} goal, the closest of all your numbers. That's something to build on.`,
+            (label, val, target, gap) => `${label} was your closest to goal, ${val} with ${withArticle(target)} goal, ${gap} short.`,
+            (label, val, target, gap) => `Your ${label} at ${val} came within ${gap} of the ${target} goal, the closest of all your numbers.`,
         ]
     };
     const TRUE_POSITIVE_ONGOING = {
@@ -265,8 +271,8 @@
             (label, val, center) => `${label} at ${val} is beating the center average of ${center}. Nice work there.`,
         ],
         closest: [
-            (label, val, target) => `${label} is your closest to goal, at ${val} against the ${target} goal, and that's a good place to build from.`,
-            (label, val, target, gap) => `Your ${label} at ${val} is within ${gap} of the ${target} goal, the closest of all your numbers. That's something to build on.`,
+            (label, val, target, gap) => `${label} is your closest to goal, ${val} with ${withArticle(target)} goal, so ${gap} to go.`,
+            (label, val, target, gap) => `Your ${label} at ${val} is within ${gap} of the ${target} goal, the closest of all your numbers, and you can get there.`,
         ]
     };
     // --- Focus framing pools, keyed by how the period vs YTD look together ---
@@ -279,29 +285,36 @@
     // `when` names the period the value is from (last week, in September,
     // this year), from describeWeekRecency. Every line used to say "last week",
     // so a month's number went out labelled as a week's.
+    //
+    // Said as encouragement, the way Scott would say it across the desk
+    // (2026-10-26): "This one needs real attention", "It's been a pattern, not
+    // a blip" and "We need to turn this around" read as a scolding, and "628s
+    // last week, YTD at 626s, target 426s" stacked three numbers in a row. Two
+    // numbers to a sentence at most now, the goal always named, and the year
+    // said in words.
     const FOCUS_PERSISTENT = [
-        (label, val, ytdVal, target, when) => `One thing to zero in on: ${label}. You came in at ${val}${at(when)} and YTD is sitting at ${ytdVal} (target ${target}). This one needs real attention.`,
-        (label, val, ytdVal, target, when) => `Let's work on ${label} together. You landed at ${val}${at(when)}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
-        (label, val, ytdVal, target, when) => `The one I really want us to tackle: ${label}. ${val}${at(when)}, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
-        (label, val, ytdVal, target, when) => `${label} is the focus. You came in at ${val}${at(when)}, YTD at ${ytdVal}, target ${target}. It keeps missing and I want us to change that.`,
+        (label, val, ytdVal, target, when) => `${label} is the one I'd love us to work on together. You came in at ${val}${at(when)} with the goal at ${target}, so let's chip away at it.`,
+        (label, val, ytdVal, target, when) => `Let's work on ${label} together. You landed at ${val}${at(when)}, and the year is at ${ytdVal}. The goal is ${target}, and I think we can get there a little at a time.`,
+        (label, val, ytdVal, target) => `If there's one thing to go after, it's ${label}. You're at ${ytdVal} for the year with ${withArticle(target)} goal, and every call is a chance to bring it closer.`,
+        (label, val, ytdVal, target, when) => `${label} is where I'd put our energy. You came in at ${val}${at(when)}, and ${target} is the goal. Small steps add up, and I'm right here with you.`,
     ];
     // "Pull the YTD back up" was said about handle time too, where up is the
     // wrong way. These name the target instead of a direction.
     const FOCUS_YTD_ONLY = [
-        (label, val, ytdVal, target, when) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. You were better${at(when)} at ${val}. Let's keep that going and get the YTD to target.`,
-        (label, val, ytdVal, target, when) => `You had ${label} at ${val}${at(when)}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so we need to keep that momentum going.`,
-        (label, val, ytdVal, target, when) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but hitting ${val}${at(when)} shows you can do it. Let's repeat.`,
+        (label, val, ytdVal, target, when) => `Nice work on ${label}${at(when)} at ${val}. The year is still at ${ytdVal} with ${withArticle(target)} goal, so more stretches like that are how we get it there.`,
+        (label, val, ytdVal, target, when) => `You had ${label} at ${val}${at(when)}, which is great. Keep that going, and that's how the year, at ${ytdVal} right now, gets to ${target}.`,
+        (label, val, ytdVal, target, when) => `${label} is the one to keep pushing on. Hitting ${val}${at(when)} shows you can do it, and doing it again is what brings the year to ${target}.`,
     ];
     const FOCUS_WEEK_DIP = [
-        (label, val, ytdVal, target, when) => `Quick note on ${label}: it dipped to ${val}${at(when)} but your YTD is solid at ${ytdVal} (target ${target}). Not worried, just want to shake off the blip.`,
-        (label, val, ytdVal, target, when) => `${label} slipped to ${val}${at(when)}, but your YTD at ${ytdVal} is still on target (${target}). Let's get back to normal.`,
-        (label, val, ytdVal, target, when) => `Only watch-out: ${label} landed at ${val}${at(when)}. YTD ${ytdVal} vs target ${target} says you're fine. Just don't let it turn into a trend.`,
+        (label, val, ytdVal, target, when) => `Quick note on ${label}: it dipped to ${val}${at(when)} with the goal at ${target}, but your year is solid at ${ytdVal}. Nothing to worry about, let's just get it back where it usually is.`,
+        (label, val, ytdVal, target, when) => `${label} slipped to ${val}${at(when)}, but the year is still on target at ${ytdVal}. You know how to do this, so let's get back to normal.`,
+        (label, val, ytdVal, target, when) => `${label} came in at ${val}${at(when)}, a little off your usual and the ${target} goal. Your year at ${ytdVal} says you've got this.`,
     ];
     const FOCUS_FALLBACK = [
-        (label, val, target, when) => `One thing to zero in on: ${label}. You came in at ${val}${at(when)}, target is ${target}.`,
-        (label, val, target, when) => `Let's work on getting ${label} closer to target (${val}${at(when)} vs ${target}).`,
-        (label, val, target, when) => `Area to focus on: ${label} came in at ${val}${at(when)}, we want ${target}.`,
-        (label, val, target, when) => `If I had to pick one thing, it'd be ${label}. You landed at ${val}${at(when)}, target is ${target}.`,
+        (label, val, target, when) => `${label} is the one I'd love us to work on. You came in at ${val}${at(when)} with the goal at ${target}, and I think you can get there.`,
+        (label, val, target, when) => `Let's work on getting ${label} closer to ${target}. You came in at ${val}${at(when)}, and every call is a chance to move it.`,
+        (label, val, target, when) => `If I had to pick one thing, it'd be ${label}. You landed at ${val}${at(when)}, with ${withArticle(target)} goal to aim for.`,
+        (label, val, target, when) => `${label} is where I'd focus next. You came in at ${val}${at(when)}, and ${target} is the goal. Let's close that together.`,
     ];
     /* The focus metric is the one the praise just credited.
      *
@@ -384,7 +397,7 @@
         (name) => `Top of the week ${name}! Here's your latest numbers and our focus for the days ahead.`,
         (name) => `Rise and shine ${name}! 🌅 Let me share your numbers and set us up for a strong week.`,
         (name, day) => `${day}'s here ${name}! Quick peek at your results and what to aim for this week.`,
-        (name) => `${name}, new week, new opportunity. Let's see what we're working with. 📈`,
+        (name) => `${name}! Let's take a look at where you are and where we're headed this week. 📈`,
         (name) => `Hey ${name}! Starting the week off by looking at your wins and setting a focus. Let's go!`,
     ];
 
@@ -455,7 +468,7 @@
         'Love the wins. Now here\'s the game plan for this week.',
         'Let\'s build on that momentum with a focus area.',
         'Great foundation. Here\'s where I want us to focus.',
-        'With those wins in mind, let\'s talk opportunity.',
+        'With those wins in mind, here\'s where I think you can grow next.',
     ];
     // True after anything: wins, a slide, or an effort line.
     const MK_TRANSITION_NEUTRAL = [
@@ -473,28 +486,26 @@
     // stretch the focus is for: this week, or next week when the tone is
     // Friday's, which is the day the week in front of us is the next one.
     const MK_FOCUS_PERSISTENT = [
-        (label, val, ytdVal, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You came in at ${val}${at(when)} and YTD is at ${ytdVal} vs target ${target}. It's been a pattern and I want us to break it.`,
-        (label, val, ytdVal, target, when) => `The one to attack: ${label}. ${val}${at(when)}, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
-        (label, val, ytdVal, target, when) => `Game plan: get ${label} moving. ${val}${at(when)}, ${ytdVal} YTD, we need ${target}. I'll help however you need.`,
-        (label, val, ytdVal, target, when, ahead) => `The mission ${ahead}: ${label}. You landed at ${val}${at(when)}, YTD ${ytdVal} vs target ${target}. I think you can get there. Let's lock in.`,
-        (label, val, ytdVal, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. ${val}${at(when)}, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
+        (label, val, ytdVal, target, when, ahead) => `Let's go after ${label} ${ahead}. You came in at ${val}${at(when)}, and the goal is ${target}. I think we can chip away at it together.`,
+        (label, val, ytdVal, target, when, ahead) => `${label} is the one I'd love us to work on ${ahead}. The year is at ${ytdVal} with ${withArticle(target)} goal, and small improvements add up.`,
+        (label, val, ytdVal, target, when, ahead) => `I think you can move ${label} ${ahead}. You came in at ${val}${at(when)} with the goal at ${target}, and I'll help however you need.`,
+        (label, val, ytdVal, target, when, ahead) => `My one ask ${ahead} is to be intentional about ${label}. You came in at ${val}${at(when)}, and ${target} is the goal.`,
     ];
     const MK_FOCUS_YTD_ONLY = [
-        (label, val, ytdVal, target, when) => `Love that ${label} came in at ${val}${at(when)}. Now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is getting that number to target.`,
-        (label, val, ytdVal, target, when) => `Your focus: repeat what you did on ${label}${at(when)} (${val}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
-        (label, val, ytdVal, target, when) => `${label} is the one to keep pushing. Hitting ${val}${at(when)} was the right direction. YTD is at ${ytdVal}, target ${target}, so let's keep stringing those together.`,
-        (label, val, ytdVal, target, when) => `Here's the one to own: ${label}. Hitting ${val}${at(when)} shows you can do it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
+        (label, val, ytdVal, target, when) => `Love that ${label} came in at ${val}${at(when)}. Let's make that the norm, because that's how the year, at ${ytdVal} now, gets to ${target}.`,
+        (label, val, ytdVal, target, when) => `Let's keep doing what you did on ${label}${at(when)}. More stretches like ${val} are what bring the year to ${target}.`,
+        (label, val, ytdVal, target, when, ahead) => `${label} is the one to keep pushing ${ahead}. Hitting ${val}${at(when)} was the right direction, and the year is still working its way to ${target}.`,
     ];
     const MK_FOCUS_WEEK_DIP = [
-        (label, val, ytdVal, target, when) => `Only thing on my radar: ${label} dipped to ${val}${at(when)}. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-off. Just don't let it turn into a trend.`,
-        (label, val, ytdVal, target, when, ahead) => `Watch-out for ${ahead}: ${label}. You landed at ${val}${at(when)}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
-        (label, val, ytdVal, target, when) => `One thing to keep in mind: ${label} slipped to ${val}${at(when)}. YTD at ${ytdVal}, target ${target}. You're fine, just shake off the dip.`,
+        (label, val, ytdVal, target, when) => `Just one small thing: ${label} dipped to ${val}${at(when)} with the goal at ${target}. Your year is solid at ${ytdVal}, so it's a one-off. Let's get it back.`,
+        (label, val, ytdVal, target, when, ahead) => `Let's reset on ${label} ${ahead}. You landed at ${val}${at(when)}, but your year at ${ytdVal} says you know how to do this.`,
+        (label, val, ytdVal, target, when) => `${label} slipped to ${val}${at(when)}, a little off your usual. The year is still on target at ${ytdVal}, so you're in good shape.`,
     ];
     const MK_FOCUS_FALLBACK = [
-        (label, val, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You came in at ${val}${at(when)}, target is ${target}.`,
-        (label, val, target, when) => `The one to attack: ${label}. ${val}${at(when)} vs target ${target}. Let's close that gap.`,
-        (label, val, target, when, ahead) => `The mission ${ahead}: ${label}. You landed at ${val}${at(when)}, target ${target}. I think you can get there.`,
-        (label, val, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. You came in at ${val}${at(when)}, aiming for ${target}.`,
+        (label, val, target, when, ahead) => `Let's go after ${label} ${ahead}. You came in at ${val}${at(when)}, and the goal is ${target}.`,
+        (label, val, target, when, ahead) => `${label} is the one I'd love us to work on ${ahead}. You came in at ${val}${at(when)} with ${withArticle(target)} goal to aim for, and I think you can get there.`,
+        (label, val, target, when, ahead) => `I think you can move ${label} ${ahead}. You landed at ${val}${at(when)}, and ${target} is the goal.`,
+        (label, val, target, when, ahead) => `My one ask ${ahead} is to be intentional about ${label}. You came in at ${val}${at(when)}, aiming for ${target}.`,
     ];
     const MK_ALL_GOOD = [
         'You\'re hitting target across the board. Incredible work. Let\'s keep that going this week!',
@@ -563,13 +574,13 @@
         (label) => `The plan was to attack ${label} this week.`,
         (label) => `${label} was the metric we wanted to own this week.`,
         (label) => `You've been working on ${label} this week.`,
-        (label) => `We identified ${label} as the one to move this week.`,
+        (label) => `${label} is the one we picked to work on this week.`,
         (label) => `This week's focus has been ${label}.`,
         (label) => `We zeroed in on ${label} as the metric to move.`,
         (label) => `The one we locked in on this week: ${label}.`,
         (label) => `You've had ${label} in your sights all week.`,
         (label) => `${label} was the priority we landed on to start the week.`,
-        (label) => `We chose ${label} as the lever to pull this week.`,
+        (label) => `We picked ${label} to work on together this week.`,
         (label) => `The number you've been hunting this week is ${label}.`,
         (label) => `${label} is where we pointed the attention this week.`,
         (label) => `Our commitment this week was to lean into ${label}.`,
@@ -590,7 +601,7 @@
         (label, val, target) => `This is the stuff. ${label} at ${val}, target is ${target}. Nailing it.`,
         (label, val, target) => `Goal met. ${label} sitting at ${val} (target ${target}). Keep it rolling.`,
         (label, val, target) => `You're there. ${label} at ${val} is clearing ${target}. That's the formula.`,
-        (label, val, target) => `${label}: ${val}. Target: ${target}. Verdict: right on track.`,
+        (label, val, target) => `${label} at ${val} is right on track for the ${target} goal.`,
         (label, val, target) => `The ${label} number (${val}) is past ${target}. Don't let up, but take a second to feel good about that.`,
         (label, val, target) => `Over the line already. ${label} at ${val}, target ${target}. Big deal.`,
         (label, val, target) => `${label} at ${val} is a real midweek statement. ${target} is the ask and you're past it.`,
@@ -602,36 +613,36 @@
         (label, val, target, gap) => `${label} at ${val} is so close to ${target} (just ${gap} away). This is very doable.`,
         (label, val, target, gap) => `Getting there! ${label} at ${val}, ${gap} to go before ${target}. Love the progress.`,
         (label, val, target, gap) => `The gap on ${label} is shrinking. ${val} vs ${target}, just ${gap} to go. Keep building.`,
-        (label, val, target, gap) => `${label}: ${val}. Target: ${target}. Gap: ${gap}. That's absolutely closeable this week.`,
+        (label, val, target, gap) => `${label} is at ${val}, ${gap} from ${target}. That's absolutely closeable this week.`,
         (label, val, target, gap) => `You're in striking distance on ${label}. ${val} now, ${target} goal, ${gap} to go.`,
         (label, val, target, gap) => `${label} is within reach. ${val} now, ${target} target, only ${gap} between.`,
         (label, val, target, gap) => `You can see the finish line on ${label}. ${val} today, ${gap} from ${target}.`,
         (label, val, target, gap) => `${label} is knocking on the door. ${val} vs ${target}, just ${gap}. One good stretch closes it.`,
         (label, val, target, gap) => `Super close on ${label}. ${val} vs ${target}, ${gap} off. A couple intentional calls gets you there.`,
         (label, val, target, gap) => `${label} at ${val} is a whisper away from ${target}. Only ${gap} separates you.`,
-        (label, val, target, gap) => `You're on the doorstep of ${label}. ${val}, need ${target}, gap of ${gap}.`,
+        (label, val, target, gap) => `You're on the doorstep with ${label}, ${val} now and ${gap} from ${target}.`,
         (label, val, target, gap) => `Almost. ${label} at ${val}, ${gap} shy of ${target}. That's a finish-the-week problem, nothing bigger.`,
         (label, val, target, gap) => `${label} is trending right where we want it. ${val} now, ${gap} from ${target}. Stay on it.`,
         (label, val, target, gap) => `You're setting up ${label} to land. ${val} vs ${target}, ${gap} left on the table.`,
     ];
     const MW_BEHIND = [
         (label, val, target, gap) => `${label} is at ${val}, still ${gap} from the ${target} target. But we've got time. Let's be intentional about it.`,
-        (label, val, target, gap) => `We've got some ground to cover on ${label}. ${val} vs ${target}, ${gap} away. Let's go get it.`,
-        (label, val, target, gap) => `${label} at ${val} is a stretch from ${target} (${gap} away), but every call is a chance to move it.`,
-        (label, val, target, gap) => `Real talk: ${label} at ${val} needs work to reach ${target} (${gap} away). Let's make these last days count.`,
-        (label, val, target, gap) => `${label} is sitting at ${val}, ${gap} short of ${target}. Not where we want it, but the week isn't over.`,
-        (label, val, target, gap) => `The ${label} number at ${val} is behind target (${target}, ${gap} to go). Let's focus on what we can control.`,
-        (label, val, target, gap) => `${label}: ${val}. We need ${target}. That's ${gap} to make up, and I've seen you close bigger ones.`,
-        (label, val, target, gap) => `Not gonna sugarcoat it. ${label} at ${val} vs ${target} (${gap}) needs attention. But there's still time.`,
-        (label, val, target, gap) => `Want to be straight with you on ${label}. ${val} with ${gap} to go to ${target}. Let's tighten up.`,
-        (label, val, target, gap) => `${label} at ${val} is off the pace (${target}, ${gap} to go). Let's turn it this week.`,
-        (label, val, target, gap) => `${label} needs a push. ${val} today, ${target} goal, ${gap} between. Two days can still move it.`,
-        (label, val, target, gap) => `The ${label} number (${val}) isn't where we want it yet. ${gap} shy of ${target}. Let's get intentional.`,
-        (label, val, target, gap) => `${label} is trailing at ${val} vs ${target}, and that's ${gap} of daylight. Time to refocus.`,
-        (label, val, target, gap) => `On ${label}, we're at ${val} with ${gap} to climb to ${target}. Not ideal, but fixable with focus.`,
-        (label, val, target, gap) => `I won't dress it up. ${label} at ${val} needs real attention to hit ${target} (${gap} to go). Let's go work.`,
-        (label, val, target, gap) => `${label} is the one that needs love right now. ${val} against ${target}, ${gap} away. Doable with intention.`,
-        (label, val, target, gap) => `Gonna call it. ${label} at ${val} is behind (${gap} from ${target}). Let's finish the week pushing on this.`,
+        (label, val, target, gap) => `We've got some ground to cover on ${label}, ${val} with ${gap} to go to ${target}. Let's go get it.`,
+        (label, val, target, gap) => `${label} at ${val} is a stretch from ${target}, ${gap} away, but every call is a chance to move it.`,
+        (label, val, target, gap) => `${label} is at ${val}, ${gap} from ${target}. Let's make these last few days count.`,
+        (label, val, target, gap) => `${label} is sitting at ${val}, ${gap} short of ${target}. Not where we want it yet, but the week isn't over.`,
+        (label, val, target, gap) => `${label} is at ${val} with ${gap} to go to ${target}. Let's focus on what we can control.`,
+        (label, val, target, gap) => `${label} is at ${val} with ${withArticle(target)} goal. That's ${gap} to make up, and I've seen you close bigger ones.`,
+        (label, val, target, gap) => `${label} is at ${val}, ${gap} from ${target}, and there's still time to move it.`,
+        (label, val, target, gap) => `I'd love to see ${label} move before the week is out. You're at ${val}, ${gap} from ${target}.`,
+        (label, val, target, gap) => `${label} at ${val} has ${gap} to go to ${target}, and we can turn it this week.`,
+        (label, val, target, gap) => `${label} could use a push. You're at ${val} with ${gap} to go to ${target}, and two days can still move it.`,
+        (label, val, target, gap) => `${label} isn't quite where we want it yet, ${val} and ${gap} shy of ${target}. A few intentional calls will help.`,
+        (label, val, target, gap) => `${label} is at ${val}, ${gap} from ${target}. Let's refocus on it together.`,
+        (label, val, target, gap) => `On ${label}, you're at ${val} with ${gap} to climb to ${target}, and that's very fixable.`,
+        (label, val, target, gap) => `${label} at ${val} is the one to work on, ${gap} from ${target}. Let's go get it together.`,
+        (label, val, target, gap) => `${label} is the one that could use some love right now, ${val} and ${gap} from ${target}. Very doable.`,
+        (label, val, target, gap) => `Let's finish the week pushing on ${label}. You're at ${val}, ${gap} from ${target}.`,
     ];
     const MW_NO_FOCUS_SET = [
         'Here\'s a quick look at how the week is going so far.',
@@ -656,12 +667,12 @@
         (label) => ` ${label} isn't showing fresh yet. Keep pushing like it is.`,
     ];
     const MW_FALLBACK_FOCUS = [
-        (label, cur, tgt) => `\n\nThe metric I'd focus on for the rest of the week: ${label} at ${cur} (target ${tgt}).`,
-        (label, cur, tgt) => `\n\nIf you ask me what to lean into the rest of the week: ${label} (${cur} vs ${tgt}).`,
-        (label, cur, tgt) => `\n\nHere's the one I'd chase down: ${label} at ${cur}, target ${tgt}.`,
-        (label, cur, tgt) => `\n\nThe lever worth pulling the rest of this week: ${label} (${cur}, target ${tgt}).`,
-        (label, cur, tgt) => `\n\nMy suggested focus the next couple days: ${label}, sitting at ${cur} against ${withArticle(tgt)} target.`,
-        (label, cur, tgt) => `\n\nWhere I'd spend the attention: ${label}. ${cur} right now, ${tgt} is the goal.`,
+        (label, cur, tgt) => `\n\nThe one I'd focus on for the rest of the week is ${label}, at ${cur} with ${withArticle(tgt)} goal.`,
+        (label, cur, tgt) => `\n\nIf you ask me what to lean into the rest of the week, it's ${label}. You're at ${cur}, and the goal is ${tgt}.`,
+        (label, cur, tgt) => `\n\nThe one I'd chase down is ${label}, ${cur} now with the goal at ${tgt}.`,
+        (label, cur, tgt) => `\n\nIf there's one thing to work on the rest of this week, it's ${label}. You're at ${cur}, aiming for ${tgt}.`,
+        (label, cur, tgt) => `\n\nFor the next couple of days, I'd focus on ${label}, sitting at ${cur} against ${withArticle(tgt)} target.`,
+        (label, cur, tgt) => `\n\nI'd spend the attention on ${label}. You're at ${cur} right now, and ${tgt} is the goal.`,
     ];
     const MW_BRIGHT_SIDE = [
         (label, val) => ` On the bright side, ${label} at ${val} is looking good.`,
@@ -741,16 +752,16 @@
     // ("down 40 seconds") and `range` the two numbers ("66s to 26s"): "When I
     // saw Hold Time at -40s" read as though hold time was minus forty seconds.
     const HF_JUMP = [
-        (label, delta, range, when) => `Incredible move in ${label}${at(when)}, ${delta}! (${range}) That kind of progress stands out.`,
-        (label, delta, range, when) => `You moved ${label} in a big way${at(when)}, ${delta}! (${range}) That's impressive.`,
-        (label, delta, range, when) => `${label} took a real swing${at(when)}, ${delta}! (${range}) Love to see it.`,
-        (label, delta, range, when) => `The progress on ${label}${at(when)} is awesome, ${delta}! (${range}) Keep that energy.`,
-        (label, delta, range, when) => `Your ${label} moved ${delta}${at(when)} and honestly it's one of the best improvements I've seen. (${range})`,
-        (label, delta, range, when) => `Moving ${label} ${delta}${at(when)} is worth celebrating. (${range}) That took real effort.`,
-        (label, delta, range, when) => `${label} took a big step${at(when)}, ${delta}. (${range}) You should feel good about that.`,
-        (label, delta, range, when) => `I have to point out that ${label} swing${at(when)}, ${delta}. (${range}) That's not easy to do.`,
-        (label, delta, range, when) => `When I saw ${label} come ${delta}${at(when)}, I knew I had to say something. (${range}) Wow.`,
-        (label, delta, range, when) => `The kind of improvement you showed on ${label}${at(when)}, ${delta}, doesn't happen by accident. (${range})`,
+        (label, delta, range, when) => `Incredible move in ${label}${at(when)}, ${delta}, from ${range}! That kind of progress stands out.`,
+        (label, delta, range, when) => `You moved ${label} in a big way${at(when)}, ${delta}, from ${range}! That's impressive.`,
+        (label, delta, range, when) => `${label} took a real swing${at(when)}, ${delta}, from ${range}! Love to see it.`,
+        (label, delta, range, when) => `The progress on ${label}${at(when)} is awesome, ${delta}, from ${range}! Keep that energy.`,
+        (label, delta, range, when) => `Your ${label} moved ${delta}${at(when)}, from ${range}, and honestly it's one of the best improvements I've seen.`,
+        (label, delta, range, when) => `Moving ${label} ${delta}${at(when)}, from ${range}, is worth celebrating. That took real effort.`,
+        (label, delta, range, when) => `${label} took a big step${at(when)}, ${delta}, from ${range}. You should feel good about that.`,
+        (label, delta, range, when) => `I have to point out that ${label} swing${at(when)}, ${delta}, from ${range}. That's not easy to do.`,
+        (label, delta, range, when) => `When I saw ${label} come ${delta}${at(when)}, from ${range}, I knew I had to say something.`,
+        (label, delta, range, when) => `The kind of improvement you showed on ${label}${at(when)}, ${delta}, from ${range}, doesn't happen by accident.`,
     ];
     const HF_TWO_WINS = [
         (l1, v1, l2, v2, when) => `Your ${l1} at ${v1} and ${l2} at ${v2} were outstanding!`,
@@ -800,7 +811,7 @@
         extras => `And ${extras} too? You're firing on all cylinders.`,
         extras => `Plus ${extras}. Just an all-around great showing.`,
         extras => `Not to mention ${extras}. Seriously impressive.`,
-        extras => `Oh and did I mention ${extras}? Because yeah, that happened too.`,
+        extras => `${capFirst(extras)} too, and that's a lot to be proud of.`,
         extras => `And to top it all off, ${extras}. Love it.`,
         extras => `Then there's ${extras} on top of everything else. ${hypeYou(false)}.`,
         extras => `Can't forget about ${extras} either. Just stacking wins.`,
@@ -809,9 +820,15 @@
     // basically had the perfect run" went to someone over the AHT target.
     // `extras` can end "and every other goal too", so the sentence stops
     // there rather than adding a second "and".
+    //
+    // "There's nothing left to ask for" and "basically the perfect run" were
+    // the only two, so they went out about 390 times each in one audit, and
+    // "run" landed twice in 42 messages that opened "What a run" (10/25).
     const HF_EXTRAS_SWEEP = [
-        extras => `On top of that: ${extras}. That's basically the perfect run.`,
+        extras => `On top of that: ${extras}. That's about as complete as it gets.`,
         extras => `Plus ${extras}. There's nothing left to ask for.`,
+        extras => `And ${extras}. Every box checked.`,
+        extras => `${capFirst(extras)}, too. Honestly, that's everything.`,
     ];
     const HF_CONSISTENCY = [
         (on, total) => `${on} out of ${total} goals hitting target, that's consistency right there.`,
@@ -896,12 +913,12 @@
         (name, month) => `${name}, here's where ${month} stands so far.`,
     ];
     const MO_JUMP = [
-        (label, delta, range, when) => `Big move in ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `Standout improvement${at(when)}: ${label}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Love watching ${label} head the right way${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `The progress on ${label}${at(when)} speaks for itself, ${delta}. (${range})`,
-        (label, delta, range, when) => `${label} is the big story${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Gotta call out ${label}${at(when)}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Big move in ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `${label} was a standout improvement${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Love watching ${label} head the right way${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `The progress on ${label}${at(when)} speaks for itself, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `${label} is the big story${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Gotta call out ${label}${at(when)}, ${delta}, from ${range}.`,
     ];
     const MO_TWO_WINS = [
         (l1, v1, l2, v2, when) => `${l1} at ${v1} and ${l2} at ${v2}, both strong${at(when)}.`,
@@ -938,7 +955,7 @@
     const MO_FOCUS = [
         (label, val, target, ahead) => `Heading into ${ahead}, let's target ${label} (${val} against the ${target} goal).`,
         (label, val, target, ahead) => `For ${ahead}, the priority is ${label} (sitting at ${val}, target ${target}).`,
-        (label, val, target) => `Main focus going forward: ${label} at ${val}, we need ${target}.`,
+        (label, val, target) => `Going forward, I'd love us to work on ${label}. You're at ${val}, with ${withArticle(target)} goal to aim for.`,
         (label, val, target, ahead) => `If we nail one thing in ${ahead}, let it be ${label} (${val} vs ${target}).`,
         (label, val, target, ahead) => `I want us to put real energy into ${label} in ${ahead}. At ${val}, shooting for ${target}.`,
         (label, val, target) => `The biggest opportunity I see? ${label} at ${val}. Target is ${target} and I know you can close that gap.`,
@@ -1008,81 +1025,79 @@
         (date, when) => `Here's the story ${when} so far.`,
     ];
     const JUMP_INTROS_ONGOING = [
-        (label, delta, range, when) => `Huge improvement in ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `Big move in ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `Love seeing ${label} move like that${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `${label} is really standing out${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `You're crushing it on ${label}${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `That swing in ${label}${at(when)} is catching my eye, ${delta}. (${range})`,
-        (label, delta, range, when) => `${label} is moving in a serious way${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Not gonna lie, ${label} coming ${delta}${at(when)} has me doing a double take. (${range})`,
-        (label, delta, range, when) => `Okay, ${label}! ${capFirst(delta)}${at(when)}. (${range})`,
-        (label, delta, range, when) => `Your ${label} is heading the right direction${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Seriously though, ${label} moving ${delta}${at(when)} is no joke. (${range})`,
-        (label, delta, range, when) => `Look at ${label} go${at(when)}, ${delta}! (${range})`,
-        (label, delta, range, when) => `${label} is taking a real shift${at(when)}, ${delta}. (${range})`,
-        (label, delta, range, when) => `Gotta call out your ${label}${at(when)}, ${delta}. (${range})`,
+        (label, delta, range, when) => `Huge improvement in ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `Big move in ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `Love seeing ${label} move like that${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `${label} is really standing out${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `You're crushing it on ${label}${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `That swing in ${label}${at(when)} is catching my eye, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `${label} is moving in a serious way${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Not gonna lie, ${label} coming ${delta}${at(when)}, from ${range}, has me doing a double take.`,
+        (label, delta, range, when) => `Okay, ${label}! ${capFirst(delta)}${at(when)}, from ${range}.`,
+        (label, delta, range, when) => `Your ${label} is heading the right direction${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Seriously though, ${label} moving ${delta}${at(when)}, from ${range}, is no joke.`,
+        (label, delta, range, when) => `Look at ${label} go${at(when)}, ${delta}, from ${range}!`,
+        (label, delta, range, when) => `${label} is taking a real shift${at(when)}, ${delta}, from ${range}.`,
+        (label, delta, range, when) => `Gotta call out your ${label}${at(when)}, ${delta}, from ${range}.`,
     ];
     const TWO_WINS_ONGOING = TWO_WINS.map((fn) => (/nailed it/i.test(fn('a', 'b', 'c', 'd'))
         ? (l1, v1, l2, v2) => `You're nailing it on ${l1} (${v1}) and ${l2} (${v2}).`
         : fn));
     const FOCUS_PERSISTENT_ONGOING = [
-        (label, val, ytdVal, target, when) => `One thing to zero in on: ${label}. You're at ${val}${at(when)} so far and YTD is sitting at ${ytdVal} (target ${target}). This one needs real attention.`,
-        (label, val, ytdVal, target, when) => `Let's work on ${label} together. You're sitting at ${val}${at(when)}, YTD at ${ytdVal}, target is ${target}. It's been a pattern, not a blip.`,
-        (label, val, ytdVal, target, when) => `The one I really want us to tackle: ${label}. ${val}${at(when)} so far, ${ytdVal} YTD, target ${target}. We need to turn this around.`,
-        (label, val, ytdVal, target, when) => `${label} is the focus. You're at ${val}${at(when)}, YTD at ${ytdVal}, target ${target}. It keeps missing and I want us to change that.`,
+        (label, val, ytdVal, target, when) => `${label} is the one I'd love us to work on together. You're at ${val}${at(when)} so far with the goal at ${target}, so let's chip away at it.`,
+        (label, val, ytdVal, target, when) => `Let's work on ${label} together. You're at ${val}${at(when)} so far, and the year is at ${ytdVal}. The goal is ${target}, and I think we can get there a little at a time.`,
+        (label, val, ytdVal, target) => `If there's one thing to go after, it's ${label}. You're at ${ytdVal} for the year with ${withArticle(target)} goal, and every call is a chance to bring it closer.`,
+        (label, val, ytdVal, target, when) => `${label} is where I'd put our energy. You're at ${val}${at(when)} so far, and ${target} is the goal. Small steps add up, and I'm right here with you.`,
     ];
     const FOCUS_YTD_ONLY_ONGOING = [
-        (label, val, ytdVal, target, when) => `YTD ${label} is sitting at ${ytdVal} vs target ${target}. You're doing better${at(when)} at ${val}. Let's keep that going and get the YTD to target.`,
-        (label, val, ytdVal, target, when) => `You've got ${label} at ${val}${at(when)}, which is great. The YTD number is still behind at ${ytdVal} (target ${target}), so let's keep that momentum going.`,
-        (label, val, ytdVal, target, when) => `${label} is the thing to keep pushing on. YTD ${ytdVal} (target ${target}), but hitting ${val}${at(when)} shows you can do it. Let's keep it up.`,
+        (label, val, ytdVal, target, when) => `Nice work on ${label}${at(when)}, ${val} so far. The year is still at ${ytdVal} with ${withArticle(target)} goal, so more stretches like this are how we get it there.`,
+        (label, val, ytdVal, target, when) => `You've got ${label} at ${val}${at(when)}, which is great. Keep that going, and that's how the year, at ${ytdVal} right now, gets to ${target}.`,
+        (label, val, ytdVal, target, when) => `${label} is the one to keep pushing on. Hitting ${val}${at(when)} shows you can do it, and keeping it up is what brings the year to ${target}.`,
     ];
     const FOCUS_WEEK_DIP_ONGOING = [
-        (label, val, ytdVal, target, when) => `Quick note on ${label}: it's dipped to ${val}${at(when)} so far, but your YTD is solid at ${ytdVal} (target ${target}). Not worried, there's time to shake off the blip.`,
-        (label, val, ytdVal, target, when) => `${label} has slipped to ${val}${at(when)}, but your YTD at ${ytdVal} is still on target (${target}). Plenty of time to get back to normal.`,
-        (label, val, ytdVal, target, when) => `Only watch-out: ${label} is sitting at ${val}${at(when)}. YTD ${ytdVal} vs target ${target} says you're fine. Just don't let it turn into a trend.`,
+        (label, val, ytdVal, target, when) => `Quick note on ${label}: it's dipped to ${val}${at(when)} so far with the goal at ${target}, but your year is solid at ${ytdVal}. Plenty of time to get it back where it usually is.`,
+        (label, val, ytdVal, target, when) => `${label} has slipped to ${val}${at(when)}, but the year is still on target at ${ytdVal}. Plenty of time to get back to normal.`,
+        (label, val, ytdVal, target, when) => `${label} is at ${val}${at(when)} so far, a little off your usual and the ${target} goal. Your year at ${ytdVal} says you've got this.`,
     ];
     const FOCUS_FALLBACK_ONGOING = [
-        (label, val, target, when) => `One thing to zero in on: ${label}. You're at ${val}${at(when)} so far, target is ${target}.`,
-        (label, val, target, when) => `Let's work on getting ${label} closer to target (${val}${at(when)} vs ${target}).`,
-        (label, val, target, when) => `Area to focus on: ${label} is at ${val}${at(when)}, we want ${target}.`,
-        (label, val, target, when) => `If I had to pick one thing, it'd be ${label}. You're sitting at ${val}${at(when)}, target is ${target}.`,
+        (label, val, target, when) => `${label} is the one I'd love us to work on. You're at ${val}${at(when)} so far with the goal at ${target}, and I think you can get there.`,
+        (label, val, target, when) => `Let's work on getting ${label} closer to ${target}. You're at ${val}${at(when)} so far, and every call is a chance to move it.`,
+        (label, val, target, when) => `If I had to pick one thing, it'd be ${label}. You're at ${val}${at(when)}, with ${withArticle(target)} goal to aim for.`,
+        (label, val, target, when) => `${label} is where I'd focus next. You're at ${val}${at(when)} so far, and ${target} is the goal. Let's close that together.`,
     ];
     const MK_FOCUS_PERSISTENT_ONGOING = [
-        (label, val, ytdVal, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You're at ${val}${at(when)} so far and YTD is at ${ytdVal} vs target ${target}. It's been a pattern and I want us to break it.`,
-        (label, val, ytdVal, target, when) => `The one to attack: ${label}. ${val}${at(when)} so far, YTD at ${ytdVal}, target ${target}. Let's close that gap for real this time.`,
-        (label, val, ytdVal, target, when) => `Game plan: get ${label} moving. ${val}${at(when)} so far, ${ytdVal} YTD, we need ${target}. I'll help however you need.`,
-        (label, val, ytdVal, target, when, ahead) => `The mission ${ahead}: ${label}. You're sitting at ${val}${at(when)}, YTD ${ytdVal} vs target ${target}. I think you can get there. Let's lock in.`,
-        (label, val, ytdVal, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. ${val}${at(when)} so far, ${ytdVal} YTD, target ${target}. Small improvements add up.`,
+        (label, val, ytdVal, target, when, ahead) => `Let's go after ${label} ${ahead}. You're at ${val}${at(when)} so far, and the goal is ${target}. I think we can chip away at it together.`,
+        (label, val, ytdVal, target, when, ahead) => `${label} is the one I'd love us to work on ${ahead}. The year is at ${ytdVal} with ${withArticle(target)} goal, and small improvements add up.`,
+        (label, val, ytdVal, target, when, ahead) => `I think you can move ${label} ${ahead}. You're at ${val}${at(when)} so far with the goal at ${target}, and I'll help however you need.`,
+        (label, val, ytdVal, target, when, ahead) => `My one ask ${ahead} is to be intentional about ${label}. You're at ${val}${at(when)} so far, and ${target} is the goal.`,
     ];
     const MK_FOCUS_YTD_ONLY_ONGOING = [
-        (label, val, ytdVal, target, when) => `Love that ${label} is at ${val}${at(when)}. Now let's make that the norm. YTD is still at ${ytdVal} (target ${target}) so the work is getting that number to target.`,
-        (label, val, ytdVal, target, when) => `Your focus: keep doing what you're doing on ${label}${at(when)} (${val}). YTD ${ytdVal} vs ${target} means we need consistency to move the needle.`,
-        (label, val, ytdVal, target, when) => `${label} is the one to keep pushing. Hitting ${val}${at(when)} is the right direction. YTD is at ${ytdVal}, target ${target}, so let's keep stringing those together.`,
-        (label, val, ytdVal, target, when) => `Here's the one to own: ${label}. Hitting ${val}${at(when)} shows you can do it. YTD still sits at ${ytdVal} vs target ${target}, so repeatability is the play.`,
+        (label, val, ytdVal, target, when) => `Love that ${label} is at ${val}${at(when)}. Let's make that the norm, because that's how the year, at ${ytdVal} now, gets to ${target}.`,
+        (label, val, ytdVal, target, when) => `Let's keep doing what you're doing on ${label}${at(when)}. More stretches like ${val} are what bring the year to ${target}.`,
+        (label, val, ytdVal, target, when, ahead) => `${label} is the one to keep pushing ${ahead}. Hitting ${val}${at(when)} is the right direction, and the year is still working its way to ${target}.`,
     ];
     const MK_FOCUS_WEEK_DIP_ONGOING = [
-        (label, val, ytdVal, target, when) => `Only thing on my radar: ${label} has dipped to ${val}${at(when)}. YTD is still solid at ${ytdVal} (target ${target}), so it's a one-off. Just don't let it turn into a trend.`,
-        (label, val, ytdVal, target, when, ahead) => `Watch-out for ${ahead}: ${label}. You're sitting at ${val}${at(when)}, but your YTD of ${ytdVal} vs ${target} says you know how to do this. Let's reset.`,
-        (label, val, ytdVal, target, when) => `One thing to keep in mind: ${label} has slipped to ${val}${at(when)}. YTD at ${ytdVal}, target ${target}. You're fine, just shake off the dip.`,
+        (label, val, ytdVal, target, when) => `Just one small thing: ${label} has dipped to ${val}${at(when)} with the goal at ${target}. Your year is solid at ${ytdVal}, so it's a one-off. Let's get it back.`,
+        (label, val, ytdVal, target, when, ahead) => `Let's reset on ${label} ${ahead}. You're at ${val}${at(when)} so far, but your year at ${ytdVal} says you know how to do this.`,
+        (label, val, ytdVal, target, when) => `${label} has slipped to ${val}${at(when)}, a little off your usual. The year is still on target at ${ytdVal}, so you're in good shape.`,
     ];
     const MK_FOCUS_FALLBACK_ONGOING = [
-        (label, val, target, when, ahead) => `Let's zero in on ${label} ${ahead}. You're at ${val}${at(when)} so far, target is ${target}.`,
-        (label, val, target, when) => `The one to attack: ${label}. ${val}${at(when)} vs target ${target}. Let's close that gap.`,
-        (label, val, target, when, ahead) => `The mission ${ahead}: ${label}. You're sitting at ${val}${at(when)}, target ${target}. I think you can get there.`,
-        (label, val, target, when, ahead) => `My ask for you ${ahead}: be intentional about ${label}. You're at ${val}${at(when)}, aiming for ${target}.`,
+        (label, val, target, when, ahead) => `Let's go after ${label} ${ahead}. You're at ${val}${at(when)} so far, and the goal is ${target}.`,
+        (label, val, target, when, ahead) => `${label} is the one I'd love us to work on ${ahead}. You're at ${val}${at(when)} with ${withArticle(target)} goal to aim for, and I think you can get there.`,
+        (label, val, target, when, ahead) => `I think you can move ${label} ${ahead}. You're at ${val}${at(when)} so far, and ${target} is the goal.`,
+        (label, val, target, when, ahead) => `My one ask ${ahead} is to be intentional about ${label}. You're at ${val}${at(when)}, aiming for ${target}.`,
     ];
     const HF_JUMP_ONGOING = [
-        (label, delta, range, when) => `Incredible move in ${label}${at(when)}, ${delta}! (${range}) That kind of progress stands out.`,
-        (label, delta, range, when) => `You're moving ${label} in a big way${at(when)}, ${delta}! (${range}) That's impressive.`,
-        (label, delta, range, when) => `${label} is taking a real swing${at(when)}, ${delta}! (${range}) Love to see it.`,
-        (label, delta, range, when) => `The progress on ${label}${at(when)} is awesome, ${delta}! (${range}) Keep that energy.`,
-        (label, delta, range, when) => `Your ${label} has moved ${delta}${at(when)} and honestly it's one of the best improvements I've seen. (${range})`,
-        (label, delta, range, when) => `Moving ${label} ${delta}${at(when)} is worth celebrating. (${range}) That takes real effort.`,
-        (label, delta, range, when) => `${label} is taking a big step${at(when)}, ${delta}. (${range}) You should feel good about that.`,
-        (label, delta, range, when) => `I have to point out that ${label} swing${at(when)}, ${delta}. (${range}) That's not easy to do.`,
-        (label, delta, range, when) => `When I saw ${label} come ${delta}${at(when)}, I knew I had to say something. (${range}) Wow.`,
-        (label, delta, range, when) => `The kind of improvement you're showing on ${label}${at(when)}, ${delta}, doesn't happen by accident. (${range})`,
+        (label, delta, range, when) => `Incredible move in ${label}${at(when)}, ${delta}, from ${range}! That kind of progress stands out.`,
+        (label, delta, range, when) => `You're moving ${label} in a big way${at(when)}, ${delta}, from ${range}! That's impressive.`,
+        (label, delta, range, when) => `${label} is taking a real swing${at(when)}, ${delta}, from ${range}! Love to see it.`,
+        (label, delta, range, when) => `The progress on ${label}${at(when)} is awesome, ${delta}, from ${range}! Keep that energy.`,
+        (label, delta, range, when) => `Your ${label} has moved ${delta}${at(when)}, from ${range}, and honestly it's one of the best improvements I've seen.`,
+        (label, delta, range, when) => `Moving ${label} ${delta}${at(when)}, from ${range}, is worth celebrating. That takes real effort.`,
+        (label, delta, range, when) => `${label} is taking a big step${at(when)}, ${delta}, from ${range}. You should feel good about that.`,
+        (label, delta, range, when) => `I have to point out that ${label} swing${at(when)}, ${delta}, from ${range}. That's not easy to do.`,
+        (label, delta, range, when) => `When I saw ${label} come ${delta}${at(when)}, from ${range}, I knew I had to say something.`,
+        (label, delta, range, when) => `The kind of improvement you're showing on ${label}${at(when)}, ${delta}, from ${range}, doesn't happen by accident.`,
     ];
     const HF_TWO_WINS_ONGOING = [
         (l1, v1, l2, v2, when) => `Your ${l1} at ${v1} and ${l2} at ${v2} are outstanding!`,
@@ -1123,14 +1138,16 @@
         extras => `And ${extras} too? You're firing on all cylinders.`,
         extras => `Plus ${extras}. Just an all-around great showing.`,
         extras => `Not to mention ${extras}. Seriously impressive.`,
-        extras => `Oh and did I mention ${extras}? Because yeah, that's happening too.`,
+        extras => `${capFirst(extras)} too, and that's a lot to be proud of.`,
         extras => `And to top it all off, ${extras}. Love it.`,
         extras => `Then there's ${extras} on top of everything else. ${hypeYou(true)}.`,
         extras => `Can't forget about ${extras} either. Just stacking wins.`,
     ];
     const HF_EXTRAS_SWEEP_ONGOING = [
-        extras => `On top of that: ${extras}. You're basically having the perfect run.`,
+        extras => `On top of that: ${extras}. That's about as complete as it gets.`,
         extras => `Plus ${extras}. There's nothing left to ask for.`,
+        extras => `And ${extras}. Every box checked so far.`,
+        extras => `${capFirst(extras)}, too. Honestly, that's everything.`,
     ];
 
     const ONGOING_TWIN = new Map([
@@ -1876,10 +1893,12 @@
         return (raw < 0 ? 'down ' : 'up ') + amount;
     }
 
-    // The two numbers a move went between: "146s to 106s". The period words
-    // live in the sentence around it, once, rather than in here twice.
+    // The two numbers a move went between, the way a person says them: "617
+    // to 415" after "down 202 seconds", which already said the unit. A rate
+    // keeps its "%". The period words live in the sentence around it, once.
     function fmtRange(metricKey, baseVal, latestVal) {
-        return `${fmtVal(metricKey, baseVal)} to ${fmtVal(metricKey, latestVal)}`;
+        const bare = (v) => String(fmtVal(metricKey, v)).replace(/^(-?\d+(?:\.\d+)?)s$/, '$1');
+        return `${bare(baseVal)} to ${bare(latestVal)}`;
     }
 
     // Turn a list of wins into readable prose: "Adherence at 98.2%",
@@ -2328,9 +2347,14 @@
             const unit = window.METRICS_REGISTRY?.[row.key]?.unit || '';
             const rawGap = Math.abs(row.value - row.target);
             const gap = fmtAmount(row.key, unit === '%' && rawGap >= 2 ? Math.round(rawGap) : rawGap);
-            // "within 0 points" is not a sentence; the line without the gap is.
-            const lines = /^0( |$)/.test(gap) ? pools.closest.slice(0, 1) : pools.closest;
-            return pick(lines)(row.label, val, fmtTarget(row.metric), gap);
+            // "within 0 points" is not a sentence: under the rounding it is
+            // right at the edge of the goal, and said so.
+            if (/^0( |$)/.test(gap)) {
+                return ongoing
+                    ? `${row.label} is right at the edge of the ${fmtTarget(row.metric)} goal, at ${val}.`
+                    : `${row.label} finished right at the edge of the ${fmtTarget(row.metric)} goal, at ${val}.`;
+            }
+            return pick(pools.closest)(row.label, val, fmtTarget(row.metric), gap);
         }
         return pick(pools.atGoal)(row.label, val);
     }
@@ -4172,10 +4196,23 @@
         (name, longLabel) => `Morning ${name}! Quick ${longLabel} check-in for you.`
     ];
 
+    // A sentence, not a heading: "Side by side:" and "Comparing X to Y:" led
+    // into bullet lists that read like a dashboard (Scott, 2026-10-26).
     const GROWTH_RANGE_LINE = [
-        (currentLabel, priorLabel) => `Comparing ${currentLabel} to ${priorLabel}:`,
-        (currentLabel, priorLabel) => `Looking at ${currentLabel} next to ${priorLabel}:`,
-        (currentLabel, priorLabel) => `Side by side: ${currentLabel} and ${priorLabel}.`
+        (currentLabel, priorLabel) => `Here's ${currentLabel} next to ${priorLabel}.`,
+        (currentLabel, priorLabel) => `I lined up ${currentLabel} with ${priorLabel}.`,
+        (currentLabel, priorLabel) => `Here's how ${currentLabel} compares to ${priorLabel}.`
+    ];
+    // Said after the moves the right way, never after a slip.
+    const GROWTH_MOVE_PRAISE = [
+        `That's real progress.`,
+        `Love seeing that.`,
+        `Really nice work there.`
+    ];
+    const GROWTH_FOCUS = [
+        (label, val, target) => `${label} is the one I'd love us to work on next. You're at ${val}, with ${withArticle(target)} goal.`,
+        (label, val, target) => `If there's one thing to go after next, it's ${label}, at ${val} with the goal at ${target}.`,
+        (label, val, target) => `Next up, let's work on ${label} together. You're at ${val}, and ${target} is the goal.`
     ];
 
     const GROWTH_NO_MOVE = [
@@ -4210,9 +4247,9 @@
     ];
 
     const GROWTH_HOLDING_INTRO = [
-        `Still solid:`,
-        `Holding strong:`,
-        `Didn't slip:`
+        (held) => `You held ${held}, still on target.`,
+        (held) => `${capFirst(held)} held strong, still on target.`,
+        (held) => `And you kept ${held}, right where it needs to be.`
     ];
 
     function getGrowthComparisonContext(comparisonType) {
@@ -4430,47 +4467,56 @@
         const greetings = improvements.length ? GROWTH_GREETINGS : GROWTH_GREETINGS_PLAIN;
         let message = `${pick(greetings)(firstName, labelInfo.long)}\n\n`;
 
+        const ytdAll = typeof ytdData !== 'undefined' ? ytdData : {};
+        const latestPeriod = getPeriodData(ctx.latestKey) || ytdAll[ctx.latestKey] || null;
+        const ongoing = !!describeWeekRecency(ctx.latestKey, latestPeriod).ongoing;
+
         // Nothing grew and nothing held at target. Everything slipping used
         // to end on "Let's regroup" with no praise anywhere in it (Scott,
         // 2026-10-14), so the best true thing comes first, kudos before the
-        // list: on target, better than the center, closest to goal, and the
+        // slips: on target, better than the center, closest to goal, and the
         // effort when the numbers have none of those.
         if (improvements.length === 0 && steady.length === 0) {
-            const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
-            const latestPeriod = getPeriodData(ctx.latestKey) || ytd[ctx.latestKey] || null;
-            const ongoing = !!describeWeekRecency(ctx.latestKey, latestPeriod).ongoing;
             const brightSpot = truePositiveLine(truePositiveFor(latestEmp, metrics, focalPoint?.metricKey, ongoing, declines.map(d => d.metricKey)), ongoing)
                 || pick(ongoing ? GROWTH_EFFORT_ONGOING : GROWTH_EFFORT);
             message += `${brightSpot}\n\n`;
         }
-        message += `${pick(GROWTH_RANGE_LINE)(ctx.currentLabel, ctx.priorLabel)}`;
 
-        // Each move in words, with the two numbers it went between.
-        const line = d => `\n• ${d.label}: ${fmtDelta(d.metricKey, d.delta)} (${fmtRange(d.metricKey, d.baseValue, d.latestValue)})`;
+        // Each move in words, with the two numbers it went between, said as
+        // sentences: "Average Handle Time went down 40 seconds, from 480 to
+        // 440." The "Growing:" and "Slipped a bit:" bullet lists read like a
+        // dashboard (Scott, 2026-10-26). Two moves to a sentence at most.
+        const range = d => fmtRange(d.metricKey, d.baseValue, d.latestValue);
+        const grew = d => `${d.label} ${ongoing ? 'is' : 'went'} ${fmtDelta(d.metricKey, d.delta)}, from ${range(d)}`;
+        const grewToo = d => `${d.label} ${ongoing ? 'is' : 'went'} ${fmtDelta(d.metricKey, d.delta)} too, from ${range(d)}`;
+        const slipped = d => `${d.label} ${ongoing ? 'has slipped' : 'slipped'} ${fmtAmount(d.metricKey, d.delta)}, from ${range(d)}`;
+        const two = parts => parts.join(', and ');
+
+        let story = pick(GROWTH_RANGE_LINE)(ctx.currentLabel, ctx.priorLabel);
         if (improvements.length === 0 && declines.length === 0) {
-            message += `\n\n${pick(GROWTH_NO_MOVE)}`;
+            story += ` ${pick(GROWTH_NO_MOVE)}`;
         } else {
             if (improvements.length) {
-                message += `\n\nGrowing:`;
-                improvements.forEach(d => { message += line(d); });
+                story += ` ${two(improvements.slice(0, 2).map(grew))}.`;
+                if (improvements[2]) story += ` ${grewToo(improvements[2])}.`;
+                story += ` ${pick(GROWTH_MOVE_PRAISE)}`;
             }
-            if (declines.length) {
-                message += `\n\nSlipped a bit:`;
-                declines.forEach(d => { message += line(d); });
-            }
+            if (declines.length) story += ` ${two(declines.map(slipped))}.`;
         }
+        message += story;
 
         // Nothing improved. Don't send an all-red message with no positive in
-        // it: surface what they held at target so the note is honest but fair.
+        // it: say what they held at target so the note is honest but fair.
         if (steady.length) {
-            message += `\n\n${pick(GROWTH_HOLDING_INTRO)}`;
-            steady.forEach(s => {
-                message += `\n• ${s.label}: still at ${fmtVal(s.metricKey, s.latestValue)}`;
-            });
+            const held = joinWinPhrases(steady.map(s => ({ label: s.label, metricKey: s.metricKey, employeeValue: s.latestValue })));
+            message += `\n\n${pick(GROWTH_HOLDING_INTRO)(held)}`;
         }
 
         if (focalPoint) {
-            message += `\n\nFocus area: ${focalPoint.label} is at ${fmtVal(focalPoint)}, and the target is ${fmtTarget(focalPoint)}.`;
+            // A metric the note just praised for moving gets its next stop,
+            // never a second ask as though it had not moved.
+            const moved = improvements.some(d => d.metricKey === focalPoint.metricKey);
+            message += `\n\n${pick(moved ? FOCUS_IMPROVING : GROWTH_FOCUS)(focalPoint.label, fmtVal(focalPoint), fmtTarget(focalPoint))}`;
             const tip = await tipFor(employeeName, focalPoint.metricKey, 'medium');
             if (tip) message += ` ${tip}`;
         }
