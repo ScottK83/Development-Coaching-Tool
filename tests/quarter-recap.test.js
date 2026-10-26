@@ -1262,3 +1262,21 @@ suite('quarterly tab: a name with markup cannot break the recap list', (t) => {
     t.check('the tag is escaped, not rendered', !html.includes('<img src=x'));
     t.check('and the escaped form is what appears', html.includes('&lt;img'));
 });
+
+/* Tone audit 2026-10-25: every recap opened on the same sentence and closed
+   on "Happy to walk through any of it." The wording is picked off the person
+   and the quarter now, so a rebuilt draft reads the same and the next
+   quarter's reads new. */
+suite('recap email: the opener and closer vary by quarter, and hold still on a rebuild', (t) => {
+    const env = load(t, YEAR);
+    t.loadModule('modules/message-voice.module.js');
+    const voice = global.window.DevCoachModules.messageVoice;
+    const bodies = [1, 2, 3].map((q) => mailFor(env, 'Jordan Reyes', q).body);
+    t.equal('the same quarter rebuilt reads the same', mailFor(env, 'Jordan Reyes', 3).body, bodies[2]);
+    bodies.forEach((body, i) => {
+        t.check('Q' + (i + 1) + ' ends on one of the closers', voice.EMAIL_CLOSERS.some((c) => body.endsWith(c)));
+        t.check('Q' + (i + 1) + ' opens on the check-in', /check-in/.test(body.split('\n')[2]));
+    });
+    const shapes = new Set(bodies.map((b) => b.split('\n')[2].replace(/Q\d/g, 'Q') + '|' + b.split('\n').pop()));
+    t.check('three quarters do not all read alike', shapes.size >= 2);
+});

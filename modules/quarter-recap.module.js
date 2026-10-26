@@ -511,11 +511,24 @@
         var model = opts.model || buildRecapModel(ctx);
         if (!model || !model.kpis.length) return null;
 
+        // One opener and one closer went on every recap (tone audit,
+        // 2026-10-25). A few wordings now, picked off the person and the
+        // quarter so a draft rebuilt reads the same and the next quarter's
+        // reads new.
+        var voice = _mod('messageVoice');
+        var seed = model.name + '|' + model.year + '|' + model.quarterName;
+        var say = function (options) {
+            return voice && typeof voice.stablePick === 'function' ? voice.stablePick(options, seed) : options[0];
+        };
+        var shown = _listNames(model.quartersShown);
         var lines = [];
         lines.push('Hi ' + model.firstName + ',');
         lines.push('');
-        lines.push('Thanks for sitting down with me for your ' + model.quarterName + ' check-in. '
-            + 'Here\'s where you were in ' + _listNames(model.quartersShown) + ':');
+        lines.push(say([
+            'Thanks for sitting down with me for your ' + model.quarterName + ' check-in. Here\'s where you were in ' + shown + ':',
+            'Good talking with you at your ' + model.quarterName + ' check-in. Here are your numbers for ' + shown + ':',
+            'Thanks again for the ' + model.quarterName + ' check-in. Here\'s how ' + shown + ' looked for you:'
+        ]));
         lines.push('');
         model.kpis.forEach(function (k) { lines.push(_kpiLine(k)); });
         // The hours sit with the other numbers, above the closing line. Below
@@ -532,10 +545,9 @@
             lines.push(count);
         }
         lines.push('');
-        lines.push('Happy to walk through any of it.');
+        lines.push(voice && typeof voice.emailCloser === 'function' ? voice.emailCloser(seed) : 'Happy to walk through any of it.');
 
         // The floor under the budget of two, whatever a later line adds.
-        var voice = _mod('messageVoice');
         var body = lines.join('\n');
         if (voice && typeof voice.limitEmojis === 'function') body = voice.limitEmojis(body, 2);
         var subject = 'Your ' + model.quarterName + ' check-in recap';

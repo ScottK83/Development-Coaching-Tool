@@ -1570,12 +1570,24 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
     // The effort line is only for when there is nothing else.
     const positive = wins.length ? null : trendTruePositive(coachable, ongoing);
 
+    // Every follow-up went out as the same text, word for word, and opened
+    // "...the week of Oct 5, and first, nice work." (tone audit, 2026-10-25).
+    // A few wordings now, chosen off the person and the period, so a rebuilt
+    // draft reads the same and next week's reads new.
+    const voice = window.DevCoachModules?.messageVoice;
+    const seed = `${displayName}|${when}`;
+    const say = (options) => (typeof voice?.stablePick === 'function' ? voice.stablePick(options, seed) : options[0]);
+
     if (wins.length) {
         const metCount = metrics.filter(m => m.meetsTarget).length;
         const tally = metrics.length > 1
             ? ` You ${ongoing ? 'are hitting' : 'hit'} ${metCount} of your ${metrics.length} goals.`
             : '';
-        lines.push(`I wanted to follow up on ${when}, and first, nice work.${tally} Here is what stood out:`);
+        lines.push(say([
+            `Nice work on ${when}.${tally} Here's what stood out to me:`,
+            `I wanted to follow up on ${when}, and I'll start with the good stuff, because there's nice work in it.${tally} Here's what stood out:`,
+            `Following up on ${when}, and there's some nice work to talk about.${tally} Here's what stood out:`
+        ]));
         lines.push('');
         wins.forEach(m => {
             const value = formatMetricDisplay(m.metricKey, m.employeeValue);
@@ -1584,13 +1596,21 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
         });
     } else {
         lines.push(positive.kind === 'effort'
-            ? `I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`
-            : `I wanted to follow up on ${when}, and I want to start with something good. ${positive.text} Thank you for the work behind that.`);
+            ? say([
+                `I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`,
+                `Following up on ${when}. First, thank you for the effort you're putting in. I see it, and I want to help you turn it into the numbers you deserve.`
+            ])
+            : say([
+                `I wanted to follow up on ${when}, and I want to start with something good. ${positive.text} Thank you for the work behind that.`,
+                `Following up on ${when}, starting with something good. ${positive.text} Thank you for the work behind that.`
+            ]));
     }
 
     if (focus.length) {
         lines.push('');
-        lines.push(focus.length === 1 ? 'Here is the one thing I want us to work on next:' : 'Here are the two things I want us to work on next:');
+        lines.push(focus.length === 1
+            ? say(['Here is the one thing I want us to work on next:', 'Here\'s the one thing I\'d love us to work on next:'])
+            : say(['Here are the two things I want us to work on next:', 'Here are the two things I\'d love us to work on next:']));
         lines.push('');
         focus.forEach(m => {
             const value = formatMetricDisplay(m.metricKey, m.employeeValue);
@@ -1602,7 +1622,11 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
             lines.push(`- ${m.label} ${was} ${value}${moving}, and the ${goal}.${moving && !saidAlready ? ' It is already moving the right way.' : ''}${tip ? ` One thing to try: ${tip}` : ''}`);
         });
         lines.push('');
-        lines.push('I know you can get there, and I am here to help however I can. Let me know if you want to sit down and talk any of it through.');
+        lines.push(say([
+            'I know you can get there, and I am here to help however I can. Let me know if you want to sit down and talk any of it through.',
+            'You\'ve got this, and I\'m here to help however I can. Grab me any time if you want to talk it through.',
+            'I\'m confident you\'ll get there, and I\'m here to help. Let me know if you want to sit down and go over any of it.'
+        ]));
     } else if (wins.length) {
         lines.push('');
         lines.push(`Everything I looked at ${ongoing ? 'is' : 'was'} at or better than goal. Keep doing exactly what you are doing, and thank you.`);
