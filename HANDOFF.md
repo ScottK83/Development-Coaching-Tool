@@ -1,8 +1,14 @@
 # Handoff
 
-Last updated 2026-10-21, version 2026.10.21.8, suite at 9222 passing.
+Last updated 2026-10-26, version 2026.10.22.1, suite at 9260 passing.
 
 ## Where things stand
+- **Deep dive, 2026-10-25, WAITING ON SCOTT:** `audit/2026-10-25-deep-dive.md`, a read-only review. It covers value for Scott, associates and APS; call listening accuracy, run on the real Sep 29 call; tracking; team trends; tone; and tips. It proposes phases A to F, which are not approved yet, and ends with 6 questions for Scott. The full lists are `audit/2026-10-25-tone-findings.md` and `audit/2026-10-25-tips-findings.md`. No app code was changed. Headlines:
+  - The call reader misread 8 things on 3 calls.
+  - The main Calls flow logs no coaching.
+  - The Today page logs a tip on every draft.
+  - Two tip trackers never meet.
+  - The team is behind the center on adherence, AHT and Positive Word, and ahead on Rep Sat and Overall Experience.
 - **Data pipeline plan, approved 2026-10-22:** `audit/2026-10-21-data-pipeline-plan.md` (Scott's four answers are at its top). **Phase 1 is done** (2026-10-22): the Snapshot and the Year to date tab use the real helpers (`metricProfiles.valueMeetsTarget` with the year's target, `window.isReverseMetric`, `window.formatMetricDisplay`) instead of the never-registered `DevCoachModules.metrics`; the Snapshot always covers the whole team (`ignoreTeamScope`), has no Rel column, leaves Calls unshaded, and merges center averages instead of replacing them; Pace shows "96.5%/wk, Stretch: best so far 96.4%" and keeps "Not possible" for over 100% or under zero. Tests: `tests/snapshot-pace-truth.test.js`. Checked on the real October data. **Next: Phase 2** (upload checks, and let a saved week or month be replaced so Scott can re-pull Feb 23, Mar 2, May, May 18 and Jun 1).
 - Done: restyle to match the Downloader Bot (Scott, 2026-10-21: "Dark only. Sidebar nav."). Dark-only tokens, `modules/sidebar.module.js`, the KIT classes in styles-v2.css, every page swept off hard-coded colours, the old forced dark layer removed, Teams cards shown light on screen. Build new UI with the KIT; never hard-code colours. Scott has not reviewed it yet.
 - Scott is working through the Today page's private round on real data and sending notes.

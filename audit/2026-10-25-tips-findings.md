@@ -1,0 +1,498 @@
+# Coaching tip audit: every problem tip
+
+Audited 2026-10-25 against modules/tips.module.js EMBEDDED_TIPS_CSV (536 tips) and tips.csv (identical, same order). "#n" is the tip's position inside its metric, counted from 0, which is the index the tips manager stores edits and deletions under. Line numbers are tips.module.js and tips.csv. Rewrites are plain language with no dashes.
+
+## 1. Breaks a standing rule, names something associates do not have, or conflicts with the identity standard (7)
+
+- **scheduleAdherence #8 (tips.module.js:14, tips.csv:10)**
+  - Tip: If system issues make you late, report it right away so we can give you next steps and keep you in adherence.
+  - Why: Promises an adherence fix ("keep you in adherence"). The rule is: report it so we can give next steps, never promise the exception.
+  - Rewrite: If system issues make you late, report it right away so we can give you next steps.
+- **scheduleAdherence #20 (tips.module.js:26, tips.csv:22)**
+  - Tip: If you're running late for a shift, text your supervisor before your start time, not after.
+  - Why: Says text; scheduleAdherence #7 says call. Unsure which the APS call out process requires, but the pool should say one thing.
+  - Rewrite: If you're running late, tell your supervisor before your start time, the way the call out process says.
+- **aht #12 (tips.module.js:149, tips.csv:145)**
+  - Tip: Verify identity every single time, but don't re-ask for background the notes already spell out.
+  - Why: A call that came in authorized needs only the name. "Every single time" pushes a second verification on those calls (handle time, and it annoys the caller).
+  - Rewrite: Verify every caller the APS way: name plus the last four of the social, a driver's license or the account password. If the call came in authorized, the name is enough. Don't re-ask for background the notes already spell out.
+- **aht #11 (tips.module.js:148, tips.csv:144)**
+  - Tip: Pre-fill customer verification info during greeting not in silence afterward.
+  - Why: "Pre-fill" is jargon and can read as filling in identity details from the screen. Verification has to come from the caller. Also repeats "Pull the account while you're greeting them".
+  - Rewrite: Pull up the account while you greet them, then ask for verification, so there is no quiet stretch after the hello.
+- **overallExperience #0 (tips.module.js:526, tips.csv:522)**
+  - Tip: Open the call with 'I'd be happy to help you with that' instead of jumping straight into verification. It sets a welcoming tone.
+  - Why: "Instead of" verification reads as skip it.
+  - Rewrite: Open with 'I'd be happy to help you with that,' then verify. It sets a welcoming tone from the first line.
+- **holdTime #39 (tips.module.js:260, tips.csv:256)**
+  - Tip: If it's going to take five minutes, that isn't a hold, tell them what you'll do instead.
+  - Why: The only "instead" an associate has is a callback, and hold tips must never point to one.
+  - Rewrite: If it's going to take five minutes, say so up front and talk them through what you're doing instead of leaving them on hold.
+- **transfers #12 (tips.module.js:105, tips.csv:101)**
+  - Tip: If the call drops during a transfer, call the customer back right away. Don't wait.
+  - Why: Unsure: only valid if associates can dial out. If they cannot, it is a tool they do not have.
+  - Rewrite: Delete if associates cannot dial out. If they can, keep it.
+
+## 2. Moves one number at another number's expense (14)
+
+- **aht #31 (tips.module.js:168, tips.csv:164)**
+  - Tip: If you know the answer by their second sentence, go to it.
+  - Why: Cutting in hurts Rep Sat and sentiment and contradicts "Let them finish the sentence even when you know how it ends." It is the most used handle time tip in the Morning Pulse history (7 times).
+  - Rewrite: Once they've finished explaining and you know the answer, go straight to it.
+- **aht #42 (tips.module.js:179, tips.csv:175)**
+  - Tip: Most customers want the number and the date, not the history lesson.
+  - Why: On a high bill call the reason is what stops the callback (the FCR pool says so). Costs FCR and overall experience.
+  - Rewrite: Lead with the number and the date, then give the one reason behind it.
+- **aht #7 (tips.module.js:144, tips.csv:140)**
+  - Tip: Don't over-explain simple things. 'Your payment is due the 15th' not a 3-minute explanation of billing cycles.
+  - Why: Holds up "a 3-minute explanation of billing cycles" as waste, but extra days on the bill is often the real answer to a high bill call (FCR: "a bill covering extra days explains itself").
+  - Rewrite: Answer the question they asked. A due date question gets the date. A 'why is it higher' question gets the one reason, like the extra days on this bill.
+- **aht #26 (tips.module.js:163, tips.csv:159)**
+  - Tip: Ask the one question that tells you what kind of call this is, then stop asking.
+  - Why: "Then stop asking" undercuts the FCR advice to ask clarifying questions up front.
+  - Rewrite: Ask the one question that tells you what kind of call this is, then go straight to it.
+- **aht #39 (tips.module.js:176, tips.csv:172)**
+  - Tip: Stop rechecking work you already checked.
+  - Why: Invites skipped checks. A wrong arrangement date is a callback.
+  - Rewrite: Check your work once, carefully, before you tell them it's done. Then move on.
+- **aht #20 (tips.module.js:157, tips.csv:153)**
+  - Tip: Stop multi-tasking on simple calls. Focus equals speed.
+  - Why: Contradicts the handle time and after-call work tips that say type notes while you talk.
+  - Rewrite: On simple calls keep only the account and your notes open. Fewer windows, faster call.
+- **managingEmotions #6 (tips.module.js:407, tips.csv:403)**
+  - Tip: Give yourself 30 seconds between difficult calls to reset mentally.
+  - Why: Thirty seconds off the phone lands in after-call work (goal 60 seconds) or out of adherence.
+  - Rewrite: Take one slow breath before you answer the next call, and save the longer reset for your break.
+- **managingEmotions #31 (tips.module.js:432, tips.csv:428)**
+  - Tip: Two hard calls back to back, take the thirty seconds in between.
+  - Why: Same cost as above.
+  - Rewrite: Two hard calls back to back? One slow breath before the next one, then a real reset at your break.
+- **negativeWord #3 (tips.module.js:362, tips.csv:358)**
+  - Tip: Don't say 'That's not my problem'. Say 'Let me get you to the right team'.
+  - Why: The swap is a transfer (goal 6% or lower).
+  - Rewrite: Don't say 'That's not my problem'. Say 'Let me see what I can do,' then do it.
+- **negativeWord #18 (tips.module.js:377, tips.csv:373)**
+  - Tip: 'I'm unable to help with that' ends the conversation. Say 'Let me find out who can'.
+  - Why: Also steers to a transfer.
+  - Rewrite: 'I'm unable to help with that' ends the conversation. Say 'Here's what I can do' and name one thing.
+- **cxRepOverall #9 (tips.module.js:492, tips.csv:488)**
+  - Tip: End with confidence: 'You're all set. Reach out if you need anything else'.
+  - Why: Invites another contact (FCR) and skips the phrase Verint scores.
+  - Rewrite: End with confidence: 'You're all set. Is there anything else I can help you with today?'
+- **fcr #43 (tips.module.js:92, tips.csv:88)**
+  - Tip: If you spot something wrong on the account they didn't ask about, fix it while you're in there.
+  - Why: A change they were not told about becomes a surprise on the next bill and a callback.
+  - Rewrite: If you spot something wrong on the account, tell them and fix it while you're both on the call.
+- **cxRepOverall #4 (tips.module.js:487, tips.csv:483)**
+  - Tip: Be proactive. If you spot a problem on the account, fix it before they have to ask.
+  - Why: Same as above.
+  - Rewrite: Be proactive. If you spot a problem on the account, tell them and fix it before they have to ask.
+- **holdTime #4 (tips.module.js:225, tips.csv:221)**
+  - Tip: If you need to research, estimate time: 'This may take 2-3 minutes, are you able to hold?'
+  - Why: A 2 to 3 minute hold is four to six times the 30 second goal, and the tip makes it sound normal.
+  - Rewrite: If you truly need a hold, ask first and keep it short: 'Can I place you on a brief hold while I check that?'
+
+## 3. Sentiment tips whose quoted words Verint does not score (checked with the app's own matcher against the shipped list) (12)
+
+Every positiveWord tip except the two below quotes a phrase Verint scores, and all 26 penalized phrases have a negativeWord tip. The misses are in other pools:
+
+- **overallSentiment #21 (tips.module.js:282, tips.csv:278)**
+  - Tip: End calls with warmth: 'Take care' beats 'Have a good day' for connection.
+  - Why: Neither phrase scores. The scored closes are "have ... wonderful", "enjoy" and "lovely" in the last 100 seconds.
+  - Rewrite: End calls with warmth: 'Have a wonderful day' or 'Enjoy the rest of your day' beats 'Have a good day'.
+- **overallSentiment #43 (tips.module.js:304, tips.csv:300)**
+  - Tip: Never say 'Calm down'. It escalates every time. Say 'I'm going to help you'.
+  - Why: "I'm going to help you" scores nothing; "I'm here to help" does.
+  - Rewrite: Never say 'Calm down'. It escalates every time. Say 'I'm here to help, let's get this fixed.'
+- **overallSentiment #16 (tips.module.js:277, tips.csv:273)**
+  - Tip: Ask 'How can I make this right for you?' on escalated calls. Gives them agency.
+  - Why: Scores nothing ("how ... help" needs the word help).
+  - Rewrite: Ask 'What can I do for you to make this right?' on escalated calls. It gives them a say.
+- **overallSentiment #9 (tips.module.js:270, tips.csv:266)**
+  - Tip: Thank them for patience if call took longer: 'Thanks for bearing with me on that'.
+  - Why: "Thanks for bearing with me" scores nothing; "Thank you for being so patient" does.
+  - Rewrite: If the call ran long, say 'Thank you for being so patient with me.'
+- **overallSentiment #6 (tips.module.js:267, tips.csv:263)**
+  - Tip: End on positive note even if you couldn't do everything: 'I'm glad I could at least help with X'.
+  - Why: Scores nothing, and "at least" undercuts it.
+  - Rewrite: End on a positive note even when you couldn't do everything: 'I was glad to help with the payment today. Enjoy the rest of your day.'
+- **overallSentiment #5 (tips.module.js:266, tips.csv:262)**
+  - Tip: Use their words back: If they say 'bill is confusing' say 'Let me clarify that confusing bill'.
+  - Why: Repeats the negative label back and scores nothing.
+  - Rewrite: If they say the bill is confusing, say 'Let's make sure this bill makes sense before we hang up.'
+- **positiveWord #21 (tips.module.js:337, tips.csv:333)**
+  - Tip: Use 'let's', it makes the customer a partner: 'Let's get this figured out together.'
+  - Why: Bare "let's" does not score; only "let's get" and "let's make sure" do. The example is fine, the instruction is not.
+  - Rewrite: Start with 'Let's get' or 'Let's make sure': 'Let's get this figured out together.'
+- **positiveWord #39 (tips.module.js:355, tips.csv:351)**
+  - Tip: 'Let's take a look together' invites them in, and 'Let's make sure we get this right' keeps them with you.
+  - Why: The first half does not score.
+  - Rewrite: 'Let's get this taken care of together' invites them in, and 'Let's make sure we get this right' keeps them with you.
+- **fcr #21 (tips.module.js:70, tips.csv:66)**
+  - Tip: Ask 'Have we addressed what you needed today?' instead of the robotic closer.
+  - Why: Calls "Is there anything else I can help you with" robotic, which is a scored phrase that two other tips teach. It is also the FCR fallback tip the Calls page shows when nothing matches.
+  - Rewrite: Ask 'Have I answered all your questions today?' and wait for a real answer.
+- **cxRepOverall #29 (tips.module.js:512, tips.csv:508)**
+  - Tip: Ask whether the explanation made sense, not whether they have questions.
+  - Why: Steers away from "Do you have any other questions or concerns?", a scored phrase.
+  - Rewrite: Check it landed by asking what they'll see on the next bill, then ask 'Do you have any other questions or concerns?'
+- **overallSentiment #11 (tips.module.js:272, tips.csv:268)**
+  - Tip: Mirror back emotions: 'You sound really frustrated, I get it, let's fix this'.
+  - Why: Low risk, marked unsure: "frustrated" is on the emotion list tagged customer only, so it should not count from the associate. If Verint misreads the speaker it flags.
+  - Rewrite: Mirror it back: 'I can hear how much this has worn on you, let's get it fixed.'
+- **managingEmotions #5 (tips.module.js:406, tips.csv:402)**
+  - Tip: Acknowledge their feelings: 'I can tell this has been really frustrating for you'.
+  - Why: Same as above ("frustrating" is customer only).
+  - Rewrite: Acknowledge it: 'I can hear how much this has worn on you. I'm here to help.'
+
+## 4. Wrong or doubtful facts (6)
+
+- **scheduleAdherence #30 (tips.module.js:36, tips.csv:32)**
+  - Tip: Two minutes late four times hurts your number more than one long absence.
+  - Why: Wrong: adherence counts minutes, eight minutes is less than a long absence. It also mixes in absences (reliability).
+  - Rewrite: Small misses add up. Two minutes late back from four breaks is eight minutes out of adherence.
+- **scheduleAdherence #32 (tips.module.js:38, tips.csv:34)**
+  - Tip: If a call runs past your break, take the full break after, it still counts correctly.
+  - Why: Unsure: "it still counts correctly" promises the schedule will be adjusted.
+  - Rewrite: If a call runs into your break, take your full break after and let your supervisor know so we can give you next steps.
+- **scheduleAdherence #0 (tips.module.js:6, tips.csv:2)**
+  - Tip: Log in 2-3 minutes early to avoid system lag delays.
+  - Why: Unsure: if PC login before shift start is unpaid, this asks for off the clock work. Check with WFM or HR.
+  - Rewrite: Keep it only if login time is paid. Otherwise: "If logins are slow, report it so we can give you next steps."
+- **scheduleAdherence #26 (tips.module.js:32, tips.csv:28)**
+  - Tip: Headset plugged in and tested before your shift starts, not at start time.
+  - Why: Unsure, same off the clock question.
+  - Rewrite: Keep it only if that time is paid.
+- **scheduleAdherence #5 (tips.module.js:11, tips.csv:7)**
+  - Tip: Review your Verint schedule every Sunday night so you know your week.
+  - Why: Asks for work on a day off.
+  - Rewrite: Look at next week's schedule in Verint before you log off on your last shift of the week.
+- **acw #38 (tips.module.js:219, tips.csv:215)**
+  - Tip: If you're still wrapping when the next call rings, wrap is too long.
+  - Why: Unsure: in most phone setups no call rings while you are in wrap.
+  - Rewrite: If wrap runs past a minute, the note is doing too much. Three lines is plenty.
+
+## 5. HR sensitive or accusing tone (5)
+
+- **scheduleAdherence #10 (tips.module.js:16, tips.csv:12)**
+  - Tip: Group bathroom breaks with scheduled breaks when possible. Saves adherence minutes.
+  - Why: Telling staff when to use the bathroom is an HR risk.
+  - Rewrite: Delete, or: "Plan personal time around your scheduled breaks when you can."
+- **holdTime #9 (tips.module.js:230, tips.csv:226)**
+  - Tip: Never place a customer on hold to check personal notifications or messages.
+  - Why: Reads as an accusation.
+  - Rewrite: Use hold only for the account work. Everything else waits for your break.
+- **reliability #12 (tips.module.js:460, tips.csv:456)**
+  - Tip: If you're a parent, have a backup childcare plan so illness doesn't mean absence.
+  - Why: Family status; Arizona earned paid sick time covers caring for a sick child. (Reliability tips only reach the dashboard Tip of the Day.)
+  - Rewrite: Delete.
+- **reliability #24 (tips.module.js:472, tips.csv:468)**
+  - Tip: If your kid gets sick often, build the backup plan now, not that morning.
+  - Why: Same as above.
+  - Rewrite: Delete.
+- **reliability #23 (tips.module.js:471, tips.csv:467)**
+  - Tip: Half a shift protects your number better than none of it.
+  - Why: Can read as pressure to come in sick.
+  - Rewrite: Delete, or: "If you can make part of a shift, tell your supervisor what you can do."
+
+## 6. Asks for something associates may not be able to do (unsure, needs Scott) (8)
+
+- **scheduleAdherence #15 (tips.module.js:21, tips.csv:17)**
+  - Tip: Track your own adherence daily in a simple spreadsheet. Awareness drives habit.
+  - Why: Busywork; Verint already tracks it. Unsure what associates can see.
+  - Rewrite: Check your adherence in Verint at the end of each shift, if you can see it there.
+- **scheduleAdherence #24 (tips.module.js:30, tips.csv:26)**
+  - Tip: Bid the same lunch every day when you can, routine beats willpower.
+  - Why: Unsure APS bids lunches.
+  - Rewrite: Keep only if lunches are bid.
+- **aht #8 (tips.module.js:145, tips.csv:141)**
+  - Tip: Review your longest calls weekly. Find your time-wasters and eliminate them.
+  - Why: Unsure associates can pull their own call list or recordings.
+  - Rewrite: Keep only if they can.
+- **aht #41 (tips.module.js:178, tips.csv:174)**
+  - Tip: Compare your longest call this week to your shortest of the same type, the gap is the lesson.
+  - Why: Same.
+  - Rewrite: Keep only if they can.
+- **aht #23 (tips.module.js:160, tips.csv:156)**
+  - Tip: Role-play your top 3 call types with a peer weekly. Muscle memory wins.
+  - Why: Needs off phone time the associate cannot schedule.
+  - Rewrite: Ask your supervisor for time to role-play your top call type with a peer.
+- **transfers #9 (tips.module.js:102, tips.csv:98)**
+  - Tip: If you transfer more than 2 times in one shift, review those calls to understand why.
+  - Why: Same access question.
+  - Rewrite: If you transfer more than twice in a shift, jot down why for each one.
+- **transfers #19 (tips.module.js:112, tips.csv:108)**
+  - Tip: Track your personal transfer rate daily. Awareness alone reduces it.
+  - Why: Unsure they see it daily.
+  - Rewrite: Keep only if they can see it.
+- **acw #37 (tips.module.js:218, tips.csv:214)**
+  - Tip: Check your wrap number at the end of each day, not the end of the month.
+  - Why: Unsure they see it daily.
+  - Rewrite: Keep only if they can see it.
+
+## 7. Low yield for the metric they sit under (12, overallSentiment)
+
+None of these words is on the Verint negative list, so they do not move Avoid Negative Words or the Verint sentiment score directly. Sound advice on tone; keep them, but each would do more with a scored replacement after it (for example "Say 'Here's what I can do' instead"). "Calm down" is also in group 3.
+
+- overallSentiment #43 (tips.module.js:304, tips.csv:300): Never say 'Calm down'. It escalates every time. Say 'I'm going to help you'.
+- overallSentiment #44 (tips.module.js:305, tips.csv:301): Replace 'You're wrong' with 'Let me clarify what happened here'.
+- overallSentiment #45 (tips.module.js:306, tips.csv:302): Don't say 'You didn't'. Say 'It looks like this step was missed'.
+- overallSentiment #46 (tips.module.js:307, tips.csv:303): Replace 'You should have' with 'Going forward here's what will work'.
+- overallSentiment #47 (tips.module.js:308, tips.csv:304): Avoid 'actually' as a correction. It puts them on defensive.
+- overallSentiment #48 (tips.module.js:309, tips.csv:305): Drop the word 'just'. 'Just click there' makes light of what the customer is going through.
+- overallSentiment #49 (tips.module.js:310, tips.csv:306): Never say 'no one else has complained'. Invalidates their experience.
+- overallSentiment #50 (tips.module.js:311, tips.csv:307): Never say 'you signed up for that', explain what they signed up for.
+- overallSentiment #51 (tips.module.js:312, tips.csv:308): Don't say 'everyone's bill went up', talk about theirs.
+- overallSentiment #52 (tips.module.js:313, tips.csv:309): Don't say 'it's only', nothing is only to the person paying it.
+- overallSentiment #53 (tips.module.js:314, tips.csv:310): Skip 'obviously' and 'clearly', both tell them they should have known.
+- overallSentiment #54 (tips.module.js:315, tips.csv:311): Avoid 'that's just how the billing works', give them the actual reason.
+
+## 8. Not in the CSV, but in the live pool
+
+- **userCustomTips, transfers: "Test Upload 2"** (from the R2 backup state/latest.json, generated 2026-10-21). getMetricTips appends user tips to the CSV pool, so this test string can be picked as the Transfers tip in a coaching email or shown on the Calls page. Delete it in Settings, Coaching Tips, Transfers.
+
+## 9. Tip text outside the CSV
+
+- **call-coaching-bridge.module.js:262 and :269** verification keywords are "date of birth" and "security question", which are not the APS standard, and no pool tip covers verification at all. A verification or QA verification finding shows two unrelated Rep Sat tips ("A customer who understands the bill doesn't have to like it to rate you well." and "Ask what would make this easier for them, then do that if you can.") and the Copilot prompt gets none. Rewrite the keywords as "last four", "social", "driver", "password", "authorized", and add a Rep Sat tip such as: "Verify the APS way: name plus the last four of the social, a driver's license or the account password. If the call came in authorized, the name is enough."
+- **call-coaching-bridge.module.js:266** safety finding (keywords safety, emergency, hazard): no pool tip contains them, so it shows the same two unrelated Rep Sat tips. Needs a tip (see gaps).
+- **call-explanation.module.js:175 and :177** deposit: "It isn't a fee, and you get it back" and "You get it back as money off your bill after [time frame]." Unsure: if the refund depends on on time payments, this is a promise that drives a callback. Possible rewrite: "You get it back as money off your bill after [time frame] of on time payments."
+- **call-explanation.module.js:130** budget billing: "That stays about the same even in the hot months." Unsure: if the budget amount is reviewed during the year, add when: "We look at the amount again [when], so it can move a little."
+- **call-transcript.module.js:773 to 774** greeting praise says "You named APS and gave your own name" but the pattern also fires on "how can I help you" alone, so the praise can be untrue. Not a tip, but associate facing.
+- call-word-choice.module.js has no tip text of its own; its examples come from POSITIVE_PHRASE_EXAMPLES in sentiment.module.js, which all score (an existing test proves it). No problems found there.
+
+## 10. Near duplicates (clusters)
+
+Not wrong, but they crowd out other advice. In the Calls page brief two of them appear side by side: a "like I said" finding shows both "Avoid 'like I said'..." and "Drop 'like I said'.", and "yes but" shows both of its tips.
+
+- **Keyboard shortcuts, word for word**
+  - aht #6 (tips.module.js:143, tips.csv:139): Learn keyboard shortcuts for your main programs. Mouse clicking adds 5-10 seconds per call.
+  - holdTime #2 (tips.module.js:223, tips.csv:219): Learn keyboard shortcuts for your main tools. Mouse clicking adds 5-10 seconds per call.
+- **Pull the account during the greeting**
+  - aht #25 (tips.module.js:162, tips.csv:158): Pull the account while you're greeting them, not after.
+  - aht #11 (tips.module.js:148, tips.csv:144): Pre-fill customer verification info during greeting not in silence afterward.
+  - holdTime #14 (tips.module.js:235, tips.csv:231): Pull up the account while you verify, so you don't need to hold later.
+- **One trip for lookups**
+  - aht #18 (tips.module.js:155, tips.csv:151): If you need to look up 3 things, look them all up in one trip instead of bouncing back and forth between screens.
+  - aht #32 (tips.module.js:169, tips.csv:165): Batch your lookups, get everything you need in one trip through the screens.
+- **Keep lookups one click away**
+  - aht #13 (tips.module.js:150, tips.csv:146): Keep the things you look up most within one click. Hunting for them is pure handle time.
+  - aht #4 (tips.module.js:141, tips.csv:137): Have frequently-used links bookmarked and organized in toolbar.
+  - holdTime #1 (tips.module.js:222, tips.csv:218): Keep frequently used screens already open in browser tabs.
+  - holdTime #6 (tips.module.js:227, tips.csv:223): Keep your lookup tools open in their own tab. Ready before you need them.
+- **Read the notes first**
+  - aht #29 (tips.module.js:166, tips.csv:162): Read the last note before you ask them to walk you through the history.
+  - fcr #5 (tips.module.js:54, tips.csv:50): Check the notes from previous calls. They often tell you what the customer really needs.
+  - fcr #10 (tips.module.js:59, tips.csv:55): Skim the last few notes while you're verifying them, the history usually tells you why they're calling.
+- **Notes while talking**
+  - aht #3 (tips.module.js:140, tips.csv:136): Type account notes while you're talking, not in silence after.
+  - acw #0 (tips.module.js:181, tips.csv:177): Start your notes during the call, not after. Fill in the account notes while you're talking.
+  - acw #24 (tips.module.js:205, tips.csv:201): Write while they're talking, not after they hang up.
+- **Three line note**
+  - acw #10 (tips.module.js:191, tips.csv:187): Use a 3-line note template: what issue / what action / what to watch for.
+  - acw #25 (tips.module.js:206, tips.csv:202): Three lines is usually plenty, what they called about, what you did, what's next.
+  - acw #17 (tips.module.js:198, tips.csv:194): Stuck on wording? Write what you did and what happens next. That is the whole note.
+- **Note the promise**
+  - acw #11 (tips.module.js:192, tips.csv:188): If you promised the customer something, write that part of the note first while the wording is still exact.
+  - acw #12 (tips.module.js:193, tips.csv:189): Note what you told the customer would happen. That's the line the next rep actually needs.
+  - acw #29 (tips.module.js:210, tips.csv:206): Note the promise, not the conversation.
+- **Same order, same words**
+  - acw #2 (tips.module.js:183, tips.csv:179): Write the note in the same order every time. Your hands stop deciding what comes next.
+  - acw #33 (tips.module.js:214, tips.csv:210): Same words every time for the same call type.
+- **Ask everything before the hold**
+  - holdTime #3 (tips.module.js:224, tips.csv:220): Ask all your questions before you put the customer on hold, so you only hold once.
+  - holdTime #26 (tips.module.js:247, tips.csv:243): Ask for everything you need before the hold starts.
+- **Come back with what you found**
+  - holdTime #13 (tips.module.js:234, tips.csv:230): Come back with what you found. 'Thanks for holding, here's what I've got' beats a second apology.
+  - holdTime #37 (tips.module.js:258, tips.csv:254): Don't come back with 'sorry about that', come back with what you found.
+- **Hold is not for thinking**
+  - holdTime #16 (tips.module.js:237, tips.csv:233): Don't hold to 'think', just explain you're considering options out loud.
+  - holdTime #31 (tips.module.js:252, tips.csv:248): Hold is for the system, not for your thinking.
+- **Say the system is slow**
+  - holdTime #17 (tips.module.js:238, tips.csv:234): If the system is slow, acknowledge it: 'My system is loading, thanks for your patience'.
+  - holdTime #27 (tips.module.js:248, tips.csv:244): If the system is dragging, say so, silence reads as being ignored.
+- **Talk instead of hold**
+  - holdTime #0 (tips.module.js:221, tips.csv:217): Default to narrating instead of holding for lookups. 'I'm pulling up your account now' keeps them with you, reserve hold for when you genuinely can't talk through it.
+  - holdTime #23 (tips.module.js:244, tips.csv:240): If you can talk while you look, talk.
+  - holdTime #11 (tips.module.js:232, tips.csv:228): If the customer doesn't want to hold, talk them through what you're doing.
+  - holdTime #12 (tips.module.js:233, tips.csv:229): For short pauses under 30 seconds, keep talking through what you're doing rather than dropping into silence, quiet feels longer than the actual time.
+- **Practise the screens**
+  - holdTime #7 (tips.module.js:228, tips.csv:224): Learn where information lives in systems. Don't hunt around while customer waits.
+  - holdTime #8 (tips.module.js:229, tips.csv:225): Practice navigation. The faster you move through screens the less customers wait.
+  - holdTime #19 (tips.module.js:240, tips.csv:236): Practice navigating your systems during downtime so it's muscle memory.
+  - holdTime #35 (tips.module.js:256, tips.csv:252): Practice the three lookups you do most until they don't need a hold at all.
+  - holdTime #21 (tips.module.js:242, tips.csv:238): Prep for common call types at start of shift. Know where things live.
+- **Break reminders**
+  - scheduleAdherence #1 (tips.module.js:7, tips.csv:3): Set phone reminders 5 minutes before breaks end.
+  - scheduleAdherence #2 (tips.module.js:8, tips.csv:4): Keep a visible timer on your desk for break times.
+  - scheduleAdherence #3 (tips.module.js:9, tips.csv:5): Put break end times in Outlook calendar with pop-up alerts.
+  - scheduleAdherence #4 (tips.module.js:10, tips.csv:6): If you're consistently late from breaks, set a timer for 2 minutes before break ends.
+  - scheduleAdherence #31 (tips.module.js:37, tips.csv:33): Put your break times in your phone, not just in your head.
+  - scheduleAdherence #13 (tips.module.js:19, tips.csv:15): Post-it note by monitor with break times helps for the first week of new schedules.
+- **Report login trouble**
+  - scheduleAdherence #8 (tips.module.js:14, tips.csv:10): If system issues make you late, report it right away so we can give you next steps and keep you in adherence.
+  - scheduleAdherence #42 (tips.module.js:48, tips.csv:44): Report login trouble the same day so we can give you next steps.
+- **Learn your top transfers**
+  - transfers #2 (tips.module.js:95, tips.csv:91): Memorize which department handles top 5 transfer reasons to route correctly first time.
+  - transfers #5 (tips.module.js:98, tips.csv:94): Learn the 5 things you transfer most. Make those your study priority this month.
+  - transfers #8 (tips.module.js:101, tips.csv:97): Keep a transfer log. Track why you transferred. Find your knowledge gaps.
+  - transfers #35 (tips.module.js:128, tips.csv:124): Keep a short list of what you handed off this week and pick one to learn.
+  - transfers #21 (tips.module.js:114, tips.csv:110): If same transfer type happens 3+ times in a week, request training on that topic.
+  - transfers #36 (tips.module.js:129, tips.csv:125): Same transfer three times in a week is a training request, not a habit.
+- **Brief the next rep**
+  - transfers #4 (tips.module.js:97, tips.csv:93): Warm transfer when you can. Brief the next rep so the customer doesn't have to repeat their story.
+  - transfers #23 (tips.module.js:116, tips.csv:112): Give the next rep a 20 second brief: the customer's name, the issue and what you've already tried.
+  - transfers #42 (tips.module.js:135, tips.csv:131): If the customer is upset, warn the next rep, walking in blind makes it worse.
+- **Hard call is not a reason to transfer**
+  - transfers #16 (tips.module.js:109, tips.csv:105): Resist the urge to transfer just because a call is getting hard. That's where learning happens.
+  - transfers #40 (tips.module.js:133, tips.csv:129): If you're transferring to get out of a hard conversation, that's the call worth staying on.
+- **Say who and why**
+  - transfers #3 (tips.module.js:96, tips.csv:92): If you do transfer, tell them who they're going to and why, a dropped call shouldn't start from zero.
+  - transfers #10 (tips.module.js:103, tips.csv:99): When transferring say 'I'm connecting you with [dept] so you can get resolution faster'.
+  - transfers #32 (tips.module.js:125, tips.csv:121): Say what you're transferring for, not just where you're sending them.
+- **Access**
+  - transfers #17 (tips.module.js:110, tips.csv:106): If you keep transferring because you don't have access to something, ask your supe whether you can get that access.
+  - transfers #43 (tips.module.js:136, tips.csv:132): Check whether you actually have access before you assume you don't.
+- **Same advice in Overall Experience and another pool (10 of the 16 OE tips)**
+  - overallExperience #12 (tips.module.js:538, tips.csv:534): On a move in or move out, read the date and the address back to them so nothing surprises them later.
+  - fcr #37 (tips.module.js:86, tips.csv:82): On move in and move out calls, read the date and the address back to them.
+  - overallExperience #9 (tips.module.js:535, tips.csv:531): On an outage call, tell them what's already been reported and what happens next. Knowing someone is on it changes how the whole call feels.
+  - fcr #40 (tips.module.js:89, tips.csv:85): If an outage caused it, tell them what's already been reported and what happens next.
+  - overallExperience #5 (tips.module.js:531, tips.csv:527): On a high bill call, start with what drove the bill up. People relax once they understand why.
+  - fcr #24 (tips.module.js:73, tips.csv:69): On a high bill call, explain what drove it before you offer a payment plan, the why is what stops the callback.
+  - overallExperience #8 (tips.module.js:534, tips.csv:530): When you set up a payment arrangement, read back the amounts and dates and ask if that works for their budget.
+  - fcr #27 (tips.module.js:76, tips.csv:72): When you set up a payment arrangement, say the exact dates and amounts out loud.
+  - overallExperience #6 (tips.module.js:532, tips.csv:528): Say the balance, the due date and the next step out loud before you hang up. That's what they'll remember about the call.
+  - fcr #41 (tips.module.js:90, tips.csv:86): Never end a billing call without saying the balance and the due date.
+  - overallExperience #1 (tips.module.js:527, tips.csv:523): When there's bad news, lead with what you can do: 'Here's what I can do for you right now' before explaining any limitations.
+  - cxRepOverall #14 (tips.module.js:497, tips.csv:493): When giving bad news, lead with what you can do.
+  - overallExperience #10 (tips.module.js:536, tips.csv:532): Use their name once you've verified them, and again at the close. It turns a transaction into a conversation.
+  - overallSentiment #26 (tips.module.js:287, tips.csv:283): Use their name again after verification, not just in the greeting.
+  - overallExperience #4 (tips.module.js:530, tips.csv:526): Match the customer's energy. If they're chatty, take a moment to connect. If they're in a hurry, get to the point quickly.
+  - overallSentiment #2 (tips.module.js:263, tips.csv:259): Match the customer's energy level, if they're calm be calm. If concerned show empathy.
+  - overallExperience #3 (tips.module.js:529, tips.csv:525): Before ending, summarize clearly: 'So here's what we did today and what happens next.' Customers remember the ending most.
+  - cxRepOverall #37 (tips.module.js:520, tips.csv:516): Close the loop out loud, here's what we did and here's what happens next.
+  - overallExperience #14 (tips.module.js:540, tips.csv:536): When a call runs long, thank them for sticking with you. 'Thanks for hanging in there with me on that' goes a long way.
+  - overallSentiment #9 (tips.module.js:270, tips.csv:266): Thank them for patience if call took longer: 'Thanks for bearing with me on that'.
+- **Promises**
+  - cxRepOverall #2 (tips.module.js:485, tips.csv:481): Keep every promise you make on the call. If you said you'd do something, do it before you hang up.
+  - cxRepOverall #11 (tips.module.js:494, tips.csv:490): Only promise what you can finish on the call, then finish it while they're still on the line.
+- **Unspoken ask**
+  - cxRepOverall #0 (tips.module.js:483, tips.csv:479): Listen for the real issue behind the question. Sometimes a billing question is really a need for a payment arrangement.
+  - cxRepOverall #21 (tips.module.js:504, tips.csv:500): Listen for the unspoken ask. 'Billed twice' might mean they want a refund, not an explanation.
+- **Great question, let me find it**
+  - cxRepOverall #19 (tips.module.js:502, tips.csv:498): If you're stumped, acknowledge it: 'Great question. Let me find the right answer'.
+  - negativeWord #1 (tips.module.js:360, tips.csv:356): Instead of 'I'm not sure', say 'Great question, let me find that answer for you'.
+- **Let them finish**
+  - overallSentiment #13 (tips.module.js:274, tips.csv:270): Don't interrupt, even if you know the answer. Let them finish.
+  - overallSentiment #38 (tips.module.js:299, tips.csv:295): Let them finish the sentence even when you know how it ends.
+- **First seconds set the tone**
+  - overallSentiment #10 (tips.module.js:271, tips.csv:267): Greet the customer with genuine energy. Your first 5 seconds set the tone.
+  - overallSentiment #25 (tips.module.js:286, tips.csv:282): The first ten seconds set the tone, they can hear whether you're ready.
+- **Vary your tone**
+  - overallSentiment #4 (tips.module.js:265, tips.csv:261): Sound genuinely interested, not robotic. Vary your tone.
+  - overallSentiment #15 (tips.module.js:276, tips.csv:272): Avoid monotone. Vary pitch like you're telling a story to a friend.
+- **Policy**
+  - overallSentiment #19 (tips.module.js:280, tips.csv:276): Avoid 'per our policy'. Use 'here's what I can do'.
+  - negativeWord #5 (tips.module.js:364, tips.csv:360): Avoid 'our policy doesn't allow that', say 'Here's what I can offer instead'.
+  - negativeWord #16 (tips.module.js:375, tips.csv:371): Don't say 'our policy states', say 'here's what we can do', same info less cold.
+- **Own the mistake**
+  - overallSentiment #22 (tips.module.js:283, tips.csv:279): If you made an error, own it cleanly: 'That's on me. Let me fix it'.
+  - managingEmotions #45 (tips.module.js:446, tips.csv:442): Own a mistake with 'That's on us, let me fix it'. 'That was our fault' flags the call as emotional.
+- **Double charge empathy**
+  - overallSentiment #3 (tips.module.js:264, tips.csv:260): Lead with empathy by naming the specific thing. Not 'I understand' but 'I hear you on that double charge, let's get it fixed.' Generic empathy sounds scripted.
+  - managingEmotions #1 (tips.module.js:402, tips.csv:398): Validate by naming the specific issue back to them. 'That double charge would frustrate me too' beats generic 'I understand your frustration'.
+- **Breathe**
+  - managingEmotions #0 (tips.module.js:401, tips.csv:397): Take a 3-second breath before responding to frustrated customers.
+  - managingEmotions #16 (tips.module.js:417, tips.csv:413): If you feel your voice tightening, take one slow breath before speaking.
+  - managingEmotions #9 (tips.module.js:410, tips.csv:406): If you're getting triggered, take a slow breath while the customer is still talking, don't add a hold to manage your own emotions.
+  - managingEmotions #30 (tips.module.js:431, tips.csv:427): If your heart rate is up, slow the sentence down and the rest follows.
+- **Not personal**
+  - managingEmotions #3 (tips.module.js:404, tips.csv:400): Don't take angry words personally. They're frustrated with situation not you.
+  - managingEmotions #32 (tips.module.js:433, tips.csv:429): It isn't personal even when the words are personal.
+  - managingEmotions #12 (tips.module.js:413, tips.csv:409): Develop a mental mantra: 'This is their bad day not mine'.
+- **Good things list**
+  - managingEmotions #14 (tips.module.js:415, tips.csv:411): Write down what went well each day. Combats the negativity bias.
+  - managingEmotions #23 (tips.module.js:424, tips.csv:420): End-of-shift: list 3 good things about your day. Builds emotional resilience.
+  - managingEmotions #38 (tips.module.js:439, tips.csv:435): Keep one good call a week in your head for the days you need it.
+- **Let them vent**
+  - managingEmotions #7 (tips.module.js:408, tips.csv:404): If the customer is yelling, let them vent for 20 to 30 seconds, then redirect calmly.
+  - managingEmotions #26 (tips.module.js:427, tips.csv:423): Let the first thirty seconds be theirs, don't fix it yet.
+  - aht #35 (tips.module.js:172, tips.csv:168): When someone needs to vent about the bill, let them, then bring it back to one thing.
+- **negativeWord: same swap twice (16 pairs)**
+  - negativeWord #1 (tips.module.js:360, tips.csv:356): Instead of 'I'm not sure', say 'Great question, let me find that answer for you'.
+  - negativeWord #27 (tips.module.js:386, tips.csv:382): 'I'm not sure' makes them doubt everything after it. Say 'Let me check on that for you'.
+  - negativeWord #2 (tips.module.js:361, tips.csv:357): 'Yes, but' cancels the yes. Say 'Yes, and here's how it works'.
+  - negativeWord #41 (tips.module.js:400, tips.csv:396): Skip 'yes, but'. If the answer is yes, stop at yes.
+  - negativeWord #5 (tips.module.js:364, tips.csv:360): Avoid 'our policy doesn't allow that', say 'Here's what I can offer instead'.
+  - negativeWord #16 (tips.module.js:375, tips.csv:371): Don't say 'our policy states', say 'here's what we can do', same info less cold.
+  - negativeWord #6 (tips.module.js:365, tips.csv:361): Don't say 'There's no way to do that'. Say 'Let me see what options we have'.
+  - negativeWord #38 (tips.module.js:397, tips.csv:393): 'There's no way to change that' ends the call. Say 'Here's what we can change'.
+  - negativeWord #7 (tips.module.js:366, tips.csv:362): Replace 'Don't do that' with 'Here's what works best'.
+  - negativeWord #29 (tips.module.js:388, tips.csv:384): Skip 'don't do that' when they explain what they tried. Say 'Next time, this way is quicker'.
+  - negativeWord #8 (tips.module.js:367, tips.csv:363): Avoid 'There's nothing I can do'. Always offer something, even if it's small.
+  - negativeWord #35 (tips.module.js:394, tips.csv:390): 'There's nothing we can do' is never the whole answer. Name one thing you can do.
+  - negativeWord #10 (tips.module.js:369, tips.csv:365): 'I'm sorry you feel that way' sounds like blame. Say 'I'm sorry this happened, let me help'.
+  - negativeWord #33 (tips.module.js:392, tips.csv:388): Never say 'sorry you feel that way'. Name what they're upset about instead.
+  - negativeWord #11 (tips.module.js:370, tips.csv:366): 'I'm trying to help you' sounds defensive. 'I'm here to help' says the same thing and sounds like you're on their side.
+  - negativeWord #32 (tips.module.js:391, tips.csv:387): Drop 'I'm just trying to help'. It sounds like you're defending yourself.
+  - negativeWord #12 (tips.module.js:371, tips.csv:367): Instead of 'We don't have that', say what you do have: 'Here's what we can do'.
+  - negativeWord #36 (tips.module.js:395, tips.csv:391): 'We don't have a record of that' sounds like a dead end. Say 'I'm not finding it yet, let me check one more place'.
+  - negativeWord #13 (tips.module.js:372, tips.csv:368): Don't say 'I understand, but'. The 'but' erases the 'I understand'.
+  - negativeWord #39 (tips.module.js:398, tips.csv:394): 'I understand, but' tells them you're about to disagree. Try 'I understand, and here's what I can do'.
+  - negativeWord #14 (tips.module.js:373, tips.csv:369): Drop 'sorry, but'. Say sorry and stop, then say what you can do.
+  - negativeWord #40 (tips.module.js:399, tips.csv:395): 'I'm sorry, but' takes the apology back. Leave the 'but' off.
+  - negativeWord #17 (tips.module.js:376, tips.csv:372): Swap 'I can't see that' for 'Here's what I'm seeing'.
+  - negativeWord #30 (tips.module.js:389, tips.csv:385): Don't say 'I can't see anything wrong', say what you do see.
+  - negativeWord #18 (tips.module.js:377, tips.csv:373): 'I'm unable to help with that' ends the conversation. Say 'Let me find out who can'.
+  - negativeWord #37 (tips.module.js:396, tips.csv:392): Never say 'I'm unable to help' without a 'here's what I can do' right behind it.
+  - negativeWord #20 (tips.module.js:379, tips.csv:375): Avoid 'like I said' and 'as I said before'. Repeating info isn't the customer's fault.
+  - negativeWord #31 (tips.module.js:390, tips.csv:386): Drop 'like I said'.
+  - negativeWord #24 (tips.module.js:383, tips.csv:379): Instead of 'There was an error', say 'Here's what happened and here's the fix'.
+  - negativeWord #34 (tips.module.js:393, tips.csv:389): Don't blame 'an error' and stop there. Say what happened and what you're doing about it.
+  - negativeWord #4 (tips.module.js:363, tips.csv:359): Replace 'You need to go to the website' with 'Let me walk you through it right now'.
+  - negativeWord #28 (tips.module.js:387, tips.csv:383): Don't send them off with 'You need to go online for that'. Walk them through it while you have them.
+- **positiveWord repeats**
+  - positiveWord #9 (tips.module.js:325, tips.csv:321): Say 'My pleasure' instead of 'You're welcome' at the close.
+  - positiveWord #34 (tips.module.js:350, tips.csv:346): 'My pleasure' and 'you bet' both land warm, and they keep every close from sounding the same.
+  - positiveWord #25 (tips.module.js:341, tips.csv:337): 'I can take care of that for you' beats 'that can be done'.
+  - positiveWord #13 (tips.module.js:329, tips.csv:325): Say 'I'll take care of this for you' instead of 'I can put in a request'.
+  - positiveWord #2 (tips.module.js:318, tips.csv:314): Use 'absolutely' instead of 'yes'. It's more enthusiastic.
+  - overallSentiment #14 (tips.module.js:275, tips.csv:271): Say 'absolutely' and 'of course'. They signal willingness and partnership.
+  - overallSentiment #23 (tips.module.js:284, tips.csv:280): Be conversational. 'Yeah absolutely' sounds human, not robotic.
+- **reliability repeats**
+  - reliability #8 (tips.module.js:456, tips.csv:452): Write down the time and what happened during any system outage, and report it the same day.
+  - reliability #28 (tips.module.js:476, tips.csv:472): If a system outage kept you off the phones, report it the same day.
+  - reliability #0 (tips.module.js:448, tips.csv:444): Review your Verint time entries to make sure you're marked correctly, coding errors can inflate your hours.
+  - reliability #13 (tips.module.js:461, tips.csv:457): Check your time entries after every pay period, so a coding mistake gets caught while it's easy to fix.
+  - reliability #21 (tips.module.js:469, tips.csv:465): Check your hours after any unusual week, that's when coding goes wrong.
+  - reliability #25 (tips.module.js:473, tips.csv:469): Look at your own hours monthly, don't wait for a review to see them.
+  - reliability #1 (tips.module.js:449, tips.csv:445): Pre-schedule any planned time off in advance so it doesn't count against reliability.
+  - reliability #19 (tips.module.js:467, tips.csv:463): Put time off in as early as you can, planned time protects your number.
+  - reliability #11 (tips.module.js:459, tips.csv:455): Bundle medical appointments into single days when possible.
+  - reliability #30 (tips.module.js:478, tips.csv:474): Put appointments on days off where you can, the wait is worth it.
+
+## 11. Gaps (what the pool does not cover)
+
+- Overall Experience: 16 tips, and 10 of them repeat another pool, so about 6 are its own. Nothing on the calls customers judge APS by beyond the rep: rate or price questions, solar bills, disconnect and reconnect timing, deposits, scam calls. On the Calls page Overall Experience can never be a chip (no finding maps to it), so these tips only reach emails.
+- FCR: no tip on solar or net metering bills, reconnect after a disconnect (when power comes back once a payment posts), how long a payment takes to post, rate plan changes (when the new plan starts), estimated reads, or scam calls (a customer told to pay by gift card or be shut off).
+- Transfers: no tip on when a transfer is required right away, such as a downed line, sparks or any safety call. The pool only argues against transferring.
+- Rep Sat: no tip on verification done smoothly (the APS standard), and none for the safety finding.
+- Managing Emotions: none of the either side phrases an associate might echo in sympathy has a tip: "ridiculous", "cannot believe" (the tip says "can't"), "totally unacceptable", "very unhappy", "not good enough". 18 of 24 either side phrases have no tip, though most are profanity.
+- Positive Words: no tip for "Is there anything else I can do for you?" or "It was a pleasure helping you", the two scored phrases with no tip.
+- Avoid Negative Words: all 26 penalized phrases have a tip, but the two "sorry but" tips are unreachable from a call (see bugs).
+
+## 12. Selection and parity bugs
+
+- Parity: tips.csv and EMBEDDED_TIPS_CSV are identical (537 rows, same order, tips.csv has a BOM). The parity test (tests/tips-pool.test.js:49 to 53) ignores order, but order matters because edits and deletions are stored by position.
+- Edits and deletions are applied twice: loadServerTips applies them (tips.module.js:568 to 589), initializeDefaultTips saves that result as metricCoachingTips (1048 to 1050), then getMetricTips applies them again by position (1113 to 1134). Simulated: deleting one FCR tip removes two; an edit to Handle Time #5 after a deletion also overwrites #6, so the edited text shows twice. The tips manager shows the right list, emails and the Calls page get the wrong one. Latent: the 10/21 R2 backup has no edits or deletions.
+- Edits and deletions read the wrong store: readJsonSetting (tips.module.js:1088 to 1095, used at 973 and 992) reads localStorage, but modifiedServerTips and deletedServerTips are IndexedDB stores (store-registry.module.js:75 to 76; storage.module.js:612 to 614 writes only to IndexedDB). Each new edit or delete starts from a stale or empty copy and wipes the ones before it. Found by reading, not run.
+- Position keyed edits drift: any tip inserted or removed mid list re-points every saved edit and deletion after it (tips.module.js:562, 979, 999).
+- Coaching email tips (coaching-email.module.js:298 to 313) are uniform random per email with no memory between weeks, and they are never written to tipUsageHistory, so the Tip effectiveness panel, which says tips are "issued via coaching emails" (metric-stability.module.js:536), only ever sees Morning Pulse tips.
+- Calls page Copilot tips (call-listening.module.js:267) pass no history, so a finding always gets the same top two tips, ties broken alphabetically (call-coaching-bridge.module.js:921). When nothing matches, the brief falls back to the alphabetically first two tips in the pool (933).
+- Plain Verint phrases are matched against raw text with punctuation (call-coaching-bridge.module.js:891 and 898), so the finding "sorry but" never matches the tips, which write "sorry, but". Routing every phrase through compilePhrase would fix it.
+- emotionPhrase has no entry in FINDING_KEYWORDS (call-coaching-bridge.module.js:234 to 275), so it matches only by the phrase itself; 18 of 24 either side phrases find no tip.
+- Ranking mixes units: the trend email's weakest metric (metric-trends.module.js:1039 to 1041, 1065 to 1072) and the Calls page chip order (call-coaching-bridge.module.js:738) sort by raw gap, seconds against percentage points, so handle time, wrap and hold usually outrank survey metrics. The Morning Pulse history (151 of 255 tips were Handle Time) is consistent with that, but Morning Pulse ranking was not checked.
+- Morning Pulse (morning-pulse.module.js:2220, script.js:6214 to 6252) has 30 day no repeat memory, but keyed by exact text: the 10/14 rewording orphaned 134 of the 139 tips in that history. High severity also limits it to tips of 120 characters or fewer, which favours the short ones, like the "second sentence" tip.
+- Dashboard Tip of the Day (dashboard.module.js:215 to 232) draws from every metric, including the 35 reliability tips.
+
+Total problem tips in groups 1 to 6: 52. Low yield: 12. Duplicate clusters: 39.

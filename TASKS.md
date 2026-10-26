@@ -1,6 +1,14 @@
 # Tasks
 
 ## Open
+- Deep dive 2026-10-25 (`audit/2026-10-25-deep-dive.md`): waiting on Scott's go and answers to its 6 questions. Proposed phases:
+  - A: call reader accuracy, 8 misreads plus grammar. Needs 3 to 5 real coloured Verint pastes.
+  - B: call scorecard on the main path, saved as data.
+  - C: log on send, one coaching log, one "What's working" view.
+  - D: call trends by associate and team.
+  - E: tone (`audit/2026-10-25-tone-findings.md`).
+  - F: tips (`audit/2026-10-25-tips-findings.md`): 52 problem tips, gaps, and two confirmed edit/delete bugs in tips.module.js.
+- Stray live data: `userCustomTips.transfers` = "Test Upload 2". Delete it only once Scott says yes.
 - Data pipeline plan (approved 2026-10-22): `audit/2026-10-21-data-pipeline-plan.md`. Phase 1 done. Next: 2 upload checks (plus replacing a saved week or month, so Scott can re-pull Feb 23-Mar 1, Mar 2-8, May, May 18-24, Jun 1-7); 3 repair stored data and hide superseded periods; 4 one period control everywhere; 5 one answer for each number.
 - Later, from the same read: two cloud syncs run side by side and R2 is never pruned (needs a worker deploy from home); undo after an upload leaves archived dailies, the auto YTD and center averages changed.
 - Scott to review the restyle on the live site; tweak what he flags.
