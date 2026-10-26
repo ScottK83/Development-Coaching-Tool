@@ -537,13 +537,13 @@ Vary wording and structure naturally like a human would.`;
 - Do NOT label sections (no "Key Wins," "Opportunities," etc.)
 - Do NOT sound like a report or checklist
 - Do NOT use robotic or instructional language
-- Do NOT repeat phrasing across bullets
+- Do NOT repeat phrasing from one sentence to the next
 - Do NOT use HR clich\u00e9s or jargon
 - Do NOT use the phrase "This is an opportunity to"
 - Do NOT use em dashes or dashes of any kind. Use commas or periods
 - At most 2 emojis in the whole email
 - Under 200 words
-- Write in natural paragraphs with clean, simple bullet points where appropriate`;
+- Write in short, natural paragraphs, the way you would say it out loud, with no bullet lists`;
     }
 
     // options.positive is set when nothing is at goal: the email leads with
@@ -581,8 +581,8 @@ Close:
         return `OUTPUT REQUIREMENTS
 
 - Address ${preferredName} by name in the opening
-- ${options.positive ? 'Open with the positive in a warm sentence, then use clean bullets for the focus areas' : 'Use clean bullets for the wins and the focus areas'}
-- Write each number the way it is given, with its goal ("goal 93% or better")
+- ${options.positive ? 'Open with the positive in a warm sentence, then talk through the focus areas in a short paragraph' : 'Talk through the wins, then the focus areas, in short paragraphs rather than bullets'}
+- Say each number the way a person says it out loud, with its goal ("you're at 91%, and the goal is 93%"), and a move in words ("down 40 seconds, from 600 to 560"), never a list of figures
 - Exactly ONE tip per focus area, rewritten in natural language, never copied verbatim
 - Sound like a real supervisor: natural, human, and supportive
 - At most 2 emojis, under 200 words, no em dashes

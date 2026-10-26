@@ -300,7 +300,7 @@ HOW TO WRITE IT:
 - ${praiseRule}
 - Then the focus areas, each with its number and its goal, framed as the next goal to reach, with the tip rewritten in your own words
 - Every metric states its own goal. On a "lower" goal such as Average Handle Time or Transfers, a number that fell is an improvement and a number that rose is a setback. Never describe a rise on one of those as progress
-- Write the numbers exactly as given
+- Keep every number true to what is given, but say it the way a person says it out loud ("you're at 91%, and the goal is 93%", "down 40 seconds, from 600 to 560"), in short paragraphs, never a list of figures or bullets
 - ${ongoing ? 'The period is still going, so use the present tense' : 'The period is over, so use the past tense'}
 - Do not mention attendance, reliability or any metric not listed above
 - Close with encouragement and confidence in them

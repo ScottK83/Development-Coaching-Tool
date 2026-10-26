@@ -23,18 +23,15 @@ function src(rel) {
     return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
 
-// Only the text a person can read: template and quoted string literals, not
-// comments. Good enough for a phrase scan.
+// The source with its comments taken out, so a phrase quoted in a comment
+// explaining why it went is not mistaken for one still in a pool. (Pulling
+// out the string literals alone lost its place at nested template literals
+// and could pass without having read the pools at all.)
 function literals(code) {
-    const bare = String(code)
+    return String(code)
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '')
         .replace(/([;,{}()\]])\s*\/\/.*$/gm, '$1');
-    const out = [];
-    const re = /`(?:\\[\s\S]|\$\{[^}]*\}|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g;
-    let m;
-    while ((m = re.exec(bare)) !== null) out.push(m[0]);
-    return out.join('\n');
 }
 
 const HARSH = [
@@ -60,6 +57,19 @@ suite('natural voice: morning pulse pools never scold, sound corporate or stitch
     t.check('no range in brackets after a move', !/\(\$\{range\}\)/.test(text));
     t.check('no "YTD at X, target Y" stacking', !/YTD (is )?(at|sitting at) \$\{ytdVal\}[^`]*target \$\{target\}/.test(text));
     t.check('no growth bullet list', !/Growing:|Slipped a bit:|Focus area: \$\{/.test(text));
+});
+
+suite('natural voice: the Copilot email prompts ask for numbers said out loud', (t) => {
+    // The weekly coaching prompt asked for "clean bullets" and "each number
+    // the way it is given", and Copilot sent back "Hold Time: 25s, goal 30s
+    // or lower" (tone audit, 2026-10-25).
+    ['modules/coaching-email.module.js', 'modules/trend-coaching-email.module.js', 'modules/metric-trends.module.js'].forEach((rel) => {
+        const text = literals(src(rel));
+        t.check(rel + ': no "clean bullets"', !/clean bullets|clean, simple bullet/.test(text));
+        t.check(rel + ': no "numbers exactly as given"', !/exactly as given|the way it is given/.test(text));
+        t.check(rel + ': asks for numbers out loud', /says (it|them) out loud/.test(text));
+        t.check(rel + ': no AI persona', !/AI Intelligence Layer/.test(text));
+    });
 });
 
 suite('natural voice: the Friday week progress is sentences, not a dashboard', (t) => {

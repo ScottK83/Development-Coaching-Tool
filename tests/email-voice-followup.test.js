@@ -114,7 +114,7 @@ suite('email voice, follow-up: the trend prompt keeps reliability out of strengt
     const analysis = mt.analyzeTrendMetrics(MARIA, { adherence: 92 }, 2026, MARIA_BEFORE, {});
     // All metrics, reliability included, as another caller might hand them.
     const prompt = mt.buildTrendCoachingPrompt('Maria', analysis.weakest, analysis.trendingDown, [], [], '', null, analysis.allMetrics);
-    const strengths = prompt.slice(prompt.indexOf('=== STRENGTHS TO LEVERAGE ==='), prompt.indexOf('=== PRIORITY DEVELOPMENT AREAS ==='));
+    const strengths = prompt.slice(prompt.indexOf('What I want to praise first:'), prompt.indexOf('\n\n', prompt.indexOf('What I want to praise first:')));
     t.check('reliability is not a strength', !/Reliability/.test(strengths));
     t.check('nor anywhere in the data', !/- Reliability/.test(prompt));
     t.check('the emoji budget is set', /At most 2 emojis/.test(prompt));
