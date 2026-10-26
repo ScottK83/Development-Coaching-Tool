@@ -51,6 +51,11 @@ suite('tips pool: one shape, two copies in step', (t) => {
     const inEmbedded = new Set(embedded);
     t.equal('no row is only in the embedded copy', embedded.filter((l) => !inFile.has(l)).length, 0);
     t.equal('no row is only in tips.csv', file.filter((l) => !inEmbedded.has(l)).length, 0);
+    // Line for line, in the same order. Same rows in a different order used to
+    // pass, and the order is what the tips manager lists.
+    const firstDifference = file.findIndex((line, i) => line !== embedded[i]);
+    t.equal(`the two copies match line for line (first difference: ${firstDifference === -1 ? 'none' : 'row ' + (firstDifference + 1) + ': ' + file[firstDifference]})`,
+        firstDifference, -1);
 
     // The lookup is by metric key. A display label here would miss silently.
     const keys = new Set(registryKeys());

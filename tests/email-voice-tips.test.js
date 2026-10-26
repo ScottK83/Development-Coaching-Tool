@@ -56,17 +56,80 @@ suite('email voice, tips: plain words, whole sentences', (t) => {
 suite('email voice, tips: Overall Experience has a real pool', (t) => {
     const { csv } = poolCopies();
     const pool = csv.filter((row) => row.startsWith('overallExperience,'));
-    t.check(`at least 13 Overall Experience tips (${pool.length})`, pool.length >= 13);
+    // 16 tips on 10/25, and 10 of them repeated another pool. Scott wants
+    // about 40 a metric so the same ones do not come round week to week.
+    t.check(`at least 40 Overall Experience tips (${pool.length})`, pool.length >= 40);
 
-    // The APS utility floor: no named systems, no texting customers, no
-    // follow-up emails, no promised exceptions.
-    const offFloor = pool.filter((row) => /\btext (them|you|the customer)\b|follow-up email|\bCRM\b|knowledge base|exception/i.test(row));
-    t.equal(`all of them fit the floor (${offFloor.join(' | ') || 'clean'})`, offFloor.length, 0);
-    t.check('and no dashes as punctuation', !pool.some((row) => /[—–]| - /.test(row)));
+    // Its own advice, not a copy of another pool's.
+    const elsewhere = new Set(csv.filter((row) => !row.startsWith('overallExperience,')).map((row) => keyOf(tipOf(row))));
+    const copied = pool.filter((row) => elsewhere.has(keyOf(tipOf(row))));
+    t.equal(`none of them is word for word in another pool (${copied.join(' | ') || 'none'})`, copied.length, 0);
 
-    // Edits are stored by a tip's position inside its metric, so the old
-    // five keep their places and the new ones come after them.
-    t.check('the original first tip is still first',
-        /^overallExperience,Open the call with 'I'd be happy to help you with that'/.test(pool[0]));
-    t.check('and the original fifth is still fifth', /^overallExperience,Match the customer's energy/.test(pool[4]));
+    // Position no longer matters: edits and deletions are keyed by the tip's
+    // own text (tests/tips-edits.test.js), so the old tips did not have to
+    // keep their places.
+});
+
+function keyOf(tip) {
+    return String(tip).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/*
+ * The APS utility floor, over every tip in both copies. It used to be checked
+ * on the Overall Experience pool only, and every other pool relied on being
+ * read by eye.
+ */
+const FLOOR = [
+    // Tools and channels associates do not have.
+    ['a channel or system they do not have', /\btext(ing)? (them|you|the customer|customers)\b|follow-up email|send (them|the customer) an email|\bCRM\b|knowledge base/i],
+    ['a wrap form', /\bfields?\b|drop-?down/i],
+    // Not confirmed that associates can dial a customer, so no tip relies on it.
+    ['dialing a customer back', /call (them|the customer|him|her) back|dial (out|them)/i],
+    // The team is not granting exceptions; report it so we can give next steps.
+    ['a promised exception', /exception|keep you in adherence/i],
+    // The team is tenured.
+    ['rookie or senior framing', /if you're new|as a new rep|still learning|shadow (a|an)\b|senior rep|tenured|rookie/i],
+    ['a dash as punctuation', /[—–―]| - /],
+    // An authorized call needs only the name.
+    ['verification on every call', /verify identity every single time/i],
+    // Unconfirmed figures and routing.
+    ['an emergency number', /\b911\b|\d{3}[-. ]\d{4}/],
+    ['a posting time', /\bpost(s|ed|ing)?\b[^.]*\b(in|within) \d+\s*(hours?|days?|business)/i],
+    ['a dollar amount', /\$\s?\d/]
+];
+
+suite('email voice, tips: every tip fits the APS floor', (t) => {
+    const { csv, embedded } = poolCopies();
+    [['tips.csv', csv], ['the embedded copy', embedded]].forEach(([where, rows]) => {
+        FLOOR.forEach(([what, pattern]) => {
+            const offenders = rows.filter((row) => pattern.test(tipOf(row)));
+            t.equal(`${where}: no tip names ${what} (${offenders.slice(0, 3).join(' | ') || 'clean'})`, offenders.length, 0);
+        });
+        // Reliability is never a focus outside its own pool.
+        const reliabilityTalk = rows.filter((row) => !row.startsWith('reliability,') && /reliability|\bPTO(ST)?\b|occurrence/i.test(tipOf(row)));
+        t.equal(`${where}: hours and reliability stay in the reliability pool (${reliabilityTalk.join(' | ') || 'clean'})`, reliabilityTalk.length, 0);
+    });
+
+    const hold = csv.filter((row) => row.startsWith('holdTime,'));
+    t.check('hold time never points to a callback', !hold.some((row) => /callback|call (you|them) back|call back/i.test(row)));
+});
+
+suite('email voice, tips: every pool is big and has no repeats', (t) => {
+    const { csv } = poolCopies();
+    const byMetric = {};
+    csv.forEach((row) => {
+        const metric = row.slice(0, row.indexOf(','));
+        (byMetric[metric] = byMetric[metric] || []).push(tipOf(row));
+    });
+    Object.keys(byMetric).forEach((metric) => {
+        const tips = byMetric[metric];
+        // About 40 a metric is the target; reliability only reaches the
+        // dashboard tip of the day, so it carries the fewest.
+        t.check(`${metric} has at least 33 tips (${tips.length})`, tips.length >= 33);
+        // Edits and deletions are keyed by a tip's text, so two tips that
+        // normalize to the same words would share every edit.
+        const keys = tips.map(keyOf);
+        const repeats = keys.filter((key, i) => keys.indexOf(key) !== i);
+        t.equal(`${metric}: no two tips are the same words (${repeats.join(' | ') || 'none'})`, repeats.length, 0);
+    });
 });
