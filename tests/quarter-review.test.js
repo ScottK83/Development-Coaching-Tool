@@ -192,7 +192,7 @@ suite('quarter review: a path that reversed is not called a steady climb', (t) =
     // 95, 88, 95 nets to zero, which is how it came out as "held steady" and
     // erased the one quarter worth talking about.
     const adh = qr.metricSentence(ctx.metrics.find((m) => m.metricKey === 'scheduleAdherence'), ctx, 'support');
-    t.check('a seven point drop and recovery is not "held steady"', !/held steady/.test(adh));
+    t.check('a seven point drop and recovery is not "held steady"', !/held steady|stayed level|stayed consistent/.test(adh));
     t.check('the middle quarter is still on the record', /88% in Q2/.test(adh));
 });
 
@@ -324,6 +324,21 @@ function withSupport(t, store, name, coaching, calls) {
     global.window.callListeningLogs = global.callListeningLogs;
     return { qr, ctx: qr.buildContext(name, 2026) };
 }
+
+/* Tone audit 2026-10-25: "...2 calls reviewed, on average handle time, rep
+   satisfaction" had no "and" before the last one, and it feeds the year-end
+   prompt. */
+suite('quarter review: the work done together names its metrics with an "and"', (t) => {
+    t.pinClock('2026-09-22');
+    const { qr, ctx } = withSupport(t, IMPROVING, 'Jordan Reyes',
+        { 'Jordan Reyes': [{ generatedAt: '2026-05-06T10:00:00Z', metricsCoached: ['aht', 'cxRepOverall', 'scheduleAdherence'] }] },
+        { 'Jordan Reyes': [{ listenedOn: '2026-03-02' }, { listenedOn: '2026-07-15' }] });
+    const tp = qr.buildTalkingPoints(ctx);
+    const section = (tp.sections || []).find((s) => s.id === 'together');
+    const line = section ? section.lines[0] : '';
+    t.check('there is a line on the work together', !!line);
+    t.check('the last metric is joined with "and": ' + line, /, on [a-z ]+, [a-z ]+, and [a-z ]+\.$/.test(line));
+});
 
 suite('quarter review: coaching held and calls reviewed reach the record', (t) => {
     t.pinClock('2026-09-22');
@@ -938,7 +953,7 @@ suite('quarter review: a net move inside the noise band is not progress', (t) =>
         'Wandered', 'overallSentiment', 'lead').text;
     t.check('every reading is shown', /91.8% in Q1, 93.6% in Q2, and 92.3% in Q3/.test(text));
     t.check('half a point is not called better', !/better than where/.test(text));
-    t.check('the standing is still said', /every quarter of it inside the 88% goal/.test(text));
+    t.check('the standing is still said', /every quarter of it inside the 88% goal|inside the 88% goal in every quarter/.test(text));
 });
 
 suite('quarter review: a steady metric is not given one reading for the year', (t) => {
@@ -946,7 +961,26 @@ suite('quarter review: a steady metric is not given one reading for the year', (
     const text = sentenceFor(t, threeQuarters('Steady', { scheduleAdherence: 95.2 }, { scheduleAdherence: 95.0 }, { scheduleAdherence: 95.7 }),
         'Steady', 'scheduleAdherence', 'brief').text;
     t.check('not "held at 95.7% across the year"', !/held at/.test(text));
-    t.check('the figure is the newest quarter, said as such', /held steady across the year, 95.7% in Q3/.test(text));
+    t.check('the figure is the newest quarter, said as such', /(held steady across the year|stayed level across the year|stayed consistent all year), 95.7% in Q3/.test(text));
+});
+
+/* Tone audit 2026-10-25: "held steady" went out 83 times in 42 documents,
+   three times in one document in 22 of them. The word is picked off the
+   metric and its numbers, so it holds still on a rebuild and differs across
+   metrics and people. */
+suite('quarter review: a steady metric is not always "held steady"', (t) => {
+    t.pinClock('2026-10-05');
+    const seen = new Set();
+    [[95.2, 95.0, 95.7], [94.1, 94.3, 94.0], [96.0, 95.8, 96.2], [93.5, 93.6, 93.4], [97.1, 97.0, 97.3]].forEach((v) => {
+        const once = sentenceFor(t, threeQuarters('Steady', { scheduleAdherence: v[0] }, { scheduleAdherence: v[1] }, { scheduleAdherence: v[2] }),
+            'Steady', 'scheduleAdherence', 'brief').text;
+        const again = sentenceFor(t, threeQuarters('Steady', { scheduleAdherence: v[0] }, { scheduleAdherence: v[1] }, { scheduleAdherence: v[2] }),
+            'Steady', 'scheduleAdherence', 'brief').text;
+        t.equal('a rebuild reads the same: ' + v.join(','), again, once);
+        const word = (/(held steady|stayed level|stayed consistent)/.exec(once) || [])[1];
+        if (word) seen.add(word);
+    });
+    t.check('more than one way to say it (' + Array.from(seen).join(', ') + ')', seen.size >= 2);
 });
 
 suite('quarter review: a gap is in points, not a percentage', (t) => {

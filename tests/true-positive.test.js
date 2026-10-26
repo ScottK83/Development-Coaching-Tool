@@ -62,7 +62,16 @@ suite('true positive: best first, and always something', (t) => {
         { key: 'scheduleAdherence', value: 91, target: 93 }
     ]);
     t.equal('then the closest to goal', closest.kind, 'closest');
-    t.check('the nearer one, as a share of its goal', /Schedule Adherence is the closest to goal, at 91% against the 93% goal/.test(closest.text));
+    // Still a miss, so it is named as close, never as good news or "a good
+    // place to build from" (Scott, 2026-10-26).
+    t.equal('the nearer one, as a share of its goal, said as close', closest.text,
+        'Your Schedule Adherence is the closest to goal, 91% with a 93% goal, so only 2 points to go.');
+    const far = voice.truePositive([
+        { key: 'aht', value: 620, target: 420 },
+        { key: 'scheduleAdherence', value: 80, target: 93 }
+    ], { ongoing: false });
+    t.equal('"only" is said only when it is true, and a finished stretch is past tense', far.text,
+        'Your Schedule Adherence was the closest to goal, 80% with a 93% goal, 13 points short.');
 
     const nothing = voice.truePositive([]);
     t.equal('with nothing at all, the effort', nothing.kind, 'effort');

@@ -181,6 +181,47 @@
     }
 
     /*
+     * THE SAME PICK EVERY TIME, A DIFFERENT ONE NEXT TIME
+     *
+     * Scott, 2026-10-26: "Any time I send a message, I want to make sure it has
+     * a natural speaking tone." Somebody who gets a message every week should
+     * not get the same sentence every week, but a draft built twice for the
+     * same person and period must read the same both times (and the tests must
+     * be able to pin it). So the choice is made off a seed, the person and the
+     * period, with the hash quarter-review has used since 10/14.
+     */
+    function stablePick(options, seed) {
+        var list = Array.isArray(options) ? options : [];
+        if (!list.length) return undefined;
+        var text = String(seed || '');
+        var h = 0;
+        for (var i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 100003;
+        return list[h % list.length];
+    }
+
+    // "an 82% goal", "a 93% goal", "an 18 hour budget". Eight, eleven and
+    // eighteen are the numbers said with a vowel sound up front.
+    function withArticle(text) {
+        var s = String(text || '').trim();
+        return (/^(8|11(?![\d.])|18(?![\d.])|11\.|18\.)/.test(s) ? 'an ' : 'a ') + s;
+    }
+
+    // How an email to one associate ends. "Happy to walk through any of it."
+    // closed all fifty captured emails on 10/25, so it is one of several now.
+    var EMAIL_CLOSERS = [
+        'Happy to walk through any of it.',
+        'If you want to go over any of it, just grab me.',
+        'Let me know if you want to talk any of it through.',
+        'Grab me any time if you want to dig into it together.',
+        'My door is open if you want to go over any of it.',
+        'Happy to sit down and go through it with you any time.'
+    ];
+
+    function emailCloser(seed) {
+        return stablePick(EMAIL_CLOSERS, seed);
+    }
+
+    /*
      * THE EMOJI BUDGET
      *
      * Scott, 2026-10-13: "2 emojis." Per message, everywhere, the team post
@@ -382,12 +423,21 @@
             .map(function (row) { return { row: row, margin: _margin(row) }; })
             .filter(function (item) { return item.margin !== null; })
             .sort(function (a, b) { return b.margin - a.margin; })[0];
+        // Still a miss, so it is named as close, never as good news: how near
+        // it is, and that it can be reached (Scott, 2026-10-26).
         if (closest) {
+            var gap = _amount(closest.row.key, Number(closest.row.value) - Number(closest.row.target));
+            var shown = _fmtValue(closest.row.key, Number(closest.row.value));
+            var goal = _fmtValue(closest.row.key, Number(closest.row.target));
+            // "only" is a comfort, so it is said only when it is true.
+            var near = closest.margin > -0.05;
             return {
                 kind: 'closest', key: closest.row.key, label: label(closest.row),
-                text: 'Your ' + label(closest.row) + ' ' + is + (pool.length > 1 ? ' the closest to goal, at ' : ' at ')
-                    + _fmtValue(closest.row.key, Number(closest.row.value)) + ' against the '
-                    + _fmtValue(closest.row.key, Number(closest.row.target)) + ' goal, and that is a good place to build from.'
+                text: 'Your ' + label(closest.row) + ' ' + is + (pool.length > 1 ? ' the closest to goal, ' : ' at ')
+                    + shown + ' with ' + withArticle(goal) + ' goal, '
+                    + (ongoing
+                        ? (near ? 'so only ' : 'so ') + gap + ' to go.'
+                        : (near ? 'only ' : '') + gap + ' short.')
             };
         }
 
@@ -399,6 +449,10 @@
         truePositive: truePositive,
         greeting: greeting,
         greetingPool: greetingPool,
+        stablePick: stablePick,
+        withArticle: withArticle,
+        emailCloser: emailCloser,
+        EMAIL_CLOSERS: EMAIL_CLOSERS,
         TONES: Object.keys(POOLS),
         isOngoingPeriod: isOngoingPeriod,
         hype: hype,

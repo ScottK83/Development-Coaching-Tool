@@ -148,7 +148,7 @@ suite('year card: the email dates the numbers it is sending', (t) => {
 
 suite('year card: movement is judged by the metric, not the arithmetic', (t) => {
     const src = fs.readFileSync(path.join(ROOT, 'modules/center-ranking.module.js'), 'utf8');
-    const fn = src.slice(src.indexOf('function _movementLines'), src.indexOf('function _lastTwoScored'));
+    const fn = src.slice(src.indexOf('function _movements('), src.indexOf('function _moveClause'));
 
     // A faster AHT is a smaller number. Reading the sign alone would print a
     // green arrow on somebody getting slower and a red one on somebody getting
@@ -159,7 +159,8 @@ suite('year card: movement is judged by the metric, not the arithmetic', (t) => 
     // A hair of movement on a rounded number is noise. Congratulating somebody
     // for 0.02 of a point is how the whole thing stops being believed.
     t.check('movement below the rounding is called flat', /Math\.abs\(delta\) < 0\.05/.test(fn));
-    t.check('and so is anything that displays the same', /=== String\(value\)/.test(fn));
+    t.check('and so is anything that displays the same',
+        /=== String\(_formatMetricDisplay\(row\.registry, Number\(after\)\)\)/.test(fn));
 });
 
 suite('year card: a rate moves in points, never in percent', (t) => {

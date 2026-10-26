@@ -93,6 +93,9 @@ function loadRankings(t, weekly, ytd, theme) {
     global.ytdData = ytd || {};
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
+    // The app loads the shared voice before the rankings, and the emails
+    // take their closers, wording rotation and emoji budget from it.
+    t.loadModule('modules/message-voice.module.js');
     t.loadModule('modules/on-off-tracker.module.js');
     t.loadModule('modules/center-ranking.module.js');
     t.loadModule('modules/period-compare.module.js');
@@ -1020,23 +1023,29 @@ suite('rankings view: the mail body says where the month moved', (t) => {
     t.check('it stays a message, not a report', lines.length <= 14);
     t.check('and does not become a wall', mail.body.length < 700);
 
+    // Said out loud (Scott, 2026-10-26): a move in words with the two numbers
+    // it went between, the metric's everyday name, never "better by" or a
+    // column heading like "CX Adv".
     t.check('every metric that moved is named and sized',
-        /(AHT|Adherence|Sentiment|CX Adv) [^,]+, (better|off) by /.test(mail.body));
-    t.check('a metric that held says so', /held at /.test(mail.body) || true);
-    t.check('the two months being compared are named',
-        /\w+ \d{4} next to \w+ \d{4}:/.test(mail.body));
+        /(handle time|adherence|sentiment|rep satisfaction) (came down|went up|slipped) \d+(\.\d+)? (seconds?|points?), from \d+(\.\d+)?%? to \d+(\.\d+)?%?/i.test(mail.body));
+    t.check('a metric that held says so', /held steady at /.test(mail.body) || true);
+    t.check('the month is named in the sentence', /In July, /.test(mail.body));
+    t.check('no "better by", "off by" or column headings',
+        !/better by|off by|\bAHT\b|CX Adv/.test(mail.body));
 
     // Direction is judged by the metric, never the arithmetic. A faster AHT is
-    // a smaller number and it must not be drawn as a fall.
-    t.check('it marks direction with an arrow', /(📈|📉|➡️)/.test(mail.body));
+    // a smaller number and it must not be said as a fall.
+    t.check('a slower handle time is a slip', /Handle time slipped 7 seconds, from 402 to 408, but it's still on target\./.test(mail.body));
     t.check('and ends on a human line about the month',
-        /(brilliant month|Nothing went backwards|direction that counts|harder month|mixed month)/.test(mail.body));
+        /(brilliant month|What a month|Nothing went backwards|Nothing slipped|direction that counts|tougher|mixed month|was a mix)/.test(mail.body));
+    t.check('two emojis at most', global.window.DevCoachModules.messageVoice.countEmojis(mail.body) <= 2);
 
     t.check('it opens to the person', /^Hi P0,/.test(mail.body));
-    t.check('says what is coming', /landed each month this year, against target/.test(mail.body));
+    t.check('says what is coming', /month by month against your goals/.test(mail.body));
     t.check('it dates the numbers for their records',
         /complete through [A-Z][a-z]+ \d{1,2}, \d{4}\./.test(mail.body));
-    t.check('and closes as an invitation', /Happy to walk through any of it.$/.test(mail.body));
+    t.check('and closes as an invitation',
+        global.window.DevCoachModules.messageVoice.EMAIL_CLOSERS.some((c) => mail.body.endsWith(c)));
 
     // Nothing that depends on alignment, because alignment is what kept failing.
     t.check('no table is attempted', !/  +S+ +S+ +S/.test(mail.body));
@@ -1089,10 +1098,13 @@ suite('rankings view: the email follows the period picked', (t) => {
     const ytd = cr.buildMonthOverMonthEmail('P0');
     t.check('the page opens on YTD, and the draft is year to date', !!ytd && ytd.scope === 'ytd');
     if (!ytd) return;
-    t.check('it says it is the year so far', /so far, year to date:/.test(ytd.body));
-    t.check('no month is set against another', !/ next to /.test(ytd.body));
-    t.check('each KPI is judged against target', /(on target|target is )/.test(ytd.body));
-    t.check('with the centre beside it', /\(center [^)]+\)/.test(ytd.body));
+    t.check('it says it is the year so far', /Year to date, /.test(ytd.body));
+    t.check('no month is set against another', !/ next to |In July, |In June, /.test(ytd.body));
+    t.check('each KPI is judged against target', /on target/.test(ytd.body) && / with an? \d+(\.\d+)?%? goal/.test(ytd.body));
+    // The picture carries the center beside every month; the body speaks to
+    // the person's own year and names one thing to go after.
+    t.check('one thing to go after', /plenty of year left/.test(ytd.body));
+    t.check('no label: value rows', !/^- [^:\n]+: /m.test(ytd.body));
     t.check('the subject says year to date', /year to date$/.test(ytd.subject));
     t.check('it dates the file', /run through July 31, 2026\./.test(ytd.body));
     t.check('still no rank or placing', !/place|rank|#\d/.test(ytd.body));
@@ -1104,7 +1116,7 @@ suite('rankings view: the email follows the period picked', (t) => {
     const june = cr.buildMonthOverMonthEmail('P0');
     t.check('a picked month gets the month story', !!june && june.scope === 'month');
     if (!june) return;
-    t.check('measured to the month picked', june.body.indexOf('June 2026 next to May 2026:') > -1);
+    t.check('measured to the month picked', june.body.indexOf('In June, ') > -1 && june.body.indexOf('In July, ') === -1);
     t.check('dated to that month, not the newest',
         /complete through June \d{1,2}, 2026\./.test(june.body));
     t.equal('and the subject stops there', june.subject, 'Your 2026 numbers, through June');
@@ -1119,14 +1131,15 @@ suite('rankings view: the email never sets a month still running against a whole
 
     const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: null });
     t.check('unpicked, the newest two finished months are compared',
-        mail.body.indexOf('July 2026 next to June 2026:') > -1);
-    t.check('August is not set against July', mail.body.indexOf('August 2026 next to') === -1);
+        mail.body.indexOf('In July, ') > -1);
+    t.check('August is not set against July', mail.body.indexOf('So far in August') === -1);
     t.check('and the date matches the month compared', /complete through July \d{1,2}, 2026\./.test(mail.body));
 
     // Picked on purpose, it is compared, and said to be the month so far.
     const picked = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-08' });
-    t.check('a picked running month is compared', picked.body.indexOf('August 2026 next to July 2026:') > -1);
-    t.check('and said to be the month so far', /August 2026 is still running/.test(picked.body));
+    t.check('a picked running month is compared', picked.body.indexOf('So far in August, ') > -1);
+    t.check('in the present tense', /is up [\d.]+ points, from /.test(picked.body) && !/went up|came down/.test(picked.body));
+    t.check('and said to be the month so far', /August is still going, so its numbers are the month so far\./.test(picked.body));
     t.check('never dated as complete', !/complete through/.test(picked.body));
 });
 
@@ -1428,25 +1441,23 @@ suite('rankings view: the monthly email says targets and nothing else', (t) => {
         });
     t.check('no em dash', body.indexOf('—') === -1);
 
-    // One line per metric with data, each carrying a goal and a verdict.
-    const metricLines = body.split('\n').filter((l) => l.indexOf('- ') === 0);
-    t.check('there are metric lines', metricLines.length >= 1);
-    metricLines.forEach((l) => {
-        t.check('a metric line carries its goal: ' + l.slice(0, 30), l.indexOf('(goal:') !== -1);
-        // A miss says how far there is to go (Scott, 2026-10-14: every piece
-        // of feedback carries praise, so no wall of "Not there yet."); the
-        // hours, a year's total, keep the old words.
-        t.check('and a verdict: ' + l.slice(0, 30),
-            l.indexOf('. Met.') !== -1 || / from goal\.$/.test(l) || l.indexOf('. Not there yet.') !== -1);
-    });
-
-    // The count line must agree with the lines above it.
-    const metCount = metricLines.filter((l) => l.indexOf('. Met.') !== -1).length;
-    t.check('the tally matches the lines',
-        body.indexOf('That is ' + metCount + ' of ' + metricLines.length + ' goals met') !== -1);
+    /* Said the way Scott would say it (2026-10-26), not five "label: value.
+       Met." rows: what is on target first, what is short with its goal, one
+       thing to go after, and the hours as the year's total, never counted as
+       a goal met for the month. */
+    t.check('no label: value rows', !/^- [^:\n]+: /m.test(body));
+    t.check('no "Met." verdicts', body.indexOf('Met.') === -1 && body.indexOf('Not there yet') === -1);
+    t.check('no goals met tally that counts the hours', !/goals met/.test(body));
+    t.check('praise first', /^Hi P0,\n\nGood stuff in July\. Handle time came in at 408 seconds and sentiment at 92%, both on target\./.test(body));
+    t.check('each miss carries its goal',
+        /Adherence finished at 86% with a 93% goal and rep satisfaction at 78% with an 82% goal\./.test(body));
+    t.check('one thing to go after, as encouragement',
+        /If you pick one to go after in August, I'd start with rep satisfaction\. It's only 4 points from goal\./.test(body));
+    t.check('the hours are the year\'s total', /this year so far/.test(body) && !/[Rr]eliability: /.test(body));
+    t.check('two emojis at most', global.window.DevCoachModules.messageVoice.countEmojis(body) <= 2);
 
     // The grid's abbreviations stay in the grid.
-    t.check('says Rep Satisfaction, not CX Adv', body.indexOf('CX Adv') === -1);
+    t.check('says rep satisfaction, not CX Adv', body.indexOf('CX Adv') === -1 && !/\bAHT\b/.test(body));
 });
 
 suite('rankings view: a month still running is never presented as finished', (t) => {
@@ -1459,9 +1470,10 @@ suite('rankings view: a month still running is never presented as finished', (t)
 
     if (mail.inProgress) {
         t.check('an in-progress month says so far', mail.body.indexOf('so far') !== -1);
-        t.check('and stands, not landed', mail.body.indexOf('stands so far') !== -1);
+        t.check('and is, not finished', !/finished at|came in at/.test(mail.body));
     } else {
-        t.check('a complete month reads as landed', mail.body.indexOf('landed against target') !== -1);
+        t.check('a complete month is said in the past', /finished at|came in at/.test(mail.body));
+        t.check('and never as still running', !/ is at | is sitting at /.test(mail.body));
     }
 
     t.equal('nobody with no data gets a mail', cr.buildMonthlyStatsEmail('Nobody Here'), null);
@@ -1501,7 +1513,7 @@ suite('rankings view: reliability on the year card is the running total for the 
 
     const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });
     t.check('the email gives the year\'s total',
-        /Reliability 17\.0 hrs missed this year/.test(mail.body));
+        /(inside the reliability budget for the year, at 17 hours so far|hours missed for the year are at 17 hours so far)/.test(mail.body));
     t.check('and never a month\'s own hours', !/hrs of it in/.test(mail.body));
     t.check('never "better by" on a total', !/Reliability[^\n]*better by/.test(mail.body));
 });
@@ -1540,7 +1552,8 @@ suite('rankings view: the YTD file wins reliability where it disagrees with the 
     });
 
     const mail = cr.buildMonthOverMonthEmail('P0', { scope: 'month', anchor: '2026-07' });
-    t.check('the email uses the YTD file too', /Reliability 1\.7 hrs missed this year/.test(mail.body));
+    t.check('the email uses the YTD file too',
+        /(inside the reliability budget for the year, at 1\.7 hours so far|hours missed for the year are at 1\.7 hours so far)/.test(mail.body));
     t.check('and a total below the month before carries no correction note',
         !/corrected/.test(mail.body) && !/of it in July/.test(mail.body));
 });

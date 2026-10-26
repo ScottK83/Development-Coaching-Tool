@@ -118,7 +118,7 @@ suite('high five: the numbers are not called this week when they are last week',
     // the one that read wrong: "last week's 617s to this week's 415s". The
     // move is in words now, with the two numbers after it, and the week is
     // named once (Scott, 2026-10-14: "-202s" read as a number of its own).
-    const jump = drawn.find(m => m.indexOf('(617s to 415s)') > -1);
+    const jump = drawn.find(m => m.indexOf('from 617 to 415') > -1);
     t.check('the comparison is written', Boolean(jump));
     t.check('the move is said in words', jump.indexOf('down 202 seconds') > -1);
     t.check('and the week it happened is named', /last week/.test(jump));
@@ -129,7 +129,7 @@ suite('high five: an in-flight week still reads as this week', async (t) => {
     const pulse = loadPulse(t, '2026-08-19');
     const drawn = await draw(pulse, THURSDAY, 60);
 
-    const jump = drawn.find(m => m.indexOf('(617s to 415s)') > -1);
+    const jump = drawn.find(m => m.indexOf('from 617 to 415') > -1);
     t.check('the comparison is written', Boolean(jump));
     t.check('and the live week is this week', /this week/.test(jump));
     t.check('never last week', !/last week/.test(jump));

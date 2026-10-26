@@ -20,7 +20,7 @@
             columnIndex: 8,
             chartType: 'line',
             chartColor: '#2196F3',
-            defaultTip: "Schedule Adherence: Being present and available is essential. Work on meeting your scheduled hours consistently."
+            defaultTip: "Being present and available is essential. Work on meeting your scheduled hours consistently."
         },
         cxRepOverall: {
             key: 'cxRepOverall',
@@ -68,7 +68,7 @@
             columnIndex: 2,
             chartType: 'bar',
             chartColor: '#FF9800',
-            defaultTip: "Transfers: You're managing transfers well. When possible, try to resolve issues yourself to enhance the customer experience."
+            defaultTip: "When you can, resolve the issue yourself, so the customer does not have to start over with someone new."
         },
         totalCalls: {
             key: 'totalCalls',
@@ -80,7 +80,7 @@
             columnIndex: 1,
             chartType: 'bar',
             chartColor: '#546E7A',
-            defaultTip: "Total Calls Answered: Your call volume for the period."
+            defaultTip: "Your call volume for the period."
         },
         transfersCount: {
             key: 'transfersCount',
@@ -92,7 +92,7 @@
             columnIndex: 3,
             chartType: 'bar',
             chartColor: '#FF6F00',
-            defaultTip: "Number of Transfers: Monitor your total transfer count. Focus on resolving issues independently when possible."
+            defaultTip: "Monitor your total transfer count. Focus on resolving issues independently when possible."
         },
         overallSentiment: {
             key: 'overallSentiment',
@@ -116,7 +116,7 @@
             columnIndex: 11,
             chartType: 'line',
             chartColor: '#4CAF50',
-            defaultTip: "Increase your use of positive language. Use encouraging and supportive words on EVERY call to reach 100% usage."
+            defaultTip: "Increase your use of positive language. Use encouraging, supportive words on every call."
         },
         negativeWord: {
             key: 'negativeWord',
@@ -153,7 +153,7 @@
             columnIndex: 4,
             chartType: 'line',
             chartColor: '#9C27B0',
-            defaultTip: "Average Handle Time: Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps."
+            defaultTip: "Focus on efficiency without rushing. Prepare your responses, but don't skip necessary steps."
         },
         acw: {
             key: 'acw',
@@ -165,7 +165,7 @@
             columnIndex: 7,
             chartType: 'bar',
             chartColor: '#3F51B5',
-            defaultTip: "After Call Work: Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy."
+            defaultTip: "Complete your documentation promptly. This keeps you available for the next customer and maintains accuracy."
         },
         holdTime: {
             key: 'holdTime',
@@ -177,7 +177,7 @@
             columnIndex: 6,
             chartType: 'bar',
             chartColor: '#009688',
-            defaultTip: "Hold Time: Minimize hold time by gathering information upfront. It improves customer experience and efficiency."
+            defaultTip: "Minimize hold time by gathering information upfront. It improves customer experience and efficiency."
         },
         reliability: {
             key: 'reliability',
@@ -192,7 +192,7 @@
             columnIndex: 22,
             chartType: 'bar',
             chartColor: '#795548',
-            defaultTip: "Reliability: Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
+            defaultTip: "Your availability is crucial. Work toward reducing unexpected absences and maintaining consistent attendance."
         }
     };
 

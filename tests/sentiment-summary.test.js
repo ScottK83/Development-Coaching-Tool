@@ -106,14 +106,14 @@ suite('sentiment summary: it says where all three stand', (t) => {
     t.check('and the volume behind it', text.indexOf('212 calls reviewed') > -1);
 
     // Each line carries figure, goal and verdict, so it cannot be read two ways.
-    t.check('positive language, met', text.indexOf('Positive Language: 88.4% against a 86% goal, met') > -1);
-    t.check('managing emotions, met', text.indexOf('Managing Emotions: 96.1% against a 95% goal, met') > -1);
+    t.check('positive language, met', text.indexOf('Positive Language is at 88.4%, with an 86% goal, and that\'s at goal.') > -1);
+    t.check('managing emotions, met', text.indexOf('Managing Emotions is at 96.1%, with a 95% goal, and that\'s at goal.') > -1);
     t.check('and the one that is short says how short',
-        text.indexOf('Avoiding Negative Words: 74.2% against a 83% goal, 8.8 points under') > -1);
+        text.indexOf('Avoiding Negative Words is at 74.2%, with an 83% goal, 8.8 points to go.') > -1);
 
     // One focus, not three.
     t.check('the focus is the widest gap', text.indexOf('WHAT TO WORK ON') > -1
-        && text.indexOf('Avoiding Negative Words. It is the widest gap') > -1);
+        && text.indexOf('Avoiding Negative Words is the one to work on') > -1);
 
     // The detailed sections still follow.
     t.check('the detail is attached', text.indexOf('POSITIVE LANGUAGE') > -1);
@@ -131,7 +131,7 @@ suite('sentiment summary: negative words are not praised', (t) => {
     }, helpers(s));
     const text = built.summary;
 
-    t.check('the focus is the negative one', text.indexOf('Avoiding Negative Words. It is the widest gap') > -1);
+    t.check('the focus is the negative one', text.indexOf('Avoiding Negative Words is the one to work on') > -1);
     t.check('and the phrases are framed as something to replace',
         text.indexOf('Coming out in your calls, and worth replacing:') > -1);
     t.check('never as something landing well',
@@ -152,7 +152,7 @@ suite('sentiment summary: a positive focus IS praised', (t) => {
     }, helpers(s));
     const text = built.summary;
 
-    t.check('the focus is positive language', text.indexOf('Positive Language. It is the widest gap') > -1);
+    t.check('the focus is positive language', text.indexOf('Positive Language is the one to work on') > -1);
     t.check('what is used is credited', text.indexOf('Already landing:') > -1);
     t.check('by name', text.indexOf('"happy to help" on 41 calls') > -1);
     t.check('and what is unused is offered', text.indexOf('Not showing up yet, and worth trying:') > -1);
@@ -186,7 +186,7 @@ suite('sentiment summary: everything at goal says so plainly', (t) => {
     t.check('no focus is manufactured',
         built.summary.indexOf('All three are at goal for this period') > -1);
     t.check('and nothing is called a gap',
-        built.summary.indexOf('widest gap') === -1);
+        built.summary.indexOf('is the one to work on') === -1);
 });
 
 suite('sentiment summary: it holds to the house rules', (t) => {
@@ -240,10 +240,33 @@ suite('sentiment summary: an emotions focus never offers a phrase to try', (t) =
     }, helpers(s));
     const focusBlock = built.summary.split('WHAT TO WORK ON')[1].split('═══')[0];
 
-    t.check('the focus is managing emotions', focusBlock.indexOf('Managing Emotions. It is the widest gap') > -1);
+    t.check('the focus is managing emotions', focusBlock.indexOf('Managing Emotions is the one to work on') > -1);
     t.check('nothing is "already landing"', focusBlock.indexOf('Already landing') === -1);
     t.check('nothing is offered as worth trying', focusBlock.indexOf('worth trying') === -1);
     // Untagged in Verint means either side said it, so it is not quoted
     // back to the associate as her own words.
     t.check('an either-side phrase is not quoted back as hers', focusBlock.indexOf('"ridiculous"') === -1);
+});
+
+/* Tone audit 2026-10-25: "95.0% against a 86% goal", "used 1 times", "DOING
+   WELL - You used...", "Great news - here's what we can do", six or more
+   emojis as section markers, and scripts nobody says out loud ("I appreciate
+   the opportunity to assist you today"). */
+suite('sentiment summary: plain words, no dashes, two emojis at most', (t) => {
+    const s = load(t);
+    t.loadModule('modules/message-voice.module.js');
+    const text = s.buildSentimentSummaryText({
+        positive: report(95, [{ phrase: 'happy to help', value: 1, speaker: 'A' }, { phrase: 'absolutely', value: 0, speaker: 'A' }]),
+        negative: report(74.2, [{ phrase: 'unfortunately', value: 1, speaker: 'A' }, { phrase: 'no way', value: 0, speaker: 'A' }, { phrase: 'ridiculous', value: 3, speaker: 'C' }]),
+        emotions: report(3, [{ phrase: 'upset', value: 1, speaker: 'A' }, { phrase: 'angry', value: 0, speaker: 'A' }])
+    }, helpers(s)).summary;
+    t.check('a summary was built', !!text);
+    t.check('no ".0" on a whole number', !/\d\.0%/.test(text));
+    t.check('never "a 8x% goal"', !/\ba 8\d%/.test(text));
+    t.check('never "1 times"', !/\b1 times\b/.test(text));
+    t.check('no spaced hyphen standing in for a dash', !/\S - \S/.test(text.replace(/^\s*-/gm, '')));
+    t.check('no "Great news" on an "unfortunately"', text.indexOf('Great news') === -1);
+    t.check('no stiff scripts', !/opportunity to assist|accomplished great things|delighted we could help|personally ensure/.test(text));
+    t.check('no shouted section markers', !/DOING WELL|INCREASE YOUR SCORE|WATCH OUT|TECHNIQUES TO MASTER|SCRIPTED/.test(text));
+    t.check('two emojis at most', global.window.DevCoachModules.messageVoice.countEmojis(text) <= 2);
 });

@@ -1120,15 +1120,45 @@ function trendHasSurveysBehind(employee, metricKey) {
     return Number.isInteger(count) && count > 0;
 }
 
+/*
+ * No calls, and what was measured off them.
+ *
+ * Scott, 2026-10-14: "If they have 0 AHT, then they couldn't have taken
+ * calls." A week with no calls has no handle, hold or wrap time and no
+ * transfers to speak of, so none of those reaches a message: the trend prompt
+ * used to hand Copilot "Average Handle Time ... current 0s ... fell by 600
+ * seconds vs previous, which is better" (tone audit, 2026-10-25). The rows
+ * that are left carry tookNoCalls, so every later step still knows the week
+ * had nothing in it to praise but the effort. A week before with no calls is
+ * no baseline either: a rise from nothing is not a slip.
+ */
+const TREND_CALL_METRIC_KEYS = new Set(['aht', 'acw', 'holdTime', 'transfers']);
+
+function trendEmployeeTookNoCalls(employee) {
+    if (!employee) return false;
+    const pulse = window.DevCoachModules?.morningPulse;
+    if (typeof pulse?.tookNoCalls === 'function') return !!pulse.tookNoCalls(employee);
+    const aht = parseFloat(employee.aht);
+    if (Number.isFinite(aht)) return aht <= 0;
+    const calls = parseInt(employee.totalCalls, 10);
+    return Number.isFinite(calls) && calls <= 0;
+}
+
 function coachableTrendMetrics(allMetrics, employee, previousEmployee = null) {
-    return (Array.isArray(allMetrics) ? allMetrics : [])
-        .filter(m => m && m.metricKey !== 'reliability')
+    const list = (Array.isArray(allMetrics) ? allMetrics : []).filter(m => m && m.metricKey !== 'reliability');
+    const noCalls = employee ? trendEmployeeTookNoCalls(employee) : trendMetricsTookNoCalls(list);
+    const priorNoCalls = trendEmployeeTookNoCalls(previousEmployee);
+    return list
+        .filter(m => !(noCalls && TREND_CALL_METRIC_KEYS.has(m.metricKey)))
         .filter(m => !employee || trendHasSurveysBehind(employee, m.metricKey))
         .map(m => {
-            // A previous period nobody answered is no baseline: "up 80 pts"
-            // from an empty column is not a move.
-            if (!previousEmployee || trendHasSurveysBehind(previousEmployee, m.metricKey)) return m;
-            const quiet = { ...m, previousValue: null, trendDelta: null, trendDirection: 'stable' };
+            const marked = noCalls && !m.tookNoCalls ? { ...m, tookNoCalls: true } : m;
+            // A previous period nobody answered, or with no calls in it, is
+            // no baseline: "up 80 pts" from an empty column is not a move.
+            const emptyBefore = previousEmployee && (!trendHasSurveysBehind(previousEmployee, m.metricKey)
+                || (priorNoCalls && TREND_CALL_METRIC_KEYS.has(m.metricKey)));
+            if (!emptyBefore) return marked;
+            const quiet = { ...marked, previousValue: null, trendDelta: null, trendDirection: 'stable' };
             quiet.classification = classifyTrendMetric(quiet);
             return quiet;
         });
@@ -1461,7 +1491,7 @@ function isZeroTimeMetric(metric) {
 }
 
 function trendMetricsTookNoCalls(metrics) {
-    return (metrics || []).some(m => m?.metricKey === 'aht' && Number(m.employeeValue) <= 0);
+    return (metrics || []).some(m => m?.tookNoCalls === true || (m?.metricKey === 'aht' && Number(m.employeeValue) <= 0));
 }
 
 /*
@@ -1540,12 +1570,24 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
     // The effort line is only for when there is nothing else.
     const positive = wins.length ? null : trendTruePositive(coachable, ongoing);
 
+    // Every follow-up went out as the same text, word for word, and opened
+    // "...the week of Oct 5, and first, nice work." (tone audit, 2026-10-25).
+    // A few wordings now, chosen off the person and the period, so a rebuilt
+    // draft reads the same and next week's reads new.
+    const voice = window.DevCoachModules?.messageVoice;
+    const seed = `${displayName}|${when}`;
+    const say = (options) => (typeof voice?.stablePick === 'function' ? voice.stablePick(options, seed) : options[0]);
+
     if (wins.length) {
         const metCount = metrics.filter(m => m.meetsTarget).length;
         const tally = metrics.length > 1
             ? ` You ${ongoing ? 'are hitting' : 'hit'} ${metCount} of your ${metrics.length} goals.`
             : '';
-        lines.push(`I wanted to follow up on ${when}, and first, nice work.${tally} Here is what stood out:`);
+        lines.push(say([
+            `Nice work on ${when}.${tally} Here's what stood out to me:`,
+            `I wanted to follow up on ${when}, and I'll start with the good stuff, because there's nice work in it.${tally} Here's what stood out:`,
+            `Following up on ${when}, and there's some nice work to talk about.${tally} Here's what stood out:`
+        ]));
         lines.push('');
         wins.forEach(m => {
             const value = formatMetricDisplay(m.metricKey, m.employeeValue);
@@ -1554,13 +1596,21 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
         });
     } else {
         lines.push(positive.kind === 'effort'
-            ? `I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`
-            : `I wanted to follow up on ${when}, and I want to start with something good. ${positive.text} Thank you for the work behind that.`);
+            ? say([
+                `I wanted to follow up on ${when}. Thank you for the work you are putting in. I can see the effort, and I want to help you turn it into the numbers you deserve.`,
+                `Following up on ${when}. First, thank you for the effort you're putting in. I see it, and I want to help you turn it into the numbers you deserve.`
+            ])
+            : say([
+                `I wanted to follow up on ${when}, and I want to start with something good. ${positive.text} Thank you for the work behind that.`,
+                `Following up on ${when}, starting with something good. ${positive.text} Thank you for the work behind that.`
+            ]));
     }
 
     if (focus.length) {
         lines.push('');
-        lines.push(focus.length === 1 ? 'Here is the one thing I want us to work on next:' : 'Here are the two things I want us to work on next:');
+        lines.push(focus.length === 1
+            ? say(['Here is the one thing I want us to work on next:', 'Here\'s the one thing I\'d love us to work on next:'])
+            : say(['Here are the two things I want us to work on next:', 'Here are the two things I\'d love us to work on next:']));
         lines.push('');
         focus.forEach(m => {
             const value = formatMetricDisplay(m.metricKey, m.employeeValue);
@@ -1572,7 +1622,11 @@ function buildCoachingEmailBody(displayName, allMetrics, weakestMetric, trending
             lines.push(`- ${m.label} ${was} ${value}${moving}, and the ${goal}.${moving && !saidAlready ? ' It is already moving the right way.' : ''}${tip ? ` One thing to try: ${tip}` : ''}`);
         });
         lines.push('');
-        lines.push('I know you can get there, and I am here to help however I can. Let me know if you want to sit down and talk any of it through.');
+        lines.push(say([
+            'I know you can get there, and I am here to help however I can. Let me know if you want to sit down and talk any of it through.',
+            'You\'ve got this, and I\'m here to help however I can. Grab me any time if you want to talk it through.',
+            'I\'m confident you\'ll get there, and I\'m here to help. Let me know if you want to sit down and go over any of it.'
+        ]));
     } else if (wins.length) {
         lines.push('');
         lines.push(`Everything I looked at ${ongoing ? 'is' : 'was'} at or better than goal. Keep doing exactly what you are doing, and thank you.`);
@@ -2232,27 +2286,6 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         .slice(0, 4);
     const positive = (strengths.length || onTarget.length) ? null : trendTruePositive(metrics, ongoing);
 
-    const efficientSet = new Set(['aht', 'acw', 'holdTime', 'transfers']);
-    const behaviorSet = new Set(['overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'overallExperience', 'cxRepOverall', 'fcr']);
-    const efficiencyNeeds = priorities.filter(m => efficientSet.has(m.metricKey)).length;
-    const behaviorNeeds = priorities.filter(m => behaviorSet.has(m.metricKey)).length;
-
-    const patternInsights = [];
-    if (efficiencyNeeds > 0 && behaviorNeeds > 0) {
-        patternInsights.push('Balanced pressure pattern: both call-control efficiency and communication-quality metrics need attention, suggesting pace and conversation quality are competing.');
-    } else if (efficiencyNeeds > 0) {
-        patternInsights.push('Execution pattern: primary risk is call flow efficiency, indicating opportunities in structure, pacing, and decision speed during interactions.');
-    } else if (behaviorNeeds > 0) {
-        patternInsights.push('Customer-experience pattern: tone and communication consistency are the main opportunities, pointing to word choice and emotional control habits.');
-    } else {
-        patternInsights.push('Consistency pattern: performance is generally steady with no concentrated risk cluster, so coaching should focus on sustaining repeatable habits.');
-    }
-
-    const volatilityRisks = metrics.filter(m => m.isVolatile).slice(0, 2);
-    if (volatilityRisks.length > 0) {
-        patternInsights.push(`Volatility signal: ${volatilityRisks.map(m => m.label).join(' and ')} show noticeable swings, so consistency routines should be reinforced to stabilize outcomes.`);
-    }
-
     const topPriority = priorities[0] || weakestMetric || null;
     const topPriorityTips = topPriority?.metricKey === weakestMetric?.metricKey
         ? (tipsForWeakest || [])
@@ -2260,16 +2293,18 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         ? (tipsForTrending || [])
         : [];
 
-    const actionTipLines = (topPriorityTips || []).slice(0, 2).map(t => `- ${t}`);
-    if (actionTipLines.length === 0) {
-        actionTipLines.push('- Use one call-plan checklist per shift to standardize call control and reduce avoidable variance.');
-        actionTipLines.push('- Complete a 5-minute end-of-day reflection to identify one repeatable behavior for the next shift.');
-    }
+    // The tips Scott's pool chose for the top focus. With none, nothing is
+    // invented here: the model is asked for one practical step instead.
+    const tipLines = (topPriorityTips || []).slice(0, 2).map(t => `- ${t}`);
 
+    /* A next stop for the next 30 days, said the way a person says it.
+     * "move from 604s to at least 533s" put "at least" on a number that has
+     * to come DOWN (tone audit, 2026-10-25). Lower-is-better goals go down
+     * to a number; the rest go up to one. */
     const resolveThirtyDayGoal = () => {
-        if (!topPriority) return 'Maintain all key metrics in On Track or Exceeding status for four consecutive weekly reviews.';
+        if (!topPriority) return '';
         if (topPriority.meetsTarget) {
-            return `${topPriority.label}: hold at or better than ${formatMetricDisplay(topPriority.metricKey, topPriority.target)} while avoiding any backslide across the next 30 days.`;
+            return `keep ${topPriority.label} at ${formatMetricDisplay(topPriority.metricKey, topPriority.target)} or better for the next 30 days`;
         }
         const gap = topPriority.gapFromTarget || 0;
         const closeBy = Math.max(getMetricBandByUnit(topPriority.metricKey, { percent: 1.5, sec: 12, hrs: 0.8, fallback: 1.5 }), gap * 0.4);
@@ -2279,54 +2314,52 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         const boundedGoal = topPriority.targetType === 'min'
             ? Math.min(goalValue, topPriority.target)
             : Math.max(goalValue, topPriority.target);
-        return `${topPriority.label}: move from ${formatMetricDisplay(topPriority.metricKey, topPriority.employeeValue)} to at least ${formatMetricDisplay(topPriority.metricKey, boundedGoal)} within 30 days.`;
+        const from = formatMetricDisplay(topPriority.metricKey, topPriority.employeeValue);
+        const to = formatMetricDisplay(topPriority.metricKey, boundedGoal);
+        return topPriority.targetType === 'min'
+            ? `bring ${topPriority.label} up from ${from} to ${to} or better in the next 30 days`
+            : `bring ${topPriority.label} down from ${from} to ${to} or lower in the next 30 days`;
     };
 
+    // The numbers, one line a metric, in plain words. The data is for the
+    // model to read, not to copy, so it carries no verdict of its own: no
+    // "class Needs Focus", no "requires focused coaching to prevent broader
+    // impact" stamped on every row (tone audit, 2026-10-25).
     const metricTableLines = metrics
         .sort((a, b) => (classificationOrder[a.classification] - classificationOrder[b.classification]) || (b.gapFromTarget - a.gapFromTarget))
         .map(metric => {
-            const current = formatMetricDisplay(metric.metricKey, metric.employeeValue);
-            const target = trendGoalPhrase(metric.metricKey, metric.target).replace(/^goal /, '');
-            const previous = metric.previousValue !== null && metric.previousValue !== undefined
-                ? formatMetricDisplay(metric.metricKey, metric.previousValue)
-                : 'N/A';
-            const teamAvg = metric.centerValue > 0 ? formatMetricDisplay(metric.metricKey, metric.centerValue) : 'N/A';
-            const volatility = metric.isVolatile ? 'swinging' : 'stable';
-            return `- ${metric.label} (${getPolarityNote(metric.metricKey)}): current ${current} | goal ${target} | previous ${previous} | team avg ${teamAvg} | movement ${getTrendLabel(metric)} | volatility ${volatility} | class ${metric.classification}`;
+            const parts = [
+                `${formatMetricDisplay(metric.metricKey, metric.employeeValue)} now`,
+                trendGoalPhrase(metric.metricKey, metric.target)
+            ];
+            if (metric.previousValue !== null && metric.previousValue !== undefined) {
+                parts.push(`${formatMetricDisplay(metric.metricKey, metric.previousValue)} the period before`);
+            }
+            if (metric.centerValue > 0) parts.push(`center average ${formatMetricDisplay(metric.metricKey, metric.centerValue)}`);
+            parts.push(getTrendLabel(metric));
+            if (metric.isVolatile) parts.push('it has been swinging');
+            return `- ${metric.label} (${getPolarityNote(metric.metricKey)}): ${parts.join(', ')}`;
         })
         .join('\n');
 
     const strengthLines = strengths.length > 0
-        ? strengths.map(m => `- ${m.label}: demonstrates ${m.trendDirection === 'improving' ? 'building momentum and coachability' : 'reliable execution under normal call demand'}.`).join('\n')
+        ? strengths.map(m => `- ${m.label}: ${formatMetricDisplay(m.metricKey, m.employeeValue)} (${trendGoalPhrase(m.metricKey, m.target)})${m.trendDirection === 'improving' ? ', and still improving' : ''}`).join('\n')
         : onTarget.length > 0
-            ? onTarget.map(m => `- ${m.label}: on target at ${formatMetricDisplay(m.metricKey, m.employeeValue)} (${trendGoalPhrase(m.metricKey, m.target)}), steady work worth recognizing.`).join('\n')
+            ? onTarget.map(m => `- ${m.label}: on target at ${formatMetricDisplay(m.metricKey, m.employeeValue)} (${trendGoalPhrase(m.metricKey, m.target)})`).join('\n')
             : `- ${positive.text}`;
     const praiseRequirement = positive
         ? (positive.key
-            ? 'Warm and genuinely proud of them: open with specific praise for the positive under STRENGTHS TO LEVERAGE, with its number and why it matters to customers. Praise only that: do not invent a win and do not say that nothing is at goal'
-            : 'Warm and genuinely proud of them: open with real thanks for their effort, as under STRENGTHS TO LEVERAGE. Do not invent a win and do not say that nothing is at goal')
-        : 'Warm and genuinely proud of them: open with specific praise for the strengths above, each with its number and why it matters to customers';
+            ? 'Open with the positive above, with its number and why it matters to our customers. Praise only that: don\'t invent a win, and don\'t say nothing is at goal.'
+            : 'Open with real thanks for their effort, as above. Don\'t invent a win, and don\'t say nothing is at goal.')
+        : 'Open with specific praise for what is above, each with its number and why it matters to our customers.';
 
-    const priorityLines = priorities.length > 0
-        ? priorities.map(m => `- ${m.label}: ${m.trendDirection === 'declining' ? 'moving away from goal' : 'below-target performance'} requires focused coaching to prevent broader impact.`).join('\n')
-        : '- No immediate risk areas detected; maintain consistent coaching cadence and monitor for drift.';
-
-    const leadershipLinks = [];
-    priorities.forEach(m => {
-        if (['aht', 'acw', 'holdTime', 'transfers', 'fcr'].includes(m.metricKey)) {
-            leadershipLinks.push(`- ${m.label} → Decision quality, Accountability, Continuous improvement`);
-        }
-        if (['overallSentiment', 'positiveWord', 'negativeWord', 'managingEmotions', 'overallExperience', 'cxRepOverall'].includes(m.metricKey)) {
-            leadershipLinks.push(`- ${m.label} → Communication clarity, Customer focus, Emotional regulation`);
-        }
-        if (m.metricKey === 'scheduleAdherence') {
-            leadershipLinks.push(`- ${m.label} → Accountability, Collaboration, Continuous improvement`);
-        }
-    });
-
-    const leadershipSection = leadershipLinks.length > 0
-        ? Array.from(new Set(leadershipLinks)).slice(0, 4).join('\n')
-        : '- Current trends align to maintaining Accountability and Continuous improvement through consistent execution habits.';
+    // A focus that is also the praise is credited, then given its next stop,
+    // never asked for as though it had not moved (Scott, 2026-10-14).
+    const praisedKeys = new Set(strengths.map(m => m.metricKey).concat(positive?.key ? [positive.key] : []));
+    const focusLines = priorities.slice(0, 2).map(m =>
+        `- ${m.label}: ${formatMetricDisplay(m.metricKey, m.employeeValue)} now, ${trendGoalPhrase(m.metricKey, m.target)}`
+        + (praisedKeys.has(m.metricKey) ? ', already moving the right way, so this is its next stop'
+            : (m.trendDirection === 'declining' ? ', and it slipped from the period before' : '')));
 
     const sentimentMetrics = metrics.length > 0
         ? {
@@ -2339,79 +2372,34 @@ function buildTrendCoachingPrompt(displayName, weakestMetric, trendingMetric, ti
         ? buildSentimentFocusAreasForPrompt(sentimentSnapshot, sentimentMetrics)
         : '';
 
-    const actionPlanSection = [
-        'Immediate tactical adjustments:',
-        ...actionTipLines,
-        'Skill development suggestions:',
-        '- Run one focused call-listening review each week with behavior-specific feedback and one repeatable behavior target.',
-        'Process adjustments:',
-        '- Add a mid-week checkpoint on trend direction so downward momentum is coached before end-of-period results lock in.',
-        `30-day measurable improvement goal: ${resolveThirtyDayGoal()}`
-    ].join('\n');
+    const thirtyDay = resolveThirtyDayGoal();
+    const sections = [];
+    sections.push(`Their numbers:\n${metricTableLines || '- No metric data available.'}`);
+    sections.push('Each line says which way is better. On a "lower is better" metric such as Average Handle Time, Hold Time, After Call Work or Transfers, a number that fell is an improvement and a number that rose is a setback. Trust the "which is better" or "which is worse" on each line over your own reading of the figures.');
+    sections.push(`What I want to praise first:\n${strengthLines}`);
+    if (focusLines.length) sections.push(`What I'd like them to work on, at most these two:\n${focusLines.join('\n')}`);
+    if (tipLines.length) sections.push(`Ideas I'd like to pass along for ${topPriority.label}:\n${tipLines.join('\n')}`);
+    if (thirtyDay) sections.push(`A next goal I'd like to set: ${thirtyDay}.`);
+    if (sentimentFocusText) sections.push(`What the call sentiment shows:\n${sentimentFocusText}`);
+    if (userNotes) sections.push(`My own notes:\n${userNotes}`);
 
-    const notesSection = userNotes ? `\nMANAGER CONTEXT:\n${userNotes}\n` : '';
-    const sentimentSection = sentimentFocusText ? `\nSENTIMENT CONTEXT:\n${sentimentFocusText}\n` : '';
+    // Asked the way the quick check-in prompt asks (on-off-tracker), which
+    // comes back sounding like a person: first person, "help me turn my notes
+    // into a message", and the voice described rather than a report ordered.
+    // "You are the AI Intelligence Layer", six shouted section headings and
+    // "clean bullets" came back as a report (tone audit, 2026-10-25).
+    return `I'm a supervisor and I want to send ${displayName}, someone on my team, a coaching email about how things are going. Below are my notes on their numbers and what I want to say. Please help me turn them into a warm, natural email I can send.
 
-    return `You are the AI Intelligence Layer for a Supervisor Development Coaching Tool.
+${sections.join('\n\n')}
 
-Use the performance data below to produce deep coaching intelligence and a ready-to-send coaching email.
-
-ASSOCIATE: ${displayName}
-
-METRIC INTELLIGENCE INPUT:
-${metricTableLines || '- No metric data available.'}
-${sentimentSection}${notesSection}
-READING THE DATA:
-- Each metric states its own direction. On a "lower is better" metric such as
-  Average Handle Time, Hold Time, After Call Work or Transfers, a number that
-  fell is an improvement and a number that rose is a setback.
-- The "movement" field already tells you whether the change was better or
-  worse. Trust that verdict over your own reading of the raw figures, and
-  never describe a rise on a "lower is better" metric as progress.
-
-OUTPUT REQUIREMENTS:
-- Compare each metric to goal and previous period.
-- Identify patterns across efficiency, sentiment, call control, and emotional regulation.
-- Flag volatility and early risks, even when still above goal.
-- Use behavioral interpretation, not numeric restatement.
-
-Generate exactly this structure:
-
-=== EXECUTIVE PERFORMANCE SUMMARY ===
-3-5 sentences for supervisor use.
-
-=== STRENGTHS TO LEVERAGE ===
-${strengthLines}
-
-=== PRIORITY DEVELOPMENT AREAS ===
-${priorityLines}
-
-=== PERFORMANCE PATTERN INSIGHTS ===
-${patternInsights.join(' ')}
-
-=== RECOMMENDED ACTION PLAN ===
-${actionPlanSection}
-
-=== LEADERSHIP COMPETENCY CONNECTION ===
-${leadershipSection}
-
-=== COACHING MESSAGE DRAFT ===
-Write a copy-ready coaching email directly to ${displayName}.
-
-Tone requirements:
+How I would like the email to read:
+- Warm, and genuinely proud of them, like I'm talking to them across the desk, not a report
 - ${praiseRequirement}
-- Goal focused: at most two development areas, each with its number, its goal and one practical step, framed as the next goal to reach
-- Encouraging and confident they will get there
-- No filler phrases
-- No mention of AI
-- Do not mention attendance, reliability or hours missed
-
-Formatting requirements:
-- Outlook-ready plain text
-- Short paragraphs and clean bullets
-- Under 250 words
+- Goal focused: at most two things to work on, each with its number and its goal and one practical step, said as encouragement and never as a scolding
+- Numbers said the way a person says them out loud, like "down 40 seconds, from 600 to 560", never a list of figures
+- Short paragraphs, no headings and no bullet lists, under 200 words
 - At most 2 emojis
-- No technical commentary
+- Don't mention attendance, reliability or hours missed, and don't mention AI
 - No em dash characters, and no hyphens with spaces around them.`;
 }
 

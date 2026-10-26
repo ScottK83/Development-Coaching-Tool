@@ -326,11 +326,15 @@
                 : sessionPositive(firstName, current, prior);
             const oppLabels = legacyOpps.length ? legacyOpps : focusLabels(latestSession, current);
 
-            let verintText = `Coaching Session with ${firstName} - ${date}\n\n`;
+            // No spaced hyphen standing in for a dash (tone audit, 2026-10-25).
+            let verintText = `Coaching session with ${firstName} on ${date}\n\n`;
 
             if (positive.kind === 'wins') {
                 verintText += `I recognized ${firstName} for their strong performance in ${joinWithConjunction(positive.labels)}.`;
-                verintText += ' Encouraged them to keep up the great work in these areas.\n\n';
+                // "these areas" about a single metric read wrong (tone audit, 2026-10-25).
+                verintText += positive.labels.length === 1
+                    ? ' Encouraged them to keep up the great work there.\n\n'
+                    : ' Encouraged them to keep up the great work in these areas.\n\n';
             } else {
                 verintText += `${positive.text} Encouraged them to keep building on it.\n\n`;
             }

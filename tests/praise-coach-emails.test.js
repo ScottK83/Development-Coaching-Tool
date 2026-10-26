@@ -112,7 +112,8 @@ suite('praise in every coaching email: People > Coach prompt, no prior week', (t
     const { coachingEmail: bare } = loadCoaching(t, twoWeeks(RED, null));
     const closest = bare.collectCoachingPromptMetricData(RED).positive;
     t.equal('with nothing else, the closest to goal', closest && closest.kind, 'closest');
-    t.check('which is a true statement with its goal', /closest to goal, at .* against the .* goal/.test(closest.text));
+    t.check('which is a true statement with its goal', /closest to goal, [\d.]+%? with an? [\d.]+%? goal, /.test(closest.text));
+    t.check('named as close, not as good news', !/good place to build|strong base|good news/.test(closest.text));
 });
 
 suite('praise in every coaching email: People > Coach prompt, no calls', (t) => {
@@ -217,7 +218,8 @@ function analyze(mt, employee, before, center = {}) {
 }
 
 function strengthsOf(prompt) {
-    return prompt.slice(prompt.indexOf('=== STRENGTHS TO LEVERAGE ==='), prompt.indexOf('=== PRIORITY DEVELOPMENT AREAS ==='));
+    const at = prompt.indexOf('What I want to praise first:');
+    return at === -1 ? '' : prompt.slice(at, prompt.indexOf('\n\n', at));
 }
 
 suite('praise in every coaching email: trend prompt, all red', (t) => {
@@ -229,8 +231,8 @@ suite('praise in every coaching email: trend prompt, all red', (t) => {
     t.check('the old "no clear strengths" line is gone', !/No clear strengths/.test(prompt));
     t.check('the strengths section carries the real positive',
         /Your Average Handle Time moved the right way, down 40 seconds\./.test(strengths));
-    t.check('the email is told to open with that positive', /open with specific praise for the positive under STRENGTHS TO LEVERAGE/.test(prompt));
-    t.check('not with "the strengths above" that are not there', !/praise for the strengths above/.test(prompt));
+    t.check('the email is told to open with that positive', /Open with the positive above, with its number/.test(prompt));
+    t.check('not with strengths that are not there', !/Open with specific praise for what is above/.test(prompt));
     t.check('still warm', /genuinely proud of them/.test(prompt));
     t.check('no em or en dashes', !DASHES.test(prompt));
 });
@@ -243,7 +245,7 @@ suite('praise in every coaching email: trend prompt, a plain goal on target coun
     const prompt = mt.buildTrendCoachingPrompt('Derek', weakest, trendingDown, [], [], '', null, metrics);
     const strengths = strengthsOf(prompt);
     t.check('the on-target goal is the strength', /Schedule Adherence: on target at 93\.5% \(goal 93% or better\)/.test(strengths));
-    t.check('and the praise line points at it', /praise for the strengths above/.test(prompt));
+    t.check('and the praise line points at it', /Open with specific praise for what is above/.test(prompt));
 });
 
 suite('praise in every coaching email: trend prompt, no calls', (t) => {
@@ -253,7 +255,53 @@ suite('praise in every coaching email: trend prompt, no calls', (t) => {
     const strengths = strengthsOf(prompt);
     t.check('a 0s handle time is not a strength', !/Average Handle Time|Hold Time|After Call Work|Transfers/.test(strengths));
     t.check('the effort is', /I saw the effort you put in, and it matters\./.test(strengths));
-    t.check('with thanks, not a number, asked for', /open with real thanks for their effort/.test(prompt));
+    t.check('with thanks, not a number, asked for', /Open with real thanks for their effort/.test(prompt));
+});
+
+/* Scott, 2026-10-26: "Any time I send a message, I want to make sure it has a
+   natural speaking tone." The trend prompt opened "You are the AI
+   Intelligence Layer", ordered six shouted sections and stamped a canned
+   verdict on every row, and the email came back reading like one. It asks
+   the way the quick check-in prompt does now. */
+suite('trend prompt: asks for a natural message, not a report', (t) => {
+    const mt = loadMetricTrends(t);
+    const { metrics, weakest, trendingDown } = analyze(mt, RED, RED_BEFORE);
+    const prompt = mt.buildTrendCoachingPrompt('Derek', weakest, trendingDown, ['Keep a quick reference sheet where you can see it'], [], '', null, metrics, { periodMeta: WEEK_META, weekKey: WEEK });
+    t.check('no "AI Intelligence Layer" persona', !/Intelligence Layer|You are the/.test(prompt));
+    t.check('no shouted section headings', !/===|^[A-Z][A-Z ]{6,}:?$/m.test(prompt));
+    t.check('no canned verdict on every row',
+        !/demonstrates building momentum|requires focused coaching|prevent broader impact|reliable execution under normal|class (Needs Focus|On Track)/.test(prompt));
+    t.check('first person, like the quick check-in', /^I'm a supervisor and I want to send Derek/.test(prompt));
+    t.check('numbers asked for out loud', /Numbers said the way a person says them out loud/.test(prompt));
+    t.check('no "clean bullets"', !/clean bullets/.test(prompt));
+    t.check('a lower-is-better goal goes down to a number, never "at least"',
+        /bring Average Handle Time down from 560s to \d+s or lower/.test(prompt) && !/at least/.test(prompt));
+    t.check('the praised move is credited in the focus, not asked for again',
+        /Average Handle Time: 560s now, goal 426s or lower, already moving the right way/.test(prompt));
+    t.check('the tip is passed along', /Keep a quick reference sheet where you can see it/.test(prompt));
+    t.check('no em or en dashes', !DASHES.test(prompt));
+});
+
+/* Tone audit 2026-10-25: the trend prompt's data could read "Average Handle
+   Time ... current 0s ... fell by 600 seconds vs previous, which is better".
+   A 0 second handle time is no calls (Scott, 2026-10-14), never a number to
+   hand Copilot and never a move. coachableTrendMetrics had no no-calls check. */
+suite('trend prompt: a week with no calls hands Copilot no 0s and no move', (t) => {
+    const mt = loadMetricTrends(t);
+    const { metrics, weakest, trendingDown } = analyze(mt, NO_CALLS, RED_BEFORE);
+    t.check('the call metrics are not coachable on a week with no calls',
+        !metrics.some((m) => ['aht', 'holdTime', 'acw', 'transfers'].includes(m.metricKey)));
+    const prompt = mt.buildTrendCoachingPrompt('Derek', weakest, trendingDown, [], [], '', null, metrics, { periodMeta: WEEK_META, weekKey: WEEK });
+    t.check('no 0 second time anywhere in the prompt', !ZERO_SECONDS.test(prompt));
+    t.check('no handle time line in the data', !/^- Average Handle Time/m.test(prompt));
+    t.check('no 0% transfers', !/Transfers[^\n]*\b0(\.0)?%/.test(prompt));
+
+    // The week before took no calls, this one did: a rise from nothing is
+    // not a slip.
+    const back = analyze(mt, RED, NO_CALLS);
+    const aht = back.metrics.find((m) => m.metricKey === 'aht');
+    t.check('handle time is still there this week', !!aht);
+    t.check('but with no move from a week of no calls', aht && (aht.trendDelta === null || aht.trendDelta === undefined));
 });
 
 suite('praise in every coaching email: follow-up email, all red', (t) => {

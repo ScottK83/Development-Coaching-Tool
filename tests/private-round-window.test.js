@@ -120,7 +120,7 @@ suite('private round: last month under the Monday tone', async (t) => {
     // month named once (Scott, 2026-10-14: "-24s" read as a number of its
     // own, and "87s last month to 63s this month" said the month twice).
     t.check('the comparison carries both months\' numbers',
-        messages.some(m => m.indexOf('(87s to 63s)') > -1));
+        messages.some(m => m.indexOf('from 87 to 63') > -1));
     t.check('the jump is September\'s, said in words',
         messages.some(m => /Hold Time[^\n]*in September/.test(m) && /down 24 seconds/i.test(m)));
     t.equal('no move is written with a minus sign',

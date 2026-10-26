@@ -299,8 +299,8 @@ suite('praise daily: everything slipped, and the growth note still has praise in
         t.check('a message every time', out.every(Boolean));
         const praiseAt = m => m.search(/Overall Sentiment (was your closest|at 86% came within)/);
         t.check('Overall Sentiment, which held and is closest to goal, is praised', out.every(m => praiseAt(m) > -1 && /86%/.test(m) && /88%/.test(m)));
-        t.check('kudos first: before the list of what slipped', out.every(m => praiseAt(m) < m.indexOf('Slipped a bit:')));
-        t.check('the slips are still said, in words', out.every(m => /Average Handle Time: up 40 seconds \(480s to 520s\)/.test(m)));
+        t.check('kudos first: before the list of what slipped', out.every(m => praiseAt(m) > -1 && praiseAt(m) < m.search(/ slipped \d/)));
+        t.check('the slips are still said, in words', out.every(m => /Average Handle Time slipped 40 seconds, from 480 to 520/.test(m)));
         t.equal('the focus metric is not the praise', out.filter(m => /Average Handle Time (was|is) your closest/.test(m)).length, 0);
         t.equal('a metric listed as slipped is never the praise', out.filter(m => /Schedule Adherence (was your closest|at 89% came within)/.test(m)).length, 0);
         t.equal('the week of Oct 5 is over, so the past tense', out.filter(m => RUNNING_ONLY.test(m)).length, 0);
@@ -323,7 +323,7 @@ suite('praise daily: the closest goal slipped, so the growth note thanks the eff
         t.equal('the slipped metric is not praised', out.filter(m => /Schedule Adherence (was your closest|at 89% came within)/.test(m)).length, 0);
         t.check('the effort is thanked before the list', out.every(m => {
             const at = m.search(/I saw the effort|Thank you for the work you put in/);
-            return at > -1 && at < m.indexOf('Slipped a bit:');
+            return at > -1 && at < m.search(/ slipped \d/);
         }));
     } finally {
         cleanUp();
@@ -340,7 +340,7 @@ suite('praise daily: a slip far from goal on everything still thanks the effort'
         const out = await draw(40, () => pulse.generateGrowthMessage('Sam Lee', 'wow'));
         t.check('the effort is thanked before the list', out.every(m => {
             const at = m.search(/I saw the effort|Thank you for the work you put in/);
-            return at > -1 && at < m.indexOf('Slipped a bit:');
+            return at > -1 && at < m.search(/ slipped \d/);
         }));
     } finally {
         cleanUp();

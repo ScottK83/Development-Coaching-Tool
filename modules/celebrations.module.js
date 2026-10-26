@@ -1480,23 +1480,27 @@
     // their _ONGOING counterparts say it while it runs ("nobody else is coming
     // close"). Which one a post draws from is periodIsComplete's call. Scott,
     // 2026-10-07: a week in progress came out as "went absolutely off".
+    //
+    // Said, not written: "the best in the Call Center", never "#1", and no
+    // "they" or "them", which under an @name reads as somebody else (Scott,
+    // 2026-10-26, tone audit 10/25).
     var SOLO_TOP_TAILS = [
-        '#1 in the Call Center. Untouched by anybody else!',
-        '#1 in the Call Center. That number belongs to them alone!',
-        '#1 in the Call Center. One name on that number, and it is theirs!',
-        '#1 in the Call Center, matched by nobody on the floor!'
+        'The best in the Call Center, untouched by anybody else.',
+        'The best in the Call Center, and that number stands alone.',
+        'The best in the Call Center. One name on that number!',
+        'The best in the Call Center, matched by nobody on the floor!'
     ];
     var SOLO_TOP_TAILS_DONE = [
-        '#1 in the Call Center. Nobody else got there!',
-        '#1 in the Call Center, and not one other person matched it!',
-        '#1 in the Call Center, and nobody else came close!',
-        '#1 in the Call Center. They set the bar and stood there alone!'
+        'The best in the Call Center. Nobody else got there!',
+        'The best in the Call Center, and not one other person matched it.',
+        'The best in the Call Center, and nobody else came close!',
+        'The best in the Call Center. That set the bar for everybody.'
     ];
     var SOLO_TOP_TAILS_ONGOING = [
-        '#1 in the Call Center. Nobody else is there!',
-        '#1 in the Call Center, and not one other person is matching it!',
-        '#1 in the Call Center, and nobody else is coming close!',
-        '#1 in the Call Center. They are setting the bar and standing there alone!'
+        'The best in the Call Center. Nobody else is there!',
+        'The best in the Call Center, and not one other person is matching it.',
+        'The best in the Call Center, and nobody else is coming close!',
+        'The best in the Call Center. That is the bar for everybody right now.'
     ];
 
     /*
@@ -1557,9 +1561,9 @@
     // lines are true either way, the _DONE ones say the period is over.
     var ONLY_ONE_LINES = [
         function(label, val) { return val + ' on ' + label + '. Untouched by anyone else in the Call Center!'; },
-        function(label, val) { return label + ' at ' + val + ', and that number belongs to them alone in the Call Center!'; },
+        function(label, val) { return label + ' at ' + val + ', and that number stands alone in the Call Center!'; },
         function(label, val) { return 'Solo mission: ' + val + ' on ' + label + ', matched by nobody in the Call Center!'; },
-        function(label, val) { return val + ' on ' + label + '. One name in the Call Center on that number, and it\'s theirs!'; }
+        function(label, val) { return val + ' on ' + label + '. One name in the Call Center on that number!'; }
     ];
     var ONLY_ONE_LINES_DONE = [
         function(label, val) { return label + ' at ' + val + '. Nobody else in the Call Center got there!'; },
@@ -1703,11 +1707,14 @@
      * called, for the two stems that need to know. ", and it holds up!" is gone:
      * it read as though the number was in doubt. Scott, 2026-10-14.
      */
+    // No "Label: value" rows, which read as a report, and not every line
+    // shouting: the post ran to a median of fourteen "!" (tone audit,
+    // 2026-10-25), so some of these end on a full stop.
     var BATCH_METRIC_STEMS = [
-        function(label, val) { return label + ': ' + val + '!'; },
+        function(label, val) { return 'Love this ' + label + ' number, ' + val + '.'; },
         function(label, val) { return val + ' on ' + label + '!'; },
-        function(label, val) { return 'Look at ' + label + ': ' + val + '!'; },
-        function(label, val) { return 'Strong showing on ' + label + ': ' + val + '!'; },
+        function(label, val) { return 'Look at ' + label + ' at ' + val + '!'; },
+        function(label, val) { return 'Strong showing on ' + label + ', ' + val + '.'; },
         function(label, val) { return label + ' at ' + val + '!'; }
         // No stem that leans on a sentence before it. "That is 83.8% on First
         // Call Resolution!" opens a bullet as though it were finishing one,
@@ -1755,7 +1762,7 @@
     // The solo lines close with a tail out of SOLO_TOP_TAILS, so these stop on
     // a full stop and hand over.
     var BATCH_SOLO_STEMS = [
-        function(label, val) { return val ? label + ': ' + val + '.' : label + '.'; },
+        function(label, val) { return val ? 'Check out ' + label + ' at ' + val + '.' : label + '.'; },
         function(label, val) { return val ? val + ' on ' + label + '.' : label + '.'; },
         function(label, val) { return val ? label + ' at ' + val + '.' : label + '.'; }
     ];
@@ -1903,11 +1910,14 @@
      * that makes the number mean something, and it is what gets said when
      * people talk about it anyway.
      */
+    //
+    // "#1" is written, not said (Scott, 2026-10-26: a natural speaking tone),
+    // so first place is "the best in the Call Center".
     function centerPlacement(achievement) {
         var rank = achievement && achievement.rank;
         if (!rank || !isFinite(rank)) return '';
         var shared = (achievement.tiedCount || 1) > 1;
-        if (rank === 1) return shared ? 'tied for #1 in the Call Center' : '#1 in the Call Center';
+        if (rank === 1) return shared ? 'tied for the best in the Call Center' : 'the best in the Call Center';
         return (shared ? 'tied for ' : '') + ordinal(rank) + ' best in the Call Center';
     }
 
@@ -2155,7 +2165,7 @@
             var r = Number(a && a.rank);
             return Number.isFinite(r) && r > 0 ? r : Infinity;
         }));
-        if (worst === 1) return 'Plus ' + n + ' more #1 ' + (n === 1 ? 'spot' : 'spots') + ' in the Call Center!';
+        if (worst === 1) return 'Plus ' + n + ' more ' + (n === 1 ? 'that is' : 'that are') + ' the best in the Call Center!';
         if (!isFinite(worst)) return 'Plus ' + n + ' more ' + (n === 1 ? 'win' : 'wins') + '!';
         var band = getTierForRank(worst, getActiveTiers()).label;
         return 'Plus ' + n + ' more ' + band + ' ' + (n === 1 ? 'finish' : 'finishes') + '!';
@@ -2173,8 +2183,10 @@
         var label = metricLabel(a);
         var val = _valueText(a);
         var stemCtx = { reverse: _metricIsReverse(a.key), noun: ctx.noun };
-        var badge = tierBadge(a);
-        var tail = sentencePlacement(a) + (badge ? ' ' + badge : '');
+        // The placing alone. "Tied for 4th best in the Call Center. Top 5!"
+        // said the same thing twice, the second time shouting (tone audit,
+        // 2026-10-25), so the tier badge stays on the cards, out of the post.
+        var tail = sentencePlacement(a);
         // A placing on a survey or two says how many. Scott, 2026-10-13.
         if (a.thin && a.surveys && val) {
             return label + ' at ' + val + ' on ' + _surveyCount(a.surveys) + '!' + tail;
@@ -2380,10 +2392,21 @@
             var counts = fieldCounts(a);
             var nobody = ctx.closed ? 'Nobody else in the Call Center matched your ' : 'Nobody else in the Call Center is matching your ';
             var lead = val ? nobody + val + ' on ' + label + '!' : nobody + label + ' performance!';
-            return lead + (counts ? ' That\'s #1 out of ' + counts.pool + ' associates.' : '');
+            // "That's #1 out of 124 associates." closed 1,666 of the DMs in
+            // the 10/25 audit, written rather than said.
+            return lead + (counts ? pick([
+                ' That\'s the best of all ' + counts.pool + ' associates.',
+                ' That puts you first out of ' + counts.pool + ' associates.'
+            ]) : '');
         }
 
-        var field = describeField(a);
+        // The beaten-count is this message's to give, said a couple of ways
+        // so it is not the same clause in every DM.
+        var c = fieldCounts(a);
+        var field = c ? pick([
+            'better than ' + c.beat + ' of ' + c.pool + ' associates',
+            'ahead of ' + c.beat + ' of the ' + c.pool + ' associates on it'
+        ]) : '';
         var head = val
             ? stem()(label, val, { reverse: _metricIsReverse(a.key), noun: ctx.noun })
             : 'Outstanding work on ' + label + '.';
@@ -2404,12 +2427,16 @@
         var closed = periodKey ? periodIsComplete(periodKey) : false;
         var ctx = { closed: closed, noun: _periodWord(periodKey) };
         var lines = [];
-        lines.push(pick(DM_OPENERS)(person.firstName));
+        var opener = pick(DM_OPENERS)(person.firstName);
+        lines.push(opener);
         lines.push('');
-        lines.push(pick(DM_INTROS.concat(closed ? DM_INTROS_DONE : DM_INTROS_ONGOING)));
-        // What "this" covers, said before the numbers rather than after them.
+        var intro = pick(_notRepeating(DM_INTROS.concat(closed ? DM_INTROS_DONE : DM_INTROS_ONGOING), opener));
+        // What "this" covers, said before the numbers rather than after them,
+        // and said as a sentence: a bare "Oct 5 to 11" dangling under "...I
+        // have to say something:" read as a stray line (tone audit, 10/25).
         var when = dateRange ? friendlyRange(dateRange, periodKey) : '';
-        if (when) lines.push(when);
+        lines.push(when ? intro.replace(/:\s*$/, '.') : intro);
+        if (when) lines.push('Here\'s ' + when + ':');
         lines.push('');
 
         var stem = rotator(DM_STEMS.concat(closed ? DM_STEMS_DONE : DM_STEMS_ONGOING));
@@ -2431,8 +2458,26 @@
             lines.push(nearMiss);
         }
         lines.push('');
-        lines.push(pick(DM_CLOSERS));
+        lines.push(pick(_notRepeating(DM_CLOSERS, opener + '\n' + intro)));
         return _capEmojis(lines.join('\n'));
+    }
+
+    /*
+     * The same idea twice in one DM: "...I wanted you to hear it from me" in
+     * the opener and again in the intro or the closer (32 of the audited DMs),
+     * "reach out" in the opener and the intro (30). A line that repeats one
+     * of these ideas already said is left out of the draw; the pool is used
+     * whole if that would empty it.
+     */
+    var DM_IDEAS = [/hear(d)? (it|this) from me/i, /reach(ing)? out/i, /had to (say|send|stop)/i];
+
+    function _notRepeating(pool, said) {
+        var used = DM_IDEAS.filter(function(re) { return re.test(said); });
+        if (!used.length) return pool;
+        var kept = pool.filter(function(line) {
+            return !used.some(function(re) { return re.test(line); });
+        });
+        return kept.length ? kept : pool;
     }
 
     // =====================
@@ -2455,9 +2500,10 @@
         return null;
     }
 
-    // The placings the post actually writes: "#1 in the Call Center",
-    // "2nd best in the Call Center", either of those behind "Tied for".
-    var PLACEMENT_RE = /(Tied for )?(?:#(\d+)|(\d+)(?:st|nd|rd|th) best) in the Call Center/g;
+    // The placings the post actually writes: "the best in the Call Center",
+    // "2nd best in the Call Center", either of those behind "Tied for". "#1"
+    // is still read, for posts written before 2026-10-26.
+    var PLACEMENT_RE = /(Tied for |tied for )?(?:([Tt]he best)|#(\d+)|(\d+)(?:st|nd|rd|th) best) in the Call Center/g;
 
     /**
      * The shout-out text with its placings wrapped for colour.
@@ -2474,8 +2520,8 @@
      */
     function highlightPlacements(text) {
         var escaped = _escapeHtml(String(text == null ? '' : text));
-        return escaped.replace(PLACEMENT_RE, function (match, tied, hashRank, ordinalRank) {
-            var band = placementTier(hashRank || ordinalRank);
+        return escaped.replace(PLACEMENT_RE, function (match, tied, theBest, hashRank, ordinalRank) {
+            var band = placementTier(theBest ? 1 : (hashRank || ordinalRank));
             if (!band) return match;
             return '<span class="placement-tier placement-tier-' + band + '">' + match + '</span>';
         });

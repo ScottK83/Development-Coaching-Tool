@@ -80,7 +80,8 @@ suite('email voice, follow-up: praise first, numbers a person can read', (t) => 
     const body = followUp(mt, MARIA, MARIA_BEFORE);
 
     t.check('greets her', body.startsWith('Hi Maria,'));
-    t.check('praise comes before the coaching', body.indexOf('nice work') > -1 && body.indexOf('nice work') < body.indexOf('work on next'));
+    t.check('praise comes before the coaching', body.search(/nice work/i) > -1 && body.search(/nice work/i) < body.indexOf('work on next'));
+    t.check('never the awkward "and first, nice work"', !/, and first, nice work/.test(body));
     t.check('says how many goals she hit', /You hit \d+ of your \d+ goals/.test(body));
     t.check('at most three wins', body.split('work on next')[0].split('\n').filter((line) => line.startsWith('- ')).length <= 3);
     t.check('handle time in seconds', /604s/.test(body));
@@ -114,7 +115,7 @@ suite('email voice, follow-up: the trend prompt keeps reliability out of strengt
     const analysis = mt.analyzeTrendMetrics(MARIA, { adherence: 92 }, 2026, MARIA_BEFORE, {});
     // All metrics, reliability included, as another caller might hand them.
     const prompt = mt.buildTrendCoachingPrompt('Maria', analysis.weakest, analysis.trendingDown, [], [], '', null, analysis.allMetrics);
-    const strengths = prompt.slice(prompt.indexOf('=== STRENGTHS TO LEVERAGE ==='), prompt.indexOf('=== PRIORITY DEVELOPMENT AREAS ==='));
+    const strengths = prompt.slice(prompt.indexOf('What I want to praise first:'), prompt.indexOf('\n\n', prompt.indexOf('What I want to praise first:')));
     t.check('reliability is not a strength', !/Reliability/.test(strengths));
     t.check('nor anywhere in the data', !/- Reliability/.test(prompt));
     t.check('the emoji budget is set', /At most 2 emojis/.test(prompt));
@@ -172,4 +173,21 @@ suite('email voice, trend picture: two emojis, words for direction', (t) => {
     t.equal('the gap to the center is in points too',
         mt.resolveTrendCenterComparisonDisplay(96.2, 92, true, 'scheduleAdherence', true).text, '+4.2 points');
     t.equal('one point is singular', mt.formatTrendChange('scheduleAdherence', 1.02), '1 point');
+});
+
+/* Tone audit 2026-10-25: the follow-up email was one fixed text, word for
+   word, for everybody, every week. The wording is chosen off the person and
+   the period now: the same draft rebuilt reads the same, and the team does
+   not all get the same sentences. */
+suite('email voice, follow-up: not one fixed text for everybody', (t) => {
+    const mt = load(t);
+    const analysis = mt.analyzeTrendMetrics(MARIA, { adherence: 92 }, 2026, MARIA_BEFORE, {});
+    const metrics = mt.coachableTrendMetrics(analysis.allMetrics, MARIA, MARIA_BEFORE);
+    const picked = mt.pickWeakestAndTrending(metrics);
+    const bodyFor = (name) => mt.buildCoachingEmailBody(name, metrics, picked.weakest, picked.trendingDown,
+        ['Keep a quick reference sheet where you can see it'], [], WEEK_META);
+    t.equal('the same person and week read the same', bodyFor('Maria Lopez'), bodyFor('Maria Lopez'));
+    const names = ['Maria Lopez', 'Ada Park', 'Bo Chen', 'Cy Diaz', 'Di Evans', 'Ed Fox', 'Flo Gray', 'Gus Hill'];
+    const shapes = new Set(names.map((n) => bodyFor(n).split('\n').slice(1).join('\n').replace(/^Hi \w+,/, '')));
+    t.check('eight people do not all get the same email (' + shapes.size + ' wordings)', shapes.size >= 3);
 });
