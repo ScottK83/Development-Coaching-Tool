@@ -2075,20 +2075,211 @@
         return sample;
     }
 
-    /**
-     * One line per metric, saying which way it went and by how much.
-     *
-     * "A step back from June" was true and useless: it named no metric, no
-     * size, and nothing to do about it. Five lines is what the monthly email
-     * already proved survives plain text in every client, so this affords the
-     * same and spends it on the part that is actionable.
-     *
-     * Direction is judged by the metric, never by the arithmetic. AHT falling
-     * is somebody getting faster; sentiment falling is not.
-     */
-    function _movementLines(prev, cur, year) {
-        var lines = [];
+    /* ── Said out loud ──
 
+       Scott, 2026-10-26: "Any time I send a message, I want to make sure it
+       has a natural speaking tone." The three emails below read as reports on
+       10/25: "- Average Handle Time: 405s (goal: 426s or lower). Met." five
+       times over, an emoji on every line, "better by 60s", "CX Adv". They are
+       sentences now, the way he would say it across the desk: the metric's
+       everyday name, the number with its unit said, a move in words with the
+       two numbers it went between, and one thing to go after, said as
+       encouragement and tied to its goal. */
+    var SPOKEN_NAMES = {
+        aht: 'handle time',
+        scheduleAdherence: 'adherence',
+        overallSentiment: 'sentiment',
+        cxRepOverall: 'rep satisfaction',
+        reliability: 'reliability'
+    };
+
+    function _spokenName(registryKey) {
+        return SPOKEN_NAMES[registryKey] || String(_registryEntry(registryKey).label || registryKey).toLowerCase();
+    }
+
+    function _cap(text) {
+        var s = String(text || '');
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    // The number as the formatter prints it, without its unit or a ".0".
+    function _bareNumber(registryKey, value) {
+        var shown = String(_formatMetricDisplay(registryKey, Number(value)));
+        var m = shown.match(/-?\d+(\.\d+)?/);
+        return (m ? m[0] : String(value)).replace(/\.0$/, '');
+    }
+
+    // "405 seconds", "95.2%", "6 hours".
+    function _spoken(registryKey, value) {
+        var unit = _registryEntry(registryKey).unit;
+        var n = _bareNumber(registryKey, value);
+        if (unit === 'sec') return n + (n === '1' ? ' second' : ' seconds');
+        if (unit === 'hrs') return n + (n === '1' ? ' hour' : ' hours');
+        if (unit === '%') return n + '%';
+        return n;
+    }
+
+    // The short form a range or a goal is said in: "from 460 to 420",
+    // "from 93.6% to 95%", "a 426 goal".
+    function _rangeNumber(registryKey, value) {
+        var n = _bareNumber(registryKey, value);
+        return _registryEntry(registryKey).unit === '%' ? n + '%' : n;
+    }
+
+    function _voice() {
+        return (window.DevCoachModules && window.DevCoachModules.messageVoice) || null;
+    }
+
+    // One wording of several, the same every time for the same person and
+    // period, so a draft rebuilt reads the same and next month's reads new.
+    function _say(options, seed) {
+        var v = _voice();
+        return v && typeof v.stablePick === 'function' ? v.stablePick(options, seed) : options[0];
+    }
+
+    // "a 426 goal", "a 93% goal", "an 82% goal".
+    function _goalWords(registryKey, year) {
+        var target = _targetFor(registryKey, year);
+        if (!target || !_isNum(target.value)) return '';
+        var said = _rangeNumber(registryKey, Number(target.value));
+        var v = _voice();
+        var withArticle = v && typeof v.withArticle === 'function'
+            ? v.withArticle(said) : ((/^(8|11|18)/.test(said) ? 'an ' : 'a ') + said);
+        return withArticle + ' goal';
+    }
+
+    // How far a miss is from its goal, measured from the number as printed so
+    // the gap adds up on the page: "54 seconds", "2 points".
+    function _gapTo(registryKey, value, year) {
+        var target = _targetFor(registryKey, year);
+        if (!target || !_isNum(target.value) || !_isNum(value)) return '';
+        var shown = _registryEntry(registryKey).unit === 'sec'
+            ? Math.round(Number(value)) : Math.round(Number(value) * 10) / 10;
+        return _praiseAmount(registryKey, shown - Number(target.value));
+    }
+
+    // For a miss whose number the message has already said: "Adherence has
+    // 2 points to go to reach its goal of 93%."
+    function _stillToGo(registryKey, value, year) {
+        var gap = _gapTo(registryKey, value, year);
+        var target = _targetFor(registryKey, year);
+        if (!gap || !target) return '';
+        return _cap(_spokenName(registryKey)) + ' has ' + gap + ' to go to reach its goal of '
+            + _rangeNumber(registryKey, Number(target.value)) + '.';
+    }
+
+    /**
+     * What is short of goal, two to a sentence, each verb different, so four
+     * misses do not read "finished at ... finished at ... finished at".
+     * rows: [{ registry, value, meets }]; a row with no target has no goal said.
+     */
+    function _missSentences(rows, year, ongoing) {
+        var verbs = ongoing ? [' is at ', ' is sitting at '] : [' finished at ', ' came in at '];
+        var out = [];
+        for (var i = 0; i < (rows || []).length; i += 2) {
+            var verb = verbs[(i / 2) % verbs.length];
+            out.push(_cap(_joinAnd(rows.slice(i, i + 2).map(function (r, j) {
+                var goal = r.meets === false ? ' with ' + _goalWords(r.registry, year) : '';
+                return _spokenName(r.registry) + (j === 0 ? verb : ' at ') + _spoken(r.registry, r.value) + goal;
+            }))) + '.');
+        }
+        return out;
+    }
+
+    function _joinAnd(parts) {
+        var list = (parts || []).filter(Boolean);
+        if (list.length <= 1) return list[0] || '';
+        if (list.length === 2) return list[0] + ' and ' + list[1];
+        return list.slice(0, -1).join(', ') + ', and ' + list[list.length - 1];
+    }
+
+    // "2026-07" -> "August", the month a finished month hands over to.
+    function _monthAfterKey(key) {
+        var m = /^(\d{4})-(\d{2})/.exec(String(key || ''));
+        if (!m) return '';
+        var names = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        return names[Number(m[2]) % 12];
+    }
+
+    function _closer(seed) {
+        var v = _voice();
+        return v && typeof v.emailCloser === 'function' ? v.emailCloser(seed) : 'Happy to walk through any of it.';
+    }
+
+    // Two emojis at most in anything an associate is sent.
+    function _emojiBudget(text) {
+        var v = _voice();
+        return v && typeof v.limitEmojis === 'function' ? v.limitEmojis(text, 2) : text;
+    }
+
+    /**
+     * The one thing to go after, said as encouragement and tied to its goal.
+     * o.ahead: "in August", when the period is over and the next one is named.
+     * o.left: "there is still time in August", when it is still running.
+     * o.single: it is the only miss, so it is never "the closest".
+     * o.pronoun: its number was the sentence just before, so "That's".
+     */
+    function _focusLine(registryKey, value, year, o) {
+        var opts = o || {};
+        var gap = _gapTo(registryKey, value, year);
+        if (!gap) return '';
+        var name = _spokenName(registryKey);
+        var margin = _praiseMargin({ registry: registryKey, value: value }, year);
+        // "only" is a comfort, so it is said only when it is true.
+        var g = (margin !== null && margin > -0.05 ? 'only ' : '') + gap;
+        if (opts.pronoun) {
+            return 'That\'s ' + g + ' from goal, and ' + (opts.ahead
+                ? 'I think you can get there ' + opts.ahead + '.'
+                : (opts.left || 'there is still time this month') + ' to get there.');
+        }
+        var is = opts.single ? _cap(name) + ' is ' : _cap(name) + ' is the closest, ';
+        if (opts.ahead) {
+            return _say([
+                is + g + ' from goal, and I think you can get there ' + opts.ahead + '.',
+                'Let\'s go after ' + name + ' together ' + opts.ahead + '. ' + _cap(g) + ' and you\'re there.',
+                (opts.single ? 'If there is one to go after ' : 'If you pick one to go after ')
+                    + opts.ahead + ', I\'d start with ' + name + '. It\'s ' + g + ' from goal.'
+            ], opts.seed);
+        }
+        var left = opts.left || 'there is still time this month';
+        return _say([
+            is + g + ' from goal, and ' + left + ' to get there.',
+            _cap(left) + ' to close the ' + gap + ' on ' + name + ', and I think you can.'
+        ], opts.seed);
+    }
+
+    /**
+     * The hours, said once, as the year's running total. Never counted as a
+     * goal met for a month, never the focus, never "better by": a total only
+     * goes up (Scott, 2026-09-18 and 2026-10-05). A total the YTD file brought
+     * down after re-coding is said as it stands, with no note about it.
+     */
+    function _hoursLine(total, year, o) {
+        if (!_isNum(total)) return '';
+        var opts = o || {};
+        var hours = Number(total);
+        var soFar = opts.yearOver ? '' : ' so far';
+        if (hours <= 0) return 'No hours missed this year' + soFar + ', which is great to see.';
+        var said = _spoken('reliability', hours);
+        if (_meetsTarget('reliability', hours, year) === true) {
+            var nothingAdded = opts.month && _isNum(opts.added) && opts.added <= 0.05
+                ? ', with nothing added in ' + opts.month : '';
+            return _say([
+                'You\'re inside the reliability budget for the year, at ' + said + soFar + nothingAdded + '.',
+                'Your hours missed for the year are at ' + said + soFar + nothingAdded + ', still inside the budget.'
+            ], opts.seed);
+        }
+        return 'Your reliability total for the year is ' + said + soFar + '.';
+    }
+
+    /**
+     * How each metric moved between two months: better, held, worse, or the
+     * hours. Direction is judged by the metric, never by the arithmetic: AHT
+     * falling is somebody getting faster; sentiment falling is not.
+     */
+    function _movements(prev, cur, year) {
+        var out = [];
         TRAJECTORY_METRIC_ROWS.forEach(function (row) {
             var before = _trajectoryMetricValue(prev, row);
             var after = _trajectoryMetricValue(cur, row);
@@ -2098,54 +2289,140 @@
             // a 0s handle time would read as a win, a 0% as a collapse.
             if (row.registry !== 'reliability' && (Number(before) === 0 || Number(after) === 0)) return;
 
-            // Reliability is the year's running total, which only ever goes up,
-            // so "better by" has no meaning. The line states the total, never a
-            // month's own hours (Scott's rule), and a total the YTD file brought
-            // down after re-coding is stated as it stands, with no note about
-            // the correction (he rejected that footnote on 2026-09-18).
+            var verdict = _meetsTarget(row.registry, Number(after), year);
             if (row.registry === 'reliability') {
-                var added = Number(after) - Number(before);
-                var total = _formatMetricDisplay(row.registry, Number(after));
-                var onTarget = _meetsTarget(row.registry, Number(after), year) === true;
-                var month = String(cur.label || '').split(' ')[0];
-                if (added > 0.05) {
-                    lines.push('📉 Reliability ' + total + ' missed this year' +
-                        (onTarget ? ', still inside the budget' : ''));
-                    return;
-                }
-                lines.push(added < -0.05
-                    ? '🎉 Reliability ' + total + ' missed this year' + (onTarget ? ', inside the budget' : '')
-                    : '🎉 Reliability ' + total + ' missed this year, nothing added in ' + month +
-                      (onTarget ? ', and inside the budget' : ''));
+                out.push({ registry: row.registry, kind: 'hours', value: Number(after),
+                    added: Number(after) - Number(before), meets: verdict === true });
                 return;
             }
-
             var delta = Number(after) - Number(before);
             var reverse = _metricIsReverse(row.registry);
-            var better = reverse ? delta < 0 : delta > 0;
-            var meets = _meetsTarget(row.registry, Number(after), year) === true;
-            var value = _formatMetricDisplay(row.registry, Number(after));
-
             // A hair of movement on a rounded number is noise, and dressing it
             // up as a trend is how somebody gets congratulated for nothing.
             var flat = Math.abs(delta) < 0.05
-                || String(_formatMetricDisplay(row.registry, Number(before))) === String(value);
-
-            if (flat) {
-                lines.push('➡️ ' + row.label + ' held at ' + value
-                    + (meets ? ', still on target 👍' : ''));
-                return;
-            }
-
-            var amount = _movementAmount(row.registry, delta);
-            var word = better ? 'better by ' : 'off by ';
-            lines.push((better ? (meets ? '🎉 ' : '📈 ') : '📉 ')
-                + row.label + ' ' + value + ', ' + word + amount
-                + (better && meets ? ', and on target' : '')
-                + (!better && meets ? ', still on target' : ''));
+                || String(_formatMetricDisplay(row.registry, Number(before))) === String(_formatMetricDisplay(row.registry, Number(after)));
+            out.push({
+                registry: row.registry,
+                kind: flat ? 'held' : ((reverse ? delta < 0 : delta > 0) ? 'better' : 'worse'),
+                before: Number(before),
+                value: Number(after),
+                meets: verdict === true,
+                judged: verdict !== null
+            });
         });
+        return out;
+    }
 
-        return lines;
+    // "handle time came down 40 seconds, from 460 to 420"
+    function _moveClause(m, ongoing) {
+        var name = _spokenName(m.registry);
+        var range = ', from ' + _rangeNumber(m.registry, m.before) + ' to ' + _rangeNumber(m.registry, m.value);
+        var amount = _praiseAmount(m.registry, m.value - m.before);
+        var up = m.value > m.before;
+        if (m.kind === 'better') {
+            return name + (ongoing ? (up ? ' is up ' : ' is down ') : (up ? ' went up ' : ' came down ')) + amount + range;
+        }
+        return name + (ongoing ? ' has slipped ' : ' slipped ') + amount + range;
+    }
+
+    /**
+     * The month's moves as a few short paragraphs: the good moves first, then
+     * what held and what slipped, then the hours, then one line that sums it
+     * up and, where something is short of goal, one thing to go after.
+     */
+    function _movementStory(moves, cur, prev, year, seed, options) {
+        var o = options || {};
+        var ongoing = !!cur.inProgress;
+        var month = _monthWord(cur.label);
+        var prior = _monthWord(prev.label);
+        var better = moves.filter(function (m) { return m.kind === 'better'; });
+        var held = moves.filter(function (m) { return m.kind === 'held'; });
+        var worse = moves.filter(function (m) { return m.kind === 'worse'; });
+        var hours = moves.filter(function (m) { return m.kind === 'hours'; })[0];
+        var paras = [];
+
+        var said = [];
+        if (better.length) {
+            // Each move carries its own commas, so two of them take one more
+            // before the "and", or the second reads as part of the first range.
+            var clauses = better.map(function (m) { return _moveClause(m, ongoing); });
+            said.push((clauses.length === 2 ? clauses.join(', and ') : _joinAnd(clauses)) + '.');
+            var landed = better.filter(function (m) { return m.meets; });
+            if (landed.length) {
+                var who = landed.length === better.length
+                    ? (better.length === 1 ? 'it' : (better.length === 2 ? 'both of them' : 'all of them'))
+                    : _joinAnd(landed.map(function (m) { return _spokenName(m.registry); }));
+                said.push((ongoing ? 'That has ' : 'That put ') + who + ' on target.');
+            }
+        }
+        held.forEach(function (m) {
+            said.push(_spokenName(m.registry) + (ongoing ? ' is holding steady at ' : ' held steady at ')
+                + _spoken(m.registry, m.value) + (m.meets ? ', still on target.' : '.'));
+        });
+        if (worse.length >= 3) {
+            // Four "slipped" sentences in a row is a wall to somebody having a
+            // hard month. Named once, together; the picture has the numbers
+            // and the line below names the one to go after.
+            said.push(_joinAnd(worse.map(function (m) { return _spokenName(m.registry); }))
+                + (ongoing ? ' have each slipped from ' : ' each slipped from ') + prior + '.');
+        } else {
+            worse.forEach(function (m) {
+                said.push(_moveClause(m, ongoing) + (m.meets ? ', but it\'s still on target.' : '.'));
+            });
+        }
+        if (said.length) {
+            said[0] = (ongoing ? 'So far in ' + month + ', ' : 'In ' + month + ', ') + said[0];
+            paras.push(said.map(_cap).join(' '));
+        }
+
+        if (hours) paras.push(_hoursLine(hours.value, year, { month: month, added: hours.added, seed: seed }));
+
+        // Said once, after the detail, so it sums up numbers they have just
+        // read rather than standing on its own as a verdict. The hours are
+        // never counted: a total that only goes up is not a move.
+        var ups = better.length, downs = worse.length;
+        var counted = better.length + held.length + worse.length;
+        var summary = '';
+        if (!counted) summary = '';
+        else if (downs === 0 && ups === counted) {
+            summary = _say(['Every single one moved the right way. What a month 🌟',
+                'Every one of them moved the right way, and that is a brilliant month 🌟'], seed);
+        } else if (downs === 0 && ups > 0) {
+            summary = _say([(ongoing ? 'Nothing has gone backwards so far in ' : 'Nothing went backwards in ') + month + '. Really nice work 🎉',
+                (ongoing ? 'Nothing has slipped so far in ' : 'Nothing slipped in ') + month + ', and that is really nice work 🎉'], seed);
+        } else if (ups > downs) {
+            summary = _say(['More up than down, and that is the direction that counts 💪',
+                'More of it went up than down, and that is the direction that counts 💪'], seed);
+        } else if (ups === 0 && downs > 0) {
+            summary = ongoing
+                ? month + ' is a tougher stretch so far, and there is plenty of time to turn it around.'
+                : month + ' was a tougher month than ' + prior + ', and that happens.';
+        } else if (ups === 0) {
+            summary = ongoing ? 'Everything is holding steady from ' + prior + '.' : 'Everything held steady from ' + prior + '.';
+        } else {
+            summary = _say(['A mixed month, with some good moves in it.', month + ' was a mix, with some real wins in it.'], seed);
+        }
+        if (summary) paras.push(summary);
+
+        // One thing to go after, from what held or slipped short of goal. A
+        // move the right way is the praise, so it is never also the focus.
+        var short = worse.concat(held)
+            .filter(function (m) { return m.judged && !m.meets; })
+            .map(function (m) { return { m: m, margin: _praiseMargin(m, year) }; })
+            .filter(function (x) { return x.margin !== null; })
+            .sort(function (a, b) { return b.margin - a.margin; });
+        // The opener already named the closest goal: a second "closest"
+        // below it would contradict it.
+        if (short.length && !o.openedOnClosest) {
+            var focus = _focusLine(short[0].m.registry, short[0].m.value, year, {
+                ahead: ongoing ? '' : 'in ' + _monthAfterKey(cur.key),
+                left: 'there is still time in ' + month,
+                single: short.length === 1,
+                seed: seed
+            });
+            if (focus) paras.push(focus);
+        }
+        return paras;
     }
 
     /* ── Something true to praise, said first ──
@@ -2279,17 +2556,26 @@
      *
      * opts.ongoing: the period is still running (present tense).
      * opts.when: "in July", "so far in August", "this year".
-     * opts.priorLabel: "June", what an improvement is measured from.
      * opts.tookNoCalls: nothing in the numbers is real.
+     * opts.avoid: registry keys the message says slipped, never praised.
+     * opts.seed: the person and period, so the wording rotates stably.
+     * opts.out: handed back { kind, registry } of what was praised.
+     *
+     * It used to open "First, the good news: your ..." on every one, which
+     * reads as a bad news sandwich, and called a miss "the closest to goal
+     * ... a strong base to build on". A miss is named as close now, never as
+     * good news (Scott, 2026-10-26).
      */
     function _praiseLine(rows, year, opts) {
         var o = opts || {};
         var ongoing = !!o.ongoing;
-        var pick = o.tookNoCalls ? null : _pickPraise(rows, year);
+        var avoid = o.avoid || [];
+        var allowed = (rows || []).filter(function (r) { return avoid.indexOf(r.registry) === -1; });
+        var pick = o.tookNoCalls ? null : _pickPraise(allowed, year);
         if (!pick) {
-            var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
+            var voice = _voice();
             var fallback = voice && typeof voice.truePositive === 'function'
-                ? voice.truePositive((rows || []).filter(_praiseUsable).map(function (r) {
+                ? voice.truePositive(allowed.filter(_praiseUsable).map(function (r) {
                     var target = _targetFor(r.registry, year);
                     return { key: r.registry, value: Number(r.value), target: target ? Number(target.value) : null };
                 }), { ongoing: ongoing, tookNoCalls: !!o.tookNoCalls })
@@ -2301,29 +2587,44 @@
         }
 
         var r = pick.row;
-        var label = _registryEntry(r.registry).label || r.label || r.registry;
-        var value = _formatMetricDisplay(r.registry, Number(r.value));
-        var is = ongoing ? 'is' : 'was';
+        if (o.out) { o.out.kind = pick.kind; o.out.registry = r.registry; }
+        var name = _spokenName(r.registry);
+        var value = _spoken(r.registry, r.value);
+        var is = ongoing ? ' is ' : ' was ';
         var when = o.when ? ' ' + o.when : '';
-        var lead = 'First, the good news: your ' + label;
+        var seed = o.seed || '';
 
         if (pick.kind === 'atGoal') {
-            return lead + ' ' + is + ' on target' + when + ', at ' + value + '.';
+            return _say([
+                _cap(name) + is + 'on target' + when + ' at ' + value + ', nice work.',
+                'Nice work on ' + name + when + ', ' + value + ' and right on target.'
+            ], seed);
         }
         if (pick.kind === 'improved') {
-            return lead + (ongoing ? ' is moving' : ' moved') + ' the right way' + when + ', '
-                + (Number(r.value) > Number(r.prior) ? 'up ' : 'down ')
-                + _praiseAmount(r.registry, Number(r.value) - Number(r.prior))
-                + (o.priorLabel ? ' from ' + o.priorLabel : '') + '.';
+            var up = Number(r.value) > Number(r.prior);
+            var move = _cap(name) + (ongoing ? (up ? ' is up ' : ' is down ') : (up ? ' went up ' : ' came down '))
+                + _praiseAmount(r.registry, Number(r.value) - Number(r.prior)) + when
+                + ', from ' + _rangeNumber(r.registry, r.prior) + ' to ' + _rangeNumber(r.registry, r.value);
+            return _say([
+                move + ', and that\'s real progress.',
+                move + '. That\'s a real step forward.',
+                move + '. Nice work.'
+            ], seed);
         }
         if (pick.kind === 'aboveCenter') {
-            return lead + ' ' + is + ' better than the center average' + when + ', '
-                + value + ' against ' + _formatMetricDisplay(r.registry, Number(r.center)) + '.';
+            var center = _spoken(r.registry, r.center);
+            return _say([
+                _cap(name) + is + value + when + ', better than the center average of ' + center + '.',
+                'Your ' + name + ' of ' + value + is + 'ahead of the center average of ' + center + when
+                    + ', and that\'s worth being proud of.'
+            ], seed);
         }
-        var target = _targetFor(r.registry, year);
-        return lead + ' ' + is + ' the closest to goal' + when + ', at '
-            + value + ' against the ' + _formatMetricDisplay(r.registry, Number(target.value))
-            + ' goal, and that is a strong base to build on.';
+        var gap = _gapTo(r.registry, r.value, year);
+        var margin = _praiseMargin(r, year);
+        var g = (margin !== null && margin > -0.05 ? 'only ' : '') + gap;
+        return ongoing
+            ? _cap(name) + ' is the closest to goal' + when + ', ' + value + ' with ' + _goalWords(r.registry, year) + ', so ' + g + ' to go.'
+            : _cap(name) + ' came closest to goal' + when + ', ' + value + ' with ' + _goalWords(r.registry, year) + ', ' + g + ' short.';
     }
 
     /**
@@ -2456,40 +2757,30 @@
     }
 
     /**
-     * The year so far as an email body, for when year to date is what was
-     * picked. One line per KPI against its target, with the centre beside it,
-     * the same numbers the YTD and Center avg columns of the picture carry.
+     * The year so far as a few short paragraphs, for when year to date is
+     * what was picked: what is on target, what is short and how close it is,
+     * one thing to go after, and the hours as the year's total. The picture
+     * carries the month by month and the center beside each one.
      */
-    function _ytdEmailLines(model) {
+    function _ytdStory(model, seed) {
         var ytd = model.ytd;
         if (!ytd || !ytd.metrics) return null;
-        var lines = [];
-        var met = 0, judged = 0;
+        var year = model.year;
+        var ongoing = _ytdOngoing(ytd.through);
 
+        var rows = [];
         ytd.metrics.forEach(function (m, k) {
             if (!m || !m.display) return;
             // No calls or no surveys all year: a 0 is not a figure to judge.
             if (m.registry !== 'reliability' && Number(m.value) === 0) return;
-            var phrase = _targetPhrase(m.registry, model.year);
             var cm = ytd.centerMetrics && ytd.centerMetrics[k];
-            var center = cm && cm.display ? ' (center ' + cm.display + ')' : '';
-            if (m.meets !== null) judged += 1;
-            if (m.meets === true) {
-                met += 1;
-                lines.push('🎉 ' + m.label + ' ' + m.display + ', on target' + center);
-            } else if (m.meets === false) {
-                lines.push('🔸 ' + m.label + ' ' + m.display + ', target is ' + phrase + center);
-            } else {
-                lines.push('➡️ ' + m.label + ' ' + m.display + center);
-            }
+            rows.push({ registry: m.registry, value: Number(m.value), meets: m.meets,
+                center: cm && _isNum(cm.value) ? Number(cm.value) : null });
         });
-        if (!lines.length) return null;
-
-        var ongoing = _ytdOngoing(ytd.through);
+        if (!rows.length) return null;
 
         // Nothing on target but the hours: the year still opens on something
-        // true, best first, before a single miss is read, and the close does
-        // not call the hours "already there".
+        // true, best first, before a single miss is read.
         var praiseRows = ytd.metrics.map(function (m, k) {
             var cm = ytd.centerMetrics && ytd.centerMetrics[k];
             return {
@@ -2500,30 +2791,92 @@
                 surveys: ytd.associateOverallSurveys
             };
         });
-        var goalPraised = _anyGoalPraised(praiseRows, model.year);
-
-        var close;
-        if (judged && met === judged) close = 'On target across the board for the year. That is a brilliant year so far 🌟';
-        else if (met * 2 > judged) close = 'More on target than not this year, keep it going 💪';
-        else if (met > 0 && goalPraised) close = 'Some of these are already there. Plenty of year left to bring the rest along.';
-        else close = ongoing
-            ? 'Plenty of year left to bring these to target. Pick one to go at first and build from there.'
-            : 'Pick one of these to carry into next year and build from there.';
-
+        var goalPraised = _anyGoalPraised(praiseRows, year);
+        var praised = {};
         var lead = null;
         if (!goalPraised) {
             var probe = {
                 values: { aht: (ytd.metrics.filter(function (m) { return m && m.registry === 'aht'; })[0] || {}).value },
                 totalCalls: ytd.totalCalls
             };
-            lead = _praiseLine(praiseRows, model.year, {
+            lead = _praiseLine(praiseRows, year, {
                 ongoing: ongoing,
-                when: ongoing ? 'this year' : 'in ' + model.year,
-                tookNoCalls: _monthTookNoCalls(probe)
+                when: ongoing ? 'this year' : 'in ' + year,
+                tookNoCalls: _monthTookNoCalls(probe),
+                seed: seed,
+                out: praised
             });
         }
 
-        return { lines: lines, met: met, judged: judged, close: close, lead: lead };
+        var kpis = rows.filter(function (r) { return r.registry !== 'reliability'; });
+        var wins = kpis.filter(function (r) { return r.meets === true; });
+        var misses = kpis.filter(function (r) { return r.meets === false; });
+        var hours = rows.filter(function (r) { return r.registry === 'reliability'; })[0];
+        var is = ongoing ? ' is at ' : ' finished at ';
+        var paras = [];
+
+        if (wins.length) {
+            var open = '';
+            if (goalPraised) {
+                open = !misses.length
+                    ? _say(ongoing
+                        ? ['Your year is going really well so far, every goal is on target.',
+                            'What a year you\'re having, every goal on target so far.']
+                        : ['What a year. Every goal finished on target.'], seed)
+                    : _say(ongoing
+                        ? ['There\'s a lot going right in your year so far.',
+                            'Your year has some real wins in it so far.']
+                        : ['There was a lot that went right in your year.'], seed);
+            }
+            var winList = _joinAnd(wins.map(function (r, i) {
+                return (i === 0 ? 'year to date, ' + _spokenName(r.registry) + is : _spokenName(r.registry) + ' at ')
+                    + _spoken(r.registry, r.value);
+            }));
+            var tail = misses.length ? (wins.length === 1 ? ', on target.' : (wins.length === 2 ? ', both on target.' : ', all on target.')) : '.';
+            paras.push((open ? open + ' ' : '') + _cap(winList) + tail);
+        }
+
+        if (misses.length) {
+            var said = [];
+            // The one praised up top has had its number said already.
+            var listed = misses.filter(function (r) { return r.registry !== praised.registry; });
+            var praisedMiss = misses.filter(function (r) { return r.registry === praised.registry; })[0];
+            if (praisedMiss && praised.kind !== 'closest') said.push(_stillToGo(praisedMiss.registry, praisedMiss.value, year));
+            said = said.concat(_missSentences(listed, year, ongoing));
+            // One to go after, never the one just praised.
+            var short = misses
+                .filter(function (r) { return r.registry !== praised.registry; })
+                .map(function (r) { return { r: r, margin: _praiseMargin(r, year) }; })
+                .filter(function (x) { return x.margin !== null; })
+                .sort(function (a, b) { return b.margin - a.margin; });
+            var focusKey = short.length && praised.kind !== 'closest' ? short[0].r.registry : '';
+            // A miss that still beats the center is worth saying, once.
+            var ahead = listed.filter(function (r) {
+                return r.registry !== focusKey && _isNum(r.center) && _praiseBetter(r.registry, r.value, r.center);
+            })[0];
+            if (ahead) {
+                said.push(_cap(_spokenName(ahead.registry)) + (ongoing ? ' is' : ' was')
+                    + ' still ahead of the center average of ' + _spoken(ahead.registry, ahead.center) + ', too.');
+            }
+            if (focusKey) {
+                said.push(_focusLine(short[0].r.registry, short[0].r.value, year, {
+                    ahead: ongoing ? '' : 'next year',
+                    left: 'there is plenty of year left',
+                    single: short.length === 1,
+                    pronoun: listed.length === 1 && short.length === 1 && !ahead,
+                    seed: seed
+                }));
+            }
+            if (said.length) paras.push(said.filter(Boolean).join(' '));
+        }
+
+        if (hours) paras.push(_hoursLine(hours.value, year, { yearOver: !ongoing, seed: seed }));
+
+        if (wins.length && wins.length * 2 > kpis.length) {
+            paras.push(_say(['Keep it going 💪', 'Keep doing what you\'re doing 🌟'], seed));
+        }
+
+        return { paras: paras, lead: lead };
     }
 
     // A year to date is still running until it reaches December 31.
@@ -2555,39 +2908,31 @@
 
         var win = windowOpts || _emailWindow();
         var firstName = String(name || '').trim().split(/\s+/)[0] || name;
+        // The picture that rides along on the clipboard carries the months.
+        var intro = 'Here\'s your year so far, month by month against your goals.';
 
         var lines = [];
         lines.push('Hi ' + firstName + ',');
         lines.push('');
-        lines.push('Here is how your numbers have landed each month this year, against target.');
 
         if (win.scope === 'ytd') {
-            var year = _ytdEmailLines(model);
-            if (year) {
-                if (year.lead) {
-                    // Kudos first: after the greeting, before a number is read.
-                    lines.splice(2, 0, year.lead, '');
-                }
-                lines.push('');
-                lines.push('Your ' + model.year + ' so far, year to date:');
-                lines.push('');
-                year.lines.forEach(function (line) { lines.push(line); });
-                lines.push('');
-                lines.push(year.close);
+            var seedYtd = name + '|ytd|' + ((model.ytd && model.ytd.through) || model.year);
+            var story = _ytdStory(model, seedYtd);
+            if (story) {
+                // Kudos first: after the greeting, before a number is read.
+                if (story.lead) lines.push(story.lead, '');
+                lines.push(intro);
+                story.paras.forEach(function (p) { lines.push('', p); });
 
                 var ytdThrough = model.ytd.through ? _longDate(model.ytd.through) : '';
-                if (ytdThrough) {
-                    lines.push('');
-                    lines.push('These year to date numbers run through ' + ytdThrough + '.');
-                }
-                lines.push('');
-                lines.push('Happy to walk through any of it.');
+                if (ytdThrough) lines.push('', 'These year to date numbers run through ' + ytdThrough + '.');
+                lines.push('', _closer(seedYtd));
 
                 return {
                     to: _apsEmailFor(name),
                     cc: COACHING_CC,
                     subject: 'Your ' + model.year + ' numbers, year to date',
-                    body: lines.join('\n'),
+                    body: _emojiBudget(lines.join('\n')),
                     monthCount: scored.length,
                     scope: 'ytd'
                 };
@@ -2597,17 +2942,19 @@
 
         var pair = _lastTwoScored(_runningReliability(_timelineFor(name), name,
             _ytdReliabilityAnchor(model.year)), win.anchor);
+        var seed = name + '|' + (pair ? pair[1].key : model.lastClosedLabel);
 
         if (pair) {
             var prev = pair[0], cur = pair[1];
-            var moves = _movementLines(prev, cur, model.year);
+            var moves = _movements(prev, cur, model.year);
 
             // Kudos first. When no goal is on target and nothing moved the
             // right way (the hours aside, which are never praise), the email
             // opens on the best true thing about the month before any of the
-            // lines below are read.
+            // moves are read, and never on one the moves say slipped.
             var curModelCol = scored.filter(function (c) { return c.key === cur.key; })[0];
             var prevModelCol = scored.filter(function (c) { return c.key === prev.key; })[0];
+            var opened = {};
             if (moves.length && curModelCol) {
                 var praiseRows = _praiseRowsFor(curModelCol, cur, prevModelCol, prev);
                 var praised = _anyGoalPraised(praiseRows, model.year) || praiseRows.some(function (r) {
@@ -2615,39 +2962,25 @@
                 });
                 if (!praised) {
                     var monthName = _monthWord(cur.label);
-                    lines.splice(2, 0, _praiseLine(praiseRows, model.year, {
+                    lines.push(_praiseLine(praiseRows, model.year, {
                         ongoing: !!cur.inProgress,
                         when: cur.inProgress ? 'so far in ' + monthName : 'in ' + monthName,
-                        priorLabel: _monthWord(prev.label),
-                        tookNoCalls: _monthTookNoCalls(cur)
+                        tookNoCalls: _monthTookNoCalls(cur),
+                        avoid: moves.filter(function (m) { return m.kind === 'worse'; })
+                            .map(function (m) { return m.registry; }),
+                        seed: seed,
+                        out: opened
                     }), '');
                 }
             }
 
+            lines.push(intro);
             if (moves.length) {
-                var ups = moves.filter(function (l) { return l.indexOf('📈') === 0 || l.indexOf('🎉') === 0; }).length;
-                var downs = moves.filter(function (l) { return l.indexOf('📉') === 0; }).length;
-
-                lines.push('');
-                lines.push(cur.label + ' next to ' + prev.label + ':');
-                lines.push('');
-                moves.forEach(function (line) { lines.push(line); });
-                lines.push('');
-
-                // Said once, after the detail, so it is a summary of numbers
-                // they can already see rather than a verdict standing on its own.
-                if (downs === 0 && ups > 0) {
-                    lines.push(ups === moves.length
-                        ? 'Every single one moved the right way. That is a brilliant month 🌟'
-                        : 'Nothing went backwards this month. Really nice work 🎉');
-                } else if (ups > downs) {
-                    lines.push('More up than down, and that is the direction that counts 💪');
-                } else if (ups === 0) {
-                    lines.push('A harder month than ' + prev.label + '. Pick one of these to go at first and build from there.');
-                } else {
-                    lines.push('A mixed month. The ones that slipped are the ones worth a look.');
-                }
+                _movementStory(moves, cur, prev, model.year, seed, { openedOnClosest: opened.kind === 'closest' })
+                    .forEach(function (p) { lines.push('', p); });
             }
+        } else {
+            lines.push(intro);
         }
 
         // The date the numbers actually run through, so somebody filing this
@@ -2665,14 +2998,14 @@
         var through = complete.length ? _longDate(complete[complete.length - 1].spanEnd) : '';
         if (curCol && curCol.inProgress) {
             lines.push('');
-            lines.push(curCol.fullLabel + ' is still running, so its numbers are the month so far.');
+            lines.push(_monthWord(curCol.fullLabel) + ' is still going, so its numbers are the month so far.');
         } else if (through) {
             lines.push('');
             lines.push('These numbers are complete through ' + through + '.');
         }
 
         lines.push('');
-        lines.push('Happy to walk through any of it.');
+        lines.push(_closer(seed));
 
         var throughLabel = curCol && !curCol.inProgress ? curCol.fullLabel : model.lastClosedLabel;
 
@@ -2685,7 +3018,7 @@
             subject: throughLabel
                 ? 'Your ' + model.year + ' numbers, through ' + String(throughLabel).split(' ')[0]
                 : 'Your ' + model.year + ' numbers, month by month',
-            body: lines.join('\n'),
+            body: _emojiBudget(lines.join('\n')),
             monthCount: scored.length,
             scope: 'month'
         };
@@ -2695,28 +3028,15 @@
 
        The year email's body cannot carry its numbers: eight months of table
        arrives in Outlook as a wall of words, which is why that one sends a
-       picture. One month is five lines, and five one-per-metric lines survive
-       plain text in every client. So this email needs no picture, no clipboard,
-       and nothing to paste.
+       picture. One month fits in a few sentences, so this email needs no
+       picture, no clipboard, and nothing to paste.
 
        Same rules as the year card, because the same person receives it:
        targets, not rating bands. No rank, no track label, no score digit.
-       What they are given is the goal and where they landed against it. */
-
-    /**
-     * What a missed goal's line ends with: how far there is to go, in words,
-     * ", 1.8 points from goal." It used to be ". Not there yet." on every
-     * miss, which read as a wall of verdicts to somebody missing them all.
-     * The hours keep their old words: a year's total has no distance back.
-     */
-    function _gapWords(registryKey, value, year) {
-        var target = _targetFor(registryKey, year);
-        if (registryKey === 'reliability' || !target || !_isNum(target.value) || !_isNum(value)) return '. Not there yet.';
-        // Measured from the number as printed, so the gap adds up on the page.
-        var shown = _registryEntry(registryKey).unit === 'sec'
-            ? Math.round(Number(value)) : Math.round(Number(value) * 10) / 10;
-        return ', ' + _praiseAmount(registryKey, shown - Number(target.value)) + ' from goal.';
-    }
+       What they are given is the goal and where they landed against it,
+       said the way Scott would say it (2026-10-26): what is on target first,
+       what is short and by how much, one thing to go after, and the hours as
+       the year's total, never counted as a goal met for the month. */
 
     function buildMonthlyStatsEmail(name) {
         var model = buildYearImageModel(name);
@@ -2728,18 +3048,24 @@
         // written as "so far": a part-month is never presented as a finished
         // one, same rule the celebrations copy follows.
         var col = scored[scored.length - 1];
-        // A 0 outside the hours is no calls or no surveys: never a "Met." for
+        // A 0 outside the hours is no calls or no surveys: never a win for
         // a 0s handle time, never a 0% that nobody answered.
         var withData = col.metrics.filter(function (m) {
             return m.display && !(m.registry !== 'reliability' && Number(m.value) === 0);
         });
         if (!withData.length) return null;
 
-        var registry = window.METRICS_REGISTRY || {};
+        var year = model.year;
         var firstName = String(name || '').trim().split(/\s+/)[0] || name;
+        var ongoing = !!col.inProgress;
+        var month = _monthWord(col.fullLabel);
+        var seed = name + '|' + col.key;
 
-        var met = withData.filter(function (m) { return m.meets === true; }).length;
-        var judged = withData.filter(function (m) { return m.meets !== null; }).length;
+        var kpis = withData.filter(function (m) { return m.registry !== 'reliability'; });
+        var hours = withData.filter(function (m) { return m.registry === 'reliability'; })[0];
+        var wins = kpis.filter(function (m) { return m.meets === true; });
+        var misses = kpis.filter(function (m) { return m.meets === false; });
+        var unjudged = kpis.filter(function (m) { return m.meets === null; });
 
         var lines = [];
         lines.push('Hi ' + firstName + ',');
@@ -2748,49 +3074,81 @@
         // Kudos first. With no goal met (the hours aside, which are never
         // praise), the email opens on the best true thing about the month:
         // a move the right way since the month before, better than the
-        // center, or the closest to goal.
+        // center, or how close the nearest goal is.
         var timeline = _timelineFor(name) || [];
         var pointFor = function (key) {
             return timeline.filter(function (pt) { return pt && String(pt.key) === String(key); })[0] || null;
         };
         var prevCol = scored.length > 1 ? scored[scored.length - 2] : null;
         var praiseRows = _praiseRowsFor(col, pointFor(col.key), prevCol, prevCol ? pointFor(prevCol.key) : null);
-        if (!_anyGoalPraised(praiseRows, model.year)) {
-            var monthName = _monthWord(col.fullLabel);
-            lines.push(_praiseLine(praiseRows, model.year, {
-                ongoing: !!col.inProgress,
-                when: col.inProgress ? 'so far in ' + monthName : 'in ' + monthName,
-                priorLabel: prevCol ? _monthWord(prevCol.fullLabel) : '',
-                tookNoCalls: _monthTookNoCalls(pointFor(col.key))
+        var praised = {};
+        var opening = [];
+        if (!_anyGoalPraised(praiseRows, year)) {
+            opening.push(_praiseLine(praiseRows, year, {
+                ongoing: ongoing,
+                when: ongoing ? 'so far in ' + month : 'in ' + month,
+                tookNoCalls: _monthTookNoCalls(pointFor(col.key)),
+                seed: seed,
+                out: praised
             }));
+        } else if (!misses.length) {
+            opening.push(_say(ongoing
+                ? [month + ' is shaping up really well, every goal is on target so far.',
+                    month + ' is off to a great start, with every goal on target so far.',
+                    'So far ' + month + ' looks great, every goal is on target.']
+                : [month + ' was a great month for you, every goal on target.',
+                    'What a ' + month + '. Every one of your goals landed on target.',
+                    month + ' was a really strong month, with every goal on target.'], seed));
+        } else {
+            opening.push(_say(ongoing
+                ? ['Nice start to ' + month + '.', month + ' has some real wins in it already.', 'Good stuff so far in ' + month + '.']
+                : ['Nice work in ' + month + '.', 'Some real wins in ' + month + '.', 'Good stuff in ' + month + '.'], seed));
+        }
+        if (wins.length) {
+            var came = ongoing ? ' is at ' : ' came in at ';
+            var winList = _joinAnd(wins.map(function (m, i) {
+                return _spokenName(m.registry) + (i === 0 ? came : ' at ') + _spoken(m.registry, m.value);
+            }));
+            var tail = !misses.length && opening.length && _anyGoalPraised(praiseRows, year) ? '.'
+                : (wins.length === 1 ? ', on target.' : (wins.length === 2 ? ', both on target.' : ', all on target.'));
+            opening.push(_cap(winList) + tail);
+        }
+        lines.push(opening.join(' '));
+
+        // What is short of goal, two to a sentence, then one to go after.
+        var listed = misses.concat(unjudged).filter(function (m) { return m.registry !== praised.registry; });
+        var praisedMiss = misses.filter(function (m) { return m.registry === praised.registry; })[0];
+        var said = _missSentences(listed, year, ongoing);
+        if (praisedMiss && praised.kind !== 'closest') said.unshift(_stillToGo(praisedMiss.registry, praisedMiss.value, year));
+        var short = misses
+            .filter(function (m) { return m.registry !== praised.registry; })
+            .map(function (m) { return { m: m, margin: _praiseMargin(m, year) }; })
+            .filter(function (x) { return x.margin !== null; })
+            .sort(function (a, b) { return b.margin - a.margin; });
+        // After an opener on the closest goal, a second "closest" would
+        // contradict it.
+        if (short.length && praised.kind !== 'closest') {
+            said.push(_focusLine(short[0].m.registry, short[0].m.value, year, {
+                ahead: ongoing ? '' : 'in ' + _monthAfterKey(col.key),
+                left: 'there is still time in ' + month,
+                single: short.length === 1,
+                pronoun: listed.length === 1 && short.length === 1,
+                seed: seed
+            }));
+        }
+        said = said.filter(Boolean);
+        if (said.length) {
             lines.push('');
+            lines.push(said.join(' '));
         }
 
-        lines.push(col.inProgress
-            ? 'Here is where ' + col.fullLabel + ' stands so far against target:'
-            : 'Here is how ' + col.fullLabel + ' landed against target:');
-        lines.push('');
-
-        withData.forEach(function (m) {
-            // The registry's full names, not the grid's abbreviations. "CX Adv"
-            // is a column heading; "Rep Satisfaction" is what the metric is
-            // called everywhere the associate sees it.
-            var full = (registry[m.registry] && registry[m.registry].label) || m.label;
-            var phrase = _targetPhrase(m.registry, model.year);
-            var line = '- ' + full + ': ' + m.display;
-            if (phrase) line += ' (goal: ' + phrase + ')';
-            if (m.meets === true) line += '. Met.';
-            else if (m.meets === false) line += _gapWords(m.registry, m.value, model.year);
-            lines.push(line);
-        });
-
-        lines.push('');
-        if (judged) {
-            lines.push('That is ' + met + ' of ' + judged + ' goals met' +
-                (col.inProgress ? ' so far' : '') + '.');
+        if (hours) {
             lines.push('');
+            lines.push(_hoursLine(hours.value, year, { seed: seed, yearOver: !ongoing && /-12$/.test(String(col.key)) }));
         }
-        lines.push('Happy to walk through any of it.');
+
+        lines.push('');
+        lines.push(_closer(seed));
 
         return {
             to: _apsEmailFor(name),
@@ -2802,7 +3160,7 @@
             subject: 'Your ' + col.fullLabel +
                 (String(col.fullLabel).indexOf(String(model.year)) === -1 ? ' ' + model.year : '') +
                 ' numbers',
-            body: lines.join('\n'),
+            body: _emojiBudget(lines.join('\n')),
             monthLabel: col.fullLabel,
             inProgress: !!col.inProgress
         };

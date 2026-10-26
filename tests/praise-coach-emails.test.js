@@ -112,7 +112,8 @@ suite('praise in every coaching email: People > Coach prompt, no prior week', (t
     const { coachingEmail: bare } = loadCoaching(t, twoWeeks(RED, null));
     const closest = bare.collectCoachingPromptMetricData(RED).positive;
     t.equal('with nothing else, the closest to goal', closest && closest.kind, 'closest');
-    t.check('which is a true statement with its goal', /closest to goal, at .* against the .* goal/.test(closest.text));
+    t.check('which is a true statement with its goal', /closest to goal, [\d.]+%? with an? [\d.]+%? goal, /.test(closest.text));
+    t.check('named as close, not as good news', !/good place to build|strong base|good news/.test(closest.text));
 });
 
 suite('praise in every coaching email: People > Coach prompt, no calls', (t) => {

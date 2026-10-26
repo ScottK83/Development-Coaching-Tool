@@ -96,6 +96,14 @@ function voiceRules(t, label, body) {
     t.check(label + ': no 0% and no 0s', !/(^|[^\d.])0(\.0)?(%|s\b)/.test(body));
     t.check(label + ': no placing named', !/place|rank|#\d/i.test(body));
     t.check(label + ': no hype for someone missing everything', !/absolutely OFF|CLINIC|on FIRE|crushing it/.test(body));
+    // Said out loud (Scott, 2026-10-26): no report rows, no column headings,
+    // no "better by", no bad news sandwich, two emojis at most.
+    t.check(label + ': no label: value rows', !/^- [^:\n]+: /m.test(body));
+    t.check(label + ': no "Met." verdicts', !/\bMet\.|Not there yet/.test(body));
+    t.check(label + ': no column headings', !/\bAHT\b|CX Adv/.test(body));
+    t.check(label + ': no "better by" or "off by"', !/better by|off by/.test(body));
+    t.check(label + ': no "First, the good news"', body.indexOf('good news') === -1);
+    t.check(label + ': two emojis at most', global.window.DevCoachModules.messageVoice.countEmojis(body) <= 2);
 }
 
 function firstLines(body, n) {
@@ -106,7 +114,8 @@ function firstLines(body, n) {
 
 suite('praise rankings: a harder month still opens on something true', (t) => {
     // Every goal missed in July, and every one worse than June. Adherence
-    // still beat the center average, which sits near 88.5%.
+    // still beat the center average, but it slipped, and a metric the same
+    // message says slipped is never the praise: the effort is.
     const cr = loadRankings(t, months(
         { aht: 480, scheduleAdherence: 92, overallSentiment: 86, cxRepOverall: 80, reliability: 4 },
         { aht: 500, scheduleAdherence: 91, overallSentiment: 85, cxRepOverall: 78, reliability: 4 }
@@ -116,28 +125,31 @@ suite('praise rankings: a harder month still opens on something true', (t) => {
     if (!mail) return;
     const body = mail.body;
 
-    t.check('it is the July story', body.indexOf('July 2026 next to June 2026:') > -1);
-    t.check('nothing moved the right way', !/📈|🎉 (AHT|Adherence|Sentiment|CX Adv)/.test(body));
+    t.check('it is the July story', /In July, /.test(body) && /from June\./.test(body));
+    t.check('nothing moved the right way', !/came down|went up/.test(body));
     t.check('the praise comes before any number is read',
-        /^Hi Zed,\n\nFirst, the good news: your Schedule Adherence was better than the center average in July, 91% against \d+(\.\d)?%\.\n/.test(body));
-    t.check('the honest lines are all still there', (body.match(/📉/g) || []).length >= 4);
+        /^Hi Zed,\n\nI saw the effort you put in, and it matters\.\n/.test(body));
+    t.check('the slips are named together, not as a wall',
+        /In July, handle time, adherence, sentiment, and rep satisfaction each slipped from June\./.test(body));
     t.check('and the close is goal focused, not a verdict',
-        /A harder month than June 2026\. Pick one of these to go at first and build from there\./.test(body));
-    t.check('the hours are never the praise', !/good news[^\n]*Reliability/.test(body));
+        /July was a tougher month than June, and that happens\.\n\nAdherence is the closest, only 2 points from goal, and I think you can get there in August\./.test(body));
+    t.check('the hours are never the praise', !/^Hi Zed,\n\n[^\n]*reliability/i.test(body));
+    t.check('the hours are the year\'s total', /reliability budget for the year, at 8 hours so far|hours missed for the year are at 8 hours so far/.test(body));
     t.check('still a message, not a report', body.length < 700);
     voiceRules(t, 'month over month', body);
 });
 
 suite('praise rankings: no hours added is not the praise in an all-red month', (t) => {
-    // Reliability held at 0, so its line is a 🎉 and the month reads "mixed",
-    // but hours are never praise material: the opener is still added.
+    // Reliability held at 0, which is good to say, but hours are never
+    // praise material: the opener is still added, and it is not the hours.
     const cr = loadRankings(t, months(
         { aht: 480, scheduleAdherence: 92, overallSentiment: 86, cxRepOverall: 80 },
         { aht: 500, scheduleAdherence: 91, overallSentiment: 85, cxRepOverall: 78 }
     ), {});
     const body = cr.buildMonthOverMonthEmail('Zed Red', MONTH).body;
-    t.check('the opener is a goal, not the hours',
-        /^Hi Zed,\n\nFirst, the good news: your Schedule Adherence was better than the center average in July/.test(body));
+    t.check('the opener is not the hours',
+        firstLines(body, 2) === 'Hi Zed,\nI saw the effort you put in, and it matters.');
+    t.check('the hours are said further down', /No hours missed this year so far/.test(body));
     voiceRules(t, 'mixed month', body);
 });
 
@@ -147,8 +159,12 @@ suite('praise rankings: a month with a win in it is left as it was', (t) => {
         { aht: 420, scheduleAdherence: 91, overallSentiment: 85, cxRepOverall: 78 }
     ), {});
     const body = cr.buildMonthOverMonthEmail('Zed Red', MONTH).body;
-    t.check('an AHT on target is praise already', /🎉 AHT 420s, better by/.test(body));
-    t.check('so no extra opener is added', body.indexOf('First, the good news') === -1);
+    t.check('an AHT on target is praise already',
+        /In July, handle time came down 60 seconds, from 480 to 420\. That put it on target\./.test(body));
+    t.check('so no extra opener is added',
+        firstLines(body, 2) === 'Hi Zed,\nHere\'s your year so far, month by month against your goals.');
+    t.check('the win is never also the focus', !/handle time is the closest|go after handle time/i.test(body));
+    voiceRules(t, 'with a win', body);
 });
 
 /* ── One month ── */
@@ -165,13 +181,18 @@ suite('praise rankings: zero goals met opens on the move the right way', (t) => 
     const body = mail.body;
 
     t.check('kudos first, with the move in words',
-        firstLines(body, 2) === 'Hi Zed,\nFirst, the good news: your Average Handle Time moved the right way in July, down 40 seconds from June.');
-    t.check('the honest tally stays', /That is 0 of 4 goals met\./.test(body) || /That is 1 of 5 goals met\./.test(body));
+        firstLines(body, 2) === 'Hi Zed,\nHandle time came down 40 seconds in July, from 520 to 480, and that\'s real progress.');
+    t.check('no tally of goals met', !/goals met/.test(body));
     t.check('no wall of "Not there yet."', body.indexOf('Not there yet.') === -1);
-    t.check('each miss says how far there is to go',
-        /- Average Handle Time: 480s \(goal: 426s or lower\), 54 seconds from goal\./.test(body)
-        && /- Schedule Adherence: 91% \(goal: 93% or higher\), 2 points from goal\./.test(body));
-    t.check('the hours still read as a total, never as praise', !/good news[^\n]*Reliability/.test(body));
+    t.check('the praised one says how far it still has to go, once',
+        /Handle time has 54 seconds to go to reach its goal of 426\./.test(body)
+        && (body.match(/480/g) || []).length === 1);
+    t.check('each other miss is said with its goal',
+        /Adherence finished at 91% with a 93% goal and sentiment at 85% with an 88% goal\./.test(body)
+        && /Rep satisfaction came in at 78% with an 82% goal\./.test(body));
+    t.check('one thing to go after, never the one praised',
+        /Adherence is the closest, only 2 points from goal, and I think you can get there in August\./.test(body));
+    t.check('the hours still read as a total, never as praise', !/^Hi Zed,\n[^\n]*reliability/i.test(firstLines(body, 2)));
     voiceRules(t, 'one month', body);
 });
 
@@ -181,8 +202,11 @@ suite('praise rankings: nothing better than before or the center, so closest to 
         { aht: 540, scheduleAdherence: 86, overallSentiment: 85, cxRepOverall: 78 }
     ), {});
     const body = cr.buildMonthlyStatsEmail('Zed Red').body;
-    t.check('the nearest goal, as a share of the goal, leads',
-        /First, the good news: your Overall Sentiment was the closest to goal in July, at 85% against the 88% goal, and that is a strong base to build on\./.test(body));
+    // Still a miss, so it is named as close, never as good news.
+    t.check('the nearest goal, as a share of the goal, leads, named as close',
+        /^Hi Zed,\n\nSentiment came closest to goal in July, 85% with an 88% goal, only 3 points short\./.test(body));
+    t.check('never "a strong base" for a miss', !/strong base|good place to build/.test(body));
+    t.check('and no second "closest" contradicts it', (body.match(/closest/g) || []).length === 1);
     voiceRules(t, 'closest', body);
 });
 
@@ -194,8 +218,10 @@ suite('praise rankings: Rep Satisfaction on two surveys is never the praise', (t
         { aht: 540, scheduleAdherence: 86, overallSentiment: 85, cxRepOverall: 95, surveyTotal: 2, repSurveyTotal: 2 }
     ), {});
     const body = cr.buildMonthlyStatsEmail('Zed Red').body;
-    t.check('an opener is still added', body.indexOf('First, the good news') > -1);
-    t.check('and it is not the thin survey', !/good news[^\n]*Rep Satisfaction/.test(body));
+    const opener = body.split('\n')[2] || '';
+    t.check('an opener is still added', /closest to goal|better than the center|came down|went up/.test(opener));
+    t.check('and it does not lead on the thin survey', !/^Rep satisfaction/.test(opener));
+    voiceRules(t, 'thin survey', body);
 });
 
 suite('praise rankings: no calls at all gets the effort, never a 0s', (t) => {
@@ -208,7 +234,9 @@ suite('praise rankings: no calls at all gets the effort, never a 0s', (t) => {
     if (!mail) return;
     t.check('the effort, in the past tense for a finished month',
         firstLines(mail.body, 2) === 'Hi Zed,\nI saw the effort you put in, and it matters.');
-    t.check('the 0s handle time is not on the list', mail.body.indexOf('Average Handle Time') === -1);
+    t.check('the 0s handle time is not on the list', !/handle time/i.test(mail.body));
+    t.check('a lone miss is not named twice in a row',
+        /Adherence finished at 86% with a 93% goal\. That's 7 points from goal, and I think you can get there in August\./.test(mail.body));
     voiceRules(t, 'no calls', mail.body);
 });
 
@@ -227,13 +255,33 @@ suite('praise rankings: a year with nothing on target opens on the best of it', 
     const body = mail.body;
 
     t.check('the year still running is said in the present tense',
-        /^Hi Zed,\n\nFirst, the good news: your Schedule Adherence is better than the center average this year, 91% against \d+(\.\d)?%\.\n/.test(body));
-    t.check('the misses are still listed against target', (body.match(/🔸/g) || []).length === 4);
+        /^Hi Zed,\n\nAdherence is 91% this year, better than the center average of \d+(\.\d)?%\.\n/.test(body));
+    t.check('the misses are still said against their goals',
+        /Adherence has 2 points to go to reach its goal of 93%\./.test(body)
+        && (body.match(/ with an? \d+%? goal/g) || []).length === 3);
     t.check('the hours on target are not called "already there"', body.indexOf('already there') === -1);
-    t.check('the close looks forward',
-        body.indexOf('Plenty of year left to bring these to target. Pick one to go at first and build from there.') > -1);
+    t.check('the close looks forward', /there is plenty of year left to get there\./.test(body));
     t.check('the old close is gone', body.indexOf('Worth picking one to go at') === -1);
+    t.check('the hours are the year\'s total, never a goal met',
+        /(reliability budget for the year, at 6 hours so far|hours missed for the year are at 6 hours so far)/.test(body));
     voiceRules(t, 'year to date', body);
+});
+
+suite('praise rankings: a draft built twice reads the same, and closers rotate across people', (t) => {
+    const cr = loadRankings(t, months(
+        { aht: 430, scheduleAdherence: 95, overallSentiment: 86, cxRepOverall: 85 },
+        { aht: 410, scheduleAdherence: 94, overallSentiment: 85.5, cxRepOverall: 80 }
+    ), {});
+    const a = cr.buildMonthlyStatsEmail('Zed Red').body;
+    const b = cr.buildMonthlyStatsEmail('Zed Red').body;
+    t.equal('the same person and month get the same words', a, b);
+    const closers = global.window.DevCoachModules.messageVoice.EMAIL_CLOSERS;
+    t.check('it ends on one of the closers', closers.some((c) => a.endsWith(c)));
+    const seen = new Set();
+    ['Zed Red', 'Ada Lovelace', 'Bo Diddley', 'Cy Young', 'Di Prince', 'Ed Norton', 'Flo Jo', 'Gus Grissom'].forEach((n) => {
+        seen.add(global.window.DevCoachModules.messageVoice.emailCloser(n + '|2026-07'));
+    });
+    t.check('different people do not all get the same closer', seen.size >= 3);
 });
 
 /* ── Verint ── */
