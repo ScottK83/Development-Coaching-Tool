@@ -34,10 +34,14 @@
             'you have been climbing past people on this one',
             'you are pulling ahead of the floor on this'
         ],
+        // Never that anybody is passing them: "the floor has been passing you
+        // here" and "others have been moving ahead of you" sat next to the
+        // banned "N people ahead of you" (Scott, 2026-10-21; tone audit
+        // 10/25). Their own ground, and that it can be won back.
         slipping: [
-            'the floor has been passing you here',
-            'you have been losing ground on this one',
-            'others have been moving ahead of you on this'
+            'you have lost a little ground on this one, and it is very winnable back',
+            'this one has lost a bit of ground this year, and there is time to win it back',
+            'you have been losing ground on this one, and a few strong weeks turn it around'
         ],
         holding: [
             'you have held your place here',

@@ -29,7 +29,21 @@ suite('year standing: direction, never a position', (t) => {
     t.check('the word rank never appears', !/\brank(ed|ing)?\b/i.test(text));
 
     t.check('but the direction is unmistakable', text.indexOf('gaining ground') > -1);
-    t.check('and so is the wrong direction', text.indexOf('passing you') > -1 || text.indexOf('losing ground') > -1);
+    t.check('and so is the wrong direction', /lost (a little|a bit of) ground|losing ground/.test(text));
+});
+
+suite('year standing: a slip never says anybody is passing them', (t) => {
+    const ys = load(t);
+    // Scott, 2026-10-21: no "N people ahead of you". The 10/25 audit found its
+    // cousins in this pool: "the floor has been passing you here", "others
+    // have been moving ahead of you". Every slipping line, every draw.
+    const lines = [0, 1, 2].map((i) => ys.buildYearStandingText(
+        [{ label: 'Schedule Adherence', valueText: '91.2%', targetText: '93%', movement: 'slipping' }],
+        { pick: (pool) => pool[i % pool.length] }));
+    lines.forEach((text, i) => {
+        t.check('line ' + i + ': no one passing them', !/passing you|ahead of you|moving ahead|passed you|behind (them|others)/i.test(text));
+        t.check('line ' + i + ': said as winnable', /win(nable)? (it )?back|turn it around/.test(text));
+    });
 });
 
 suite('year standing: churn is not movement', (t) => {

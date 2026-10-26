@@ -26,7 +26,7 @@ const REGISTRY = {
 // two emojis a message, the opener's and the sign-off's).
 const PLAIN =
     'Where the year stands\n'
-    + '  • Schedule Adherence 91.2% against a 93% target: the floor has been passing you here.';
+    + '  • Schedule Adherence 91.2% against a 93% target: you have lost a little ground on this one, and it is very winnable back.';
 
 function load(t, withProjection) {
     t.installFakeBrowser();
@@ -78,7 +78,7 @@ suite('year standing pace: the answer a direction cannot give', (t) => {
 
     const text = ys.buildYearStandingText([entry({ paceText: pace })]);
 
-    t.check('the direction still leads', text.indexOf('passing you') > -1);
+    t.check('the direction still leads', text.indexOf('lost a little ground') > -1);
     t.check('and the number they know is still there', text.indexOf('91.2%') > -1);
     t.check('the pace line follows it', text.indexOf(pace) > -1);
     t.check('indented under the bullet, not beside it', text.indexOf(`.\n    ${pace}`) > -1);
