@@ -3,7 +3,19 @@
 Last updated 2026-10-26, version 2026.10.22.1, suite at 9260 passing.
 
 ## Where things stand
-- **Deep dive, 2026-10-25, WAITING ON SCOTT:** `audit/2026-10-25-deep-dive.md`, a read-only review. It covers value for Scott, associates and APS; call listening accuracy, run on the real Sep 29 call; tracking; team trends; tone; and tips. It proposes phases A to F, which are not approved yet, and ends with 6 questions for Scott. The full lists are `audit/2026-10-25-tone-findings.md` and `audit/2026-10-25-tips-findings.md`. No app code was changed. Headlines:
+- **Deep dive plan APPROVED 2026-10-26 ("Go ahead with the plan"), in progress.**
+  - Done and live (v2026.10.26.5):
+    - A: call reader accuracy (`tests/call-reader-accuracy.test.js`).
+    - B: the call scorecard, `modules/call-scorecard.module.js`, which sits under the flag strip and is saved as `entry.scorecard` with corrections (`tests/call-scorecard.test.js`).
+    - E: tone, merged from a worktree.
+    - F: tips, merged from a worktree. 547 tips; edits and deletions are keyed by text.
+  - Next: C (log coaching on send, one log, a "What's working" view), then D (call trends from saved scorecards).
+  - Defaults used because Scott left Q2 to Q6 unanswered:
+    - The score is shown to Scott and in the Verint note only, never in the associate email.
+    - Tips that assume dial-out or own-call access were rewritten to work either way.
+    - "Test Upload 2" is left alone.
+    - This plan goes before data pipeline Phase 2.
+- **Deep dive, 2026-10-25:** `audit/2026-10-25-deep-dive.md`, a read-only review. It covers value for Scott, associates and APS; call listening accuracy, run on the real Sep 29 call; tracking; team trends; tone; and tips. It proposes phases A to F, which are not approved yet, and ends with 6 questions for Scott. The full lists are `audit/2026-10-25-tone-findings.md` and `audit/2026-10-25-tips-findings.md`. No app code was changed. Headlines:
   - The call reader misread 8 things on 3 calls.
   - The main Calls flow logs no coaching.
   - The Today page logs a tip on every draft.

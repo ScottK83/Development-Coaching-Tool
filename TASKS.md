@@ -1,7 +1,7 @@
 # Tasks
 
 ## Open
-- Deep dive 2026-10-25 (`audit/2026-10-25-deep-dive.md`): waiting on Scott's go and answers to its 6 questions. Proposed phases:
+- Deep dive 2026-10-25: Scott approved it 2026-10-26. A, B, E and F are done and live; C and D are next. Phases:
   - A: call reader accuracy, 8 misreads plus grammar. Needs 3 to 5 real coloured Verint pastes.
   - B: call scorecard on the main path, saved as data.
   - C: log on send, one coaching log, one "What's working" view.
