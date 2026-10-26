@@ -1707,11 +1707,14 @@
      * called, for the two stems that need to know. ", and it holds up!" is gone:
      * it read as though the number was in doubt. Scott, 2026-10-14.
      */
+    // No "Label: value" rows, which read as a report, and not every line
+    // shouting: the post ran to a median of fourteen "!" (tone audit,
+    // 2026-10-25), so some of these end on a full stop.
     var BATCH_METRIC_STEMS = [
-        function(label, val) { return label + ': ' + val + '!'; },
+        function(label, val) { return 'Love this ' + label + ' number, ' + val + '.'; },
         function(label, val) { return val + ' on ' + label + '!'; },
-        function(label, val) { return 'Look at ' + label + ': ' + val + '!'; },
-        function(label, val) { return 'Strong showing on ' + label + ': ' + val + '!'; },
+        function(label, val) { return 'Look at ' + label + ' at ' + val + '!'; },
+        function(label, val) { return 'Strong showing on ' + label + ', ' + val + '.'; },
         function(label, val) { return label + ' at ' + val + '!'; }
         // No stem that leans on a sentence before it. "That is 83.8% on First
         // Call Resolution!" opens a bullet as though it were finishing one,
@@ -2428,10 +2431,12 @@
         lines.push(opener);
         lines.push('');
         var intro = pick(_notRepeating(DM_INTROS.concat(closed ? DM_INTROS_DONE : DM_INTROS_ONGOING), opener));
-        lines.push(intro);
-        // What "this" covers, said before the numbers rather than after them.
+        // What "this" covers, said before the numbers rather than after them,
+        // and said as a sentence: a bare "Oct 5 to 11" dangling under "...I
+        // have to say something:" read as a stray line (tone audit, 10/25).
         var when = dateRange ? friendlyRange(dateRange, periodKey) : '';
-        if (when) lines.push(when);
+        lines.push(when ? intro.replace(/:\s*$/, '.') : intro);
+        if (when) lines.push('Here\'s ' + when + ':');
         lines.push('');
 
         var stem = rotator(DM_STEMS.concat(closed ? DM_STEMS_DONE : DM_STEMS_ONGOING));

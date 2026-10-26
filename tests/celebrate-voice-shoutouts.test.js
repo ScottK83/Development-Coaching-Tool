@@ -323,3 +323,17 @@ suite('celebrate voice: a DM does not say the same idea twice', (t) => {
     }
     t.check('"hear it from me" and "reach out" once at most' + (doubled ? ': ' + doubled : ''), !doubled);
 });
+
+suite('celebrate voice: no "Label: value" rows, and the DM date is a sentence', (t) => {
+    const { cel } = load(t);
+    for (let i = 0; i < DRAWS; i++) {
+        const week = i % 2 ? DONE_WEEK : RUNNING_WEEK;
+        const post = cel.generateAllShoutOuts(team(), '', week);
+        const rows = post.split('\n').filter((l) => /^• [A-Z][A-Za-z ]+: \d/.test(l));
+        if (rows.length) { t.check('no "Label: value" bullet: ' + rows.join(' | '), false); return; }
+        const dm = cel.generateDirectMessage(team()[0], 'Oct 5, 2026 - Oct 11, 2026', week);
+        if (/:\n[A-Z][a-z]{2} \d+ to \d+\n/.test(dm)) { t.check('the date does not dangle after a colon: ' + dm, false); return; }
+        if (!/\nHere's [A-Z][a-z]{2} \d+ to \d+:\n/.test(dm)) { t.check('the date is said as a sentence: ' + dm, false); return; }
+    }
+    t.check('every post and DM speaks in sentences', true);
+});
