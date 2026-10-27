@@ -1,31 +1,41 @@
 # Handoff
 
-Last updated 2026-10-26, version 2026.10.22.1, suite at 9260 passing.
+Last updated 2026-10-26, version 2026.10.26.8, suite at 9918 passing.
 
 ## Where things stand
-- **Deep dive plan APPROVED 2026-10-26 ("Go ahead with the plan"), in progress.**
-  - Done and live (v2026.10.26.5):
-    - A: call reader accuracy (`tests/call-reader-accuracy.test.js`).
-    - B: the call scorecard, `modules/call-scorecard.module.js`, which sits under the flag strip and is saved as `entry.scorecard` with corrections (`tests/call-scorecard.test.js`).
-    - E: tone, merged from a worktree.
-    - F: tips, merged from a worktree. 547 tips; edits and deletions are keyed by text.
-  - Next: C (log coaching on send, one log, a "What's working" view), then D (call trends from saved scorecards).
-  - Defaults used because Scott left Q2 to Q6 unanswered:
-    - The score is shown to Scott and in the Verint note only, never in the associate email.
-    - Tips that assume dial-out or own-call access were rewritten to work either way.
-    - "Test Upload 2" is left alone.
-    - This plan goes before data pipeline Phase 2.
-- **Deep dive, 2026-10-25:** `audit/2026-10-25-deep-dive.md`, a read-only review. It covers value for Scott, associates and APS; call listening accuracy, run on the real Sep 29 call; tracking; team trends; tone; and tips. It proposes phases A to F, which are not approved yet, and ends with 6 questions for Scott. The full lists are `audit/2026-10-25-tone-findings.md` and `audit/2026-10-25-tips-findings.md`. No app code was changed. Headlines:
-  - The call reader misread 8 things on 3 calls.
-  - The main Calls flow logs no coaching.
-  - The Today page logs a tip on every draft.
-  - Two tip trackers never meet.
-  - The team is behind the center on adherence, AHT and Positive Word, and ahead on Rep Sat and Overall Experience.
-- **Data pipeline plan, approved 2026-10-22:** `audit/2026-10-21-data-pipeline-plan.md` (Scott's four answers are at its top). **Phase 1 is done** (2026-10-22): the Snapshot and the Year to date tab use the real helpers (`metricProfiles.valueMeetsTarget` with the year's target, `window.isReverseMetric`, `window.formatMetricDisplay`) instead of the never-registered `DevCoachModules.metrics`; the Snapshot always covers the whole team (`ignoreTeamScope`), has no Rel column, leaves Calls unshaded, and merges center averages instead of replacing them; Pace shows "96.5%/wk, Stretch: best so far 96.4%" and keeps "Not possible" for over 100% or under zero. Tests: `tests/snapshot-pace-truth.test.js`. Checked on the real October data. **Next: Phase 2** (upload checks, and let a saved week or month be replaced so Scott can re-pull Feb 23, Mar 2, May, May 18 and Jun 1).
-- Done: restyle to match the Downloader Bot (Scott, 2026-10-21: "Dark only. Sidebar nav."). Dark-only tokens, `modules/sidebar.module.js`, the KIT classes in styles-v2.css, every page swept off hard-coded colours, the old forced dark layer removed, Teams cards shown light on screen. Build new UI with the KIT; never hard-code colours. Scott has not reviewed it yet.
+- **Deep dive plan done (Scott, 2026-10-26: "Go ahead with the plan").** All six phases are live. The audit is `audit/2026-10-25-deep-dive.md`, and its full lists are `audit/2026-10-25-tone-findings.md` and `audit/2026-10-25-tips-findings.md`.
+  - **Calls**
+    - The reader misreads fixed (`tests/call-reader-accuracy.test.js`). The made-up test call is `tests/fixtures/arrangement-call.txt`; real transcripts are never committed.
+    - A scorecard on every call (`modules/call-scorecard.module.js`). It has ten lines, each Yes, Missed, Didn't apply or Check, with times and numbers. It sits under the flag strip, on the main path.
+    - A click corrects a line and the notes follow. The corrected card is saved as `entry.scorecard`.
+    - Copy For Verint carries the score; the associate email never does.
+  - **Coaching log, written when coaching goes out**
+    - `recordCallCoaching` runs on Verint, the Copilot email and Outlook (not the summary step).
+    - `recordTodayCoaching` runs on the Today page's "✓ Sent", and Undo removes the record.
+    - The Coach page and the trend email write one record per period.
+    - Each is a single record, keyed by `dedupeKey`. Records carry `source`, `behaviors` and the tips.
+    - Today redrafts no longer pile up in `tipUsageHistory`.
+  - **Ranking:** metrics are ranked in their own noise steps (`getMetricNoiseThreshold`), not raw gaps. A survey metric nobody answered is never "weakest" (`measured: false`).
+  - **Center > Trends > What's working** (`modules/whats-working.module.js`) has four parts:
+    - The team against the center over 4 and 8 weeks, read as Working, Watch or Pivot.
+    - Coaching outcomes at 1 and 3 weeks, judged against the team. coaching-outcomes uses `buildEmployeeAggregateForPeriod` for the 3 weeks.
+    - Which tips land, with nothing called on fewer than 5 results.
+    - The scored calls, by line and by associate.
+    The Patterns tab's tip table now points to it. Each associate's call history opens with their last 8 scorecards.
+  - **Tone and tips:** merged from two agent worktrees after review.
+  - **Checked in the real page:**
+    - Headless Chrome on the seeded real backup: What's working matches the offline numbers.
+    - A call sent to Verint twice logged once.
+    - A Today Sent logged the tip that was in the message, and Undo removed it.
+- **Defaults while Scott's questions 2 to 6 are unanswered:**
+  - The call score is for Scott and the Verint note only.
+  - Tips that assume dial-out, own-call access or daily numbers work either way.
+  - "Test Upload 2" is left alone.
+  - The deep dive goes before data pipeline Phase 2.
+  - See TASKS.md for what is still owed.
+- **Data pipeline plan, approved 2026-10-22:** `audit/2026-10-21-data-pipeline-plan.md`. Phase 1 is done. **Next: Phase 2** (upload checks, and let a saved week or month be replaced).
+- Restyle (2026-10-21, dark only, sidebar nav): build new UI with the KIT classes and never hard-code colours. Scott has not reviewed it yet.
 - Scott is working through the Today page's private round on real data and sending notes.
-- Latest change: the private standings block names both placings for every metric ("93rd in the Call Center, 11th on our team"), with no "N people ahead of you" counts and no top 15 bar. A last place (Call Center or team) is left off. The team note no longer has a built-in default; nothing is added unless Scott writes and saves one.
-- Before that (10/14): every associate message, call or metric, carries real praise. Calls use a praise floor in `call-transcript` (`addFloorPraise`); metric messages use `messageVoice.truePositive`.
 
 ## Next
 - See TASKS.md.

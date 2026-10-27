@@ -1,25 +1,43 @@
 # Tasks
 
 ## Open
-- Deep dive 2026-10-25: Scott approved it 2026-10-26. A, B, E and F are done and live; C and D are next. Phases:
-  - A: call reader accuracy, 8 misreads plus grammar. Needs 3 to 5 real coloured Verint pastes.
-  - B: call scorecard on the main path, saved as data.
-  - C: log on send, one coaching log, one "What's working" view.
-  - D: call trends by associate and team.
-  - E: tone (`audit/2026-10-25-tone-findings.md`).
-  - F: tips (`audit/2026-10-25-tips-findings.md`): 52 problem tips, gaps, and two confirmed edit/delete bugs in tips.module.js.
+- Deep dive follow-ups. Phases A to F are live in v2026.10.26.8 (`audit/2026-10-25-deep-dive.md`). Still needed:
+  - Scott's answers to the open questions; defaults are in place until then (see HANDOFF).
+  - 3 to 5 real Verint pastes, coloured copy, to test the reader on real calls and to see why the Sep 29 call came through without speaker labels.
+  - Scott to confirm two changes in the Rankings emails: the "N of M goals met" tally was dropped, and the year to date email no longer lists the center average beside each number (the picture still shows it).
+  - Tone work not done:
+    - The quarter recap's number lines ("Average Handle Time: Q1 451s, Q2 438s") are still a list.
+    - The group "rockstars" email prompt still asks for high energy and bullet points.
+    - The labels on the Today page cards ("Focus: ... vs target") are unchanged.
 - Stray live data: `userCustomTips.transfers` = "Test Upload 2". Delete it only once Scott says yes.
-- Data pipeline plan (approved 2026-10-22): `audit/2026-10-21-data-pipeline-plan.md`. Phase 1 done. Next: 2 upload checks (plus replacing a saved week or month, so Scott can re-pull Feb 23-Mar 1, Mar 2-8, May, May 18-24, Jun 1-7); 3 repair stored data and hide superseded periods; 4 one period control everywhere; 5 one answer for each number.
-- Later, from the same read: two cloud syncs run side by side and R2 is never pruned (needs a worker deploy from home); undo after an upload leaves archived dailies, the auto YTD and center averages changed.
+- Data pipeline plan (approved 2026-10-22): `audit/2026-10-21-data-pipeline-plan.md`. Phase 1 is done. Next:
+  - Phase 2: upload checks, and let a saved week or month be replaced, so Scott can re-pull Feb 23 to Mar 1, Mar 2 to 8, May, May 18 to 24 and Jun 1 to 7.
+  - Phase 3: repair the stored data and hide superseded periods.
+  - Phase 4: one period control everywhere.
+  - Phase 5: one answer for each number.
+- Later, from the same read:
+  - Two cloud syncs run side by side, and R2 is never pruned. This needs a worker deploy from home.
+  - Undo after an upload leaves the archived dailies, the auto YTD and the center averages changed.
 - Scott to review the restyle on the live site; tweak what he flags.
-- Restyle leftovers, optional: the Calls page keeps three primary buttons (its three main steps); Settings Save buttons are secondary; kit wishes not built yet (row tints on table rows, a progress meter, a .chip class); baseline/outputs.txt will differ (regenerate with node tests/baseline.js if it matters).
-- Rankings emails (Center > Rankings): still carry more than 2 emojis, a reliability "Met." line, and "off by 20s" instead of "20 seconds".
+- Restyle leftovers, optional:
+  - Settings Save buttons are secondary.
+  - Kit wishes not built yet: row tints on table rows, a progress meter, a .chip class.
+  - baseline/outputs.txt is stale. Regenerate it with `node tests/baseline.js` if it matters. The year-standing entry errors in the baseline because it passes the wrong argument shape; that predates the deep dive.
 - 30-day goal Copilot prompt (script.js `buildTrendAiGoalPrompt`) has no praise and no zero-survey or no-calls check.
 - Worker auth secret needs deploying from the home PC (see memory: project_worker_auth_deploy).
 
 ## Done recently
-- 2026-10-22: data plan Phase 1. Snapshot and Year to date judged by the real target, direction and format; Snapshot always the whole team, no Rel, Calls unshaded, center averages merged; Pace shows a stretch's number and the best so far.
+- 2026-10-26: deep dive plan, all six phases, from v2026.10.26.2 to .8. Tests at 9918 passing.
+  - A: the call reader's 8 misreads fixed.
+  - B: the call scorecard.
+  - C: coaching logged when it goes out (Calls, Today "Sent", Coach page, trend email), and metrics ranked in noise steps.
+  - D: call trends from the saved scorecards, on What's working and in each associate's call history.
+  - E: message tone, across Rankings, pulse, celebrations, year standing, prompts and grammar.
+  - F: 547 tips, the edit and delete bugs, the gaps.
+  - New tab: Center > Trends > What's working.
+- 2026-10-25: deep dive audit (`audit/2026-10-25-deep-dive.md`).
+- 2026-10-22: data plan Phase 1.
+  - The Snapshot and Year to date are judged by the real target, direction and format.
+  - The Snapshot always covers the whole team, has no Rel column, leaves Calls unshaded, and merges center averages.
+  - Pace shows a stretch's number and the best so far.
 - 2026-10-21: restyle to match the Downloader Bot (6 steps, v2026.10.21.4 to .8).
-- 2026-10-21: a last place (Call Center or team) is never said in the private standings; the number and its next step stand alone.
-- 2026-10-21: private placings read "52nd in the Call Center, 7th on our team"; built-in service level team note removed.
-- 2026-10-14: praise in every piece of feedback (calls praise floor, `messageVoice.truePositive` across metric messages, Verint log fix).
