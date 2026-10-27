@@ -115,6 +115,7 @@ function initializeRedFlag() {
     document.getElementById('followUpHistoryFilter')?.addEventListener('change', renderFollowUpHistory);
 
     document.getElementById('showSurveyFeedbackPanelBtn')?.addEventListener('click', () => switchRedFlagMode('survey-feedback'));
+    document.getElementById('showQaCoachingPanelBtn')?.addEventListener('click', () => switchRedFlagMode('qa-coaching'));
     document.getElementById('parseSurveyBtn')?.addEventListener('click', parseSurveyData);
     document.getElementById('copySurveyPromptBtn')?.addEventListener('click', copySurveyPromptAndOpenCopilot);
     document.getElementById('clearSurveyBtn')?.addEventListener('click', clearSurveyFeedback);
@@ -260,15 +261,18 @@ function handleFollowUpProcessTypeChange() {
 function switchRedFlagMode(mode) {
     const showFollowUpBtn = document.getElementById('showFollowUpPanelBtn');
     const showSurveyBtn = document.getElementById('showSurveyFeedbackPanelBtn');
+    const showQaBtn = document.getElementById('showQaCoachingPanelBtn');
     const showRedFlagBtn = document.getElementById('showRedFlagPanelBtn');
     const followUpPanel = document.getElementById('followUpPanel');
     const followUpPreview = document.getElementById('followUpEmailPreviewSection');
     const followUpHistory = document.getElementById('followUpHistoryPanel');
     const surveyPanel = document.getElementById('surveyFeedbackPanel');
+    const qaPanel = document.getElementById('qaCoachingPanel');
     const redFlagPanel = document.getElementById('redFlagPanel');
 
     const isFollowUp = mode === 'follow-up';
     const isSurvey = mode === 'survey-feedback';
+    const isQa = mode === 'qa-coaching';
     const isRedFlag = mode === 'red-flag';
 
     if (followUpPanel) followUpPanel.style.display = isFollowUp ? 'block' : 'none';
@@ -282,14 +286,16 @@ function switchRedFlagMode(mode) {
         if (isFollowUp) renderFollowUpHistory();
     }
     if (surveyPanel) surveyPanel.style.display = isSurvey ? 'block' : 'none';
+    if (qaPanel) qaPanel.style.display = isQa ? 'block' : 'none';
+    if (isQa) window.DevCoachModules?.qaCoaching?.show?.();
     if (redFlagPanel) redFlagPanel.style.display = isRedFlag ? 'block' : 'none';
 
     // The chosen mode is a sub-nav tab: .is-active, not an inline colour.
     // The row gets .sub-nav here too, so the tab look holds whatever the
     // page markup says.
-    const tabRow = (showFollowUpBtn || showSurveyBtn || showRedFlagBtn)?.parentElement;
+    const tabRow = (showFollowUpBtn || showSurveyBtn || showQaBtn || showRedFlagBtn)?.parentElement;
     if (tabRow?.classList && !tabRow.classList.contains('sub-nav')) tabRow.classList.add('sub-nav');
-    [[showFollowUpBtn, isFollowUp], [showSurveyBtn, isSurvey], [showRedFlagBtn, isRedFlag]].forEach(([btn, on]) => {
+    [[showFollowUpBtn, isFollowUp], [showSurveyBtn, isSurvey], [showQaBtn, isQa], [showRedFlagBtn, isRedFlag]].forEach(([btn, on]) => {
         if (!btn) return;
         btn.style.background = '';
         btn.style.color = '';
@@ -496,7 +502,8 @@ function renderFollowUpHistory() {
     if (!panel || !listEl) return;
 
     const history = loadFollowUpHistory();
-    const entries = Array.isArray(history.entries) ? history.entries : [];
+    // QA coachings share the store and have their own list on the QA tab.
+    const entries = (Array.isArray(history.entries) ? history.entries : []).filter(e => e.kind !== 'qa');
 
     if (entries.length === 0) {
         panel.style.display = 'none';

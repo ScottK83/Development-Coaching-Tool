@@ -1587,6 +1587,7 @@ Box 2 - Future Improvement Areas:
                     <div class="sub-nav">
                         <button type="button" id="showFollowUpPanelBtn" class="btn-secondary is-active" aria-selected="true">Follow-Up</button>
                         <button type="button" id="showSurveyFeedbackPanelBtn" class="btn-secondary">Survey Feedback</button>
+                        <button type="button" id="showQaCoachingPanelBtn" class="btn-secondary">QA Coaching</button>
                         <button type="button" id="showRedFlagPanelBtn" class="btn-secondary">Red Flag Coaching</button>
                     </div>
 
@@ -1658,6 +1659,56 @@ Box 2 - Future Improvement Areas:
                                 <button type="button" id="copySurveyPromptBtn" class="btn-secondary" style="flex: 1; min-width: 150px;">Copy & Open Copilot</button>
                                 <button type="button" id="clearSurveyBtn" class="btn-ghost" style="flex: 1; min-width: 150px;">Clear</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Rendered and wired by modules/qa-coaching.module.js -->
+                    <div id="qaCoachingPanel" style="display: none; margin-bottom: 20px;">
+                        <div class="card">
+                            <h3 class="card-title">QA Coaching</h3>
+                            <p class="text-secondary" style="margin-top: 0;">Paste the Verint coaching session (one or several), or pick the associate and type QA's notes.</p>
+                            <label for="qaCoachingPaste" class="text-primary" style="font-weight: bold; display: block; margin-bottom: 5px;">Paste from Verint:</label>
+                            <textarea id="qaCoachingPaste" placeholder="Copy the whole Manage Coaching Session page and paste it here. It reads itself." style="width: 100%; min-height: 110px; box-sizing: border-box; resize: vertical; font-family: monospace;"></textarea>
+                            <div id="qaCoachingPasteStatus" class="text-faint" style="font-size: 0.85em; margin-top: 4px;"></div>
+                            <div id="qaCoachingSessions" style="display: none; flex-wrap: wrap; gap: 8px; margin-top: 10px;"></div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                <div>
+                                    <label for="qaCoachingAssociate" class="text-primary" style="font-weight: bold; display: block; margin-bottom: 5px;">Associate:</label>
+                                    <select id="qaCoachingAssociate" style="width: 100%; box-sizing: border-box;"><option value="">-- Choose an associate --</option></select>
+                                </div>
+                                <div>
+                                    <label for="qaCoachingReason" class="text-primary" style="font-weight: bold; display: block; margin-bottom: 5px;">Reason for coaching:</label>
+                                    <select id="qaCoachingReason" style="width: 100%; box-sizing: border-box;"></select>
+                                </div>
+                            </div>
+
+                            <label for="qaCoachingNotes" class="text-primary" style="font-weight: bold; display: block; margin: 15px 0 5px;">What QA noticed:</label>
+                            <textarea id="qaCoachingNotes" style="width: 100%; min-height: 80px; box-sizing: border-box; resize: vertical;"></textarea>
+
+                            <label for="qaCoachingSteps" class="text-primary" style="font-weight: bold; display: block; margin: 15px 0 5px;">For next time (one per line):</label>
+                            <textarea id="qaCoachingSteps" style="width: 100%; min-height: 80px; box-sizing: border-box; resize: vertical;"></textarea>
+
+                            <label for="qaCoachingPraise" class="text-primary" style="font-weight: bold; display: block; margin: 15px 0 5px;">What went well (optional):</label>
+                            <textarea id="qaCoachingPraise" placeholder="Leave empty to thank them for the care they put into their calls." style="width: 100%; min-height: 50px; box-sizing: border-box; resize: vertical;"></textarea>
+                        </div>
+
+                        <div class="card">
+                            <h3 class="card-title">Email</h3>
+                            <div id="qaCoachingPreview" class="card-sunken text-primary" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; font-family: Arial, sans-serif; margin-bottom: 12px;"></div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" id="qaCoachingEmailBtn" class="btn-primary" style="flex: 1; min-width: 150px;">Open Email Draft</button>
+                                <button type="button" id="qaCoachingCopyEmailBtn" class="btn-secondary" style="flex: 1; min-width: 150px;">Copy Email</button>
+                                <button type="button" id="qaCoachingCopilotBtn" class="btn-secondary" style="flex: 1; min-width: 150px;">Copilot Prompt</button>
+                                <button type="button" id="qaCoachingVerintBtn" class="btn-secondary" style="flex: 1; min-width: 150px;">Copy For Verint</button>
+                                <button type="button" id="qaCoachingClearBtn" class="btn-ghost" style="flex: 1; min-width: 150px;">Clear</button>
+                            </div>
+                            <p class="text-faint" style="font-size: 0.85em; margin-bottom: 0;">For an Outlook read receipt, tick Options, Request a Read Receipt in the draft. The email also asks them to reply "Got it".</p>
+                        </div>
+
+                        <div class="card">
+                            <h3 class="card-title">Sent <span id="qaCoachingHistoryCount" class="text-faint" style="font-size: 0.8em;"></span></h3>
+                            <div id="qaCoachingHistoryList" style="max-height: 400px; overflow-y: auto;"></div>
                         </div>
                     </div>
 
@@ -1841,6 +1892,8 @@ Box 2 - Future Improvement Areas:
                 'modules/tips.module.js',
                 'modules/pto.module.js',
                 'modules/red-flag.module.js',
+                // Follow Up > QA Coaching; red-flag's tab switch opens it.
+                'modules/qa-coaching.module.js',
                 // Infrastructure Modules
                 'modules/navigation.module.js',
                 // Builds the sidebar and drives the nav buttons above; navigation

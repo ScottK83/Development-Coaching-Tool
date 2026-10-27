@@ -1,0 +1,93 @@
+Made-up sessions in the shape of Verint's "Manage Coaching Session" page. No real names.
+
+Manage Coaching Session:
+
+
+ Properties
+Session ID	 10001
+ Employee(s)
+Doe, Jamie
+Organization Name	ENG Residential
+Creation Date	10/05/2026
+Assigned By	Evaluator, Pat
+Topic
+
+Reason
+Process Accuracy - Incorrect rate plan was selected; customer stated they would like to go w/ TOU plan, fixed rate was selected instead. There was an opportunity to confirm rate plan during the recap.
+Coaching Session Type	Process Accuracy QA (Priority Coaching)
+Coach	Coach, Casey
+Status	Meeting Scheduled (Coach or Manager have scheduled a Coaching meeting between the Coach and Employee(s))
+Due Date
+10/09/2026
+Select Date
+Follow-up Date
+
+20
+ Days after Session Due Date
+Result
+
+Completion Date
+
+ Schedule Details
+Date and Time
+10/05/2026 2:45 PM
+Enter date value in the format MM/dd/yyyy h:mm a. For example 10/27/2026 10:21 AM.Select Date and Time
+Duration (minutes)
+30
+
+
+Location
+Schedule in WFM
+Optimize Date/Time
+
+
+ Attachments
+Evaluation	Evaluation	Date: 10/05/2026
+Evaluator Name: Evaluator, Pat
+Form Name: APS Process Accuracy Evaluation
+Score: 60.00 	 	View	Delete
+ 	 	 	 	View All Attachments
+Add
+
+ Meeting Summary
+Meeting Summary
+
+
+ Employee Feedback
+
+
+Save
+Cancel
+Revert
+
+
+
+Manage Coaching Session:
+
+
+ Properties
+Session ID	 10002
+ Employee(s)
+Rivera, Sam
+Organization Name	ENG Residential
+Creation Date	10/20/2026
+Assigned By	Evaluator, Pat
+Topic
+
+Reason
+Process Accuracy - There was an opportunity for FCR - customer stated they wouldn't be able to pay until next Fri - 10/23, current PA will already be broken. We could have cancelled and initiated PA process based on what was currently due.
+Coaching Session Type	Process Accuracy QA (Priority Coaching)
+Coach	Coach, Casey
+Status	Meeting Scheduled (Coach or Manager have scheduled a Coaching meeting between the Coach and Employee(s))
+Due Date
+10/30/2026
+Select Date
+Result
+
+Completion Date
+
+ Attachments
+Evaluation	Evaluation	Date: 10/20/2026
+Evaluator Name: Evaluator, Pat
+Form Name: APS Process Accuracy Evaluation
+Score: 80.00 	 	View	Delete

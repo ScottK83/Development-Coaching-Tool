@@ -1,8 +1,20 @@
 # Handoff
 
-Last updated 2026-10-26, version 2026.10.26.8, suite at 9918 passing.
+Last updated 2026-10-27, version 2026.10.27.1, suite at 9990 passing.
 
 ## Where things stand
+- **QA Coaching tab (Scott, 2026-10-27), under People > Follow Up** (`modules/qa-coaching.module.js`). You paste a Verint "Manage Coaching Session" page (one or several), or type the associate, reason and QA notes. It gives:
+  - The email, in the call email's voice: praise first, what QA noticed, steps for next time, and a "Got it" reply request. Scott said no score.
+  - A Copilot prompt.
+  - Copy For Verint, which fills the Meeting Summary box.
+  - Read tracking: each coaching is one record in `followUpHistory` (`kind: 'qa'`, keyed by session id). It shows as Sent until Scott marks it Read, and it is flagged once it is past its Verint due date. Those records stay out of the To-Do history list.
+  - Read receipts: a mailto link can't turn one on, so the panel says to tick Request a Read Receipt in Outlook.
+  - Tests: `tests/qa-coaching.test.js` on a made-up `tests/fixtures/qa-coaching-sessions.txt`. Checked in headless Chrome as well.
+  - Scott's own paste of 5 real sessions read correctly. It was not kept.
+- **Real QA notes were committed to the public repo (Scott, 2026-10-27).** He added them as a file, `QA coaching`, and the file was removed in `ab58f773`. Still open, see TASKS.md:
+  - The commit is still in the Git history.
+  - The old Cloudflare deploy `5944fe50` still serves the file.
+  - Cloudflare's Phoenix cache may still serve the file at `/QA%20coaching` for up to 7 days.
 - **Deep dive plan done (Scott, 2026-10-26: "Go ahead with the plan").** All six phases are live. The audit is `audit/2026-10-25-deep-dive.md`, and its full lists are `audit/2026-10-25-tone-findings.md` and `audit/2026-10-25-tips-findings.md`.
   - **Calls**
     - The reader misreads fixed (`tests/call-reader-accuracy.test.js`). The made-up test call is `tests/fixtures/arrangement-call.txt`; real transcripts are never committed.

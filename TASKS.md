@@ -1,6 +1,15 @@
 # Tasks
 
 ## Open
+- **QA notes still public, Scott to finish (2026-10-27).** The `QA coaching` file is gone from main.
+  - Delete the Cloudflare Pages deploy `5944fe50` (commit 9d9977a). Two ways:
+    - In the dashboard, open the `supervisor-dashboard` project, then Deployments, then that deploy, then Delete.
+    - Or run `wrangler pages deployment delete 5944fe50-87ef-460f-91a6-57c9fe812abb --project-name supervisor-dashboard`. Claude's permission check blocked this command.
+  - Then check <https://development-coaching-tool.pages.dev/QA%20coaching>. The Phoenix edge cached it with s-maxage of 7 days.
+  - Optional: rewrite the history to drop commit 9d9977a and force-push. Scott has not asked for this.
+- QA Coaching ideas, not built:
+  - Log QA coachings in the coaching log, so What's working can see them.
+  - Add reasons as new QA sessions come in. Only rate plan and payment arrangement reasons exist so far.
 - Deep dive follow-ups. Phases A to F are live in v2026.10.26.8 (`audit/2026-10-25-deep-dive.md`). Still needed:
   - Scott's answers to the open questions; defaults are in place until then (see HANDOFF).
   - 3 to 5 real Verint pastes, coloured copy, to test the reader on real calls and to see why the Sep 29 call came through without speaker labels.
@@ -27,6 +36,7 @@
 - Worker auth secret needs deploying from the home PC (see memory: project_worker_auth_deploy).
 
 ## Done recently
+- 2026-10-27: QA Coaching tab under People > Follow Up. It reads a Verint paste and gives the email (no score), a Copilot prompt, Copy For Verint, and Sent/Read tracking. 60 new checks; the suite is at 9990.
 - 2026-10-26: deep dive plan, all six phases, from v2026.10.26.2 to .8. Tests at 9918 passing.
   - A: the call reader's 8 misreads fixed.
   - B: the call scorecard.
