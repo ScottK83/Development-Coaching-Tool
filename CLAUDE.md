@@ -14,7 +14,7 @@ Supervisor coaching app for the APS call center. Live at https://development-coa
 ## Constraints
 - Never edit `APP_VERSION` by hand.
 - Parallel Claude sessions edit this repo: stage only your own files, never `git add -A`.
-- Associate-facing text: praise first, no em or en dashes (tests/no-em-dash.test.js), no disclaimers, at most 2 emojis, moves in words ("down 24 seconds"), no reliability or hours in focus areas.
+- Associate-facing text: praise first, no em or en dashes (tests/no-em-dash.test.js), no disclaimers, at most 2 emojis (plus the team post's 🥇🥈🥉 on top 3 placings), moves in words ("down 24 seconds"), no reliability or hours in focus areas.
 - Code never writes a file to the PC; backups go to R2.
 
 ## Pitfalls

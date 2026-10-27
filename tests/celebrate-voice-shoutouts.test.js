@@ -81,6 +81,9 @@ function team() {
     ];
 }
 
+const MEDALS = ['', '🥇', '🥈', '🥉'];
+const unmedalled = (text) => text.replace(/[🥇🥈🥉]/gu, '');
+
 function everything(cel, keys, draws) {
     const out = { team: [], single: [], dm: [] };
     keys.forEach((key) => {
@@ -99,8 +102,11 @@ suite('celebrate voice: two emojis a message, the channel post included', (t) =>
     const { cel, voice } = load(t);
     const all = everything(cel, RUNNING.concat(FINISHED));
 
+    // The team post's medals on its top three placings sit outside the two
+    // (Scott, 2026-10-26); the heading and the sign-off still hold to it.
     const worst = (list) => Math.max.apply(null, list.map((m) => voice.countEmojis(m)));
-    t.check('the team post never carries more than two (worst ' + worst(all.team) + ')', worst(all.team) <= 2);
+    const posts = all.team.map(unmedalled);
+    t.check('the team post never carries more than two besides its medals (worst ' + worst(posts) + ')', worst(posts) <= 2);
     t.check('nor the one-person shout-out (worst ' + worst(all.single) + ')', worst(all.single) <= 2);
     t.check('nor the private message (worst ' + worst(all.dm) + ')', worst(all.dm) <= 2);
 
@@ -108,7 +114,8 @@ suite('celebrate voice: two emojis a message, the channel post included', (t) =>
     // the pools still hold the line.
     delete global.window.DevCoachModules.messageVoice;
     const bare = cel.generateAllShoutOuts(team(), '', DONE_WEEK);
-    t.check('the pools themselves hold to two', voice.countEmojis(bare) <= 2);
+    t.check('the pools themselves hold to two', voice.countEmojis(unmedalled(bare)) <= 2);
+    t.check('and the medals do not need the limiter', /🥇/u.test(bare));
     t.check('and the post still writes without the limiter', bare.indexOf('@Kristin') > -1);
 
     // Every bullet is plain, and no name wears a crown or a medal.
@@ -118,6 +125,57 @@ suite('celebrate voice: two emojis a message, the channel post included', (t) =>
     const nameLines = lines.filter((l) => /@[A-Z][a-z]+$/.test(l) && l.indexOf('•') === -1);
     t.check('name lines were found', nameLines.length > 0);
     t.check('no name is decorated', nameLines.every((l) => l.charAt(0) === '@'));
+});
+
+/*
+ * Scott, 2026-10-26, on a ten-person post with no emoji between its heading
+ * and its sign-off: "I wouldn't mind an emoji or two here." He picked a medal
+ * in front of every 1st, 2nd and 3rd place, ties included, over a trophy on
+ * the solo bests only.
+ */
+suite('celebrate voice: the team post wears a medal on every top three placing', (t) => {
+    const { cel } = load(t);
+    const people = [
+        { name: 'Ana One', firstName: 'Ana', achievements: [
+            win('transfers', 'Transfers', 0.9, 1, 1),
+            win('managingEmotions', 'Managing Emotions', 100, 1, 3),
+            win('negativeWord', 'Avoiding Negative Words', 99.1, 2, 1)
+        ] },
+        { name: 'Bo Two', firstName: 'Bo', achievements: [
+            win('aht', 'Average Handle Time', 287, 3, 1),
+            win('fcr', 'First Call Resolution', 88.2, 3, 2),
+            win('adherence', 'Schedule Adherence', 97, 4, 1)
+        ] }
+    ];
+    const post = cel.generateAllShoutOuts(people, 'Oct 19, 2026 - Oct 25, 2026', DONE_WEEK);
+    const line = (label) => post.split('\n').find((l) => l.indexOf(label) > -1) || '';
+    t.check('a solo best gets gold', line('Transfers').indexOf('🥇 The best in the Call Center') > -1);
+    t.check('a shared best gets gold too', line('Managing Emotions').indexOf('🥇 Tied for the best in the Call Center') > -1);
+    t.check('2nd gets silver', line('Avoiding Negative Words').indexOf('🥈 2nd best in the Call Center') > -1);
+    t.check('3rd gets bronze', line('Average Handle Time').indexOf('🥉 3rd best in the Call Center') > -1);
+    t.check('a shared 3rd gets bronze', line('First Call Resolution').indexOf('🥉 Tied for 3rd best in the Call Center') > -1);
+    t.check('4th gets nothing', /[.!] 4th best in the Call Center/.test(line('Schedule Adherence'))
+        && !/[🥇🥈🥉]/u.test(line('Schedule Adherence')));
+    t.check('no name wears one', !/@\S*[🥇🥈🥉]|[🥇🥈🥉]\s*@/u.test(post));
+
+    // Every draw, every tense: the medal always matches the placing beside it.
+    const all = everything(cel, RUNNING.concat(FINISHED), 15);
+    const PLACING = /(?:([🥇🥈🥉]) )?(?:Tied for )?(?:The best|(\d+)(?:st|nd|rd|th) best) in the Call Center/u;
+    const wrong = all.team.join('\n').split('\n').filter((l) => l.indexOf('• ') === 0).find((l) => {
+        const m = PLACING.exec(l);
+        if (!m) return false;
+        const rank = m[2] ? Number(m[2]) : 1;
+        return (m[1] || '') !== (MEDALS[rank] || '');
+    });
+    t.check('the medal matches the placing on every line' + (wrong ? ', but: ' + wrong : ''), !wrong);
+
+    // The other two messages keep to their two emojis and carry no medal.
+    t.check('the one-person shout-out has none', all.single.every((m) => !/[🥇🥈🥉]/u.test(m)));
+    t.check('nor the private message', all.dm.every((m) => !/[🥇🥈🥉]/u.test(m)));
+
+    // The colour on the card still lands on the placing, with the medal outside it.
+    const lit = cel.highlightPlacements(line('Average Handle Time'));
+    t.check('the card still colours the placing', lit.indexOf('🥉 <span class="placement-tier placement-tier-top5">3rd best in the Call Center</span>') > -1);
 });
 
 suite('celebrate voice: the channel post is short enough to read', (t) => {

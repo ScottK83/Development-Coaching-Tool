@@ -1509,7 +1509,8 @@
      * one; the lines between them carry none. The single shout-out opened on
      * six ("🎉🎉🎉 HUGE shout-out to @Kristin! 🎉🎉🎉") and the team post ran
      * to a median of thirty, which reads as noise and buries the numbers the
-     * post exists to show. Scott, 2026-10-14.
+     * post exists to show. Scott, 2026-10-14. The one exception is the team
+     * post's medals on its top three placings (see MEDALS, 2026-10-26).
      */
     var SHOUTOUT_OPENERS = [
         function(name) { return '🎉 HUGE shout-out to ' + name + '!'; },
@@ -1922,11 +1923,12 @@
     }
 
     // The placing as a sentence of its own, ready to append to a line that has
-    // already closed. Empty when there is no rank worth naming.
-    function sentencePlacement(achievement) {
+    // already closed. Empty when there is no rank worth naming. The team post
+    // hands in its medal to sit in front of it.
+    function sentencePlacement(achievement, medal) {
         var placing = centerPlacement(achievement);
         if (!placing) return '';
-        return ' ' + placing.charAt(0).toUpperCase() + placing.slice(1) + '.';
+        return ' ' + (medal || '') + placing.charAt(0).toUpperCase() + placing.slice(1) + '.';
     }
 
     /**
@@ -2049,6 +2051,28 @@
         var voice = window.DevCoachModules && window.DevCoachModules.messageVoice;
         if (voice && typeof voice.limitEmojis === 'function') return voice.limitEmojis(text, 2);
         return text;
+    }
+
+    /*
+     * A medal on every 1st, 2nd and 3rd place in the team post, ties
+     * included (Scott, 2026-10-26: "I wouldn't mind an emoji or two here",
+     * then picked medals on the top three). They sit outside the two-emoji
+     * budget, which still holds for the heading and the sign-off. While the
+     * post is built each medal is a private-use stand-in, so the cap counts
+     * only the pool emojis, and the medals go in once it has run.
+     */
+    var MEDALS = ['', '🥇', '🥈', '🥉'];
+    var MEDAL_MARKS = ['', '', '', ''];
+
+    function medalMark(achievement) {
+        var mark = MEDAL_MARKS[achievement && achievement.rank];
+        return mark ? mark + ' ' : '';
+    }
+
+    function _placeMedals(text) {
+        return text.replace(/[-]/g, function(mark) {
+            return MEDALS[mark.charCodeAt(0) - 0xE000];
+        });
     }
 
     // One name per metric in every message. A label carried on an older
@@ -2186,12 +2210,13 @@
         // The placing alone. "Tied for 4th best in the Call Center. Top 5!"
         // said the same thing twice, the second time shouting (tone audit,
         // 2026-10-25), so the tier badge stays on the cards, out of the post.
-        var tail = sentencePlacement(a);
+        var medal = ctx.medals ? medalMark(a) : '';
+        var tail = sentencePlacement(a, medal);
         // A placing on a survey or two says how many. Scott, 2026-10-13.
         if (a.thin && a.surveys && val) {
             return label + ' at ' + val + ' on ' + _surveyCount(a.surveys) + '!' + tail;
         }
-        if (a.soloRank1) return words.solo(label, val);
+        if (a.soloRank1) return words.solo(label, val, medal);
         if (val) return words.metric()(label, val, stemCtx) + tail;
         return words.noValue()(label) + tail;
     }
@@ -2245,7 +2270,7 @@
         // A period still running gets only the wordings that are true while it
         // is running, from the intro to the closer.
         var closed = periodIsComplete(periodKey);
-        var ctx = { closed: closed, noun: _periodWord(periodKey) };
+        var ctx = { closed: closed, noun: _periodWord(periodKey), medals: true };
         var intro = nextBatchIntro[closed ? 'done' : 'ongoing']();
         var introText = typeof intro === 'function' ? intro(!closed) : intro;
 
@@ -2268,7 +2293,7 @@
         var words = {
             metric: rotator(BATCH_METRIC_STEMS.concat(closed ? BATCH_CLOSED_STEMS : BATCH_OPEN_STEMS)),
             noValue: rotator(BATCH_NO_VALUE_STEMS),
-            solo: function(label, val) { return soloStem()(label, val) + ' ' + soloTail(); }
+            solo: function(label, val, medal) { return soloStem()(label, val) + ' ' + (medal || '') + soloTail(); }
         };
 
         celebrations.forEach(function(person, idx) {
@@ -2279,15 +2304,15 @@
             if (idx > 0) msg += '\n';
             // Named with an @ so the post can go up as written and each name is
             // picked up as a real mention instead of being retyped. No crown or
-            // medal in front of it: a name is a heading, and the emojis are
-            // spent on the opener and the sign-off.
+            // medal in front of it: a name is a heading. The medals go on the
+            // placings, and the other two emojis on the opener and the sign-off.
             msg += '@' + person.firstName + '\n';
             var built = personLines(person, words, ctx, MAX_PUBLIC_LINES);
             built.lines.forEach(function(line) { msg += '• ' + line + '\n'; });
             if (built.more) msg += built.more + '\n';
         });
         msg += nextBatchCloser[closed ? 'done' : 'ongoing']();
-        return _capEmojis(msg);
+        return _placeMedals(_capEmojis(msg));
     }
 
     // --- Direct message ---
