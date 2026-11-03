@@ -1,11 +1,18 @@
 # Tasks
 
 ## Open
-- **QA notes still public, Scott to finish (2026-10-27).** The `QA coaching` file is gone from main.
+- **Many hats review (2026-11-03), plan waiting on Scott:** `audit/2026-11-03-many-hats.md`. Five phases:
+  1. Wording and small bugs.
+  2. The year turnover, before Dec 15.
+  3. Data safety.
+  4. Message shape.
+  5. Supervisor pages.
+
+  Six questions are at the end of the file. Nothing has been changed in the app yet.
+- **QA notes still public, Scott to finish (2026-10-27).** The `QA coaching` file is gone from main. Checked 2026-11-03: the main URL now returns the app, but the old deploy's own address still serves the notes.
   - Delete the Cloudflare Pages deploy `5944fe50` (commit 9d9977a). Two ways:
     - In the dashboard, open the `supervisor-dashboard` project, then Deployments, then that deploy, then Delete.
     - Or run `wrangler pages deployment delete 5944fe50-87ef-460f-91a6-57c9fe812abb --project-name supervisor-dashboard`. Claude's permission check blocked this command.
-  - Then check <https://development-coaching-tool.pages.dev/QA%20coaching>. The Phoenix edge cached it with s-maxage of 7 days.
   - Optional: rewrite the history to drop commit 9d9977a and force-push. Scott has not asked for this.
 - QA Coaching ideas, not built:
   - Log QA coachings in the coaching log, so What's working can see them.

@@ -1,8 +1,20 @@
 # Handoff
 
-Last updated 2026-10-27, version 2026.10.27.1, suite at 9990 passing.
+Last updated 2026-11-03, version 2026.10.27.2, suite at 9990 passing.
 
 ## Where things stand
+- **Many hats review (Scott, 2026-11-03), plan waiting on his answer:** `audit/2026-11-03-many-hats.md`.
+  - **How it was checked:** the live backup was loaded into a sealed local copy in headless Chrome, with every cloud call blocked, and every page was walked. This week's real Tuesday messages, team post and high fives were read. The copy was also run with the clock on 2027-01-05.
+  - **Top items:**
+    - The old deploy `5944fe50` still serves the real QA notes.
+    - The site and repo are public.
+    - Tuesday DMs open with "new week" lines whenever Monday's daily is not uploaded.
+    - "Where the year stands" contradicts the target, and in January it mixes years.
+    - Intelligence prints AHT moves with the sign flipped.
+    - Restoring from the whole-state backup drops the annual goals.
+    - A second tab or stale browser can overwrite the cloud copy.
+  - Nothing was changed in the app.
+  - **Rebuilding the sealed copy:** a node server on 127.0.0.1 injects a guard script (blocks off-origin fetch and XHR, stubs dialogs, mailto and clipboard) plus an optional fake clock read from `localStorage.__fakeClock`. Seed with `applyRepoBackupPayload`, then reload with `__skipBeforeunloadSave`. Use headless Chrome with a temp profile and CDP. See memory reference-local-smoke-harness.
 - **QA Coaching tab (Scott, 2026-10-27), under People > Follow Up** (`modules/qa-coaching.module.js`). You paste a Verint "Manage Coaching Session" page (one or several), or type the associate, reason and QA notes. It gives:
   - The email, in the call email's voice: praise first, what QA noticed, steps for next time, and a "Got it" reply request. Scott said no score.
   - A Copilot prompt.
