@@ -117,9 +117,12 @@ function initializeMetricTrends() {
     // appear in the dropdown). Listener attachment happens once below.
     populateUploadedDataDropdown();
 
-    // Populate trend generation dropdowns (starts with blank selections)
-    populateTrendPeriodDropdown();
+    // Blank the associate list first, then let the period dropdown fill it
+    // for the period it opens on. The other way round wiped the list it had
+    // just built, so the picker stayed empty and never took the associate
+    // already picked on People (2026-11-03).
     initializeEmployeeDropdown();
+    populateTrendPeriodDropdown();
 
     // Listener attachment is one-shot — these functions call addEventListener
     // on persistent index.html elements with no per-call cleanup, so calling
@@ -2069,7 +2072,7 @@ function attachTrendTipsModalHandlers(options) {
 
         showToast('✅ Coaching logged', 2000);
         document.getElementById('copilotPromptDisplay').value = finalPrompt;
-        showToast('💡 Updated prompt above with your notes. Copy and paste into CoPilot!', 3000);
+        showToast('💡 Updated prompt above with your notes. Copy and paste into Copilot!', 3000);
         document.getElementById('copilotPromptDisplay').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
@@ -2103,9 +2106,9 @@ function buildTrendTipsModalHtml(displayName, periodLabel, summaryBoxesHtml, foc
         </div>
 
         <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
-            <h4 class="card-title" style="margin-top: 0;">CoPilot Prompt</h4>
+            <h4 class="card-title" style="margin-top: 0;">Copilot Prompt</h4>
             <p class="text-secondary" style="font-size: 0.9em; margin: 0 0 10px 0;">
-                Copy this prompt and paste it into <strong><a href="${copilotUrl()}" target="_blank" class="tone-accent">Microsoft CoPilot</a></strong> to draft the coaching email:
+                Copy this prompt and paste it into <strong><a href="${copilotUrl()}" target="_blank" class="tone-accent">Microsoft Copilot</a></strong> to draft the coaching email:
             </p>
             <textarea id="copilotPromptDisplay" readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${escapeHtml(copilotPrompt)}</textarea>
             <button id="copyPromptBtn" class="btn-secondary" style="margin-top: 10px;">
@@ -4248,7 +4251,7 @@ function createTeamTrendSummaryPanel(periodLabel, teamSize, summaryBoxesHtml, te
         ${summaryBoxesHtml}
 
         <div style="margin: 20px 0; padding: 15px; background: var(--bg-surface-raised); border-radius: 4px; border: 1px solid var(--border);">
-            <h4 class="card-title" style="margin-top: 0;">Team CoPilot Prompt</h4>
+            <h4 class="card-title" style="margin-top: 0;">Team Copilot Prompt</h4>
             <textarea id="teamTrendPromptDisplay" readonly style="width: 100%; height: 180px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.85em; background: var(--bg-surface); color: var(--text-primary);">${escapeHtml(teamPrompt)}</textarea>
         </div>
 

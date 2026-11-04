@@ -1516,7 +1516,12 @@
             callCenterAverages: coerceObject(payload?.callCenterAverages),
             ptoTracker: coerceObject(payload?.ptoTracker),
             reliabilityTracker: coerceObject(resolvedReliabilityTracker),
-            yearEndAnnualGoalsStore: coerceObject(payload?.yearEndAnnualGoalsStore),
+            // Saved under the name the app reads. The backup carries it as
+            // yearEndAnnualGoalsStore, and writing it back under that name put
+            // the goals where nothing looks, while the restore said it worked
+            // (2026-11-03). Nullable, so an older backup without it leaves the
+            // goals on this machine alone.
+            yearEndAnnualGoals: coerceNullableObject(payload?.yearEndAnnualGoalsStore ?? payload?.yearEndAnnualGoals),
             yearEndDraftEntries: coerceObject(payload?.yearEndDraftStore || payload?.yearEndDraftEntries),
             employeePreferredNames: coerceObject(payload?.employeePreferredNames),
             // Nullable, so the loop below skips them. coerceObject turns an

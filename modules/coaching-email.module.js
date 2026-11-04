@@ -778,10 +778,10 @@ Generate the coaching email for ${preferredName} now.`;
 
         // Copilot opens inside this click rather than 500ms later, so the popup
         // keeps its user activation, and the button now flashes only once the
-        // copy has resolved. It used to say "Copied to CoPilot" regardless.
+        // copy has resolved. It used to say "Copied to Copilot" regardless.
         window.DevCoachModules.sharedUtils.copyPromptAndOpenCopilot(promptArea.value, {
             button,
-            successLabel: '✅ Copied to CoPilot',
+            successLabel: '✅ Copied to Copilot',
             silent: true,
             onCopyFailed: () => promptArea.select()
         });
@@ -879,11 +879,16 @@ Generate the coaching email for ${preferredName} now.`;
         return { latestWeek, employees };
     }
 
+    // Said the way the prompt below it says the week. "Week of 11/01/2026"
+    // was the day the week ended, beside a prompt reading "Week of Oct 26"
+    // (2026-11-03). "Week of" is the day it started.
     function setCoachingLatestPeriodStatus(status, coachingWeekKey, latestWeek) {
-        const endDate = latestWeek?.metadata?.endDate
-            ? formatDateMMDDYYYY(latestWeek.metadata.endDate)
-            : (coachingWeekKey.split('|')[1] ? formatDateMMDDYYYY(coachingWeekKey.split('|')[1]) : coachingWeekKey);
-        status.textContent = `Using latest period: Week of ${endDate}`;
+        const meta = latestWeek?.metadata || {};
+        const endIso = meta.endDate || String(coachingWeekKey || '').split('|')[1] || '';
+        const start = shortDate(resolveCoachingWeekStartIso(coachingWeekKey, meta));
+        const end = shortDate(endIso);
+        const label = start && end && start !== end ? `${start} to ${end}` : (end || coachingWeekKey);
+        status.textContent = `Using the latest upload: ${label}`;
         status.style.display = 'block';
     }
 

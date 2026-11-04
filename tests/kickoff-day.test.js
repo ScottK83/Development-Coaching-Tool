@@ -65,15 +65,25 @@ suite('kickoff day: the generator is told which day it is for', (t) => {
         /startsTheWeek \? MK_OPENERS_WEEK_START : MK_OPENERS_MIDWEEK/.test(SOURCE));
 });
 
-suite('kickoff day: a Tuesday with no Monday is the start of the week', (t) => {
-    // The case that produced the bug. A Tuesday holding Monday's numbers is a
-    // follow-up. A Tuesday with no Monday at all, because nobody worked it, is
-    // where the week actually starts and should open like it.
-    t.check('the call site decides it from the Monday row',
-        /plan\.id === 'monday'\s*\|\|\s*\(plan\.id === 'tuesday' && !dailyEntry\?\.mondayRow\)/.test(SOURCE));
+suite('kickoff day: a Tuesday starts the week only after a holiday Monday', (t) => {
+    // Labor Day: nobody worked Monday, so Tuesday is where the week starts and
+    // should open like it. 2026-11-03: Monday was worked but its daily was
+    // not uploaded, and 11 of 15 messages said "Top of the week". The missing
+    // row alone can't tell those apart, so the calendar has the last word.
+    t.check('the call site needs both the missing row and a holiday',
+        /plan\.id === 'monday'\s*\|\|\s*\(plan\.id === 'tuesday' && !dailyEntry\?\.mondayRow\s*&& outreach\.isClosedHoliday\(getThisWeekDailyWindow\(\)\.mondayIso\)\)/.test(SOURCE));
 
     t.check('and hands the day word over with it',
         /dayWord: dayWordFor\(plan\)/.test(SOURCE));
+});
+
+suite('kickoff day: the private round says a coverage warning once', (t) => {
+    // The same "Monday's daily upload is missing" was printed on all 15 cards.
+    const card = poolBetween('const cardsHtml = rendered.map(', '}).join(\'\');');
+    t.check('the card markup was found', card.length > 200);
+    t.check('no card carries the warning', !/coverage\.warning/.test(card));
+    t.check('one banner sits above the cards',
+        /listEl\.innerHTML = warningHtml \+ cardsHtml/.test(SOURCE));
 });
 
 suite('kickoff day: the weekend recap names no day at all', (t) => {

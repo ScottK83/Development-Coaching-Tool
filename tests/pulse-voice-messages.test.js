@@ -279,7 +279,8 @@ suite('pulse voice: a high five names two extra wins, then counts', async (t) =>
     const drawn = await drawHighFives(pulse, 120);
     const mentions = m => (m.match(/ at \d/g) || []).length + (m.match(/ \(\d+(\.\d+)?(s|%)\)/g) || []).length;
     t.check('four wins by name at most (two leading, two extra)', drawn.every(m => mentions(m) <= 4));
-    t.check('the rest are counted', drawn.every(m => /\d+ more goals? on target/.test(m)));
+    // Counted in words, "two more goals" (2026-11-03).
+    t.check('the rest are counted', drawn.every(m => /\b(one|two|three|four|five|six|seven|eight|nine|ten|\d{2,}) more goals? on target/.test(m)));
     t.equal('not everything is on target, so no "perfect run"', drawn.filter(m => /perfect run|nothing left to ask for/.test(m)).length, 0);
     t.check('scorecard metrics lead', drawn.every(m => /Average Handle Time|Schedule Adherence|Overall Sentiment|Rep Satisfaction/.test(m.split('\n')[0])));
 

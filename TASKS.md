@@ -1,14 +1,15 @@
 # Tasks
 
 ## Open
-- **Many hats review (2026-11-03), plan waiting on Scott:** `audit/2026-11-03-many-hats.md`. Five phases:
-  1. Wording and small bugs.
-  2. The year turnover, before Dec 15.
+- **Many hats review (2026-11-03), approved by Scott the same day ("Do the plans. No need to lock the site yet."):** `audit/2026-11-03-many-hats.md`. Five phases:
+  1. Wording and small bugs. **Done 11/03** (A1, A5, A6, A7, S1, S4, S11, FCR icon, Copilot spelling, X4, X2).
+  2. The year turnover, before Dec 15. In progress.
   3. Data safety.
-  4. Message shape.
-  5. Supervisor pages.
+  4. Message shape. Scott didn't answer question 3, so the plan's shape is the default: praise, one focus, two standings bullets, "Where the year stands" once a month.
+  5. Supervisor pages. Attendance (question 4) unanswered: default is an honest empty state, never "120h remaining" with no data, and no restore.
 
-  Six questions are at the end of the file. Nothing has been changed in the app yet.
+  Still unanswered: question 5 (blank transfer rate with calls stays blank) and 6 (Copilot account, Scott's to check). The site stays public for now.
+- **Idea, not started (Scott, 11/03): pull the numbers straight from Power BI instead of pasting.** Needs APS IT: an app registration in the APS Microsoft tenant, the Power BI admin setting that allows dataset queries, and Build rights on the dataset. See the 11/03 answer in HANDOFF.
 - **QA notes still public, Scott to finish (2026-10-27).** The `QA coaching` file is gone from main. Checked 2026-11-03: the main URL now returns the app, but the old deploy's own address still serves the notes.
   - Delete the Cloudflare Pages deploy `5944fe50` (commit 9d9977a). Two ways:
     - In the dashboard, open the `supervisor-dashboard` project, then Deployments, then that deploy, then Delete.

@@ -71,7 +71,31 @@ suite('daily outreach: refuses to write what the data cannot back', (t) => {
     const fullTuesday = outreach.checkCoverage(tuesday, { inWeekly: true, dailyRowCount: 1, hasMondayRow: true });
     t.check('Tuesday with a Monday upload has nothing to warn about', !fullTuesday.warning);
 
+    // A holiday Monday has no daily to upload, so nothing is missing.
+    const afterHoliday = outreach.checkCoverage(tuesday, { inWeekly: true, dailyRowCount: 0, hasMondayRow: false, mondayWasHoliday: true });
+    t.check('Tuesday after a holiday Monday has nothing to warn about', afterHoliday.ok === true && !afterHoliday.warning);
+
     t.check('Monday never asks for daily rows', outreach.checkCoverage(monday, { inWeekly: true, dailyRowCount: 0 }).ok === true);
+});
+
+suite('daily outreach: the holiday calendar', (t) => {
+    const outreach = load(t);
+    // Labor Day 2026 is the one Scott's team is known to have had off.
+    t.check('Labor Day 2026', outreach.isClosedHoliday('2026-09-07'));
+    t.check('Memorial Day 2026', outreach.isClosedHoliday('2026-05-25'));
+    t.check('Thanksgiving 2026', outreach.isClosedHoliday('2026-11-26'));
+    t.check('Christmas 2026', outreach.isClosedHoliday('2026-12-25'));
+    t.check('New Year 2027', outreach.isClosedHoliday('2027-01-01'));
+    // A Sunday holiday moves to the Monday.
+    t.check('July 4 2027 is a Sunday, so Monday the 5th', outreach.isClosedHoliday('2027-07-05'));
+    t.check('Christmas 2022 fell on a Sunday, so Monday the 26th', outreach.isClosedHoliday('2022-12-26'));
+    t.check('Labor Day 2027 is the 6th', outreach.isClosedHoliday('2027-09-06'));
+    t.check('Memorial Day 2027 is the 31st', outreach.isClosedHoliday('2027-05-31'));
+
+    // The Monday the bug came from was a plain work day.
+    t.check('Monday 2026-11-02 was a work day', !outreach.isClosedHoliday('2026-11-02'));
+    t.check('so was Monday 2026-08-31', !outreach.isClosedHoliday('2026-08-31'));
+    t.check('nothing is not a holiday', !outreach.isClosedHoliday(''));
 });
 
 suite('daily outreach: the daily recap reads like a sentence', (t) => {

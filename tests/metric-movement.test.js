@@ -150,3 +150,33 @@ suite('metricMovement — arrow markup', (t) => {
     t.check('titles never say a bare direction word',
         !/title="(Declining|Improving)"/.test(good + bad));
 });
+
+suite('metricMovement: a move is said the way it happened', (t) => {
+    const mm = load(t);
+    // Intelligence printed "drop in Average Handle Time (-31.0sec)" for a
+    // handle time that went from 562 to 593 (2026-11-03).
+    t.equal('handle time that rose', mm.moveInWords('aht', 593, 562), 'up 31 seconds, from 562s to 593s');
+    t.equal('handle time that fell', mm.moveInWords('aht', 689, 699), 'down 10 seconds, from 699s to 689s');
+    t.equal('one second is singular', mm.moveInWords('holdTime', 41, 40), 'up 1 second, from 40s to 41s');
+    t.equal('a percentage moves in points', mm.moveInWords('fcr', 70.5, 72.3), 'down 1.8 points, from 72.3% to 70.5%');
+    t.equal('hours in hours', mm.moveInWords('reliability', 4.5, 3), 'up 1.5 hours, from 3h to 4.5h');
+    t.equal('no move says so', mm.moveInWords('fcr', 70, 70), 'unchanged at 70%');
+    t.equal('nothing to compare is nothing said', mm.moveInWords('fcr', 70, null), '');
+});
+
+suite('trend intelligence: alerts say the move, not a signed delta', (t) => {
+    const mm = load(t);
+    const intel = t.loadModule('modules/trend-intelligence.module.js').trendIntelligence;
+    const context = {
+        metricsRegistry: REGISTRY,
+        metricDelta: (key, current, prev) => (REGISTRY[key].isReverse ? prev - current : current - prev),
+        getTrendDeltaThreshold: () => ({ value: 15, unit: 'sec' })
+    };
+    const out = intel.collectIndividualTrendWarningsAndRationale({ aht: 593 }, { aht: 562 }, null, 'week', context);
+    const line = out.warnings.join(' ');
+    t.check('the warning was raised', out.warnings.length === 1);
+    t.check('it says the number went up', line.indexOf('up 31 seconds, from 562s to 593s') > -1);
+    t.check('and never prints the minus', line.indexOf('-31') === -1);
+    t.check('the reason has no signed delta either', out.rationale.join(' ').indexOf('-31') === -1);
+    t.check('movement module is the source', typeof mm.moveInWords === 'function');
+});

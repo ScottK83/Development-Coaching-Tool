@@ -3439,16 +3439,38 @@ async function handleRestoreSnapshotClick() {
         return;
     }
 
+    // From here the in-memory globals are the old copy. The leave-page save
+    // would write them over what is about to be restored, so it is off for
+    // the rest of this page's life.
+    window.__skipBeforeunloadSave = true;
     try {
         window.DevCoachModules?.repoSync?.applyRepoBackupPayload?.(payload);
     } catch (error) {
         setSnapshotStatus('The restore failed partway: ' + (error?.message || error), true);
-        alert('⚠️ The restore failed partway through.\n\n' + (error?.message || error) + '\n\nKeep the backup that just downloaded.');
+        alert('⚠️ The restore failed partway through.\n\n' + (error?.message || error) +
+              '\n\nThe copy from before the restore is in the cloud. Reload and use Sync & Backup to get it back.');
         return;
     }
 
+    // The restored copy goes to the cloud before the reload. Which stores
+    // changed is only kept in memory, so after a reload nothing would send
+    // it, the cloud would still hold the copy just replaced, and the next
+    // pull could put that back (2026-11-03).
+    setSnapshotStatus(`Restored the copy from ${date}. Sending it to the cloud...`);
+    const sync = window.DevCoachModules?.manifestSync;
+    const names = window.DevCoachModules?.storeRegistry?.syncedNames?.() || [];
+    let pushed = { ok: false, error: 'cloud sync is unavailable in this build' };
+    try {
+        if (sync && names.length) pushed = await sync.push(names, 'restored a saved day');
+    } catch (error) {
+        pushed = { ok: false, error: error?.message || String(error) };
+    }
+
     setSnapshotStatus(`Restored the copy from ${date}. Reloading...`);
-    alert(`✅ Restored the copy saved on ${date}.\n\nThe page will reload.`);
+    alert(pushed.ok
+        ? `✅ Restored the copy saved on ${date}, and sent it to the cloud.\n\nThe page will reload.`
+        : `✅ Restored the copy saved on ${date} on this computer.\n\nIt did not reach the cloud: ${pushed.error || pushed.code || 'the push failed'}. ` +
+          `After the reload, press Sync Now so the other computer gets it too.`);
     location.reload();
 }
 
@@ -6175,14 +6197,16 @@ function buildCoachingPriorityEntry(employeeName, buckets, coreMetrics) {
         if (delta > 5) {
             recognizeScore += 8;
             if (recognizeReasons.length < 3) {
-                recognizeReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} improving (+${delta.toFixed(1)})`);
+                const move = window.DevCoachModules?.metricMovement?.moveInWords?.(metricKey, current, prev);
+                recognizeReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} improving${move ? `, ${move}` : ''}`);
             }
         }
 
         if (delta < -thresholdData.value) {
             coachScore += 12;
             if (coachReasons.length < 3) {
-                coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} dropped ${delta.toFixed(1)}${thresholdData.unit}`);
+                const move = window.DevCoachModules?.metricMovement?.moveInWords?.(metricKey, current, prev);
+                coachReasons.push(`${METRICS_REGISTRY[metricKey]?.label || metricKey} got worse${move ? `, ${move}` : ''}`);
             }
         }
 

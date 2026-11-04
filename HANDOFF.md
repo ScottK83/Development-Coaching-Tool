@@ -3,7 +3,14 @@
 Last updated 2026-11-03, version 2026.10.27.2, suite at 9990 passing.
 
 ## Where things stand
-- **Many hats review (Scott, 2026-11-03), plan waiting on his answer:** `audit/2026-11-03-many-hats.md`.
+- **Many hats plan approved 2026-11-03.** Phase 1 is done (see TASKS for the list); Phase 2, the year turnover, is next and must land before Dec 15.
+  - **Phase 1 notes:**
+    - A Tuesday opens like a new week only when Monday was a closed holiday (`dailyOutreach.isClosedHoliday`: New Year, Memorial Day, July 4, Labor Day, Thanksgiving, Christmas, each moved to Monday when it falls on a Sunday).
+    - `celebrations.periodNoun` says "this", "last" or "that" week/month/quarter/year from the period's end date.
+    - `metricMovement.moveInWords` gives "up 31 seconds, from 562s to 593s".
+    - The tip sweep changed 112 of 547 tips, mostly comma splices split. Scott's saved tip edits are matched by words, and the backup held none for built-in tips.
+  - **Power BI (Scott asked 11/03 whether the app could pull from it instead of pasting):** a direct link needs APS IT (an app registration in the APS tenant, the admin setting that allows dataset queries, and Build rights on the dataset), and IT would also see that the data lands in a personal Cloudflare account. Power Automate's "Run a query against a dataset" can pull the rows on a schedule, but the app still can't read them without the same sign-in. Not started.
+- **Many hats review (Scott, 2026-11-03):** `audit/2026-11-03-many-hats.md`.
   - **How it was checked:** the live backup was loaded into a sealed local copy in headless Chrome, with every cloud call blocked, and every page was walked. This week's real Tuesday messages, team post and high fives were read. The copy was also run with the clock on 2027-01-05.
   - **Top items:**
     - The old deploy `5944fe50` still serves the real QA notes.

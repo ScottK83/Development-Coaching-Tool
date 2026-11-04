@@ -146,6 +146,37 @@
         return d.movementWord + amount + ' vs ' + against + ', which is ' + d.verdict;
     }
 
+    /**
+     * The move as it happened: "up 31 seconds, from 562s to 593s".
+     * Intelligence printed a performance delta with its sign, so a handle
+     * time that rose 31 seconds read "drop in Average Handle Time (-31.0sec)"
+     * (2026-11-03). This says which way the number went, in words, and leaves
+     * the verdict to the sentence around it.
+     */
+    function moveInWords(metricKey, current, previous) {
+        if (current === null || current === undefined || current === '') return '';
+        if (previous === null || previous === undefined || previous === '') return '';
+        var a = Number(current);
+        var b = Number(previous);
+        if (!isFinite(a) || !isFinite(b)) return '';
+        if (a === b) return 'unchanged at ' + _fmt(metricKey, a);
+        var unit = (_registry(metricKey) || {}).unit;
+        var size = Math.abs(a - b);
+        var n = Math.round(size * 10) / 10;
+        var amount;
+        if (unit === 'sec') {
+            var s = Math.round(size);
+            amount = s + (s === 1 ? ' second' : ' seconds');
+        } else if (unit === '%') {
+            amount = n + (n === 1 ? ' point' : ' points');
+        } else if (unit === 'hrs') {
+            amount = n + (n === 1 ? ' hour' : ' hours');
+        } else {
+            amount = String(n);
+        }
+        return (a > b ? 'up ' : 'down ') + amount + ', from ' + _fmt(metricKey, b) + ' to ' + _fmt(metricKey, a);
+    }
+
     /** Short parenthetical for tables and lists: " (improving)" / " (getting worse)". */
     function phrase(metricKey, direction) {
         var d = describe(metricKey, direction, null);
@@ -180,6 +211,7 @@
         resolveDirection: resolveDirection,
         describe: describe,
         sentence: sentence,
+        moveInWords: moveInWords,
         phrase: phrase,
         arrowHtml: arrowHtml,
         DEFAULT_STABLE_BAND: DEFAULT_STABLE_BAND

@@ -1221,7 +1221,7 @@
     }
 
     /**
-     * The CoPilot prompt. Same facts, asked as a question rather than stated.
+     * The Copilot prompt. Same facts, asked as a question rather than stated.
      *
      * options.prior, when a caller has it, is the last report's three figures
      * ({ positive, negative, emotions }, numbers or reports), so a real move
@@ -1984,11 +1984,11 @@
         const prompt = delegatedPrompt || '';
 
         if (!prompt) {
-            alert('⚠️ Could not generate CoPilot prompt from sentiment data.');
+            alert('⚠️ Could not generate Copilot prompt from sentiment data.');
             return;
         }
 
-        handOffToCopilot(prompt, { message: '📋 CoPilot prompt copied. Opening CoPilot' });
+        handOffToCopilot(prompt, { message: '📋 Copilot prompt copied. Opening Copilot' });
     }
 
     // Export all functions

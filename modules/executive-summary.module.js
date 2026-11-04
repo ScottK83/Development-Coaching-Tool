@@ -661,7 +661,7 @@
     // ============================================
 
     function openCopilotWithPrompt(prompt, title) {
-        title = title || 'CoPilot';
+        title = title || 'Copilot';
         // Open the plain Copilot URL and let the user paste from the clipboard.
         // We deliberately do NOT use a ?sendquery=1&q=<prompt> auto-submit
         // deep-link: auto-submitting a large pre-filled query on a fresh page
@@ -670,7 +670,7 @@
         var copilotUrl = _copilotUrl();
 
         // Always copy prompt to clipboard first, then open Copilot
-        copyToClipboard(prompt, { message: '\ud83d\udccb Prompt copied. Paste it in CoPilot with Ctrl+V' });
+        copyToClipboard(prompt, { message: '\ud83d\udccb Prompt copied. Paste it in Copilot with Ctrl+V' });
 
         var windowRef = window.open(copilotUrl, '_blank');
 
@@ -678,7 +678,7 @@
         if (!windowRef) {
             var tempDiv = document.createElement('div');
             tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--border); box-shadow: var(--shadow-lg); max-width: 600px; z-index: 10001;';
-            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">Copy This Prompt</h3>\n                <p>Could not open CoPilot. Copy this text and paste at <a href="' + copilotUrl + '" target="_blank">' + copilotUrl.split('//').pop() + '</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" class="btn-secondary" style="margin-top: 10px; padding: 8px 16px;">Close</button>\n            ';
+            tempDiv.innerHTML = '\n                <h3 style="margin-top: 0;">Copy This Prompt</h3>\n                <p>Could not open Copilot. Copy this text and paste at <a href="' + copilotUrl + '" target="_blank">' + copilotUrl.split('//').pop() + '</a>:</p>\n                <textarea readonly style="width: 100%; height: 200px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; font-size: 0.85em;">' + escapeHtml(prompt) + '</textarea>\n                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);" class="btn-secondary" style="margin-top: 10px; padding: 8px 16px;">Close</button>\n            ';
             document.body.appendChild(tempDiv);
         }
     }

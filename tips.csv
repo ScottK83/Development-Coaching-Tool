@@ -1,37 +1,37 @@
 ﻿Metric,Tip
 scheduleAdherence,Set phone reminders 5 minutes before breaks end.
-scheduleAdherence,Put break end times in Outlook calendar with pop-up alerts.
+scheduleAdherence,Put break end times in your Outlook calendar with pop-up alerts.
 scheduleAdherence,When a new schedule posts, check every start time and break in Verint, not just the days.
 scheduleAdherence,Lock your screen at breaks instead of logging all the way out. You come back ready instead of waiting on a full login.
 scheduleAdherence,If you're running late, tell your supervisor before your start time, the way the call out process says.
 scheduleAdherence,If system issues make you late, report it right away so we can give you next steps.
 scheduleAdherence,Set a daily alarm for 10 minutes before your shift starts, same time every day.
-scheduleAdherence,Log out of personal apps before break ends so you're ready to take calls.
+scheduleAdherence,Log out of personal apps before your break ends so you're ready to take calls.
 scheduleAdherence,Open your first screens while you log in, so you're ready when your schedule starts.
 scheduleAdherence,When your break ends, that's the cue to sit down and go available, not to finish one more thing.
 scheduleAdherence,Keep a quick note of any day you got back late from a break and why. The pattern tells you what to fix.
 scheduleAdherence,If weather affects your commute, leave 15 minutes earlier on bad days.
 scheduleAdherence,Put your personal phone on Do Not Disturb while you're on the phones.
-scheduleAdherence,Set your status to Available within 30 seconds of schedule start. Don't coast in.
-scheduleAdherence,Practice a consistent morning routine, same wake time same prep time.
+scheduleAdherence,Set your status to Available within 30 seconds of your scheduled start. Don't coast in.
+scheduleAdherence,Practice a consistent morning routine, same wake time, same prep time.
 scheduleAdherence,Treat your schedule like an appointment with yourself. Commit to it.
-scheduleAdherence,Decide the night before what your first 30 minutes look like, no scrambling once you're on the clock.
+scheduleAdherence,Decide the night before what your first 30 minutes look like, so there's no scrambling once you're on the clock.
 scheduleAdherence,Your schedule is built around when calls actually arrive, so ten minutes off moves that work onto someone else.
 scheduleAdherence,Treat your lunch time like a meeting you can't be late for. Routine beats willpower.
-scheduleAdherence,Ask for a schedule change early, last minute requests are the hardest to cover.
+scheduleAdherence,Ask for a schedule change early. Last minute requests are the hardest to cover.
 scheduleAdherence,If your headset acts up, report it or swap it right away instead of fighting it call after call.
-scheduleAdherence,Restart your PC at the end of shift so the morning login is quick.
+scheduleAdherence,Restart your PC at the end of your shift so the morning login is quick.
 scheduleAdherence,Know your exact start time to the minute, not roughly.
-scheduleAdherence,If a call ends right before break, take the break, don't squeeze in one more.
+scheduleAdherence,If a call ends right before your break, take the break. Don't squeeze in one more.
 scheduleAdherence,Small misses add up. Two minutes late back from four breaks is eight minutes out of adherence.
 scheduleAdherence,If a call runs into your break, let your supervisor know so we can give you next steps.
 scheduleAdherence,Look at tomorrow's schedule before you log off tonight.
-scheduleAdherence,Coffee and water refilled before you go available, not after.
+scheduleAdherence,Refill your coffee and water before you go available, not after.
 scheduleAdherence,If you swap a shift, check that it actually landed in Verint before you count on it.
 scheduleAdherence,Use the right aux code so your time reads the way it really happened.
 scheduleAdherence,If you get pulled into a meeting, make sure it shows on your schedule.
 scheduleAdherence,Early is not the same as on time, and on time is not the same as ready.
-scheduleAdherence,Watch the pattern not the day, one rough morning is noise, three is a habit forming.
+scheduleAdherence,Watch the pattern, not the day. One rough morning is noise, three is a habit forming.
 scheduleAdherence,If the commute is the problem, change the leave time, not the wake time.
 scheduleAdherence,Come back from lunch on the minute. It's the longest break, so it's the easiest one to run over.
 scheduleAdherence,Stay available until your scheduled end time. The end of a shift counts the same as the start.
@@ -39,16 +39,16 @@ scheduleAdherence,Adherence means doing what your schedule says when it says it,
 scheduleAdherence,Decide what you'll do with your break before it starts, so it doesn't run long.
 scheduleAdherence,Know your break and lunch times for the day before your first call.
 scheduleAdherence,If a meeting or training runs over, tell your supervisor right then so we can give you next steps.
-fcr,Take 10 extra seconds to confirm you fully answered the question before ending call.
-fcr,Ask 'Is there anything else I can help you with today?' and wait for actual response.
+fcr,Take 10 extra seconds to confirm you fully answered the question before ending the call.
+fcr,Ask 'Is there anything else I can help you with today?' and wait for an actual response.
 fcr,Check that it landed: 'Let me make sure I explained that clearly...' catches confusion before they hang up.
 fcr,Don't rush the close. Customers will call back if they're still confused.
-fcr,If you're unsure you resolved it, work it out on this call, look it up or ask a peer rather than letting them call back.
+fcr,If you're unsure you resolved it, work it out on this call: look it up or ask a peer rather than letting them call back.
 fcr,Ask clarifying questions upfront: 'Just to make sure I help you completely, is this about X or Y?'
-fcr,Before ending call, summarize what you did: 'So I've updated X and you should see Y'.
+fcr,Before ending the call, summarize what you did: 'So I've updated X and you should see Y'.
 fcr,If the customer says 'I guess that works', dig deeper. They're not satisfied yet.
 fcr,When someone calls back on something you handled, work out what got missed the first time.
-fcr,Skim the last few notes while you're verifying them, the history usually tells you why they're calling.
+fcr,Skim the last few notes while you're verifying them. The history usually tells you why they're calling.
 fcr,Ask 'What have you tried so far?' so you don't repeat steps they already did.
 fcr,If you need to escalate, do it inside the call, while they're still on the line.
 fcr,Verify understanding with 'Tell me in your own words what we're doing next'.
@@ -56,20 +56,20 @@ fcr,Tell the customer what to do if it happens again so they can handle it witho
 fcr,When account notes are unclear, ask someone who knows that call type instead of guessing at what happened.
 fcr,Build a personal 'gotcha list' of things that tripped you up. Review it weekly.
 fcr,If the customer mentions two issues, tackle the bigger one first but take care of both before you hang up.
-fcr,If you don't know the answer say 'Give me one moment to confirm that', never guess.
+fcr,If you don't know the answer, say 'Give me one moment to confirm that.' Never guess.
 fcr,Confirm the payment details before you end a billing call, so they don't have to call back.
 fcr,If there's a known outage, mention it up front so the customer doesn't call back confused.
 fcr,Ask 'Have I answered all your questions today?' and wait for a real answer.
-fcr,Fix what caused it not just what they noticed. A bill they still don't understand is another call next month.
+fcr,Fix what caused it, not just what they noticed. A bill they still don't understand is another call next month.
 fcr,Check the date on notes from prior reps. Outdated info causes wrong fixes.
-fcr,On a high bill call, explain what drove it before you offer a payment plan, the why is what stops the callback.
-fcr,Check the meter read dates, a bill covering extra days explains itself.
-fcr,If there's a pending disconnect on the account, say so, don't let them find out later.
+fcr,On a high bill call, explain what drove it before you offer a payment plan. The why is what stops the callback.
+fcr,Check the meter read dates. A bill covering extra days explains itself.
+fcr,If there's a pending disconnect on the account, say so. Don't let them find out later.
 fcr,When you set up a payment arrangement, say the exact dates and amounts out loud.
 fcr,If they say they already paid, find where the payment landed before you explain anything else.
-fcr,Confirm how they get their bill, someone who never sees it will call every month.
-fcr,Tell them what the next bill should look like, surprises are callbacks.
-fcr,If weather drove the usage, say it plainly, hotter month means more running time means a higher bill.
+fcr,Confirm how they get their bill. Someone who never sees it will call every month.
+fcr,Tell them what the next bill should look like. Surprises are callbacks.
+fcr,If weather drove the usage, say it plainly: a hotter month means more running time and a higher bill.
 fcr,When you change a due date, say which bill it takes effect on.
 fcr,If they may qualify for assistance, get that referral done on this call.
 fcr,A customer who says 'so what do I do now' hasn't been given a next step.
@@ -88,8 +88,8 @@ fcr,On a rate plan change, check which bill the new plan starts on and tell them
 fcr,If the bill was estimated, say so plainly and tell them what you can see about the next actual read.
 fcr,On a reconnect call, check where the payment stands before you say anything about timing, then tell them exactly what happens next.
 transfers,Before transferring, take 10 seconds to look it up. Customers would rather wait than start over with someone new.
-transfers,Say 'Let me see if I can help you with that first' before defaulting to transfer.
-transfers,If you do transfer, tell them who they're going to and why, a dropped call shouldn't start from zero.
+transfers,Say 'Let me see if I can help you with that first' before defaulting to a transfer.
+transfers,If you do transfer, tell them who they're going to and why. A dropped call shouldn't start from zero.
 transfers,Learn the 5 things you transfer most. Make those your study priority this month.
 transfers,Before transferring billing issues, verify you can't do a simple payment arrangement first.
 transfers,If the customer asks for a supervisor, try to resolve it first: 'I'd love to help you. Let me see what I can do.'
@@ -97,16 +97,16 @@ transfers,If you transfer more than twice in a shift, jot down why for each one.
 transfers,Stay on the line until the next agent picks up. Don't abandon them in transfer purgatory.
 transfers,If a transfer drops, note the account so whoever they reach next can pick up where you left off.
 transfers,Build relationships with other departments so warm transfers are smoother.
-transfers,Know what your department can and can't do, over-transferring costs you ownership.
+transfers,Know what your department can and can't do. Over-transferring costs you ownership.
 transfers,Reach out to a peer with low transfers to see how they're handling them.
 transfers,If you keep transferring because you think you don't have access, check first, then ask your supervisor whether you can get that access.
 transfers,Apologize in advance for any wait: 'They may have a short wait, thanks for hanging in'.
-transfers,Before transferring ask yourself 'Have I done everything I can to help them?'
+transfers,Before transferring, ask yourself 'Have I done everything I can to help them?'
 transfers,Some transfers are the right call. Don't feel bad about sending one where it belongs.
 transfers,Warm transfer when you can, and give the next rep a 20 second brief: the customer's name, the issue and what you've already tried.
 transfers,A high bill question is yours, not another team's.
 transfers,Learn everything you can do on a payment arrangement before you hand one off.
-transfers,If you're transferring because you're unsure, say what you're unsure about first, someone may answer it in ten seconds.
+transfers,If you're transferring because you're unsure, say what you're unsure about first. Someone may answer it in ten seconds.
 transfers,Check whether the team you're about to send them to is even open.
 transfers,If they've already been transferred once today, work harder to keep it.
 transfers,Ask what they were told last time before you send them back to the same place.
@@ -114,37 +114,37 @@ transfers,If the answer is sitting in the notes, don't transfer for it.
 transfers,A transfer to the wrong team costs the customer twice.
 transfers,If you're sending them to credit or collections, explain what will happen there.
 transfers,Sending someone back to the automated line still feels like a transfer to them.
-transfers,Same transfer three times in a week is a training request, not a habit.
+transfers,The same transfer three times in a week is a training request, not a habit.
 transfers,Ownership means you know where it went and that it landed.
-transfers,Ask a peer first, most of the time the answer is somewhere on your floor.
-transfers,A transfer you can explain is fine, a transfer you can't is a knowledge gap.
+transfers,Ask a peer first. Most of the time the answer is somewhere on your floor.
+transfers,A transfer you can explain is fine, but a transfer you can't is a knowledge gap.
 transfers,If you're transferring to get out of a hard conversation, that's the call worth staying on.
-transfers,Don't promise what the next team will do, tell them what the next team handles.
-transfers,If the customer is upset, warn the next rep, walking in blind makes it worse.
+transfers,Don't promise what the next team will do. Tell them what the next team handles.
+transfers,If the customer is upset, warn the next rep. Walking in blind makes it worse.
 transfers,A downed line, sparks or smoke is a safety call. Tell them to stay well away and follow the emergency steps right away.
 transfers,A safety call is never one to hold on to. Follow the emergency steps right away, even if it means a transfer.
 transfers,Before you transfer, tell the customer the one thing the next team will need from them, so it's ready.
 transfers,When a call needs another team for one piece, do every piece you can first, then transfer for the rest.
 transfers,If the customer asks to be transferred, find out why first. Often it's something you can do.
 aht,Keep a quick reference sheet where you can see it. Faster than searching mid-call.
-aht,Memorize top 5 most common customer questions to avoid looking up every time.
+aht,Memorize the 5 most common customer questions so you don't have to look them up every time.
 aht,Practice your greeting and closing so they flow without stalling. Smooth pace beats fumbling through them.
 aht,Type account notes while you're talking, not in silence after.
-aht,Work both monitors on every call. Account and notes on one. Your lookup tools on the other. Alt-tabbing costs you seconds every single call.
+aht,Work both monitors on every call, with the account and notes on one and your lookup tools on the other. Alt-tabbing costs you seconds every single call.
 aht,Learn keyboard shortcuts for your main programs. Mouse clicking adds 5-10 seconds per call.
 aht,Answer the question they asked. A due date question gets the date. A 'why is it higher' question gets the one reason, like the extra days on this bill.
 aht,When a call runs long, notice what made it long. That's the step to practice.
-aht,Don't type a full sentence when a phrase will do. Notes are for you not a novel.
+aht,Don't type a full sentence when a phrase will do. Notes are for you, not a novel.
 aht,Identify your 2 slowest tasks and find a faster way. Almost all of your time savings will come from those two.
 aht,Pull up the account while you greet them, then ask for verification, so there's no quiet stretch after the hello.
 aht,If the call came in authorized, the name is all you need to verify. Don't re-ask for what the notes already spell out.
 aht,Keep the things you look up most within one click. Hunting for them is pure handle time.
 aht,If the customer is rambling, gently redirect: 'So what I'm hearing is X. Let me solve that.'
 aht,Avoid over-apologizing. One genuine 'I'm sorry for the wait' is enough.
-aht,Have a ready opener for the answers you know cold. 'Great question, here's how that works', so you're not stalling while you get your thoughts together.
+aht,Have a ready opener for the answers you know cold, like 'Great question, here's how that works', so you're not stalling while you get your thoughts together.
 aht,If you realize mid-call you took the wrong path, switch right away instead of finishing the wrong one.
 aht,If you need to look up 3 things, look them all up in one trip instead of bouncing back and forth between screens.
-aht,Wrap counts in your handle time. A short accurate note costs you less than a long one.
+aht,Wrap counts in your handle time. A short, accurate note costs you less than a long one.
 aht,On simple calls, close what you don't need. Fewer windows means less hunting.
 aht,Keep a notepad of your common call types and the notes you use for them. Beats retyping the same thing every call.
 aht,Listen fully the first time so the customer doesn't have to repeat themselves.
@@ -156,14 +156,14 @@ aht,If you're explaining a bill three different ways, pick the number that matte
 aht,Read the last note before you ask them to walk you through the history.
 aht,Say the numbers once clearly instead of three times quickly.
 aht,Once they've finished explaining and you know the answer, go straight to it.
-aht,Tell them what you're doing, not how you're doing it, they don't need the clicks.
+aht,Tell them what you're doing, not how you're doing it. They don't need the clicks.
 aht,Have the amounts and dates in front of you before you start explaining them.
 aht,When someone needs to vent about the bill, let them, then bring it back to one thing.
-aht,Your longest calls are usually two calls stacked, name both up front and take them in order.
+aht,Your longest calls are usually two calls stacked. Name both up front and take them in order.
 aht,If the same screen is slow every day, log it so we can push on it.
-aht,Same greeting every time, no thinking required.
+aht,Use the same greeting every time, so there's no thinking required.
 aht,Check your work once, carefully, before you tell them it's done. Then move on.
-aht,If they've gone quiet they're reading, ask instead of waiting.
+aht,If they've gone quiet, they're reading. Ask instead of waiting.
 aht,Think about what your quickest high bill call did differently from your slowest one, and do more of that.
 aht,Lead with the number and the date, then give the one reason behind it.
 aht,Saying it straight takes less time than talking around it.
@@ -171,7 +171,7 @@ acw,Start your notes during the call, not after. Fill in the account notes while
 acw,Keep your common note phrases saved somewhere you can paste from. 'Customer called regarding billing question' shouldn't be retyped 20 times a day.
 acw,Write the note in the same order every time. Your hands stop deciding what comes next.
 acw,Use the abbreviations everyone on the floor knows, so you type less and the next rep can still read it.
-acw,Don't write a novel. Brief accurate notes are better than essays.
+acw,Don't write a novel. Brief, accurate notes are better than essays.
 acw,If the call was simple, the note can be simple: 'Changed due date to 20th per customer request.'
 acw,Write the note for the next person who opens this account, not for yourself.
 acw,Resist rewriting a note you already finished. Your first pass is usually good enough.
@@ -181,33 +181,33 @@ acw,If you promised the customer something, write that part of the note first wh
 acw,Close unneeded windows between calls. Don't hunt through 10 tabs during wrap.
 acw,Be consistent with your wrap codes. The same situation should get the same code every time.
 acw,If your after-call work crept up over the past week, look at what changed in how you wrap up.
-acw,On a repeat caller the prior note gives you the background, yours only has to say what changed.
+acw,On a repeat caller, the prior note gives you the background, so yours only has to say what changed.
 acw,Stuck on wording? Write what you did and what happens next. That is the whole note.
 acw,If the call needs a follow-up step, do the step first and write the note second.
 acw,Finish the note before you go available. One you come back to takes twice as long.
 acw,Don't overthink the perfect note. Good enough beats perfect and late.
-acw,Decide your wrap code during the call not after it.
+acw,Decide your wrap code during the call, not after it.
 acw,Review your saved note phrases monthly. Delete anything that's out of date.
 acw,Log any system issues that slow you down. Once we can show a pattern we can push to get it fixed.
-acw,Three lines is usually plenty, what they called about, what you did, what's next.
+acw,Three lines is usually plenty: what they called about, what you did and what's next.
 acw,Dates and amounts belong in the note, adjectives don't.
 acw,If the note takes longer than the fix, the note is too long.
 acw,Don't retype what the system already recorded on its own.
-acw,Name the plan or program exactly, the next rep shouldn't have to guess which one.
+acw,Name the plan or program exactly. The next rep shouldn't have to guess which one.
 acw,If you left something open, say who owns it.
-acw,Skip the greeting and the pleasantries, nobody reads those.
+acw,Skip the greeting and the pleasantries. Nobody reads those.
 acw,If the note has to be long, say why in the first line.
 acw,A note nobody can act on is time spent for nothing.
-acw,Don't save the hard note for last, write it while it's fresh.
+acw,Don't save the hard note for last. Write it while it's fresh.
 acw,Look at your after-call work every time you get your numbers, not just at the end of the month.
 acw,If wrap runs past a minute, the note is doing too much.
-acw,The note is a record, write it like someone will read it back to you.
+acw,The note is a record, so write it like someone will read it back to you.
 acw,If you don't know which wrap code fits, ask once and remember it, instead of guessing every time.
 acw,Type the amounts and dates as you confirm them with the customer, so the note is half done when you hang up.
 acw,Use wrap for the note and the code only. Reading and catching up can wait for your break.
 acw,Before you go available, read your note once. If it says what happened and what's next, you're done.
 acw,On a payment arrangement, put the dates and amounts in the note exactly as you said them.
-holdTime,Default to narrating instead of holding for lookups. 'I'm pulling up your account now' keeps them with you, reserve hold for when you genuinely can't talk through it.
+holdTime,Default to narrating instead of holding for lookups. 'I'm pulling up your account now' keeps them with you. Reserve hold for when you genuinely can't talk through it.
 holdTime,Ask all your questions before you put the customer on hold, so you only hold once.
 holdTime,If you truly need a hold, ask first and keep it short: 'Can I place you on a brief hold while I check that?'
 holdTime,Check in every 30-45 seconds during long holds: 'Still researching, appreciate your patience'.
@@ -228,9 +228,9 @@ holdTime,Two short holds feel longer to them than one honest one.
 holdTime,Coming back with nothing is worse than never leaving.
 holdTime,Don't hold to read a note you could have read during the greeting.
 holdTime,If you need a second hold, explain why before you go.
-holdTime,Give them something to do while you're gone, having the account number ready keeps them with you.
-holdTime,If they're angry, hold makes it worse, keep talking.
-holdTime,A long hold on a billing call means it got complicated, tell them that.
+holdTime,Give them something to do while you're gone. Having the account number ready keeps them with you.
+holdTime,If they're angry, a hold makes it worse, so keep talking.
+holdTime,A long hold on a billing call means it got complicated, so tell them that.
 holdTime,Come back inside your estimate even if you're not done, then give a new one.
 holdTime,Practice the three lookups you do most until they don't need a hold at all.
 holdTime,If you're holding to ask a peer, tell them that's what you're doing.
@@ -248,40 +248,40 @@ holdTime,On an outage call, have the outage details up before you answer, so you
 holdTime,On a move in or move out, gather the date, the address and the contact info before you start the order, so you don't hold halfway through.
 overallSentiment,Smile while talking. Customers hear it in your voice even on the phone.
 overallSentiment,Use the customer's name at least twice, at the start and at the end.
-overallSentiment,Match the customer's energy level, if they're calm be calm. If concerned show empathy.
+overallSentiment,Match the customer's energy level. If they're calm, be calm. If they're concerned, show empathy.
 overallSentiment,Lead with empathy by naming the specific thing. Not 'I understand' but 'I hear you on that double charge, let's get it fixed.' Generic empathy sounds scripted.
 overallSentiment,Sound genuinely interested, not robotic. Vary your tone.
 overallSentiment,If they say the bill is confusing, say 'Let's make sure this bill makes sense before we hang up.'
 overallSentiment,End on a positive note even when you couldn't do everything: 'I was glad to help with the payment today. Enjoy the rest of your day.'
 overallSentiment,Acknowledge their effort: 'I appreciate you calling in about this instead of letting it slide'.
-overallSentiment,Don't go quiet. If you're thinking say 'Let me think about the best way to help you here'.
+overallSentiment,Don't go quiet. If you're thinking, say 'Let me think about the best way to help you here'.
 overallSentiment,If the call ran long, say 'Thank you for being so patient with me.'
 overallSentiment,Greet the customer with genuine energy. Your first 5 seconds set the tone.
 overallSentiment,Mirror it back: 'I can hear how much this has worn on you, and I'm here to help.'
 overallSentiment,Use open-ended acknowledgment like 'Tell me more about that'.
 overallSentiment,Don't interrupt, even if you know the answer. Let them finish.
 overallSentiment,Ask 'What can I do for you to make this right?' on escalated calls. It gives them a say.
-overallSentiment,Thank them for being a customer. Specific if you can.
+overallSentiment,Thank them for being a customer. Be specific if you can.
 overallSentiment,If the customer shares something personal, acknowledge it briefly before moving on.
 overallSentiment,Laugh when they joke. Don't stay corporate-robot in casual moments.
 overallSentiment,End calls with warmth: 'Have a wonderful day' or 'Enjoy the rest of your day' beats 'Have a good day'.
-overallSentiment,Be conversational. 'Yeah absolutely' sounds human, not robotic.
+overallSentiment,Be conversational. 'Yeah, absolutely' sounds human, not robotic.
 overallSentiment,Use inclusive 'we' language instead of 'you'. Feels like teamwork.
 overallSentiment,If they're worried about money, don't sound casual about the amount.
 overallSentiment,Slow down for the numbers, speed up for the small talk.
-overallSentiment,If they've called before, acknowledge it, 'I see you called last week' goes a long way.
-overallSentiment,Don't sound like you're reading the account, sound like you understand it.
+overallSentiment,If they've called before, acknowledge it. 'I see you called last week' goes a long way.
+overallSentiment,Don't sound like you're reading the account. Sound like you understand it.
 overallSentiment,Give them a number they won't like, then stop and let them react.
 overallSentiment,If they mention a fixed income, that changes how you talk about the amount.
 overallSentiment,A customer who feels rushed remembers the rush, not the fix.
-overallSentiment,Warmth isn't length, a short call can be a kind one.
-overallSentiment,Ask before you explain, some people want the number and nothing else.
+overallSentiment,Warmth isn't length. A short call can be a kind one.
+overallSentiment,Ask before you explain. Some people want the number and nothing else.
 overallSentiment,If they apologize for being upset, tell them they're fine.
 overallSentiment,Say it the way you'd want it said to you about your own bill.
-overallSentiment,If they thank you, take it, don't wave it off with 'just doing my job'.
+overallSentiment,If they thank you, take it. Don't wave it off with 'just doing my job'.
 overallSentiment,Talk about the bill like it's their money, because it is.
-overallSentiment,If they mention a hard week, one line of acknowledgment then help.
-overallSentiment,End with what happens next, certainty is what people actually want.
+overallSentiment,If they mention a hard week, give one line of acknowledgment, then help.
+overallSentiment,End with what happens next. Certainty is what people actually want.
 overallSentiment,Never say 'Calm down'. It escalates every time. Say 'I'm here to help, let's get this fixed.'
 overallSentiment,Replace 'You're wrong' with 'Let me show you what I'm seeing, I'm happy to walk through it.'
 overallSentiment,Don't say 'You didn't'. Say 'It looks like this step was missed, let's get it done now.'
@@ -289,11 +289,11 @@ overallSentiment,Replace 'You should have' with 'Here's what we can do going for
 overallSentiment,Avoid 'actually' as a correction. It puts them on the defensive. Say 'Here's what I'm seeing' instead.
 overallSentiment,Drop the word 'just'. 'Just click there' makes light of what the customer is going through.
 overallSentiment,Never say 'no one else has complained'. It tells them their problem doesn't count. Say 'Let's make sure we get to the bottom of this.'
-overallSentiment,Never say 'you signed up for that', explain what they signed up for.
-overallSentiment,Don't say 'everyone's bill went up', talk about theirs.
-overallSentiment,Don't say 'it's only', nothing is only to the person paying it.
+overallSentiment,Never say 'you signed up for that'. Explain what they signed up for.
+overallSentiment,Don't say 'everyone's bill went up'. Talk about theirs.
+overallSentiment,Don't say 'it's only'. Nothing is only to the person paying it.
 overallSentiment,Skip 'obviously' and 'clearly', both tell them they should have known.
-overallSentiment,Avoid 'that's just how the billing works', give them the actual reason.
+overallSentiment,Avoid 'that's just how the billing works'. Give them the actual reason.
 positiveWord,Say 'No problem at all' when they thank you or apologize for asking. It tells them they're no trouble.
 positiveWord,Say 'I'd be happy to help you with that' as soon as they tell you why they called.
 positiveWord,Use 'absolutely' instead of 'yes'. It's more enthusiastic.
@@ -317,7 +317,7 @@ positiveWord,Avoid 'obviously'. Customers don't like feeling talked down to. 'Of
 positiveWord,Ask 'What can I help you with today?' rather than 'What's going on?'
 positiveWord,Make them a partner with 'Let's get' or 'Let's make sure': 'Let's get this figured out together.'
 positiveWord,Open with 'How can I help you today?' and let them talk.
-positiveWord,Use 'of course' instead of 'sure'. Sounds more professional and warm.
+positiveWord,Use 'of course' instead of 'sure'. It sounds more professional and warm.
 positiveWord,Start your greeting with positive words: 'Thank you for being a part of APS, my name is [your name], how may I help you today?' Then, once they tell you why they called, answer with 'Absolutely, I can definitely help with that.'
 positiveWord,End with 'Enjoy the rest of your day'. The close is one of the easiest places to add positive words.
 positiveWord,'Let's get that set up for you' beats 'you'll need to set that up'.
@@ -340,7 +340,7 @@ positiveWord,'It was a pleasure helping you' is a warm last line, especially aft
 negativeWord,Replace 'unfortunately' with 'what I can do is...' to focus on solutions.
 negativeWord,'Yes, but' cancels the yes. Say 'Yes, and here's how it works'.
 negativeWord,Don't say 'That's not my problem'. Say 'Let me see what I can do,' then do it.
-negativeWord,Avoid 'our policy doesn't allow that', say 'Here's what I can offer instead'.
+negativeWord,Avoid 'our policy doesn't allow that'. Say 'Here's what I can offer instead'.
 negativeWord,Don't say 'There's no way to do that'. Say 'Let me see what options we have'.
 negativeWord,Don't say 'I can't find it'. Say 'Let me look another way'.
 negativeWord,'I'm sorry you feel that way' sounds like blame. Say 'I'm sorry this happened, let me help'.
@@ -383,36 +383,36 @@ managingEmotions,Stay solution-focused: 'I hear you, let me see what I can do to
 managingEmotions,Acknowledge it in your own words: 'That sounds like a rough week. I'll take care of this for you.'
 managingEmotions,After a hard call, take one slow breath before you answer the next one, and save the longer reset for your break.
 managingEmotions,If the customer is yelling, let them vent for 20 to 30 seconds, then redirect calmly.
-managingEmotions,Use 'we' language: 'Let's figure this out together', creates partnership feeling.
-managingEmotions,If you're getting triggered, take a slow breath while the customer is still talking, don't add a hold to manage your own emotions.
-managingEmotions,After difficult calls, stand up and move. Resets your nervous system.
+managingEmotions,Use 'we' language like 'Let's figure this out together'. It creates a feeling of partnership.
+managingEmotions,If you're getting triggered, take a slow breath while the customer is still talking. Don't add a hold to manage your own emotions.
+managingEmotions,After difficult calls, stand up and move. It resets your nervous system.
 managingEmotions,Keep water at your desk. A sip creates a 3-second pause to regroup.
-managingEmotions,Develop a mental mantra: 'This is their bad day not mine'.
+managingEmotions,Develop a mental mantra: 'This is their bad day, not mine'.
 managingEmotions,Don't check email or texts between calls on tough shifts. Stay present.
-managingEmotions,Write down what went well each day. Combats the negativity bias.
-managingEmotions,Pair up with a peer for venting sessions during breaks not during calls.
+managingEmotions,Write down what went well each day. It combats the negativity bias.
+managingEmotions,Pair up with a peer for venting sessions during breaks, not during calls.
 managingEmotions,Remind yourself you chose to be here today. It puts you back in the driver's seat instead of feeling like the shift is happening to you.
-managingEmotions,If a customer is abusive you don't have to take it, follow the steps for ending the call and tell your supe.
+managingEmotions,If a customer is abusive, you don't have to take it. Follow the steps for ending the call and tell your supe.
 managingEmotions,After swearing or yelling calls, talk to your supe for a reset. Don't absorb it.
-managingEmotions,Practice 'name it to tame it'. Notice 'I'm feeling frustrated' and intensity drops.
-managingEmotions,Use posture. Sit up straight. Body language affects voice tone.
+managingEmotions,Practice 'name it to tame it'. Notice 'I'm feeling frustrated' and the intensity drops.
+managingEmotions,Use posture. Sit up straight. Body language affects your tone of voice.
 managingEmotions,If a call gets personal, redirect: 'Let's focus on the solution to X'.
-managingEmotions,Have a finish-strong ritual for the last hour of shift. The tiredness is real.
-managingEmotions,A high bill brings real fear, that's what you're hearing, not anger at you.
-managingEmotions,If they're scared of a shut off, tell them what will actually happen, facts calm people.
+managingEmotions,Have a finish-strong ritual for the last hour of your shift. The tiredness is real.
+managingEmotions,A high bill brings real fear. That's what you're hearing, not anger at you.
+managingEmotions,If they're scared of a shut off, tell them what will actually happen. Facts calm people.
 managingEmotions,Don't match their volume, match their urgency.
-managingEmotions,Your voice is the only thing they have, keep it steady even when theirs isn't.
+managingEmotions,Your voice is the only thing they have, so keep it steady even when theirs isn't.
 managingEmotions,If your heart rate is up, slow the sentence down and the rest follows.
 managingEmotions,It isn't personal even when the words are personal.
-managingEmotions,Say the hard part plainly, talking around it makes people more anxious.
-managingEmotions,Don't carry the last call into this one, this customer didn't do it.
+managingEmotions,Say the hard part plainly. Talking around it makes people more anxious.
+managingEmotions,Don't carry the last call into this one. This customer didn't do it.
 managingEmotions,When someone cries, quiet is fine, then one steady sentence.
-managingEmotions,If you notice you're arguing, you've stopped helping, reset.
+managingEmotions,If you notice you're arguing, you've stopped helping. Reset.
 managingEmotions,Keep one good call a week in your head for the days you need it.
 managingEmotions,If a shift breaks you a little, tell your supe before it ends, not next week.
-managingEmotions,You can't fix someone's money, you can be the calm part of their day.
+managingEmotions,You can't fix someone's money, but you can be the calm part of their day.
 managingEmotions,If the same call type gets you every time, say that out loud to someone.
-managingEmotions,Panic and anger sound alike on the phone, treat the panic first.
+managingEmotions,Panic and anger sound alike on the phone, so treat the panic first.
 managingEmotions,Say 'concern' instead of 'complaint'. 'Complaint' flags the call as emotional even when you're the one saying it.
 managingEmotions,Show empathy with 'I'm so sorry that happened'. 'I can't believe that happened' and 'that's horrible' flag the call as emotional, even from you.
 managingEmotions,Own a mistake with 'That's on us, let me fix it'. 'That was our fault' flags the call as emotional.
@@ -424,13 +424,13 @@ managingEmotions,'I can tell you're very unhappy' repeats a phrase that flags th
 managingEmotions,Don't say 'that's not good enough' about APS, even when you agree. It flags the call. Say 'You deserve a clear answer, here's what I can do.'
 managingEmotions,Keep 'stupid' and 'stupidity' off your side of the call, even about a rule or the system. Both flag the call. Say 'That part is confusing, let me explain it.'
 managingEmotions,Don't ask 'Are you threatening me?' The word flags the call from your side too. Follow the steps for ending the call and tell your supervisor.
-managingEmotions,If they call APS a monopoly, don't repeat the word back, it flags the call. Say 'I hear you, let's look at what I can do on this bill.'
+managingEmotions,If they call APS a monopoly, don't repeat the word back. It flags the call. Say 'I hear you, let's look at what I can do on this bill.'
 managingEmotions,Don't say they got 'screwed', even to take their side. It flags the call. Say 'I see why that felt unfair. Let me see what I can do.'
 managingEmotions,Never say 'you people', even about a group like solar customers. It flags the call from your side too. Say 'customers on solar' instead.
 managingEmotions,'I'm not angry' still flags the call. If they ask whether you're upset with them, say 'Not at all, I'm here to help.'
-reliability,If time off is listed as Same Day use PTOST, you're given 40 hours of PTOST so use them.
+reliability,If time off is listed as Same Day, use PTOST. You're given 40 hours of PTOST, so use them.
 reliability,Alert your supervisor if you see any discrepancies in your reliability hours. They can investigate and get corrections made.
-reliability,If you have FMLA paperwork submit it proactively, don't wait for a covered absence.
+reliability,If you have FMLA paperwork, submit it proactively. Don't wait for a covered absence.
 reliability,Track your own PTOST balance. Don't assume the system tracks perfectly.
 reliability,Use scheduled PTO for appointments when possible. Planned beats unplanned.
 reliability,If you're sick more than 2 consecutive days, check with HR about short-term leave.
@@ -439,22 +439,22 @@ reliability,Know the difference between excused and occurrence absences in your 
 reliability,If transportation is an ongoing issue, talk to your supe about flex scheduling.
 reliability,Bundle medical appointments into single days when possible.
 reliability,Check your time entries after every pay period, so a coding mistake gets caught while it's easy to fix.
-reliability,Flag a coding error as soon as you spot it. The longer it sits the harder it is to correct.
-reliability,Sign up for weather alerts. Plan for storms before they become day-of scramble.
+reliability,Flag a coding error as soon as you spot it. The longer it sits, the harder it is to correct.
+reliability,Sign up for weather alerts. Plan for storms before they become a day-of scramble.
 reliability,Review the attendance policy once a year. Rules change.
-reliability,If you need an accommodation, request it formally not informally.
+reliability,If you need an accommodation, request it formally, not informally.
 reliability,Keep a personal attendance journal. Notice your own patterns.
-reliability,Put time off in as early as you can, planned time protects your number.
+reliability,Put time off in as early as you can. Planned time protects your number.
 reliability,If you know at 4am you can't make it, report it then, the way the call out process says, not at start time.
 reliability,Learn what counts and what doesn't before you need to know.
 reliability,If you can make part of a shift, tell your supervisor what you can do.
-reliability,Look at your own hours monthly, don't wait for a review to see them.
+reliability,Look at your own hours monthly. Don't wait for a review to see them.
 reliability,Keep the confirmation for anything you submit.
 reliability,If you're out several days, start the paperwork on day one.
 reliability,Learn the difference between PTO and PTOST before the morning you need it.
 reliability,If a shift is consistently hard to make, talk to your supe about the shift itself.
 reliability,One planned day off beats three unplanned hours.
-reliability,Don't assume a schedule change went through, go look.
+reliability,Don't assume a schedule change went through. Go look.
 reliability,If you're close to a threshold, you should be the first to know that.
 reliability,Know who to tell and how before the morning you need to call out.
 reliability,Keep your supervisor's contact info where you can find it at 5am.
@@ -463,44 +463,44 @@ reliability,Know your PTO balance before you plan a trip, not after.
 reliability,If you leave early for any reason, make sure it's coded the way it really happened.
 cxRepOverall,Listen for the real issue behind the question. Sometimes a billing question is really a need for a payment arrangement.
 cxRepOverall,End every call with specific next steps. Don't leave the customer wondering what happens next.
-cxRepOverall,Take ownership of the customer's issue, don't pass the buck.
+cxRepOverall,Take ownership of the customer's issue. Don't pass the buck.
 cxRepOverall,Be proactive. If you spot a problem on the account, tell them and fix it before they have to ask.
 cxRepOverall,Make the customer feel heard. Repeat back their concern to show you listened.
 cxRepOverall,Go one step further. If they ask about the bill, also mention the next due date.
-cxRepOverall,Show you care about resolution not just call completion.
-cxRepOverall,Use their communication style. If they're chatty engage, if they're rushed be efficient.
+cxRepOverall,Show you care about resolution, not just call completion.
+cxRepOverall,Use their communication style. If they're chatty, engage. If they're rushed, be efficient.
 cxRepOverall,End with confidence: 'You're all set. Is there anything else I can help you with today?'
-cxRepOverall,Treat every call like it's your only call, rushed customers feel it.
+cxRepOverall,Treat every call like it's your only call. Rushed customers feel it.
 cxRepOverall,Only promise what you can finish on the call, then finish it while they're still on the line.
-cxRepOverall,Use the customer's preferred name, ask 'Is it Mike or Michael?' early.
+cxRepOverall,Use the customer's preferred name. Ask 'Is it Mike or Michael?' early.
 cxRepOverall,Show expertise: 'Here's what usually works in situations like yours'.
 cxRepOverall,When giving bad news, lead with what you can do.
 cxRepOverall,Give the reference or confirmation number whenever there is one. Customers feel more secure with something to hold on to.
 cxRepOverall,Check that the contact info on the account is current before you hang up.
-cxRepOverall,Mention a program only when it genuinely fits. Budget billing for someone fighting big swings. Never as a script.
+cxRepOverall,Mention a program only when it genuinely fits, like budget billing for someone fighting big swings, never as a script.
 cxRepOverall,If the call turns up an unrelated issue, take care of it now instead of leaving them to call back.
 cxRepOverall,If you're stumped, acknowledge it: 'Great question. Let me find the right answer'.
 cxRepOverall,Thank customers for their patience specifically, not generically.
 cxRepOverall,If the customer seems rushed, give them the short version: what you did and what happens next.
 cxRepOverall,Use the one-more-thing close: 'Before we wrap, anything else on your mind?'
-cxRepOverall,Don't read scripts robotically. Internalize them then speak naturally.
+cxRepOverall,Don't read scripts robotically. Internalize them, then speak naturally.
 cxRepOverall,They rate the whole experience, not just the fix, and that includes how sure you sounded.
 cxRepOverall,Say what you're doing before you go quiet.
-cxRepOverall,Give them one thing to remember, the date, the amount, or the next step.
+cxRepOverall,Give them one thing to remember: the date, the amount or the next step.
 cxRepOverall,If you can't give them what they want, give them the clearest no you can with an option next to it.
 cxRepOverall,Check it landed by asking what they'll see on the next bill, then ask 'Do you have any other questions or concerns?'
 cxRepOverall,Use their words for their problem, not the internal name for it.
 cxRepOverall,If the bill is the problem, don't just explain it, tell them what could change it.
 cxRepOverall,Confirm the phone number and email so outage alerts actually reach them.
-cxRepOverall,If they mention they're moving, handle it now instead of next call.
+cxRepOverall,If they mention they're moving, handle it now instead of on the next call.
 cxRepOverall,When they're right, say so plainly.
 cxRepOverall,Offer the option that fits them, not the one that's quickest to set up.
 cxRepOverall,Tell them what will arrive in writing and when.
-cxRepOverall,Close the loop out loud, here's what we did and here's what happens next.
-cxRepOverall,If they sound unsure at the end, they are, ask again.
+cxRepOverall,Close the loop out loud: here's what we did and here's what happens next.
+cxRepOverall,If they sound unsure at the end, they are. Ask again.
 cxRepOverall,A customer who understands the bill doesn't have to like it to rate you well.
-cxRepOverall,Say your name at the end too, ownership is memorable.
-cxRepOverall,Don't oversell the fix, say exactly what it does.
+cxRepOverall,Say your name at the end too. Ownership is memorable.
+cxRepOverall,Don't oversell the fix. Say exactly what it does.
 cxRepOverall,Ask what would make this easier for them, then do that if you can.
 cxRepOverall,Verify the APS way: the caller's name plus the last four of the social, a driver's license or the password on the account. If the call came in authorized, the name is enough.
 cxRepOverall,Verify before you share anything on the account, even the balance. A date of birth or a security question doesn't count. Ask for the last four of the social, a driver's license or the account password.
@@ -535,7 +535,7 @@ overallExperience,When a big bill is coming, help them plan before it arrives. T
 overallExperience,On a start service call, read the start date back and tell them what to expect on the first bill.
 overallExperience,On a high bill call, compare it to the same month last year, not just last month. It's the fairer comparison, and they'll feel the difference.
 overallExperience,On an outage call, ask if they're safe and comfortable before anything else, especially in the summer heat.
-overallExperience,Don't sound rushed even when the queue is long. They can't see the queue, they only hear you.
+overallExperience,Don't sound rushed even when the queue is long. They can't see the queue. They only hear you.
 overallExperience,If they're new to Arizona, give them a heads up about summer bills and mention budget billing if it fits. Knowing ahead turns a shock into a plan.
 overallExperience,On a fee they didn't expect, explain what it's for in plain words first. People take a fee better once it makes sense.
 overallExperience,When the bill is right but still high, say so kindly, then help them with the next one. Honest and helpful is what they rate.

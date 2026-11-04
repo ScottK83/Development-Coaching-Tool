@@ -177,6 +177,14 @@ Team Update - Week of ${input.endDate}
 Please generate the email now.`;
     }
 
+    // "up 31 seconds, from 562s to 593s". The delta the alerts are judged on
+    // is a performance delta, positive = better, so printing it with its sign
+    // told Scott a handle time that rose 31 seconds had "dropped (-31.0sec)".
+    function moveText(metricKey, current, prev) {
+        const movement = window.DevCoachModules?.metricMovement;
+        return movement?.moveInWords ? movement.moveInWords(metricKey, current, prev) : '';
+    }
+
     function collectIndividualTrendWarningsAndRationale(currentEmp, prevEmp, thirdEmp, periodLabel, context = {}) {
         const warnings = [];
         const rationale = [];
@@ -210,8 +218,9 @@ Please generate the email now.`;
             if (delta >= -thresholdData.value) return;
 
             const metricLabel = metricsRegistry[metricKey]?.label || metricKey;
-            warnings.push(`⚠️ Sudden ${periodLabel}-over-${periodLabel} drop in ${metricLabel} (${delta.toFixed(1)}${thresholdData.unit}). Needs supportive conversation.`);
-            rationale.push(`${metricLabel}: delta ${delta.toFixed(1)}${thresholdData.unit} crossed alert threshold (-${thresholdData.value}${thresholdData.unit}).`);
+            const move = moveText(metricKey, current, prev);
+            warnings.push(`⚠️ ${metricLabel} got worse ${periodLabel} over ${periodLabel}${move ? `, ${move}` : ''}. Needs a supportive conversation.`);
+            rationale.push(`${metricLabel}: worse by more than the ${thresholdData.value}${thresholdData.unit} alert line${move ? ` (${move})` : ''}.`);
         });
 
         return { warnings, rationale };
@@ -242,8 +251,9 @@ Please generate the email now.`;
             if (delta <= 5) return;
 
             const metricLabel = metricsRegistry[metricKey]?.label || metricKey;
-            wins.push(`🎉 Strong ${periodLabel}-over-${periodLabel} improvement in ${metricLabel} (+${delta.toFixed(1)})`);
-            rationale.push(`${metricLabel}: improvement delta ${delta.toFixed(1)} exceeded +5 threshold.`);
+            const move = moveText(metricKey, current, prev);
+            wins.push(`🎉 Strong ${periodLabel}-over-${periodLabel} improvement in ${metricLabel}${move ? `, ${move}` : ''}`);
+            rationale.push(`${metricLabel}: better by more than the 5 point line${move ? ` (${move})` : ''}.`);
         });
 
         return { wins, rationale };
@@ -272,7 +282,8 @@ Please generate the email now.`;
             return {
                 metricKey,
                 label: metricsRegistry[metricKey]?.label || metricKey,
-                delta: metricDelta(metricKey, currentValue, previousValue)
+                delta: metricDelta(metricKey, currentValue, previousValue),
+                move: moveText(metricKey, currentValue, previousValue)
             };
         }).filter(Boolean);
 
@@ -290,10 +301,10 @@ Please generate the email now.`;
             ? ` (${movement.describe(m.metricKey, direction, null).movementWord})`
             : '';
         const improvementText = strongest && strongest.delta > 0
-            ? `${strongest.label} is improving by ${strongest.delta.toFixed(1)}${moved(strongest, 'improving')}.`
+            ? `${strongest.label} is improving${strongest.move ? `, ${strongest.move}` : moved(strongest, 'improving')}.`
             : 'No clear positive movement this cycle.';
         const downfallText = weakest && weakest.delta < 0
-            ? `${weakest.label} is getting worse by ${Math.abs(weakest.delta).toFixed(1)}${moved(weakest, 'declining')}.`
+            ? `${weakest.label} is getting worse${weakest.move ? `, ${weakest.move}` : moved(weakest, 'declining')}.`
             : 'No meaningful declines detected this cycle.';
 
         return `<div class="card-sunken" style="margin-bottom: 15px; padding: 12px;">

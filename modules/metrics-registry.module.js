@@ -37,7 +37,7 @@
         fcr: {
             key: 'fcr',
             label: 'First Call Resolution',
-            icon: '✅',
+            icon: '🏁',
             target: { type: 'min', value: 73 },
             isReverse: false,
             unit: '%',

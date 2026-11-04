@@ -204,7 +204,7 @@ suite('week progress: praise leads, before any numbers', (t) => {
         wins: ['A', 'B', 'C', 'D', 'E'].map(l => ({ label: l, valueText: '1%' })), goalCount: 9, allOnTarget: false
     });
     t.check('two wins are named', some.indexOf('A at 1%, B at 1%') > -1);
-    t.check('and the rest are counted, not listed', some.indexOf('and 3 more goals on target') > -1 && some.indexOf('C at') === -1);
+    t.check('and the rest are counted, not listed', some.indexOf('and three more goals on target') > -1 && some.indexOf('C at') === -1);
 });
 
 suite('week progress: the focus reads with the right article', (t) => {

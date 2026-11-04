@@ -54,7 +54,7 @@ suite('copilot handoff: it reports what actually happened', async (t) => {
 
     const result = await su.copyPromptAndOpenCopilot('a prompt', {
         button: { textContent: 'Generate' },
-        successLabel: '✅ Copied to CoPilot',
+        successLabel: '✅ Copied to Copilot',
         openWindow: () => ({ closed: false }),
         onCopyFailed: () => { recovered = true; }
     });
@@ -63,7 +63,7 @@ suite('copilot handoff: it reports what actually happened', async (t) => {
     t.check('the button says so rather than claiming success',
         events.indexOf('flash:Copy failed') !== -1);
     t.check('the success label is never shown on failure',
-        events.indexOf('flash:✅ Copied to CoPilot') === -1);
+        events.indexOf('flash:✅ Copied to Copilot') === -1);
     t.check('the caller gets its recovery path', recovered);
 });
 

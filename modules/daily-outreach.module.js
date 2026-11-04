@@ -129,6 +129,45 @@
         return WEEKDAY_IDS.map(id => PLANS[id]);
     }
 
+    /*
+     * A Tuesday with no Monday daily is one of two things: the center was shut
+     * for a holiday, or the daily just wasn't uploaded. Labor Day 2026 was the
+     * first; the morning of 2026-11-03 was the second, and 11 of 15 messages
+     * opened "Top of the week" on a week the team had already worked a day of.
+     * The data can't tell them apart, so the calendar does. These are the
+     * usual utility closures, each moved to the Monday when it falls on a
+     * Sunday.
+     */
+    function nthWeekday(year, month, weekday, n) {
+        const first = new Date(year, month, 1).getDay();
+        return 1 + ((weekday - first + 7) % 7) + (n - 1) * 7;
+    }
+
+    function lastWeekday(year, month, weekday) {
+        const lastDay = new Date(year, month + 1, 0);
+        return lastDay.getDate() - ((lastDay.getDay() - weekday + 7) % 7);
+    }
+
+    function closedHolidaysFor(year) {
+        const fixed = [[0, 1], [6, 4], [11, 25]].map(([month, day]) => {
+            const when = new Date(year, month, day);
+            if (when.getDay() === 0) when.setDate(day + 1);
+            return isoDate(when);
+        });
+        return new Set([
+            ...fixed,
+            isoDate(new Date(year, 4, lastWeekday(year, 4, 1))),   // Memorial Day
+            isoDate(new Date(year, 8, nthWeekday(year, 8, 1, 1))), // Labor Day
+            isoDate(new Date(year, 10, nthWeekday(year, 10, 4, 4))) // Thanksgiving
+        ]);
+    }
+
+    function isClosedHoliday(iso) {
+        const year = Number(String(iso || '').slice(0, 4));
+        if (!Number.isFinite(year) || year < 2000) return false;
+        return closedHolidaysFor(year).has(String(iso).slice(0, 10));
+    }
+
     function shiftDays(iso, days) {
         const when = new Date(iso + 'T12:00:00');
         if (Number.isNaN(when.getTime())) return iso;
@@ -252,6 +291,7 @@
      *   inWeekly       associate appears in the selected weekly upload
      *   dailyRowCount  daily rows for this associate, Monday through today
      *   hasMondayRow   a daily row specifically for Monday
+     *   mondayWasHoliday  the center was shut Monday, so no row is expected
      *
      * Returns { ok, reason, warning }. `warning` is for a message that can
      * still go out but will be thinner than intended.
@@ -272,7 +312,7 @@
             return { ok: false, reason: 'No uploads covering this week yet.' };
         }
 
-        if (plan.covers === 'lastWeekPlusMonday' && !facts.hasMondayRow) {
+        if (plan.covers === 'lastWeekPlusMonday' && !facts.hasMondayRow && !facts.mondayWasHoliday) {
             // The weekly recap still stands on its own; only the Monday
             // addendum is missing, so this is a note rather than a block.
             return { ok: true, reason: '', warning: "Monday's daily upload is missing, so the message covers last week only." };
@@ -359,8 +399,9 @@
         if (wins.length) {
             const named = wins.slice(0, 2).map(w => `${w.label} at ${w.valueText}`);
             const rest = wins.length - named.length;
+            const restWord = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][rest] || rest;
             const list = rest
-                ? `${named.join(', ')}, and ${rest} more ${rest === 1 ? 'goal' : 'goals'} on target`
+                ? `${named.join(', ')}, and ${restWord} more ${rest === 1 ? 'goal' : 'goals'} on target`
                 : joinList(named);
             return pickOne([
                 `Love what I'm seeing: ${list}. 🙌`,
@@ -588,6 +629,7 @@
         weekdayPlans,
         WEEKDAY_IDS,
         mondayOf,
+        isClosedHoliday,
         stampFor,
         sendKey,
         checkCoverage,

@@ -74,9 +74,9 @@
         (label, delta, range, when) => `That swing in ${label} caught my eye${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `${label} moved in a serious way${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `Not gonna lie, ${label} coming ${delta}${at(when)}, from ${range}, made me do a double take.`,
-        (label, delta, range, when) => `Okay, ${label}! ${capFirst(delta)}${at(when)}, from ${range}.`,
+        (label, delta, range, when) => `Take a bow on ${label}${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `Your ${label} went the right direction${at(when)}, ${delta}, from ${range}.`,
-        (label, delta, range, when) => `Seriously though, ${label} moving ${delta}${at(when)}, from ${range}, is no joke.`,
+        (label, delta, range, when) => `Honestly, ${label} moving ${delta}${at(when)}, from ${range}, is no small thing.`,
         (label, delta, range, when) => `Look at ${label} go${at(when)}, ${delta}, from ${range}!`,
         (label, delta, range, when) => `${label} took a real shift${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `Gotta call out your ${label}${at(when)}, ${delta}, from ${range}.`,
@@ -814,7 +814,7 @@
         extras => `${capFirst(extras)} too, and that's a lot to be proud of.`,
         extras => `And to top it all off, ${extras}. Love it.`,
         extras => `Then there's ${extras} on top of everything else. ${hypeYou(false)}.`,
-        extras => `Can't forget about ${extras} either. Just stacking wins.`,
+        extras => `Add ${extras} to the list. Just stacking wins.`,
     ];
     // Only when every goal the message can speak to is on target. "You've
     // basically had the perfect run" went to someone over the AHT target.
@@ -1033,9 +1033,9 @@
         (label, delta, range, when) => `That swing in ${label}${at(when)} is catching my eye, ${delta}, from ${range}.`,
         (label, delta, range, when) => `${label} is moving in a serious way${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `Not gonna lie, ${label} coming ${delta}${at(when)}, from ${range}, has me doing a double take.`,
-        (label, delta, range, when) => `Okay, ${label}! ${capFirst(delta)}${at(when)}, from ${range}.`,
+        (label, delta, range, when) => `Take a bow on ${label}${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `Your ${label} is heading the right direction${at(when)}, ${delta}, from ${range}.`,
-        (label, delta, range, when) => `Seriously though, ${label} moving ${delta}${at(when)}, from ${range}, is no joke.`,
+        (label, delta, range, when) => `Honestly, ${label} moving ${delta}${at(when)}, from ${range}, is no small thing.`,
         (label, delta, range, when) => `Look at ${label} go${at(when)}, ${delta}, from ${range}!`,
         (label, delta, range, when) => `${label} is taking a real shift${at(when)}, ${delta}, from ${range}.`,
         (label, delta, range, when) => `Gotta call out your ${label}${at(when)}, ${delta}, from ${range}.`,
@@ -1141,7 +1141,7 @@
         extras => `${capFirst(extras)} too, and that's a lot to be proud of.`,
         extras => `And to top it all off, ${extras}. Love it.`,
         extras => `Then there's ${extras} on top of everything else. ${hypeYou(true)}.`,
-        extras => `Can't forget about ${extras} either. Just stacking wins.`,
+        extras => `Add ${extras} to the list. Just stacking wins.`,
     ];
     const HF_EXTRAS_SWEEP_ONGOING = [
         extras => `On top of that: ${extras}. That's about as complete as it gets.`,
@@ -1921,9 +1921,11 @@
         const named = extraWins.slice(0, 2);
         const rest = extraWins.length - named.length;
         if (!rest) return joinWinPhrases(named);
+        // Counts in words, "one more goal", the way a person says it.
+        const COUNT = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
         const tail = everyOtherGoal
             ? 'every other goal too'
-            : `${rest} more ${rest === 1 ? 'goal' : 'goals'} on target`;
+            : `${COUNT[rest] || rest} more ${rest === 1 ? 'goal' : 'goals'} on target`;
         return `${named.map(w => `${w.label} at ${fmtVal(w)}`).join(', ')}, and ${tail}`;
     }
 
@@ -5296,11 +5298,12 @@
         } else if (plan.base === 'midweek') {
             base = await generateMidweekCheckinMessage(employeeName, latestKey, baselineKey);
         } else {
-            // A Tuesday holding Monday's numbers is a follow-up. A Tuesday with
-            // no Monday at all, because nobody worked it, is the start of the
-            // week and should open like one.
+            // A Tuesday after a holiday Monday is the start of the week and
+            // opens like one. Any other Tuesday is a follow-up, Monday's daily
+            // or not: a missing upload is not a day nobody worked (2026-11-03).
             const startsTheWeek = plan.id === 'monday'
-                || (plan.id === 'tuesday' && !dailyEntry?.mondayRow);
+                || (plan.id === 'tuesday' && !dailyEntry?.mondayRow
+                    && outreach.isClosedHoliday(getThisWeekDailyWindow().mondayIso));
             base = await generateMondayKickoffMessage(employeeName, latestKey, baselineKey, {
                 dayWord: dayWordFor(plan),
                 startsTheWeek,
@@ -5427,6 +5430,7 @@
                     inWeekly: true,
                     dailyRowCount: dailyEntry ? dailyEntry.rows.length : 0,
                     hasMondayRow: Boolean(dailyEntry && dailyEntry.mondayRow),
+                    mondayWasHoliday: outreach.isClosedHoliday(dailyThisWeek.mondayIso),
                     weeklyCoversThisWeek
                 });
 
@@ -5584,11 +5588,23 @@
             rendered.push({ ...entry, message, appliedNote });
         }
 
+        // A coverage warning is said once above the cards, not on each one.
+        // On 2026-11-03 the same "Monday's daily upload is missing" sat on all
+        // 15. When only some people have it, the banner names them.
+        const warningGroups = new Map();
+        rendered.forEach(r => {
+            const text = r.coverage.warning;
+            if (!text) return;
+            if (!warningGroups.has(text)) warningGroups.set(text, []);
+            warningGroups.get(text).push(r.emp.name);
+        });
+        const warningHtml = [...warningGroups].map(([text, names]) => {
+            const who = names.length === rendered.length ? '' : ` (${names.map(escapeHtml).join(', ')})`;
+            return `<div class="tone-warn" style="margin-bottom:12px; font-size:0.85em;">⚠️ ${escapeHtml(text)}${who}</div>`;
+        }).join('');
+
         const cardsHtml = rendered.map((r, idx) => {
             const safeName = escapeHtml(r.emp.name);
-            const warning = r.coverage.warning
-                ? `<div class="tone-warn" style="margin-bottom:8px; font-size:0.8em;">⚠️ ${escapeHtml(r.coverage.warning)}</div>`
-                : '';
             return `<div class="rmm-rep-card" data-rep-index="${idx}" data-rep-name="${safeName}" style="border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; background:var(--bg-surface);">` +
                 `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">` +
                     `<div style="font-weight:700;">${safeName}</div>` +
@@ -5597,7 +5613,6 @@
                         `<div class="${r.badge.pill}" style="font-size:0.78em; padding:3px 10px;">${r.badge.icon} ${escapeHtml(r.badge.label)}</div>` +
                     `</div>` +
                 `</div>` +
-                warning +
                 `<textarea class="rmm-rep-text" style="width:100%; min-height:120px; padding:10px; border:1px solid var(--border); border-radius:6px; font-size:0.9em; color:var(--text-primary); background:var(--bg-surface-raised); resize:vertical; font-family:inherit;">${escapeHtml(r.message)}</textarea>` +
                 `<div style="display:flex; gap:8px; margin-top:10px;">` +
                     `<button class="rmm-copy btn-secondary" style="flex:1; padding:9px 14px;">Copy</button>` +
@@ -5646,7 +5661,7 @@
             `</details>`
             : '';
 
-        listEl.innerHTML = cardsHtml + emptyHtml + sentHtml + blockedHtml;
+        listEl.innerHTML = warningHtml + cardsHtml + emptyHtml + sentHtml + blockedHtml;
 
         const updateProgress = () => {
             progressEl.textContent = `${sentSet.size} / ${rendered.length} sent`;

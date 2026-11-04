@@ -539,7 +539,7 @@ Please generate the coaching email now with HIGH ENERGY celebrating our top perf
         }
 
         handOffToCopilot(copilotPrompt, {
-            message: '📋 Group email prompt copied. Paste into CoPilot with Ctrl+V'
+            message: '📋 Group email prompt copied. Paste into Copilot with Ctrl+V'
         });
     }
 

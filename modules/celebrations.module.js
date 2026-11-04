@@ -1971,29 +1971,51 @@
         var meta = (weekly[periodKey] || ytd[periodKey] || daily[periodKey] || {}).metadata || {};
 
         var byType = {
-            daily: 'that day',
-            week: 'this week',
-            'week-in-progress': 'this week',
-            month: 'this month',
-            'month-to-date': 'this month',
-            'month-agg': 'this month',
-            quarter: 'this quarter',
-            ytd: 'this year'
+            daily: 'day',
+            week: 'week',
+            'week-in-progress': 'week',
+            month: 'month',
+            'month-to-date': 'month',
+            'month-agg': 'month',
+            quarter: 'quarter',
+            ytd: 'year'
         };
-        if (byType[meta.periodType]) return byType[meta.periodType];
 
         var parts = String(periodKey || '').split('|');
-        if (parts.length < 2) return 'this period';
-        var start = new Date(parts[0] + 'T00:00:00');
-        var end = new Date(parts[1] + 'T00:00:00');
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'this period';
+        var end = new Date(String(meta.endDate || parts[1] || '') + 'T00:00:00');
+        var unit = byType[meta.periodType];
+        if (!unit) {
+            if (parts.length < 2) return 'this period';
+            var start = new Date(parts[0] + 'T00:00:00');
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'this period';
+            var days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+            unit = days <= 1 ? 'day' : days <= 8 ? 'week' : days <= 31 ? 'month' : days <= 95 ? 'quarter' : 'year';
+        }
+        if (unit === 'day') return 'that day';
+        if (isNaN(end.getTime())) return 'this ' + unit;
+        return unitTense(unit, end);
+    }
 
-        var days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
-        if (days <= 1) return 'that day';
-        if (days <= 8) return 'this week';
-        if (days <= 31) return 'this month';
-        if (days <= 95) return 'this quarter';
-        return 'this year';
+    /*
+     * "This week" for the week still running, "last week" for the one just
+     * finished, "that week" for anything older. The Tuesday team post went out
+     * on 2026-11-03 about the week of Oct 26 and said "this week" seven times.
+     * A unit has finished once its end falls before the start of today's one.
+     */
+    function unitStart(unit, when) {
+        var d = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+        if (unit === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+        if (unit === 'month') d.setDate(1);
+        if (unit === 'quarter') d = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+        if (unit === 'year') d = new Date(d.getFullYear(), 0, 1);
+        return d;
+    }
+
+    function unitTense(unit, end) {
+        var current = unitStart(unit, new Date());
+        if (end.getTime() >= current.getTime()) return 'this ' + unit;
+        var previous = unitStart(unit, new Date(current.getTime() - 86400000));
+        return (end.getTime() >= previous.getTime() ? 'last ' : 'that ') + unit;
     }
 
     /**
@@ -2017,17 +2039,38 @@
         return Boolean(CLOSED_PERIOD_TYPES[meta.periodType]);
     }
 
-    function perfectSurveyLine(perfect) {
+    // `variant` picks the wording. The team post hands each person the next
+    // one, because the same sentence under seven names in one post read as a
+    // template (2026-11-03). Everywhere else gets the first.
+    // Each one opens on PERFECT, so the line reads as the headline it is.
+    var PERFECT_ONE = [
+        function(when) { return 'PERFECT survey. The one that came in ' + when + ' was flawless!'; },
+        function(when) { return 'PERFECT survey ' + when + ', top marks on every question!'; },
+        function(when) { return 'PERFECT marks on the one survey ' + when + '!'; }
+    ];
+    // "All 2 of them" is how a template counts, not how a person does.
+    // Scott, 2026-10-14.
+    var PERFECT_TWO = [
+        function(when) { return 'PERFECT surveys. Both of them ' + when + ', not one off the mark!'; },
+        function(when) { return 'PERFECT surveys ' + when + ', two for two!'; },
+        function(when) { return 'PERFECT marks on both surveys ' + when + '!'; }
+    ];
+    var PERFECT_MANY = [
+        function(when, n) { return 'PERFECT surveys. All ' + n + ' of them ' + when + ', not one off the mark!'; },
+        function(when, n) { return 'PERFECT surveys ' + when + ', ' + n + ' for ' + n + '!'; },
+        function(when, n) { return 'PERFECT marks on all ' + n + ' surveys ' + when + '!'; },
+        function(when, n) { return 'PERFECT surveys ' + when + '. Every one of the ' + n + ' was top marks!'; }
+    ];
+
+    function perfectSurveyLine(perfect, variant) {
         var n = perfect && perfect.count;
         if (!n) return '';
         // Carried on the object rather than passed in, because this line is
         // rendered from four places and only detection knows the period.
         var when = (perfect && perfect.periodNoun) || 'this period';
-        if (n === 1) return 'PERFECT survey. The one that came in ' + when + ' was flawless!';
-        // "All 2 of them" is how a template counts, not how a person does.
-        // Scott, 2026-10-14.
-        if (n === 2) return 'PERFECT surveys. Both of them ' + when + ', not one off the mark!';
-        return 'PERFECT surveys. All ' + n + ' of them ' + when + ', not one off the mark!';
+        var pool = n === 1 ? PERFECT_ONE : n === 2 ? PERFECT_TWO : PERFECT_MANY;
+        var i = Math.abs(Math.floor(Number(variant) || 0)) % pool.length;
+        return pool[i](when, n);
     }
 
     // The same fact as its own sentence, for lines that already close with
@@ -2094,7 +2137,7 @@
     // The period said as a noun on its own: "week", "month". For "Finished the
     // week at", because nobody on the floor says "the period".
     function _periodWord(periodKey) {
-        return periodNoun(periodKey).replace(/^(this|that) /, '');
+        return periodNoun(periodKey).replace(/^(this|that|last) /, '');
     }
 
     var MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -2225,7 +2268,9 @@
     // "plus N more" for anything left over.
     function personLines(person, words, ctx, cap) {
         var lines = [];
-        if (person.perfectSurveys) lines.push(perfectSurveyLine(person.perfectSurveys));
+        if (person.perfectSurveys) {
+            lines.push(perfectSurveyLine(person.perfectSurveys, ctx.perfectVariant ? ctx.perfectVariant() : 0));
+        }
         var wins = _linedAchievements(person);
         var room = Math.max(0, cap - lines.length);
         wins.slice(0, room).forEach(function(a) { lines.push(publicLine(a, words, ctx)); });
@@ -2295,6 +2340,7 @@
             noValue: rotator(BATCH_NO_VALUE_STEMS),
             solo: function(label, val, medal) { return soloStem()(label, val) + ' ' + (medal || '') + soloTail(); }
         };
+        ctx.perfectVariant = rotator([0, 1, 2, 3]);
 
         celebrations.forEach(function(person, idx) {
             // One blank line between people, and nothing else. The rule used to

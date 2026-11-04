@@ -684,10 +684,14 @@ suite('celebrations: a flawless survey week is called out on its own', (t) => {
         !result.celebrations.some(c => c.name === 'Nearly Person'));
 
     const post = celebrations.generateAllShoutOuts(result.celebrations, '');
-    t.check('the post says it plainly', post.indexOf('PERFECT surveys') > -1);
-    t.check('and shows what it was measured on', post.indexOf('All 6 of them this week') > -1);
+    t.check('the post says it plainly', /\u2022 PERFECT/.test(post));
+    // The wording rotates through the post, so these read the line's facts:
+    // the count, and the week it was, which had finished by the 18th.
+    const lineFor = (count) => post.split('\n').find(l => /PERFECT/.test(l) && new RegExp('\\b' + count + '\\b').test(l)) || '';
+    t.check('and shows what it was measured on', /\b6\b/.test(lineFor(6)) && lineFor(6).indexOf('last week') > -1);
     t.check('a single survey does not read as "all 1 of them"', post.indexOf('All 1 of them') === -1);
-    t.check('it is named as the one it was', post.indexOf('The one that came in this week') > -1);
+    t.check('it is named as the one it was',
+        post.split('\n').some(l => /PERFECT (survey\b|marks on the one survey)/.test(l) && l.indexOf('last week') > -1));
 
     // Across the board, on whatever came back.
     t.check('one metric at 100 is not a set',
@@ -938,13 +942,18 @@ suite('celebrations: a rewording never drops a fact', (t) => {
 suite('celebrations: the period is called what it is', (t) => {
     const celebrations = load(t, null);
 
+    // The suite's clock is Tuesday 2026-08-18.
     t.equal('a single day', celebrations.periodNoun('2026-08-17|2026-08-17'), 'that day');
-    t.equal('a working week', celebrations.periodNoun('2026-08-17|2026-08-21'), 'this week');
-    t.equal('a full week', celebrations.periodNoun('2026-08-10|2026-08-16'), 'this week');
+    t.equal('the week still running', celebrations.periodNoun('2026-08-17|2026-08-21'), 'this week');
+    // The Tuesday team post on 2026-11-03 called the finished week "this week".
+    t.equal('the week just finished', celebrations.periodNoun('2026-08-10|2026-08-16'), 'last week');
+    t.equal('an older week', celebrations.periodNoun('2026-07-27|2026-08-02'), 'that week');
     t.equal('a month to date', celebrations.periodNoun('2026-08-01|2026-08-17'), 'this month');
-    t.equal('a whole month', celebrations.periodNoun('2026-07-01|2026-07-31'), 'this month');
-    t.equal('a quarter', celebrations.periodNoun('2026-04-01|2026-06-30'), 'this quarter');
+    t.equal('the month just finished', celebrations.periodNoun('2026-07-01|2026-07-31'), 'last month');
+    t.equal('an older month', celebrations.periodNoun('2026-05-01|2026-05-31'), 'that month');
+    t.equal('the quarter just finished', celebrations.periodNoun('2026-04-01|2026-06-30'), 'last quarter');
     t.equal('the year so far', celebrations.periodNoun('2026-01-01|2026-08-16'), 'this year');
+    t.equal('last year', celebrations.periodNoun('2025-01-01|2025-12-31'), 'last year');
 
     // Nothing to measure is not a licence to guess a week.
     t.equal('an unkeyed period says so', celebrations.periodNoun(''), 'this period');
@@ -970,6 +979,19 @@ suite('celebrations: the perfect-survey line follows the window', (t) => {
     // An entry from before this was stamped on has to read as something true.
     t.check('an unstamped one falls back to a period, not a week',
         celebrations.perfectSurveyLine({ count: 4 }).indexOf('this period') > -1);
+
+    // Seven people in one post all read "PERFECT survey. The one that came in
+    // this week was flawless!" (2026-11-03). The post hands out the wordings
+    // in turn.
+    const many = [0, 1, 2, 3].map(v => celebrations.perfectSurveyLine({ count: 5, periodNoun: 'last week' }, v));
+    t.equal('four wordings for several surveys', new Set(many).size, 4);
+    t.check('each keeps the count and the period',
+        many.every(line => line.indexOf('5') > -1 && line.indexOf('last week') > -1 && /PERFECT/.test(line)));
+    const ones = [0, 1, 2].map(v => celebrations.perfectSurveyLine({ count: 1, periodNoun: 'last week' }, v));
+    t.equal('three for a single survey', new Set(ones).size, 3);
+    t.check('none of them says "all 1"', ones.every(line => !/all 1\b/i.test(line)));
+    t.check('a variant past the end wraps round',
+        celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, 3) === celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, 0));
 });
 
 suite('celebrations: the pools no longer claim a week', (t) => {

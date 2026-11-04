@@ -234,6 +234,31 @@ suite('restore: a repo restore lands where the app actually reads', async (t) =>
         store[PREFIX + 'myTeamMembers'] !== undefined);
 });
 
+suite('backup: a restore puts the annual goals where the app reads them', async (t) => {
+    const { storage } = load(t, {});
+    await storage.hydrate();
+    const alerts = [];
+    global.alert = (m) => alerts.push(String(m));
+    const modules = t.loadModule('modules/repo-sync.module.js');
+
+    // The backup carries them as yearEndAnnualGoalsStore. They were written
+    // back under that name, which nothing reads, so a restore from the whole
+    // state backup lost every annual goal and still said it worked.
+    const goals = { 'Chris Vale|2026': { goals: 'Hit adherence every month' } };
+    modules.repoSync.applyRepoBackupPayload({ weeklyData: { w1: { employees: [] } }, yearEndAnnualGoalsStore: goals });
+    t.equal('the goals are back under the name the app reads',
+        JSON.stringify(storage.readStore('yearEndAnnualGoals')), JSON.stringify(goals));
+    t.check('nothing was left under the payload name',
+        !storage.readStore('yearEndAnnualGoalsStore'));
+
+    // A backup from before the goals were carried has no field at all, and
+    // must not wipe the goals on this machine.
+    modules.repoSync.applyRepoBackupPayload({ weeklyData: { w1: { employees: [] } } });
+    t.equal('an older backup leaves them alone',
+        JSON.stringify(storage.readStore('yearEndAnnualGoals')), JSON.stringify(goals));
+    t.equal('and nothing alerted', alerts.length, 0);
+});
+
 suite('backup: the export file covers stores that no longer live in localStorage', async (t) => {
     const { storage, store } = load(t, {
         [PREFIX + 'weeklyData']: JSON.stringify({ w1: {} }),
