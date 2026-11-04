@@ -154,20 +154,19 @@ function load(t, options) {
 // Three lines per metric rather than one and a half. The value leads, because a
 // placing with no number behind it is a position in a league table the reader
 // cannot check, and it is also the number the milestone then asks them to move.
+//
+// Two metrics and one milestone (many hats review, 2026-11-03): three bullets
+// each ending in the same "At X you would have finished about N places higher"
+// read as a form. The one step that moves the most keeps its line.
 const EXPECTED =
     'Where you stood for the week ending Aug 21\n'
     + '\n'
     + '  • Schedule Adherence: 93.9%\n'
     + '      10th in the Call Center, 3rd on our team.\n'
-    + '      Add 1 point. At 94.9% you would have finished about 4 places higher.\n'
     + '\n'
     + '  • Rep Satisfaction: 88%\n'
     + '      15th in the Call Center, 4th on our team.\n'
-    + '      Add 2 points. At 90% you would have finished about 7 places higher.\n'
-    + '\n'
-    + '  • Average Handle Time: 422s\n'
-    + '      12th in the Call Center, 4th on our team.\n'
-    + '      Take 15 seconds off. At 407s you would have finished about 8 places higher.';
+    + '      Add 2 points. At 90% you would have finished about 7 places higher.';
 
 suite('pulse standings: both placings and a milestone, for a named period', (t) => {
     const pulse = load(t);
@@ -175,27 +174,35 @@ suite('pulse standings: both placings and a milestone, for a named period', (t) 
 
     t.check('something was written', block.length > 0);
     t.check('the period is named rather than assumed', block.indexOf('the week ending Aug 21') > -1);
+    t.equal('one milestone line in the block, not one per bullet',
+        (block.match(/places higher/g) || []).length, 1);
+
+    // With rep sat taken by the message's focus, handle time takes the slot.
+    // The milestone arithmetic is checked on it below.
+    const aht = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY, null, { skipRankKeys: ['associateOverall'] });
+    t.check('a metric the focus already named is left out', aht.indexOf('Rep Satisfaction') === -1);
 
     // Dana sits eleven peers back on handle time and four back inside the team,
     // and both halves have to be said: "12th in the Call Center" and "4th on our team" are answers
     // to two different questions and neither stands in for the other.
-    t.check('the call center placing is there', block.indexOf('12th in the Call Center') > -1);
-    t.check('and the team placing beside it', block.indexOf('4th on our team') > -1);
+    t.check('the call center placing is there', aht.indexOf('12th in the Call Center') > -1);
+    t.check('and the team placing beside it', aht.indexOf('4th on our team') > -1);
 
     // Fifteen seconds off 422 is 407, which clears the peers at 401, 403 and
     // 405 and nobody else, so the re-rank is 4th and the gain is eight places.
     t.check('the milestone names a real step in the metric\'s own unit',
-        block.indexOf('Take 15 seconds off') > -1);
+        aht.indexOf('Take 15 seconds off') > -1);
     t.check('and the gain is the one a re-rank actually gives',
-        block.indexOf('Take 15 seconds off. At 407s you would have finished about 8 places higher.') > -1);
+        aht.indexOf('Take 15 seconds off. At 407s you would have finished about 8 places higher.') > -1);
 
     // The ask has a destination in it. "Take 15 seconds off" leaves the reader
     // doing the subtraction to find out what they are being asked for.
-    t.check('and the number they would land on is named', block.indexOf('At 407s you would') > -1);
+    t.check('and the number they would land on is named', aht.indexOf('At 407s you would') > -1);
 
     // A percentage metric asks in points, not in seconds.
     t.check('a rate metric steps in points', block.indexOf('Add 2 points') > -1);
-    t.check('and one point stays singular', block.indexOf('Add 1 point.') > -1);
+    const sentiment = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY, null, { skipRankKeys: ['associateOverall', 'aht'] });
+    t.check('and one point stays singular', sentiment.indexOf('Add 1 point.') > -1);
 
     t.equal('the block as it lands', block, EXPECTED);
 });
@@ -205,7 +212,7 @@ suite('pulse standings: the block is a block, not a spreadsheet', (t) => {
     const block = pulse.buildStandingsBlock('Dana Reed', WEEK_KEY);
     const bullets = block.split('\n').filter(line => line.indexOf('  • ') === 0);
 
-    t.equal('three metrics, no more', bullets.length, 3);
+    t.equal('two metrics, no more', bullets.length, 2);
 
     // Dana is measured on six projectable metrics and placed best on adherence,
     // so that is the line the message opens on. Somebody whose block opens on
@@ -261,13 +268,13 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
     // Nothing was invented to justify the slot. Bottom of a field that tight
     // has no step worth naming, so the bullet is the label line alone.
     t.check('with no placing line and no milestone attached to it',
-        block.indexOf('Rep Satisfaction: 70%\n\n') > -1);
-    t.check('the metric it displaced is gone', block.indexOf('Overall Sentiment') === -1);
-    t.equal('and the block is still three metrics', bullets.length, 3);
+        /Rep Satisfaction: 70%$/.test(block));
+    t.check('the metric it displaced is gone', block.indexOf('Average Handle Time') === -1);
+    t.equal('and the block is still two metrics', bullets.length, 2);
 
     // The proof it was displaced rather than missing: with rep satisfaction
-    // withheld for thin surveys, sentiment takes that same slot and prints a
-    // five place milestone.
+    // withheld for thin surveys, handle time takes that same slot and prints
+    // an eight place milestone.
     const withoutSurveys = load(t, {
         rows: rows.slice(0, 29).concat([danaRow({
             surveyTotal: 2,
@@ -275,8 +282,8 @@ suite('pulse standings: rep satisfaction keeps its slot', (t) => {
         })])
     }).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('it really did have a milestone to lose',
-        /Overall Sentiment: 90\.1%\n      26th in the Call Center/.test(withoutSurveys)
-        && withoutSurveys.indexOf('Add 1 point. At 91.1% you would have finished about 5 places higher.') > -1);
+        /Average Handle Time: 422s\n      12th in the Call Center/.test(withoutSurveys)
+        && withoutSurveys.indexOf('Take 15 seconds off. At 407s you would have finished about 8 places higher.') > -1);
 
     // The pin is a slot, not a lower bar. Three surveys is still the floor, and
     // a week under it hands the slot back to the metric that earned it.
@@ -293,7 +300,7 @@ suite('pulse standings: the milestones carry no caveat', (t) => {
     t.check('the milestones are still worded as a what-if', block.indexOf('you would have finished') > -1);
 
     const flat = load(t, { noise: 999 }).buildStandingsBlock('Dana Reed', WEEK_KEY);
-    t.check('and the placings still stand without a milestone', flat.indexOf('12th in the Call Center') > -1);
+    t.check('and the placings still stand without a milestone', flat.indexOf('10th in the Call Center') > -1);
 });
 
 suite('pulse standings: a step the app calls churn is not a milestone', (t) => {
@@ -411,7 +418,7 @@ suite('pulse standings: private message only', async (t) => {
     );
 
     t.check('the private message carries the block', dm.indexOf('Where you stood for') > -1);
-    t.check('with the placings in it', dm.indexOf('12th in the Call Center') > -1);
+    t.check('with the placings in it', dm.indexOf('10th in the Call Center') > -1);
     // Above the sign-off, which is the last thing the message says.
     const paragraphs = dm.split('\n\n');
     t.check('and the sign-off still closes the message', paragraphs[paragraphs.length - 1].indexOf('Call Center') === -1
@@ -451,7 +458,7 @@ suite('pulse standings: the seam that keeps it private', (t) => {
     // Whitespace-tolerant: what matters is that the one use is finish(), with
     // the block inside the near-miss tail, not whether it fits on one line.
     t.check('and the one use is the one-to-one assembly point',
-        /const finish = \(text\) =>\s*withNearMiss\(\s*withStandings\(/.test(src));
+        /const finish = \(text\) => \{[^}]*return withNearMiss\(\s*withStandings\(/.test(src));
 
     // No module other than this one may reach the block, however tempting.
     const others = fs.readdirSync(path.join(ROOT, 'modules'))
@@ -536,8 +543,9 @@ suite('pulse standings: a week still being worked is not spoken of in the past',
     // result on a week they can still change.
     const open = load(t, { weekMeta: { periodType: 'week-in-progress', endDate: '2026-08-20' } })
         .buildStandingsBlock('Dana Reed', WEEK_KEY);
+    // The block's one milestone is rep sat's, the step that moves the most.
     t.check('the ask points forward',
-        open.indexOf('Add 1 point. At 94.9% you could still move up about 4 places this week.') > -1);
+        open.indexOf('Add 2 points. At 90% you could still move up about 7 places this week.') > -1);
     t.check('and nothing in it is already over', open.indexOf('would have finished') === -1);
     t.check('with no caveat under it', open.indexOf('assume everybody else') === -1);
     t.check('and not the finished one', open.indexOf('where they finished') === -1);
@@ -546,7 +554,7 @@ suite('pulse standings: a week still being worked is not spoken of in the past',
     // one there: the reader cannot go back and take those places.
     const closed = load(t).buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a finished week still reports what was missed',
-        closed.indexOf('Add 1 point. At 94.9% you would have finished about 4 places higher.') > -1);
+        closed.indexOf('Add 2 points. At 90% you would have finished about 7 places higher.') > -1);
     t.check('with no offer to change it', closed.indexOf('could still move up') === -1);
     t.check('and no caveat under it either', closed.indexOf('assume everybody else') === -1);
 
@@ -557,4 +565,24 @@ suite('pulse standings: a week still being worked is not spoken of in the past',
         .buildStandingsBlock('Dana Reed', WEEK_KEY);
     t.check('a Thursday from a past week is over too', stale.indexOf('could still move up') === -1);
     t.check('and reads in the past tense', stale.indexOf('you would have finished about') > -1);
+});
+
+suite('pulse standings: the focus is not said twice', async (t) => {
+    // Many hats review, 2026-11-03: one metric showed up in the praise, again
+    // in the focus, and again in "Where you stood". Adherence is Dana's one
+    // miss here, so it is the focus, and the standings leave it to the focus.
+    const pulse = load(t);
+    global.weeklyData[WEEK_KEY].employees[0].scheduleAdherence = 91;
+    global.window.analyzeTrendMetrics = () => ({
+        allMetrics: [
+            { metricKey: 'scheduleAdherence', label: 'Schedule Adherence', employeeValue: 91, target: 93, targetType: 'min', classification: 'Needs Focus', meetsTarget: false },
+            { metricKey: 'aht', label: 'Average Handle Time', employeeValue: 422, target: 426, targetType: 'max', classification: 'On Track', meetsTarget: true },
+            { metricKey: 'fcr', label: 'First Call Resolution', employeeValue: 80, target: 73, targetType: 'min', classification: 'Exceeding Expectation', meetsTarget: true }
+        ]
+    });
+    const dm = await pulse.buildOutreachMessage({}, { base: 'kickoff', dailyMode: 'none' }, 'Dana Reed', WEEK_KEY, null, null);
+    t.check('the focus is adherence', /Schedule Adherence/.test(dm.split('Where you stood')[0]));
+    t.check('so the standings do not list it again', dm.indexOf('  • Schedule Adherence: 93.9%') === -1);
+    t.check('the next metric takes the slot', dm.indexOf('  • Average Handle Time: 422s') > -1);
+    t.equal('and the block is still two bullets', (dm.split('Where you stood')[1].match(/^  • /gm) || []).length, 2);
 });

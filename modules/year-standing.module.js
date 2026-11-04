@@ -28,24 +28,27 @@
     const MIN_PLACES = 3;
     const MIN_SHARE_OF_FIELD = 0.03;
 
+    // Said as its own sentence, after the number and the goal. Run into the
+    // number with a colon ("651s against a 426s target: you have been
+    // climbing past people on this one") it read as praise for a number
+    // nowhere near its goal (Scott's many hats review, 2026-11-03). "The
+    // floor" was call center slang, and "very winnable back" was not English.
+    // {since} is the real window: the oldest of this year's YTD files.
+    //
+    // Never that anybody is passing them: "others have been moving ahead of
+    // you" sat next to the banned "N people ahead of you" (Scott, 2026-10-21;
+    // tone audit 10/25). Their own ground, and that it can be won back.
     const PHRASES = {
         gaining: [
-            'you have been gaining ground on the floor here',
-            'you have been climbing past people on this one',
-            'you are pulling ahead of the floor on this'
+            'Your place in the Call Center has been climbing since {since}.',
+            'You have moved up in the Call Center since {since}.'
         ],
-        // Never that anybody is passing them: "the floor has been passing you
-        // here" and "others have been moving ahead of you" sat next to the
-        // banned "N people ahead of you" (Scott, 2026-10-21; tone audit
-        // 10/25). Their own ground, and that it can be won back.
         slipping: [
-            'you have lost a little ground on this one, and it is very winnable back',
-            'this one has lost a bit of ground this year, and there is time to win it back',
-            'you have been losing ground on this one, and a few strong weeks turn it around'
+            'Your place in the Call Center has slipped a little since {since}, and there is time to win it back.',
+            'You have lost a few places in the Call Center since {since}, and a few strong weeks win them back.'
         ],
         holding: [
-            'you have held your place here',
-            'you are holding steady against the floor on this'
+            'You have held your place in the Call Center since {since}.'
         ]
     };
 
@@ -76,11 +79,38 @@
         return placesGained > 0 ? 'gaining' : 'slipping';
     }
 
-    function phraseFor(movement, pick) {
+    function phraseFor(movement, pick, since) {
         const pool = PHRASES[movement];
         if (!pool) return '';
-        if (typeof pick === 'function') return pick(pool);
-        return pool[0];
+        const line = typeof pick === 'function' ? pick(pool) : pool[0];
+        return String(line).replace('{since}', since || 'the start of the year');
+    }
+
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+        'August', 'September', 'October', 'November', 'December'];
+
+    /**
+     * "late September" from a YTD file's closing date. The window the movement
+     * was measured over, said the way a person would say it: the year's first
+     * file on hand is rarely January, and "this year" over five weeks of files
+     * claimed more than the numbers knew.
+     */
+    function sinceText(isoDate) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(isoDate || ''));
+        if (!m) return '';
+        const month = parseInt(m[2], 10) - 1;
+        const day = parseInt(m[3], 10);
+        if (!(month >= 0 && month < 12) || !(day >= 1)) return '';
+        const part = day <= 10 ? 'early' : (day <= 20 ? 'mid' : 'late');
+        return `${part} ${MONTHS[month]}`;
+    }
+
+    // "beating the 426s goal" or "with a 93% goal". The number and its goal
+    // stand on their own, so a climb never reads as the goal being met.
+    function goalPhrase(entry) {
+        if (!entry.targetText) return '';
+        if (entry.meetsTarget === true) return `, beating the ${entry.targetText} goal`;
+        return `, with ${withArticle(entry.targetText)} goal`;
     }
 
     // The shapes a position takes on its way into a sentence. This module
@@ -130,9 +160,8 @@
         if (!list.length) return '';
 
         const lines = list.slice(0, opts.limit || 3).map(e => {
-            const value = e.valueText ? `${e.label} ${e.valueText}` : e.label;
-            const against = e.targetText ? ` against ${withArticle(e.targetText)} target` : '';
-            const bullet = `  • ${value}${against}: ${phraseFor(e.movement, opts.pick)}.`;
+            const number = e.valueText ? `: ${e.valueText} for the year${goalPhrase(e)}.` : '.';
+            const bullet = `  • ${e.label}${number} ${phraseFor(e.movement, opts.pick, opts.since)}`;
             const pace = safePaceText(e.paceText);
             return pace ? `${bullet}\n    ${pace}` : bullet;
         });
@@ -184,11 +213,17 @@
      * they are enough, which they are. Earlier in the year it is months, and
      * December names the month rather than promising time that is gone.
      */
-    function urgencyLine(date) {
+    /* weeksLeft, when the caller has it, is the count the pace sentences and
+     * the Pace page use (futures, from the YTD file's closing date). Counting
+     * again from today put "Nine weeks at 91.1%" and "About 8 weeks left" in
+     * the same message (2026-11-03). One count, everywhere.
+     */
+    function urgencyLine(date, weeksLeft) {
         const when = date instanceof Date ? date : new Date();
         const left = monthsLeftInYear(when);
         if (left <= 0) return 'December is the last stretch of the year, and every call in it still counts.';
-        const weeks = weeksLeftInYear(when);
+        const given = Number(weeksLeft);
+        const weeks = Number.isFinite(given) && given > 0 ? Math.round(given) : weeksLeftInYear(when);
         if (weeks <= 16) return `About ${weeks} weeks left in the year. That is real time to move any of these, and I'm here to help.`;
         return `${left} months left in the year, so there is time to move this.`;
     }
@@ -235,12 +270,15 @@
         const current = rowFor(keys[keys.length - 1]);
         if (!earlier || !current) return null;
 
+        const earlierEnd = ytd[keys[0]]?.metadata?.endDate || (keys[0].includes('|') ? keys[0].split('|')[1] : keys[0]);
         return {
             earlier: earlier.row.metricRanks || {},
             current: current.row.metricRanks || {},
             fieldSize: current.fieldSize,
             earlierKey: keys[0],
-            currentKey: keys[keys.length - 1]
+            currentKey: keys[keys.length - 1],
+            // What the movement is measured since, in words ("late September").
+            since: sinceText(earlierEnd)
         };
     }
 
@@ -251,6 +289,7 @@
         PHRASES,
         classifyMovement,
         phraseFor,
+        sinceText,
         safePaceText,
         buildYearStandingText,
         monthsLeftInYear,

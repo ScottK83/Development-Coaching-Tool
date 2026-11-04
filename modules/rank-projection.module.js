@@ -451,8 +451,10 @@
     /**
      * The same story with the door taken out.
      *
-     *   "Four weeks at 96.0% brings the year to 92.4%. Six gets you over the
-     *    line and it stays over."
+     *   "Four weeks at 96% brings the year to 92.4%. Hold it for six weeks and
+     *    the year clears the 93% goal."
+     *   "Average 96% for the rest of the year and the year ends at 93%, right
+     *    on the goal."
      *
      * For every message where a placing is off the table: nothing in here names
      * a position, an ordinal, a peer count or a rank, and the tests hold it to
@@ -483,27 +485,51 @@
         if (!isBetterThan(projected, current, reverse)) return '';
 
         const noun = periodNounFrom(opts);
+        const target = num(opts.target);
+        const goalText = target === null ? '' : fmt(registryKey, target);
+
+        /* The stretch is the whole rest of the year when the caller says how
+         * long the rest of the year is and the stretch covers it. Said as "the
+         * rest of the year", not as a count: "Nine weeks at 91.1%" sat in the
+         * same message as "About 8 weeks left in the year", and the Pace page
+         * said 9 (many hats review, 2026-11-03). The weeks are counted once,
+         * in the line under the block.
+         */
+        const rest = wholeAtLeastOne(opts.maxPeriods);
+        if (rest !== null && periods >= rest) {
+            const lands = fmt(registryKey, projected);
+            let line = 'Average ' + fmt(registryKey, assumed) + ' for the rest of the year and the year ends at ' + lands;
+            if (target !== null && hasReached(projected, target, reverse)) {
+                line += lands === goalText ? ', right on the goal.' : ', past the ' + goalText + ' goal.';
+            } else {
+                line += '.';
+            }
+            return line;
+        }
+
         const opening = countWord(periods) + ' ' + pluralNoun(noun, periods) + ' at ' + fmt(registryKey, assumed)
             + ' brings the year to ' + fmt(registryKey, projected) + '.';
-
-        const target = num(opts.target);
         if (target === null) return opening;
 
-        // Already over by the end of the stretch being described. Holding is
-        // safe to promise here: a projection that crossed the target while
-        // improving can only have come from an assumed value better than the
-        // target, so more of the same keeps it there.
+        // Already over by the end of the stretch being described. A projection
+        // that crossed the target while improving can only have come from an
+        // assumed value better than the target, so more of the same keeps it
+        // there, and that needs no second sentence to say. "That is over the
+        // line, and holding it keeps it there" was hard to follow.
         if (hasReached(projected, target, reverse)) {
-            return opening + ' That is over the line, and holding it keeps it there.';
+            return opening + ' That clears the ' + goalText + ' goal.';
         }
         if (!isBetterThan(assumed, target, reverse)) return opening;
 
-        const cap = wholeAtLeastOne(opts.maxPeriods) || DEFAULT_MAX_PERIODS;
+        const cap = rest || DEFAULT_MAX_PERIODS;
         const needed = wholeAtLeastOne(opts.periodsToTarget)
             || periodsToCrossFromProjection(current, assumed, projected, periods, target, cap);
         if (needed === null || needed <= periods) return opening;
 
-        return opening + ' ' + countWord(needed) + ' gets you over the line and it stays over.';
+        const howLong = rest !== null && needed >= rest
+            ? 'the rest of the year'
+            : countWord(needed).toLowerCase() + ' ' + pluralNoun(noun, needed);
+        return opening + ' Hold it for ' + howLong + ' and the year clears the ' + goalText + ' goal.';
     };
 
     window.DevCoachModules = window.DevCoachModules || {};

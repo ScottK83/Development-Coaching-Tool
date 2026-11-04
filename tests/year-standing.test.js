@@ -28,8 +28,24 @@ suite('year standing: direction, never a position', (t) => {
     t.check('nobody is called top anything', !/top \d/i.test(text));
     t.check('the word rank never appears', !/\brank(ed|ing)?\b/i.test(text));
 
-    t.check('but the direction is unmistakable', text.indexOf('gaining ground') > -1);
-    t.check('and so is the wrong direction', /lost (a little|a bit of) ground|losing ground/.test(text));
+    t.check('but the direction is unmistakable', text.indexOf('has been climbing') > -1);
+    t.check('and so is the wrong direction', /slipped a little|lost a few places/.test(text));
+
+    // The number and its goal are said on their own, then the movement as a
+    // sentence of its own (many hats review, 2026-11-03). Run together with a
+    // colon, "651s against a 426s target: you have been climbing past people"
+    // read as praise for a number nowhere near its goal.
+    const apart = ys.buildYearStandingText([
+        { label: 'Average Handle Time', valueText: '651s', targetText: '426s', meetsTarget: false, movement: 'gaining' }
+    ], { since: 'late September' });
+    t.equal('the number, the goal, then the move with its real window', apart.split('\n')[1],
+        '  • Average Handle Time: 651s for the year, with a 426s goal. Your place in the Call Center has been climbing since late September.');
+    const beat = ys.buildYearStandingText([
+        { label: 'First Call Resolution', valueText: '78.4%', targetText: '73%', meetsTarget: true, movement: 'gaining' }
+    ], { since: 'late September' });
+    t.check('a goal that is met is said as beaten', beat.indexOf('78.4% for the year, beating the 73% goal.') > -1);
+    t.check('no "floor" slang', !/floor/i.test(apart + beat + text));
+    t.check('no "very winnable back"', !/winnable/i.test(text));
 });
 
 suite('year standing: a slip never says anybody is passing them', (t) => {
@@ -42,7 +58,7 @@ suite('year standing: a slip never says anybody is passing them', (t) => {
         { pick: (pool) => pool[i % pool.length] }));
     lines.forEach((text, i) => {
         t.check('line ' + i + ': no one passing them', !/passing you|ahead of you|moving ahead|passed you|behind (them|others)/i.test(text));
-        t.check('line ' + i + ': said as winnable', /win(nable)? (it )?back|turn it around/.test(text));
+        t.check('line ' + i + ': said as something to win back', /win (it|them) back/.test(text));
     });
 });
 
@@ -127,7 +143,16 @@ suite('year standing: the urgency is real, not invented', (t) => {
 
     // The article: "against a 82% target" read like nobody proofread it.
     const an = ys.buildYearStandingText([{ label: 'Rep Satisfaction', valueText: '88.5%', targetText: '82%', movement: 'gaining' }]);
-    t.check('an 82% target', an.indexOf('against an 82% target') > -1);
+    t.check('an 82% goal', an.indexOf('with an 82% goal') > -1);
+
+    // The weeks left are the Pace page's count when the caller has it, so a
+    // message never says "Nine weeks at 91.1%" over "About 8 weeks left".
+    t.check('the caller\'s week count wins', ys.urgencyLine(new Date(2026, 10, 4), 9).indexOf('About 9 weeks left') === 0);
+    t.check('and today\'s count is the fallback', ys.urgencyLine(new Date(2026, 10, 4)).indexOf('About 8 weeks left') === 0);
+    t.equal('the window in words', ys.sinceText('2026-09-22'), 'late September');
+    t.equal('early in a month', ys.sinceText('2026-10-04'), 'early October');
+    t.equal('the middle of one', ys.sinceText('2026-10-15'), 'mid October');
+    t.equal('and nothing from nothing', ys.sinceText(''), '');
     t.check('no emoji on the heading', an.indexOf('Where the year stands') === 0);
 });
 

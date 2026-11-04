@@ -26,7 +26,7 @@ const REGISTRY = {
 // two emojis a message, the opener's and the sign-off's).
 const PLAIN =
     'Where the year stands\n'
-    + '  • Schedule Adherence 91.2% against a 93% target: you have lost a little ground on this one, and it is very winnable back.';
+    + '  • Schedule Adherence: 91.2% for the year, with a 93% goal. Your place in the Call Center has slipped a little since the start of the year, and there is time to win it back.';
 
 function load(t, withProjection) {
     t.installFakeBrowser();
@@ -78,7 +78,7 @@ suite('year standing pace: the answer a direction cannot give', (t) => {
 
     const text = ys.buildYearStandingText([entry({ paceText: pace })]);
 
-    t.check('the direction still leads', text.indexOf('lost a little ground') > -1);
+    t.check('the direction still leads', text.indexOf('slipped a little') > -1);
     t.check('and the number they know is still there', text.indexOf('91.2%') > -1);
     t.check('the pace line follows it', text.indexOf(pace) > -1);
     t.check('indented under the bullet, not beside it', text.indexOf(`.\n    ${pace}`) > -1);
@@ -86,7 +86,8 @@ suite('year standing pace: the answer a direction cannot give', (t) => {
 
     // The pace sentence is the one part of this block that names a number
     // nobody has hit yet, so it has to name what buys it.
-    t.check('it says what holding the number does to the year', text.indexOf('brings the year to') > -1);
+    t.check('it says what holding the number does to the year',
+        text.indexOf('for the rest of the year and the year ends at') > -1);
 
     checkPlacingFree(t, 'a rendered pace line', text);
 });
@@ -111,7 +112,9 @@ suite('year standing pace: a month of work, and the whole year of it', (t) => {
     });
 
     t.check('four weeks is spelled as a word', pace.indexOf('Four weeks') === 0);
-    t.check('and the real count is named', pace.indexOf('over the line') > -1);
+    // The crossing lands at the year end, so it is said as "the rest of the
+    // year" rather than as a second count of weeks (2026-11-03).
+    t.check('and what it takes is named', pace.indexOf('Hold it for the rest of the year') > -1);
 
     const text = ys.buildYearStandingText([entry({ paceText: pace })]);
     checkPlacingFree(t, 'the near-term pace line', text);

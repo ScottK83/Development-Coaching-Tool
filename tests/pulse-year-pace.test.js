@@ -177,7 +177,9 @@ suite('pulse year pace: the message quotes the number on the table', (t) => {
     t.check('the message says something', pace.length > 0);
     t.check('and it is the table\'s number, formatted the same way',
         pace.indexOf(display('scheduleAdherence', required)) > -1);
-    t.check('over the weeks the year actually has left', pace.indexOf('22 weeks') > -1);
+    // Said as the rest of the year; the count itself is the urgency line's,
+    // and it is the same 22 the ask was worked out over.
+    t.check('over the weeks the year actually has left', pace.indexOf('for the rest of the year') > -1);
 
     // What the file count would have printed instead. Both halves are wrong and
     // both halves are wrong in the associate's favour, which is why neither was
@@ -190,7 +192,7 @@ suite('pulse year pace: the message quotes the number on the table', (t) => {
     // The whole sentence, so that a change to the copy has to be made on purpose.
     t.equal('the line as it lands',
         pace,
-        '22 weeks at 95.5% brings the year to 93.0%. That is over the line, and holding it keeps it there.');
+        'Average 95.5% for the rest of the year and the year ends at 93.0%, right on the goal.');
 });
 
 suite('pulse year pace: an ask nobody has ever posted stays unsaid', (t) => {

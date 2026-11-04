@@ -2870,7 +2870,14 @@
         // second full YTD analysis pass per associate on a bulk generate. The
         // block is told whether a focus is already set, because one "losing
         // ground" line is plenty under a focus that is asking for work.
-        const yearBlock = buildYearStandingBlock(employeeName, allMetrics, ytdMap, { hasFocus: !!focalPoint });
+        // "Where the year stands" goes in the first Monday or Tuesday message
+        // of the month (options.yearBlock false for the rest). The same year
+        // lines every week were the longest part of a message that already
+        // carried the week's numbers.
+        const yearBlock = options?.yearBlock === false
+            ? ''
+            : buildYearStandingBlock(employeeName, allMetrics, ytdMap, { hasFocus: !!focalPoint });
+        if (focalPoint && options?.spoken instanceof Set) options.spoken.add(focalPoint.metricKey);
         // No options at all is the standalone kickoff button, which is Monday
         // and does open the week. An explicit empty day word is a caller
         // saying there is no day to name, which is different from not saying.
@@ -2937,10 +2944,10 @@
         return polish(message);
     }
 
-    // Three bullets is as much of a standings block as a Monday message can
-    // carry before it stops being read, and two pace sentences under them is
-    // as much arithmetic as still reads like coaching.
-    const YEAR_STANDING_LIMIT = 3;
+    // Two bullets, once a month (many hats review, 2026-11-03: the Monday
+    // message had grown to five sections), and two pace sentences under them
+    // is as much arithmetic as still reads like coaching.
+    const YEAR_STANDING_LIMIT = 2;
     const YEAR_PACE_LINES = 2;
 
     // The near-term stretch a pace sentence describes first. Four weeks is a
@@ -3265,6 +3272,9 @@
                 label: window.METRICS_REGISTRY?.[metricKey]?.label || metricKey,
                 valueText: year ? fmtVal(year) : '',
                 targetText: year ? fmtTarget(year) : '',
+                // Said beside the number, so a climb on a metric still short
+                // of its goal never reads as the goal being met.
+                meetsTarget: year ? year.meetsTarget === true : null,
                 movement: move
             });
         });
@@ -3281,10 +3291,14 @@
         // Only the lines that will actually be printed are worth the work.
         attachYearPace(entries.slice(0, YEAR_STANDING_LIMIT), employeeName, ytdMap);
 
+        // The weeks left are the Pace page's count, the same one the pace
+        // sentences use, so the message never names two.
+        const weeksLeft = yearPaceWeekInfo()?.weeksRemaining;
         return standing.buildYearStandingText(entries, {
             limit: YEAR_STANDING_LIMIT,
             pick,
-            closer: standing.urgencyLine(new Date())
+            since: movement.since || '',
+            closer: standing.urgencyLine(new Date(), weeksLeft)
         });
     }
 
@@ -3335,9 +3349,11 @@
        "drops out on its own" is exactly the kind of property a later edit
        removes without noticing it was load bearing. */
 
-    // Three metrics is a standings block. Six is a spreadsheet, and a
-    // spreadsheet in a direct message does not get read.
-    const STANDINGS_LIMIT = 3;
+    // Two metrics is a standings block. Three made the message about 1,600
+    // characters in five sections, with the same numbers said two or three
+    // times (many hats review, 2026-11-03). The plan's shape: praise, one
+    // focus, two standings bullets.
+    const STANDINGS_LIMIT = 2;
 
     // Below this a "gain" is noise in somebody else's week rather than movement
     // in this one. Two places is the smallest move worth putting a name to.
@@ -3657,7 +3673,11 @@
      * associate who gets no block gets the message exactly as it read before
      * any of this existed, which is the failure everybody can live with.
      */
-    function buildStandingsBlock(employeeName, periodKey, spokenFor) {
+    function buildStandingsBlock(employeeName, periodKey, spokenFor, options) {
+        // The metric the message's focus already asked them to work on. Said
+        // a second time down here, with its placing, it was the same number
+        // three times in one message.
+        const skipRankKeys = new Set((options && options.skipRankKeys) || []);
         const ranking = window.DevCoachModules?.centerRanking;
         const rp = window.DevCoachModules?.rankProjection;
         if (!ranking?.buildRankingsForPeriod || !rp?.projectRank || !rp?.isProjectable) return '';
@@ -3687,6 +3707,7 @@
         // STANDINGS_METRICS for why the two lists are deliberately different.
         STANDINGS_METRICS.forEach(rankKey => {
             if (STANDINGS_NEVER.has(rankKey)) return;
+            if (skipRankKeys.has(rankKey)) return;
             if (!(rp.PROJECTABLE_RANK_KEYS || []).includes(rankKey)) return;
             const registryKey = rp.registryKeyFor(rankKey);
             if (!registryKey || STANDINGS_NEVER.has(registryKey)) return;
@@ -3836,6 +3857,14 @@
          * number the milestone line then asks them to move, so the two sit
          * together instead of a paragraph apart.
          */
+        // One "what one step would have done" line per block, on the bullet
+        // where the step moves the most. Every bullet ending in the same
+        // "Add 1 point. At X% you would have finished about N places higher"
+        // read as a form (2026-11-03).
+        const withMilestone = chosen
+            .filter(c => c.milestone)
+            .sort((a, b) => b.milestone.gain - a.milestone.gain)[0] || null;
+
         const lines = chosen.map(c => {
             // The placing without the size of the field behind it. Both fields
             // are still what the rank was counted over, and the minimums above
@@ -3853,7 +3882,7 @@
             const where = [center, team].filter(Boolean).join(', ');
             const bullet = '  • ' + c.label + ': ' + fmtVal(c.registryKey, c.current)
                 + (where ? '\n      ' + where.charAt(0).toUpperCase() + where.slice(1) + '.' : '');
-            return c.milestone ? bullet + '\n      ' + c.milestone.text : bullet;
+            return c === withMilestone ? bullet + '\n      ' + c.milestone.text : bullet;
         });
 
         // No caveat under the milestones. Each one is already worded as a
@@ -3879,9 +3908,9 @@
     // Appended to a one-to-one message and nowhere else. The seam is here on
     // purpose: one function decides the block is private, and a channel post or
     // a shout-out stays clear of it by not calling this.
-    function withStandings(message, employeeName, periodKey, spokenFor) {
+    function withStandings(message, employeeName, periodKey, spokenFor, options) {
         if (!message) return message;
-        const block = buildStandingsBlock(employeeName, periodKey, spokenFor);
+        const block = buildStandingsBlock(employeeName, periodKey, spokenFor, options);
         // Above the sign-off, so the message still ends on it.
         return block ? beforeSignOff(message, block) : message;
     }
@@ -5245,6 +5274,38 @@
         return null;
     }
 
+    // Registry keys to the rank keys the standings block counts in.
+    function rankKeysFor(registryKeys) {
+        const map = window.DevCoachModules?.rankProjection?.RANK_TO_REGISTRY || {};
+        const out = [];
+        (registryKeys || new Set()).forEach(key => {
+            Object.keys(map).forEach(rankKey => { if (map[rankKey] === key) out.push(rankKey); });
+        });
+        return out;
+    }
+
+    /**
+     * Whether this associate has already been sent a Monday or Tuesday
+     * message this calendar month. Those are the messages that carry "Where
+     * the year stands", so the first one of the month carries it and the rest
+     * leave it out. Read from the same send log the ticks write, so it holds
+     * across computers and reloads. No log, no way to know: the block goes in.
+     */
+    function yearBlockSentThisMonth(outreach, employeeName, now) {
+        if (!outreach?.loadSentLog) return false;
+        const when = now instanceof Date ? now : new Date();
+        const log = outreach.loadSentLog() || {};
+        return Object.keys(log).some(key => {
+            const entry = log[key];
+            if (!entry || entry.employee !== employeeName) return false;
+            if (entry.plan !== 'monday' && entry.plan !== 'tuesday') return false;
+            const at = new Date(entry.at);
+            return !Number.isNaN(at.getTime())
+                && at.getFullYear() === when.getFullYear()
+                && at.getMonth() === when.getMonth();
+        });
+    }
+
     // The one-to-one message as both private surfaces get it. The team note
     // goes in after the standings and near-miss tails: it is the manager's
     // own paragraph, and those are about this person's numbers. All three sit
@@ -5277,8 +5338,14 @@
         // so the two tails cannot both name the same metric with placings
         // counted over different fields.
         const spokenFor = new Set();
-        const finish = (text) =>
-            withNearMiss(withStandings(text, employeeName, latestKey, spokenFor), employeeName, latestKey, spokenFor);
+        // Registry keys the body's focus already named, handed to the
+        // standings block so it does not say them again.
+        const focusKeys = new Set();
+        const finish = (text) => {
+            const skipRankKeys = rankKeysFor(focusKeys);
+            skipRankKeys.forEach(k => spokenFor.add(k));
+            return withNearMiss(withStandings(text, employeeName, latestKey, spokenFor, { skipRankKeys }), employeeName, latestKey, spokenFor);
+        };
 
         const latestIsThisWeek = latestKeyCoversThisWeek(outreach, latestKey);
 
@@ -5316,6 +5383,8 @@
             base = await generateMondayKickoffMessage(employeeName, latestKey, baselineKey, {
                 dayWord: dayWordFor(plan),
                 startsTheWeek,
+                yearBlock: !yearBlockSentThisMonth(outreach, employeeName),
+                spoken: focusKeys,
                 // Friday under a month or a year window lands here too, and on a
                 // Friday the week the plan is for is the next one.
                 ahead: plan.id === 'friday' ? 'next week' : 'this week',
@@ -5809,6 +5878,7 @@
         // Exported so the rule that the two tails never name the same metric
         // twice can be asserted rather than reasoned about.
         withNearMiss,
+        yearBlockSentThisMonth,
         // The team note, shared by the private round and the one-person
         // post, which both write through buildOutreachMessage.
         loadTeamNote,

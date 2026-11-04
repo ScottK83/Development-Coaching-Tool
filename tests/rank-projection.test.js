@@ -312,8 +312,9 @@ suite('rank projection: the pace clause never leaks a placing', (t) => {
 
     t.check('the pace is stated', clause.indexOf('Four weeks at 96.0%') > -1);
     t.check('and where it lands', clause.indexOf('brings the year to 92.6%') > -1);
-    t.check('and what it takes to clear the target', clause.indexOf('Six gets you over the line') > -1);
-    t.check('and that it has to be held', clause.indexOf('stays over') > -1);
+    t.check('and what it takes to clear the target',
+        clause.indexOf('Hold it for six weeks and the year clears the 93.0% goal.') > -1);
+    t.check('in plain words, not "over the line"', clause.indexOf('over the line') === -1);
 
     // The same guards the year standing copy is held to. A number that invites
     // somebody to compare themselves to a colleague has no business in a
@@ -350,8 +351,8 @@ suite('rank projection: the pace clause drops what it cannot support', (t) => {
         rankKey: 'adherence', currentValue: 91.2, target: 93, assumedValue: 96,
         projectedValue: 93.5, periods: 8
     });
-    t.check('a pace that already clears says so', over.indexOf('That is over the line') > -1);
-    t.check('and still asks them to hold it', over.indexOf('keeps it there') > -1);
+    t.check('a pace that already clears says so', over.indexOf('That clears the 93.0% goal.') > -1);
+    t.check('without a second count of weeks', !/Hold it for/.test(over));
     t.check('no em dash reaches an associate', over.indexOf('—') === -1);
 
     // An assumption that never crosses the target gets the pace and no promise.
@@ -360,7 +361,7 @@ suite('rank projection: the pace clause drops what it cannot support', (t) => {
         projectedValue: 91.7, periods: 4
     });
     t.check('a pace that cannot reach the target names no finish line',
-        short.indexOf('over the line') === -1);
+        short.indexOf('clears the') === -1);
     t.check('but it still reports where the pace lands', short.indexOf('brings the year to') > -1);
 
     // Sideways is not progress and must not be written as though it were.
@@ -379,7 +380,30 @@ suite('rank projection: the pace clause drops what it cannot support', (t) => {
         projectedValue: 605, periods: 4
     });
     t.check('a falling handle time counts as progress', fast.indexOf('brings the year to 605 sec') > -1);
-    t.check('and its own target is reachable from here', fast.indexOf('Six gets you over the line') > -1);
+    t.check('and its own target is reachable from here',
+        fast.indexOf('Hold it for six weeks and the year clears the 600 sec goal.') > -1);
+
+    // Told how long the rest of the year is, a stretch that covers it is said
+    // as "the rest of the year", not as a count of weeks. The weeks are
+    // counted once, in the line under the block (many hats review, 2026-11-03).
+    const rest = rp.buildPaceClause({
+        rankKey: 'adherence', currentValue: 72, target: 75, assumedValue: 91.1,
+        projectedValue: 75, periods: 9, maxPeriods: 9
+    });
+    t.equal('the rest of the year, right on the goal', rest,
+        'Average 91.1% for the rest of the year and the year ends at 75.0%, right on the goal.');
+    const past = rp.buildPaceClause({
+        rankKey: 'adherence', currentValue: 72, target: 75, assumedValue: 91.1,
+        projectedValue: 75.6, periods: 9, maxPeriods: 9
+    });
+    t.check('past the goal says by how much it lands', past.indexOf('ends at 75.6%, past the 75.0% goal.') > -1);
+    const fourOfNine = rp.buildPaceClause({
+        rankKey: 'adherence', currentValue: 91.2, target: 93, assumedValue: 96,
+        projectedValue: rp.projectValue(91.2, 4000, 96, 1600), periods: 4, periodsToTarget: 9, maxPeriods: 9
+    });
+    t.check('a crossing at the year end is "the rest of the year"',
+        fourOfNine.indexOf('Hold it for the rest of the year and the year clears the 93.0% goal.') > -1);
+    t.check('so the only count in it is the stretch itself', !/\bNine\b|\b9 weeks/.test(fourOfNine));
 
     t.equal('reliability never gets a pace clause', rp.buildPaceClause({
         rankKey: 'reliability', currentValue: 6, target: 4, assumedValue: 0,
