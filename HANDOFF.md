@@ -1,9 +1,34 @@
 # Handoff
 
-Last updated 2026-11-03, version 2026.11.03.3, suite at 10072 passing.
+Last updated 2026-11-04, version 2026.11.04.3, suite at 10244 passing.
 
 ## Where things stand
-- **Many hats plan approved 2026-11-03.** Phases 1 to 3 are done and live (v2026.11.03.6). The worker part of Phase 3 waits on Scott's deploy from home; the steps are in TASKS. Next is Phase 4, message shape, then Phase 5, supervisor pages.
+- **Mental health check-in (Scott, 2026-11-04: "a message where I copy and paste to each of them"), live in v2026.11.04.1.**
+  - **Where:** Today > Day with the whole team picked, the fourth card (`modules/checkin-round.module.js`).
+  - **How it works:**
+    - Scott writes one message, and `{first}` becomes each person's first name (a preferred name wins).
+    - There are four starters with no numbers in them.
+    - Copy is the send and ticks the person off, the same as the High five round.
+    - The words are synced (`devCoachingTool_checkinRound`).
+    - The ticks go in the outreach send log under plan `checkinround`, keyed by round. "Start a new round" starts the list over.
+  - **Tests:** `tests/checkin-round.test.js`. It was also clicked through in headless Chrome on made-up data.
+- **Many hats plan: all five phases done.**
+  - **Phases 1 to 3:** live in v2026.11.03.6. The worker part of Phase 3 waits on Scott's deploy from home; the steps are in TASKS.
+  - **Phase 4, message shape (v2026.11.04.2):**
+    - "Where the year stands" says the number and the goal, then the movement since the oldest of this year's YTD files ("since late September").
+    - There is one count of weeks left (futures). The pace line says "for the rest of the year" instead of a second count.
+    - Two standings bullets and one milestone line. The focus metric is not repeated.
+    - The year block goes only in the first Monday or Tuesday message of the month, read from the send log (`yearBlockSentThisMonth`).
+  - **Phase 5, supervisor pages (v2026.11.04.3):**
+    - Intelligence reads the YTD file.
+    - Year to date uses the Today page's badge split (`morningPulse.getStatusBadge`) and names roster members missing from the file.
+    - No PTO balance is shown with nothing on file.
+    - Pace says "Out of reach this year" when the ask is past the best week in the center.
+    - Numbers gives the gap in seconds or points.
+    - Quarterly says "above" or "under" the goal, and reliability has no place movement.
+    - "Who didn't make it" uses the 3-survey floor.
+    - Snapshot opens on last week.
+  - **Not done:** the real-data check of Phase 4. The R2 download was blocked by Claude's permission check on 11/04 (see TASKS).
   - **Phase 3 notes:**
     - Sync Now keeps the regression guard on, and going backwards takes two answers.
     - `storage.getLastSaveRefusal(key)` gives the reason a save was refused, and `notifyStorageSaveFailed(label, key)` words the message from it.

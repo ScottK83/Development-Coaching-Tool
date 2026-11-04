@@ -9,10 +9,16 @@
   3. Data safety. **Code done 11/03** (v2026.11.03.5 and .6): X1, X7, X8, X9, X10, X11 warning, X12. Still owed:
      - **Scott: deploy the worker from the home PC** (it carries the 9/23 secret change and the new empty-store guard). Steps are below.
      - X11 size: `latest.json` is about 6.2 MB and still growing. Trimming the daily archive or the old transcripts is Scott's call, so it's not done.
-  4. Message shape. Scott didn't answer question 3, so the plan's shape is the default: praise, one focus, two standings bullets, "Where the year stands" once a month.
-  5. Supervisor pages. Attendance (question 4) unanswered: default is an honest empty state, never "120h remaining" with no data, and no restore.
+  4. Message shape. **Done 11/04** (v2026.11.04.2): A2, A4, A3 with the plan's default shape (Scott didn't answer question 3). Still owed:
+     - Check it on Scott's real data in the sealed copy. The R2 download was blocked by Claude's permission check on 11/04, so only made-up data was used. Scott can allow it, or read a real Monday and Tuesday round himself.
+     - Possible trim: the year block can still name the focus metric (with its year number and direction). Not changed.
+  5. Supervisor pages. **Done 11/04** (v2026.11.04.3): S2, S3, S5 (honest empty state, no restore, because question 4 is unanswered), S6, S7, S8, S9, S10.
 
   Still unanswered: question 5 (blank transfer rate with calls stays blank) and 6 (Copilot account, Scott's to check). The site stays public for now.
+- **Mental health check-in (Scott, 11/04), done in v2026.11.04.1.** It's on Today > Day with the whole team picked, beside the High five round. Ideas, not built:
+  - A "Replied" tick.
+  - Scott's own starter text (an EAP line, for example), which he can type and it is saved.
+  - Mental health notes are sensitive, so nothing about replies is stored.
 - **Idea, not started (Scott, 11/03): pull the numbers straight from Power BI instead of pasting.** Needs APS IT: an app registration in the APS Microsoft tenant, the Power BI admin setting that allows dataset queries, and Build rights on the dataset. See the 11/03 answer in HANDOFF.
 - **QA notes still public, Scott to finish (2026-10-27).** The `QA coaching` file is gone from main. Checked 2026-11-03: the main URL now returns the app, but the old deploy's own address still serves the notes.
   - Delete the Cloudflare Pages deploy `5944fe50` (commit 9d9977a). Two ways:
@@ -55,6 +61,7 @@
   This deploy carries the 9/23 secret change and the 11/03 empty-store guard. See memory: project_worker_auth_deploy.
 
 ## Done recently
+- 2026-11-04: mental health check-in round (v2026.11.04.1), many hats Phase 4 message shape (.2) and Phase 5 supervisor pages (.3). Suite at 10244 passing. Checked in headless Chrome on made-up data.
 - 2026-10-27: QA Coaching tab under People > Follow Up. It reads a Verint paste and gives the email (no score), a Copilot prompt, Copy For Verint, and Sent/Read tracking. 60 new checks; the suite is at 9990.
 - 2026-10-26: deep dive plan, all six phases, from v2026.10.26.2 to .8. Tests at 9918 passing.
   - A: the call reader's 8 misreads fixed.
