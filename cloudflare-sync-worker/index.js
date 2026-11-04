@@ -210,6 +210,30 @@ export default {
         const currentObj = await env.COACHING_BUCKET.get(V2_MANIFEST_KEY);
         const current = await currentObj.json();
 
+        // A store that has data is never emptied by a commit unless the client
+        // says it emptied it on purpose. A browser whose copy loaded empty, a
+        // fresh profile or a database that failed to open, could otherwise
+        // send {} over the real thing (2026-11-03). Delete-all has its own
+        // mode and is not affected.
+        const allowEmpty = new Set(Array.isArray(body?.allowEmpty) ? body.allowEmpty.map(String) : []);
+        const emptied = [];
+        for (const [shardName, hash] of Object.entries(changed)) {
+          const liveHash = (current.shards || {})[shardName];
+          if (!hash || !liveHash || liveHash === hash || shardName.startsWith('conflicts/') || allowEmpty.has(shardName)) continue;
+          const incoming = await env.COACHING_BUCKET.head(`${V2_OBJECTS_PREFIX}${hash}.json`);
+          if (!incoming || incoming.size > 2) continue;
+          const live = await env.COACHING_BUCKET.head(`${V2_OBJECTS_PREFIX}${liveHash}.json`);
+          if (live && live.size > 2) emptied.push(shardName);
+        }
+        if (emptied.length) {
+          return json({
+            ok: false,
+            code: 'EMPTIED_STORE_GUARD',
+            error: `Refusing to empty ${emptied.join(', ')}: the cloud copy has data and this computer's copy is empty. Reload to pull it, or empty it on purpose from this computer.`,
+            stores: emptied
+          }, 409, cors);
+        }
+
         // The delta is applied onto CURRENT, not onto whatever the client last
         // saw. A shard the client did not name keeps the live value.
         const nextShards = { ...(current.shards || {}) };

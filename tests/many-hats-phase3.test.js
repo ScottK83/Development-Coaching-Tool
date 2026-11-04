@@ -108,3 +108,34 @@ suite('many hats X1: a pull warns the app\'s other tabs', (t) => {
     const apply = between(storage, 'function applyRemoteStore(key, value)', 'function isStoreStale');
     t.check('a pulled store is announced like a local save', /announceWriteToOtherTabs\(key\)/.test(apply));
 });
+
+suite('many hats X10: a contest save changes its own day on the latest month', (t) => {
+    const ui = read('modules/contest-ui.module.js');
+    const save = between(ui, 'async function saveDay', '\n    }\n');
+    const fetchAt = save.indexOf('month = await fetchMonth(monthKey)');
+    const dayAt = save.indexOf('const day = Object.assign({}, month.days[date] || {})');
+    const pushAt = save.indexOf('await pushMonth(monthKey, month)');
+    // Two panels each sent back the month as they had loaded it, and the
+    // second wiped the first one's days.
+    t.check('the month is read fresh before the day is built', fetchAt > -1 && fetchAt < dayAt);
+    t.check('and that fresh month is what is sent', pushAt > dayAt);
+    t.check('a failed read saves nothing', /could not read the latest copy first/.test(save));
+
+    const importer = between(ui, 'async function importFromUploads', '\n    }\n');
+    t.check('the importer merges onto a fresh read too',
+        importer.indexOf('await fetchMonth(monthKey)') > -1
+        && importer.indexOf('await fetchMonth(monthKey)') < importer.indexOf('api.mergeImportIntoMonth(currentMonthData(), preview)'));
+});
+
+suite('many hats X1: an emptying is only sent when it was done here', (t) => {
+    const sync = read('modules/manifest-sync.module.js');
+    t.check('the commit names the stores emptied on purpose', /allowEmpty: deliberatelyEmptied\(changed\)/.test(sync));
+    const helper = between(sync, 'function deliberatelyEmptied', 'async function commitWithRebase');
+    t.check('only stores this computer has synced before count', /if \(!applied\[name\]\) return false;/.test(helper));
+});
+
+suite('many hats X11: a browser without its database is told so up front', (t) => {
+    const script = read('script.js');
+    const boot = between(script, 'function startCloudSyncBackground()', 'storage?.onBackendProblem');
+    t.check('the small storage fallback gets a banner', /getBackendMode\(\) !== 'idb'/.test(boot) && /no longer fits/.test(boot));
+});

@@ -359,6 +359,20 @@
         return next;
     }
 
+    // Stores this computer is sending empty after having synced them before,
+    // which is an emptying done here. The worker refuses to empty a store with
+    // data unless it is named here, so a copy that merely loaded empty, on a
+    // computer that never held this store, cannot wipe the cloud's.
+    function deliberatelyEmptied(changed) {
+        const applied = loadSyncState().applied || {};
+        return Object.keys(changed).filter((name) => {
+            if (!applied[name]) return false;
+            const value = readStoreValue(name);
+            if (Array.isArray(value)) return value.length === 0;
+            return !!value && typeof value === 'object' && Object.keys(value).length === 0;
+        });
+    }
+
     async function commitWithRebase(changedInput, reason) {
         const device = getDeviceId();
         let changed = changedInput;
@@ -407,6 +421,7 @@
                 mode: 'v2.commit',
                 baseEtag,
                 changed,
+                allowEmpty: deliberatelyEmptied(changed),
                 device,
                 reason,
                 appVersion: window.APP_VERSION || null

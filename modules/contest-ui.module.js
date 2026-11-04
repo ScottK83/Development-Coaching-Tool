@@ -386,7 +386,19 @@
         if (busy) return;
 
         const monthKey = monthKeyFor(date);
-        const month = currentMonthData();
+
+        // The month is read again from the cloud right before the save, and
+        // only this day is changed on it. The save sends the whole month, so
+        // two panels open on two computers each sent back the month as they
+        // had loaded it, and the second wiped the days the first had saved
+        // (2026-11-03).
+        let month;
+        try {
+            month = await fetchMonth(monthKey);
+        } catch (error) {
+            if (status) status.textContent = 'Not saved: could not read the latest copy first (' + (error?.message || error) + ').';
+            return;
+        }
 
         // Only the people on screen are rewritten. Anyone stored for this date
         // but not currently listed is left exactly as they were.
@@ -488,6 +500,14 @@
             return;
         }
 
+        // Merged onto the month as it is in the cloud now, not as this panel
+        // last loaded it, for the same reason as saveDay.
+        try {
+            await fetchMonth(monthKey);
+        } catch (error) {
+            say('Nothing was imported: could not read the latest copy first (' + (error?.message || error) + ').');
+            return;
+        }
         var merged = api.mergeImportIntoMonth(currentMonthData(), preview);
         var summary = 'Found ' + preview.counts.adherenceValues + ' adherence '
             + (preview.counts.adherenceValues === 1 ? 'number' : 'numbers')

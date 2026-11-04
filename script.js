@@ -2931,6 +2931,12 @@ function startCloudSyncBackground() {
 
     if (storage?.isBackendUnavailable?.()) {
         showSyncReloadBanner('Your saved data could not be opened in this browser. Changes and sync are paused so nothing older is saved over it. Reload to try again.');
+    } else if (storage?.getBackendMode && storage.getBackendMode() !== 'idb') {
+        // The browser database never opened here, so everything is in the
+        // small local storage area. The data outgrew it in the fall (the cloud
+        // copy is past 6 MB), so saves would start failing as "full"
+        // (2026-11-03). Said once, up front, rather than at the first failure.
+        showSyncReloadBanner('This browser is keeping your data in its small storage area, which your data no longer fits. Use Chrome or Edge in a normal (not private) window, then reload.');
     }
     storage?.onBackendProblem?.((kind, key) => {
         showSyncReloadBanner(kind === 'writeFailed'

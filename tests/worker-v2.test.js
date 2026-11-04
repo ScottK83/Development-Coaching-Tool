@@ -261,3 +261,27 @@ suite('contest: a bad month or payload is refused, not stored', async (t) => {
     t.equal('a payload with no days is refused', noDays.status, 400);
     t.check('and nothing was written', !bucket._objects.has('state/contest/2026-09.json'));
 });
+
+suite('v2: a store with data is not emptied unless the client says so', async (t) => {
+    const bucket = createFakeR2();
+    const full = await putStore(bucket, { w1: { employees: [1, 2] } });
+    await call(bucket, { mode: 'v2.commit', intent: 'create', changed: { weeklyData: full }, device: 'workpc' });
+    const read = await call(bucket, { mode: 'v2.manifest' });
+
+    // A browser whose copy loaded empty sends {} over the real thing.
+    const empty = await putStore(bucket, {});
+    const refused = await call(bucket, { mode: 'v2.commit', baseEtag: read.body.etag, changed: { weeklyData: empty }, device: 'fresh' });
+    t.equal('it is refused', refused.status, 409);
+    t.equal('and says why', refused.body.code, 'EMPTIED_STORE_GUARD');
+    t.check('naming the store', (refused.body.stores || []).indexOf('weeklyData') > -1);
+    const still = await call(bucket, { mode: 'v2.manifest' });
+    t.equal('the live copy is untouched', still.body.manifest.shards.weeklyData, full);
+
+    // Emptied here on purpose: allowed.
+    const allowed = await call(bucket, { mode: 'v2.commit', baseEtag: read.body.etag, changed: { weeklyData: empty }, allowEmpty: ['weeklyData'], device: 'workpc' });
+    t.equal('an emptying named by the client goes through', allowed.status, 200);
+
+    // A store with nothing in it can be written empty again freely.
+    const again = await call(bucket, { mode: 'v2.commit', baseEtag: allowed.body.etag, changed: { weeklyData: await putStore(bucket, []) }, device: 'workpc' });
+    t.equal('empty over empty is fine', again.status, 200);
+});

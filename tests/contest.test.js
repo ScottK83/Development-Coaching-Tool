@@ -342,7 +342,7 @@ suite('contest: editing one team does not wipe the rest of that day', (t) => {
     const { ROOT } = require('./harness');
     const ui = fs.readFileSync(path.join(ROOT, 'modules/contest-ui.module.js'), 'utf8').replace(/\r\n/g, '\n');
     const start = ui.indexOf('async function saveDay');
-    const body = ui.slice(start, start + 3200);
+    const body = ui.slice(start, ui.indexOf('\n    }\n', start));
 
     // A day is revisited days later to add surveys that arrived late. If that
     // revisit happens with a different team selected, rebuilding the day from
