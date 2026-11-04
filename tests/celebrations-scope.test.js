@@ -987,11 +987,15 @@ suite('celebrations: the perfect-survey line follows the window', (t) => {
     t.equal('four wordings for several surveys', new Set(many).size, 4);
     t.check('each keeps the count and the period',
         many.every(line => line.indexOf('5') > -1 && line.indexOf('last week') > -1 && /PERFECT/.test(line)));
-    const ones = [0, 1, 2].map(v => celebrations.perfectSurveyLine({ count: 1, periodNoun: 'last week' }, v));
-    t.equal('three for a single survey', new Set(ones).size, 3);
+    // Four of each, so the post's four-step rotation never lands on the
+    // same line twice in a row of four.
+    const ones = [0, 1, 2, 3].map(v => celebrations.perfectSurveyLine({ count: 1, periodNoun: 'last week' }, v));
+    t.equal('four for a single survey', new Set(ones).size, 4);
+    const twos = [0, 1, 2, 3].map(v => celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, v));
+    t.equal('and four for two', new Set(twos).size, 4);
     t.check('none of them says "all 1"', ones.every(line => !/all 1\b/i.test(line)));
     t.check('a variant past the end wraps round',
-        celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, 3) === celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, 0));
+        celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, 4) === celebrations.perfectSurveyLine({ count: 2, periodNoun: 'last week' }, 0));
 });
 
 suite('celebrations: the pools no longer claim a week', (t) => {

@@ -3,7 +3,9 @@
 ## Open
 - **Many hats review (2026-11-03), approved by Scott the same day ("Do the plans. No need to lock the site yet."):** `audit/2026-11-03-many-hats.md`. Five phases:
   1. Wording and small bugs. **Done 11/03** (A1, A5, A6, A7, S1, S4, S11, FCR icon, Copilot spelling, X4, X2).
-  2. The year turnover, before Dec 15. In progress.
+  2. The year turnover. **Done 11/03** (Y1, Y2, X3, X5, X6). Checked on the real data with the clock on Nov 3, Dec 29, Jan 5 and Jan 12. Still owed:
+     - The 2027 targets and bands in `metric-profiles`, once APS publishes them. Until then, 2026's stand and the On/Off legend says so.
+     - Idea: in January the Review Year box opens on the new year, but year-end reviews are about the one before. Not changed.
   3. Data safety.
   4. Message shape. Scott didn't answer question 3, so the plan's shape is the default: praise, one focus, two standings bullets, "Where the year stands" once a month.
   5. Supervisor pages. Attendance (question 4) unanswered: default is an honest empty state, never "120h remaining" with no data, and no restore.

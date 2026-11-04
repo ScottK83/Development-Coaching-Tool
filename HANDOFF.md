@@ -1,9 +1,16 @@
 # Handoff
 
-Last updated 2026-11-03, version 2026.10.27.2, suite at 9990 passing.
+Last updated 2026-11-03, version 2026.11.03.3, suite at 10072 passing.
 
 ## Where things stand
-- **Many hats plan approved 2026-11-03.** Phase 1 is done (see TASKS for the list); Phase 2, the year turnover, is next and must land before Dec 15.
+- **Many hats plan approved 2026-11-03.** Phases 1 and 2 are done and live (v2026.11.03.3 and after). Next is Phase 3, data safety; its worker half needs a deploy from the home PC.
+  - **Real data check, 11/03** (sealed copy, clock on Nov 3, Dec 29, Jan 5, Jan 12):
+    - Tuesday openers: 0 of 15 said "new week" (11 of 15 before).
+    - The private round shows one banner, not one per card.
+    - The team post says "last week" (7 times) and "this week" 0 times.
+    - In January there are no "the year" lines and no year block until a 2027 YTD arrives, and Pace is empty until 2027 uploads exist.
+    - The upload's target year stays on Auto.
+    - The Coach trend email follows the People pick.
   - **Phase 1 notes:**
     - A Tuesday opens like a new week only when Monday was a closed holiday (`dailyOutreach.isClosedHoliday`: New Year, Memorial Day, July 4, Labor Day, Thanksgiving, Christmas, each moved to Monday when it falls on a Sunday).
     - `celebrations.periodNoun` says "this", "last" or "that" week/month/quarter/year from the period's end date.

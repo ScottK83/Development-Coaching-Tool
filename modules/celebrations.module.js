@@ -2046,14 +2046,16 @@
     var PERFECT_ONE = [
         function(when) { return 'PERFECT survey. The one that came in ' + when + ' was flawless!'; },
         function(when) { return 'PERFECT survey ' + when + ', top marks on every question!'; },
-        function(when) { return 'PERFECT marks on the one survey ' + when + '!'; }
+        function(when) { return 'PERFECT marks on the one survey ' + when + '!'; },
+        function(when) { return 'PERFECT survey ' + when + '. Nothing to fix on that one!'; }
     ];
     // "All 2 of them" is how a template counts, not how a person does.
     // Scott, 2026-10-14.
     var PERFECT_TWO = [
         function(when) { return 'PERFECT surveys. Both of them ' + when + ', not one off the mark!'; },
         function(when) { return 'PERFECT surveys ' + when + ', two for two!'; },
-        function(when) { return 'PERFECT marks on both surveys ' + when + '!'; }
+        function(when) { return 'PERFECT marks on both surveys ' + when + '!'; },
+        function(when) { return 'PERFECT surveys ' + when + '. Both of them top marks!'; }
     ];
     var PERFECT_MANY = [
         function(when, n) { return 'PERFECT surveys. All ' + n + ' of them ' + when + ', not one off the mark!'; },
