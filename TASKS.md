@@ -6,7 +6,9 @@
   2. The year turnover. **Done 11/03** (Y1, Y2, X3, X5, X6). Checked on the real data with the clock on Nov 3, Dec 29, Jan 5 and Jan 12. Still owed:
      - The 2027 targets and bands in `metric-profiles`, once APS publishes them. Until then, 2026's stand and the On/Off legend says so.
      - Idea: in January the Review Year box opens on the new year, but year-end reviews are about the one before. Not changed.
-  3. Data safety.
+  3. Data safety. **Code done 11/03** (v2026.11.03.5 and .6): X1, X7, X8, X9, X10, X11 warning, X12. Still owed:
+     - **Scott: deploy the worker from the home PC** (it carries the 9/23 secret change and the new empty-store guard). Steps are below.
+     - X11 size: `latest.json` is about 6.2 MB and still growing. Trimming the daily archive or the old transcripts is Scott's call, so it's not done.
   4. Message shape. Scott didn't answer question 3, so the plan's shape is the default: praise, one focus, two standings bullets, "Where the year stands" once a month.
   5. Supervisor pages. Attendance (question 4) unanswered: default is an honest empty state, never "120h remaining" with no data, and no restore.
 
@@ -43,7 +45,14 @@
   - Kit wishes not built yet: row tints on table rows, a progress meter, a .chip class.
   - baseline/outputs.txt is stale. Regenerate it with `node tests/baseline.js` if it matters. The year-standing entry errors in the baseline because it passes the wrong argument shape; that predates the deep dive.
 - 30-day goal Copilot prompt (script.js `buildTrendAiGoalPrompt`) has no praise and no zero-survey or no-calls check.
-- Worker auth secret needs deploying from the home PC (see memory: project_worker_auth_deploy).
+- **Worker deploy, from the home PC (Scott).** In this order:
+  1. In the app on every computer you use (home and work), open Settings, then Sync & Backup, then Settings, and type the worker's secret into "Sync password (this computer only)".
+  2. In `cloudflare-sync-worker`, run `wrangler secret list` and confirm `SYNC_SHARED_SECRET` is there.
+  3. Check that `wrangler.toml` holds every variable the dashboard has, because a deploy overwrites dashboard vars.
+  4. Run `wrangler deploy`.
+  5. Then on each computer press Sync Now once and check the footer shows no warning.
+
+  This deploy carries the 9/23 secret change and the 11/03 empty-store guard. See memory: project_worker_auth_deploy.
 
 ## Done recently
 - 2026-10-27: QA Coaching tab under People > Follow Up. It reads a Verint paste and gives the email (no score), a Copilot prompt, Copy For Verint, and Sent/Read tracking. 60 new checks; the suite is at 9990.

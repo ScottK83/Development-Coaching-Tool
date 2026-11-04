@@ -3,7 +3,15 @@
 Last updated 2026-11-03, version 2026.11.03.3, suite at 10072 passing.
 
 ## Where things stand
-- **Many hats plan approved 2026-11-03.** Phases 1 and 2 are done and live (v2026.11.03.3 and after). Next is Phase 3, data safety; its worker half needs a deploy from the home PC.
+- **Many hats plan approved 2026-11-03.** Phases 1 to 3 are done and live (v2026.11.03.6). The worker part of Phase 3 waits on Scott's deploy from home; the steps are in TASKS. Next is Phase 4, message shape, then Phase 5, supervisor pages.
+  - **Phase 3 notes:**
+    - Sync Now keeps the regression guard on, and going backwards takes two answers.
+    - `storage.getLastSaveRefusal(key)` gives the reason a save was refused, and `notifyStorageSaveFailed(label, key)` words the message from it.
+    - Pull failures while online are shown (`notePullProblem`).
+    - weeklyData, ytdData and dailyData use the `unionByPeriod` merge.
+    - `applyRemoteStore` warns the app's other tabs.
+    - The contest day save re-reads the month first.
+    - The worker refuses `EMPTIED_STORE_GUARD` unless a store is named in `allowEmpty`.
   - **Real data check, 11/03** (sealed copy, clock on Nov 3, Dec 29, Jan 5, Jan 12):
     - Tuesday openers: 0 of 15 said "new week" (11 of 15 before).
     - The private round shows one banner, not one per card.
