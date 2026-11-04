@@ -121,7 +121,7 @@ suite('sync: pulls go through applyRemoteStore, and a full pull refetches everyt
 suite('sync: the app reloads after a pull and offers a full re-download', (t) => {
     const script = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    t.check('the startup pull is handled, not just toasted', /sync\.pull\(\)\.then\(\(result\) => \{\s*renderCloudSyncStatus\(\);\s*afterCloudPull\(result, 'boot'\)/.test(script));
+    t.check('the startup pull is handled, not just toasted', /sync\.pull\(\)\.then\(\(result\) => \{[\s\S]{0,140}renderCloudSyncStatus\(\);\s*afterCloudPull\(result, 'boot'\)/.test(script));
     t.check('it pulls again when the tab comes back', /visibilitychange[\s\S]{0,200}pullFromOtherMachine\('focus'\)/.test(script));
     t.check('and on a timer', /setInterval\(\(\) => pullFromOtherMachine\('timer'\)/.test(script));
     t.check('the re-download button is on the page', html.indexOf('id="cloudSyncFullPullBtn"') > -1);

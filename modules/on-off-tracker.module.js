@@ -10,6 +10,12 @@
         return window.formatMetricDisplay(key, value);
     }
 
+    // Names come from uploaded files, so they are escaped on the way into HTML.
+    function _esc(value) {
+        return window.DevCoachModules?.sharedUtils?.escapeHtml?.(value) ?? String(value ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function _getYearEndTargetConfig(metricKey, reviewYear, periodMetadata) {
         return window.getYearEndTargetConfig(metricKey, reviewYear, periodMetadata);
     }
@@ -1227,7 +1233,7 @@
             offTrack.forEach(function(r) {
                 var avgText = r.result.ratingAverage !== null ? ' (avg: ' + r.result.ratingAverage.toFixed(2) + ')' : '';
                 html += '<div style="padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9em;">' +
-                    '<span class="tone-bad" style="font-weight: 600;">' + r.firstName + '</span>' + avgText +
+                    '<span class="tone-bad" style="font-weight: 600;">' + _esc(r.firstName) + '</span>' + avgText +
                     (r.offMetrics.length ? ' to <span class="tone-bad">' + r.offMetrics.join(', ') + '</span>' : '') +
                     '</div>';
             });
@@ -1248,7 +1254,7 @@
             if (!group.length) return;
             var calloutTone = count >= 4 ? 'callout-good' : count >= 3 ? 'callout-warn' : 'callout-bad';
             var label = count === 5 ? 'All 5 metrics' : count + ' of 5 metrics';
-            var names = group.map(function(r) { return r.firstName; }).join(', ');
+            var names = group.map(function(r) { return _esc(r.firstName); }).join(', ');
 
             html += '<div class="callout ' + calloutTone + '" style="padding: 10px 14px; margin-bottom: 6px;">' +
                 '<span style="font-weight: 700; font-size: 0.9em;">' + label + '</span>' +
@@ -1336,7 +1342,7 @@
             var avgDisplay = r.result.ratingAverage !== null ? r.result.ratingAverage.toFixed(2) : '--';
 
             html += '<tr style="background: ' + bg + ';">' +
-                '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap;">' + r.firstName + '</td>' +
+                '<td style="padding: 6px 8px; font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap;">' + _esc(r.firstName) + '</td>' +
                 scoreCell(scores.aht, values.aht, 'sec', 'aht') +
                 scoreCell(scores.adherence, values.adherence, '%', 'scheduleAdherence') +
                 scoreCell(scores.sentiment, values.sentiment, '%', 'overallSentiment') +

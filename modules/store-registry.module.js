@@ -27,12 +27,18 @@
     // merge  how two machines' versions of this store are reconciled
     //   'lastWriterWins'    the later write replaces, loser kept under conflicts/
     //   'unionByEntryHash'  append-only logs; entries are merged, never dropped
+    //   'unionByPeriod'     maps of period key to upload. Both machines'
+    //                       periods are kept; where both wrote the same period,
+    //                       ours is live and theirs is kept under conflicts/
     //   'recompute'         derived, rebuilt rather than merged
     const STORES = [
         // --- Bulk data, on IndexedDB ---
-        { name: 'weeklyData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
-        { name: 'ytdData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
-        { name: 'dailyData', tier: 'data', backend: 'idb', merge: 'lastWriterWins' },
+        // By period, not last writer wins. A computer that had not pulled the
+        // other one's upload replaced the whole store, so the upload was only
+        // left under conflicts/, where nothing reads it (2026-11-03).
+        { name: 'weeklyData', tier: 'data', backend: 'idb', merge: 'unionByPeriod' },
+        { name: 'ytdData', tier: 'data', backend: 'idb', merge: 'unionByPeriod' },
+        { name: 'dailyData', tier: 'data', backend: 'idb', merge: 'unionByPeriod' },
         // Dailies that a weekly upload has superseded. Kept rather than
         // deleted: day-level detail is the only thing that answers a trend
         // question at finer resolution than a week.

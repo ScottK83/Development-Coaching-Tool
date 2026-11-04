@@ -244,8 +244,12 @@ suite('cloud sync: the app wires pull at boot and a trailing push', (t) => {
         body.indexOf('result?.ok && !result.skipped') > -1);
 
     // Offline is not an error state; it is what the local backend is for.
-    t.check('a failed pull is swallowed rather than shown as a failure',
-        /catch\(\(\) => \{ \/\* offline is not an error \*\/ \}\)/.test(body));
+    // A pull that fails while online is (2026-11-03): the other computer's
+    // work is not arriving, and saying nothing hid that.
+    t.check('a failed pull goes to the problem reporter',
+        /\.catch\(notePullProblem\)/.test(body));
+    const note = src.slice(src.indexOf('function notePullProblem'), src.indexOf('function clearCloudProblem'));
+    t.check('which stays quiet when offline', /navigator\.onLine === false\) return/.test(note));
 });
 
 suite('cloud sync: setup refuses to overwrite an existing cloud copy', (t) => {
@@ -301,7 +305,7 @@ suite('two machines: the same append-only store edited on both keeps every entry
         merged['Alyssa Dimes'].filter(e => e.note === 'shared baseline').length, 1);
 });
 
-suite('two machines: a last-writer-wins clash keeps the loser rather than dropping it', async (t) => {
+suite('two machines: both computers\' weeks survive a clash on the uploads', async (t) => {
     const bucket = createFakeR2();
 
     const a = machine(t, bucket, 'a');
@@ -311,6 +315,9 @@ suite('two machines: a last-writer-wins clash keeps the loser rather than droppi
     const b = machine(t, bucket, 'b');
     await b.sync.pull();
 
+    // The case from 2026-11-03: one computer uploads a week, the other had
+    // not pulled it and adds its own. Last writer wins left the first week
+    // only under conflicts/, where nothing reads it.
     a.values.weeklyData = { w1: {}, 'work-pc-week': {} };
     b.values.weeklyData = { w1: {}, 'home-pc-week': {} };
 
@@ -318,17 +325,40 @@ suite('two machines: a last-writer-wins clash keeps the loser rather than droppi
     const second = await b.sync.push(['weeklyData']);
     t.equal('the second machine commits', second.ok, true);
 
-    const manifestRaw = JSON.parse(bucket._objects.get('state/v2/manifest.json').value);
-    const conflictKeys = Object.keys(manifestRaw.shards).filter(k => k.startsWith('conflicts/weeklyData/'));
+    const check = machine(t, bucket, 'c');
+    await check.sync.pull();
+    t.check('the first machine\'s week is live', 'work-pc-week' in check.values.weeklyData);
+    t.check('and so is the second\'s', 'home-pc-week' in check.values.weeklyData);
+});
 
-    // weeklyData is not mergeable entry by entry, so one version has to be
+suite('two machines: a last-writer-wins clash keeps the loser rather than dropping it', async (t) => {
+    const bucket = createFakeR2();
+
+    const a = machine(t, bucket, 'a');
+    a.values.reliabilityTracker = { w1: { employees: [] } };
+    await a.sync.createFirstManifest(['reliabilityTracker']);
+
+    const b = machine(t, bucket, 'b');
+    await b.sync.pull();
+
+    a.values.reliabilityTracker = { w1: {}, 'work-pc-week': {} };
+    b.values.reliabilityTracker = { w1: {}, 'home-pc-week': {} };
+
+    await a.sync.push(['reliabilityTracker']);
+    const second = await b.sync.push(['reliabilityTracker']);
+    t.equal('the second machine commits', second.ok, true);
+
+    const manifestRaw = JSON.parse(bucket._objects.get('state/v2/manifest.json').value);
+    const conflictKeys = Object.keys(manifestRaw.shards).filter(k => k.startsWith('conflicts/reliabilityTracker/'));
+
+    // A last-writer-wins store is not merged, so one version has to be
     // live. The other must still be reachable: a blob the manifest references
     // is a blob that exists, and nothing is destroyed.
     t.equal('the overwritten version is kept under conflicts', conflictKeys.length, 1);
 
     const check = machine(t, bucket, 'c');
     await check.sync.pull();
-    t.check('the later writer is live', 'home-pc-week' in check.values.weeklyData);
+    t.check('the later writer is live', 'home-pc-week' in check.values.reliabilityTracker);
 
     // And the other machine's bytes are still fetchable from the conflict shard.
     const conflictHash = manifestRaw.shards[conflictKeys[0]];

@@ -1175,6 +1175,11 @@ Box 2 - Future Improvement Areas:
                                     </label>
                                 </div>
                                 <div style="margin-top: 8px;">
+                                    <label for="callListeningSyncSecret" style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--text-primary); font-size: 0.85em;">Sync password (this computer only):</label>
+                                    <input type="password" id="callListeningSyncSecret" autocomplete="off" placeholder="The SYNC_SHARED_SECRET set on the worker" style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85em;">
+                                    <div class="text-secondary" style="font-size: 0.8em; margin-top: 4px;">Kept on this computer and never sent to the backup. Enter it on each computer before the worker starts asking for it.</div>
+                                </div>
+                                <div style="margin-top: 8px;">
                                     <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: bold; color: var(--text-primary); cursor: pointer; font-size: 0.85em;">
                                         <input type="checkbox" id="callListeningIsWorkPc">
                                         This is my Work PC (source of truth)

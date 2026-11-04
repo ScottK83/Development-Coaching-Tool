@@ -385,12 +385,18 @@
     // UI CONFIG FROM DOM
     // ============================================
 
+    // The secret field came off the page at some point and nothing set it
+    // after that, so turning the worker's secret on would have locked every
+    // browser out (2026-11-03). It is back, for this computer only: the sync
+    // settings store is device-tier and never leaves the machine.
     function getCallListeningSyncConfigFromUI() {
         const endpoint = document.getElementById('callListeningSyncEndpoint')?.value || '';
         const autoSyncEnabled = document.getElementById('callListeningAutoSyncEnabled')?.checked ?? true;
         const isWorkPc = document.getElementById('callListeningIsWorkPc')?.checked ?? false;
         const existing = loadCallListeningSyncConfig();
-        return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled, sharedSecret: existing.sharedSecret, isWorkPc });
+        const secretInput = document.getElementById('callListeningSyncSecret');
+        const sharedSecret = secretInput ? secretInput.value : existing.sharedSecret;
+        return saveCallListeningSyncConfig({ endpoint, autoSyncEnabled, sharedSecret, isWorkPc });
     }
 
     function getTotalCallListeningLogCount() {
@@ -434,6 +440,14 @@
 
         const syncConfig = loadCallListeningSyncConfig();
         syncEndpointInput.value = syncConfig.endpoint || '';
+        const secretInput = document.getElementById('callListeningSyncSecret');
+        if (secretInput) {
+            secretInput.value = syncConfig.sharedSecret || '';
+            if (!secretInput.dataset.bound) {
+                secretInput.addEventListener('change', () => { getCallListeningSyncConfigFromUI(); });
+                secretInput.dataset.bound = 'true';
+            }
+        }
         if (isWorkPcCheckbox) isWorkPcCheckbox.checked = syncConfig.isWorkPc || false;
         autoSyncCheckbox.checked = syncConfig.autoSyncEnabled;
         setAutoSyncEnabledStatus(syncConfig);
@@ -448,7 +462,7 @@
                 }
                 await runWithButtonBusyState(syncNowBtn, 'Syncing...', async () => {
                     getCallListeningSyncConfigFromUI();
-                    await syncRepoData('manual sync now', { force: true, allowDataRegression: true });
+                    await syncRepoData('manual sync now', { force: true });
                 });
             });
             syncNowBtn.dataset.bound = 'true';
@@ -595,7 +609,7 @@
                     }
 
                     setCallListeningSyncStatus('Uploading local data to Worker...', 'info');
-                    await syncRepoData('upload to git', { force: true, allowDataRegression: true });
+                    await syncRepoData('upload to git', { force: true });
                 });
             });
             forcePushBtn.dataset.bound = 'true';
@@ -1774,20 +1788,33 @@
             return true;
         }
 
+        // A button press used to send with the guard switched off, so Sync
+        // Now on a computer that had not pulled yet replaced the newer cloud
+        // copy without a word (2026-11-03). The guard stays on; going
+        // backwards takes two answers, and the safe one comes first.
         const incomingSummary = error?.payload?.incomingSummary || null;
         const message = [
-            'Sync protected your newer repo backup.',
-            `This device: ${formatSummaryLabel(incomingSummary)}`,
-            `Repo backup: ${formatSummaryLabel(existingSummary)}`,
+            'The cloud has a newer copy than this computer.',
+            `This computer: ${formatSummaryLabel(incomingSummary)}`,
+            `Cloud: ${formatSummaryLabel(existingSummary)}`,
             '',
-            'Restore repo backup to this device now?'
+            'Press OK to load the cloud copy onto this computer. This is almost always the right answer.'
         ].join('\n');
 
         const shouldRestore = confirm(message);
         if (!shouldRestore) {
+            const sendAnyway = confirm([
+                'Replace the cloud copy with this computer\'s older one instead?',
+                '',
+                'Only do this if you deleted something here on purpose. The cloud copy is replaced; saved copies from earlier days are kept.'
+            ].join('\n'));
+            if (sendAnyway) {
+                await syncRepoData(error?.syncReason || 'manual sync now', { force: true, allowDataRegression: true });
+                return true;
+            }
             pauseRepoSyncForRegression(existingSummary);
             repoSyncConflictPromptMutedUntil = now + (5 * 60 * 1000);
-            setCallListeningSyncStatus('Sync blocked (older local profile). Use Force Restore to match latest repo data.', 'error');
+            setCallListeningSyncStatus('Not synced: the cloud copy is newer. Load it with Force Restore, or press Sync Now again to choose.', 'error');
             return true;
         }
 
@@ -1883,6 +1910,7 @@
         // Handle the final error
         if (lastError) {
             lastError.interactive = forceSync;
+            lastError.syncReason = reason;
             const handledConflict = await maybeHandleRepoSyncConflict(lastError);
             if (handledConflict) return;
             handleRepoSyncFailure(lastError);

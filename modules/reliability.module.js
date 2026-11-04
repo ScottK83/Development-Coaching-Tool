@@ -2314,7 +2314,8 @@
 
             // Verint column
             var verintVisible = (t.verint || []).filter(showVerintItem);
-            var verintText = verintVisible.map(function(v) { return v.activity + ' (' + v.hours + 'h)'; }).join('<br>') || '<span class="text-faint">-</span>';
+            // Cells straight from Verint and payroll files, so escaped.
+            var verintText = verintVisible.map(function(v) { return escapeHtml(v.activity) + ' (' + escapeHtml(v.hours) + 'h)'; }).join('<br>') || '<span class="text-faint">-</span>';
 
             // Payroll column
             var payrollVisible = (t.payroll || []).filter(function(p) { return p.trc !== 'REG' && showPayrollItem(p); });
@@ -2322,12 +2323,12 @@
                 var label = p.trc;
                 var taskCode = normalizeTaskCode(p.taskCode);
                 if (taskCode) label += ' / ' + taskCode;
-                return label + ' (' + p.quantity + 'h)';
+                return escapeHtml(label) + ' (' + escapeHtml(p.quantity) + 'h)';
             }).join('<br>');
             // Also show if they clocked in on a same-day
             var regEntries = t.payroll.filter(function(p) { return p.trc === 'REG' && p.clockIn; });
             if (regEntries.length > 0 && t.category !== 'planned') {
-                var regLabel = regEntries.map(function(p) { return 'REG ' + p.quantity + 'h (in: ' + p.clockIn + ')'; }).join('<br>');
+                var regLabel = regEntries.map(function(p) { return 'REG ' + escapeHtml(p.quantity) + 'h (in: ' + escapeHtml(p.clockIn) + ')'; }).join('<br>');
                 payrollText = payrollText ? payrollText + '<br>' + regLabel : regLabel;
             }
             if (!payrollText) payrollText = '<span class="text-faint">-</span>';

@@ -187,8 +187,10 @@
                 html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
                 html += '<div><span style="font-weight: 700; font-size: 1.05em; color: var(--text-primary);">' + escapeHtml(p.firstName) + '</span>' +
                     ' <span style="font-size: 0.8em; color: var(--text-tertiary);">' + p.metCount + '/' + p.totalMetrics + ' targets met</span></div>';
-                html += '<button type="button" onclick="window.DevCoachModules?.dashboard?.coachNow(\'' +
-                    escapeHtml(p.name.replace(/'/g, "\\'")) + '\')" ' +
+                // The name rides in a data attribute, not inside the inline
+                // script, so no name can break out of the handler.
+                html += '<button type="button" data-coach-name="' + escapeHtml(p.name) + '" ' +
+                    'onclick="window.DevCoachModules?.dashboard?.coachNow(this.dataset.coachName)" ' +
                     'class="btn-secondary" style="padding: 6px 14px; font-size: 0.82em;">Coach Now \u2192</button>';
                 html += '</div>';
 

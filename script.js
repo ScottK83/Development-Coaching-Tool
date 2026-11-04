@@ -122,7 +122,7 @@ function saveWeeklyData() {
     // Repo sync is triggered automatically by the localStorage.setItem hook
     // installed in repo-sync.module.js — no explicit queueRepoSync call needed.
     var ok = window.DevCoachModules?.storage?.saveWeeklyData?.(weeklyData);
-    if (ok === false) notifyStorageSaveFailed('weekly performance data');
+    if (ok === false) notifyStorageSaveFailed('weekly performance data', 'weeklyData');
     return ok;
 }
 function loadYtdData() {
@@ -130,7 +130,7 @@ function loadYtdData() {
 }
 function saveYtdData() {
     var ok = window.DevCoachModules?.storage?.saveYtdData?.(ytdData);
-    if (ok === false) notifyStorageSaveFailed('YTD data');
+    if (ok === false) notifyStorageSaveFailed('YTD data', 'ytdData');
     return ok;
 }
 function loadDailyData() {
@@ -143,7 +143,7 @@ function saveDailyData() {
     // Not repo-synced (see above), which makes a silent failure here worse than
     // elsewhere, not better: there is no backup copy to fall back on. Surface it.
     var ok = window.DevCoachModules?.storage?.saveDailyData?.(dailyData);
-    if (ok === false) notifyStorageSaveFailed('daily check-in data');
+    if (ok === false) notifyStorageSaveFailed('daily check-in data', 'dailyData');
     return ok;
 }
 function loadCoachingHistory() {
@@ -151,7 +151,7 @@ function loadCoachingHistory() {
 }
 function saveCoachingHistory() {
     var ok = window.DevCoachModules?.storage?.saveCoachingHistory?.(coachingHistory);
-    if (ok === false) notifyStorageSaveFailed('coaching history');
+    if (ok === false) notifyStorageSaveFailed('coaching history', 'coachingHistory');
     return ok;
 }
 function loadSentimentPhraseDatabase() {
@@ -159,7 +159,7 @@ function loadSentimentPhraseDatabase() {
 }
 function saveSentimentPhraseDatabase() {
     var ok = window.DevCoachModules?.storage?.saveSentimentPhraseDatabase?.(sentimentPhraseDatabase);
-    if (ok === false) notifyStorageSaveFailed('sentiment phrase data');
+    if (ok === false) notifyStorageSaveFailed('sentiment phrase data', 'sentimentPhraseDatabase');
     return ok;
 }
 function loadAssociateSentimentSnapshots() {
@@ -167,7 +167,7 @@ function loadAssociateSentimentSnapshots() {
 }
 function saveAssociateSentimentSnapshots() {
     var ok = window.DevCoachModules?.storage?.saveAssociateSentimentSnapshots?.(associateSentimentSnapshots);
-    if (ok === false) notifyStorageSaveFailed('sentiment snapshots');
+    if (ok === false) notifyStorageSaveFailed('sentiment snapshots', 'associateSentimentSnapshots');
     return ok;
 }
 
@@ -176,14 +176,45 @@ function saveAssociateSentimentSnapshots() {
 // GitHub backup never captures it. Toasts immediately; throttles the blocking
 // alert so a bulk operation can't spam it.
 var _lastStorageFailAlert = 0;
-function notifyStorageSaveFailed(label) {
+// The reason the storage module gives decides the words. A save refused
+// because another tab or computer changed the data was reported as "Storage
+// is full", which sent Scott to back up when the fix was a reload.
+function storageSaveFailureText(label, reason) {
+    if (reason === 'stale') {
+        return {
+            toast: '⚠️ Could not save ' + label + '. It was changed in another tab or on another computer since this page opened. Reload, then make the change again.',
+            alert: '⚠️ Not saved: newer data is waiting.\n\n' + label + ' was changed in another tab or on another computer after this page loaded, so saving here would have written over it.\n\nReload this page, then make your change again.'
+        };
+    }
+    if (reason === 'unreadable') {
+        return {
+            toast: '⚠️ Could not save ' + label + '. The saved copy could not be read, so it was left alone. Reload the page.',
+            alert: '⚠️ Not saved.\n\nThe saved copy of ' + label + ' could not be read, and saving now would replace it with whatever this page rebuilt. It was left alone.\n\nReload the page. If this keeps happening, restore from Settings → Sync & Backup.'
+        };
+    }
+    if (reason === 'unavailable') {
+        return {
+            toast: '⚠️ Could not save ' + label + '. The browser\'s storage could not be opened. Reload the page.',
+            alert: '⚠️ Not saved.\n\nThe browser\'s storage could not be opened, so ' + label + ' was not saved.\n\nReload the page. If it happens again, close other tabs of the app and reload.'
+        };
+    }
+    return null;
+}
+
+function notifyStorageSaveFailed(label, storeKey) {
+    var reason = storeKey ? window.DevCoachModules?.storage?.getLastSaveRefusal?.(storeKey)?.reason : '';
+    var specific = storageSaveFailureText(label, reason);
     try {
         var toast = window.DevCoachModules?.uiUtils?.showToast;
-        if (toast) toast('⚠️ Could not save ' + label + '. Browser storage is full. Back up before making more changes.', 6000);
+        if (toast) toast(specific ? specific.toast : '⚠️ Could not save ' + label + '. Browser storage is full. Back up before making more changes.', 6000);
     } catch (_e) { /* toast unavailable */ }
     var now = Date.now();
     if (now - _lastStorageFailAlert > 30000) {
         _lastStorageFailAlert = now;
+        if (specific) {
+            try { alert(specific.alert); } catch (_e) { /* alert unavailable */ }
+            return;
+        }
         try {
             // Deliberately does NOT point at archiveOldWeeks. That flow deletes the
             // archived weeks, downloads a file no importer can read back, and pushes
@@ -2799,16 +2830,61 @@ var _cloudPushTimer = null;
 var _cloudSyncBackgroundStarted = false;
 var _lastCloudFailToast = 0;
 var _lastCloudPushAt = null;
+// What went wrong with the cloud last, in words, until the next success
+// clears it. The footer and the sync panel used to read "Last Sync: none yet"
+// and "Backed up" right beside a toast saying the save never arrived.
+var _cloudProblem = '';
 
 // Throttled: a repeated failure is one problem, not twenty. Offline is handled
 // by the caller and never reaches here.
 function notifyCloudPushFailed(reason) {
+    _cloudProblem = 'Changes did not reach the cloud: ' + reason;
+    showCloudProblemInFooter();
     const now = Date.now();
     if (now - _lastCloudFailToast < 60000) return;
     _lastCloudFailToast = now;
     try {
         showToast('⚠️ Changes are saved on this computer but did not reach the cloud: ' + reason, 7000);
     } catch (_e) { /* toast unavailable */ }
+}
+
+// A pull that could not be made while the browser says it is online is a
+// real problem, not a quiet offline moment: the other computer's work is not
+// arriving. Offline stays silent, as before.
+function notePullProblem(error) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    // No endpoint is a computer not set up for sync, and an unopenable local
+    // database already has its own banner.
+    if (error?.code === 'LOCAL_STORE_UNAVAILABLE') return;
+    const reason = error?.message || error?.error || error?.code || String(error || 'unknown error');
+    if (/No sync endpoint is configured/.test(reason)) return;
+    _cloudProblem = 'Could not check the cloud for the other computer\'s changes: ' + reason;
+    showCloudProblemInFooter();
+    renderCloudSyncStatus();
+    const now = Date.now();
+    if (now - _lastCloudFailToast < 60000) return;
+    _lastCloudFailToast = now;
+    try { showToast('⚠️ ' + _cloudProblem, 7000); } catch (_e) { /* toast unavailable */ }
+}
+
+function clearCloudProblem() {
+    if (!_cloudProblem) return;
+    _cloudProblem = '';
+    showCloudProblemInFooter();
+}
+
+function showCloudProblemInFooter() {
+    const el = document.getElementById('lastSyncFooter');
+    if (!el) return;
+    if (_cloudProblem) {
+        if (!el.dataset.normalText) el.dataset.normalText = el.textContent;
+        el.textContent = '⚠️ ' + _cloudProblem;
+        el.classList.add('tone-warn');
+    } else if (el.dataset.normalText) {
+        el.textContent = el.dataset.normalText;
+        delete el.dataset.normalText;
+        el.classList.remove('tone-warn');
+    }
 }
 
 /**
@@ -2841,9 +2917,10 @@ function startCloudSyncBackground() {
     renderCloudSyncStatus();
 
     sync.pull().then((result) => {
+        if (result && result.ok === false && !result.skipped) notePullProblem(result);
         renderCloudSyncStatus();
         afterCloudPull(result, 'boot');
-    }).catch(() => { /* offline is not an error */ });
+    }).catch(notePullProblem);
 
     // The other machine keeps working after this one has booted. Checking only
     // at startup meant a tab left open all day never saw a thing it uploaded.
@@ -2888,6 +2965,7 @@ function startCloudSyncBackground() {
             sync.push(dirty, 'auto').then((result) => {
                 if (result?.ok && !result.skipped) {
                     storage?.clearDirtyStores?.(result.pushed, result.writeCounts);
+                    clearCloudProblem();
                     _lastCloudPushAt = new Date().toLocaleTimeString();
                     renderCloudSyncStatus();
                     console.log(`[cloud] Pushed ${result.changed.join(', ')} as version ${result.version}.`);
@@ -2931,9 +3009,10 @@ async function pullFromOtherMachine(when) {
     if (!sync) return;
     try {
         const result = await sync.pull();
+        if (result && result.ok === false && !result.skipped) notePullProblem(result);
         renderCloudSyncStatus();
         afterCloudPull(result, when);
-    } catch (_error) { /* offline is not an error */ }
+    } catch (error) { notePullProblem(error); }
 }
 
 /**
@@ -3116,9 +3195,10 @@ function renderCloudSyncStatus() {
         parts.push('Nothing waiting.');
     }
     parts.push(`This computer is "${sync.getDeviceId()}".`);
+    if (_cloudProblem) parts.unshift('⚠️ ' + _cloudProblem + '.');
 
     el.textContent = parts.join(' ');
-    el.classList.toggle('tone-warn', pending.length > 0);
+    el.classList.toggle('tone-warn', pending.length > 0 || !!_cloudProblem);
 
     const setupBtn = document.getElementById('cloudSyncSetupBtn');
     // The first push seeds the copy, so the button is a manual escape hatch
@@ -4583,7 +4663,7 @@ function repairInlineTranscriptsIfNeeded() {
 function saveCallListeningLogs(triggerSync = true, reason = 'updated') {
     try {
         const ok = window.DevCoachModules?.storage?.saveCallListeningLogs?.(callListeningLogs || {});
-        if (ok === false) notifyStorageSaveFailed('call listening logs');
+        if (ok === false) notifyStorageSaveFailed('call listening logs', 'callListeningLogs');
         if (triggerSync) {
             queueCallListeningRepoSync(reason);
         }
@@ -7562,7 +7642,7 @@ async function initApp() {
             footerSyncBtn.disabled = true;
             footerSyncBtn.textContent = 'Syncing...';
             try {
-                await repoSync.syncRepoData('manual footer sync', { force: true, allowDataRegression: true });
+                await repoSync.syncRepoData('manual footer sync', { force: true });
                 showToast('Sync complete!', 3000);
             } catch (e) {
                 showToast('Sync failed: ' + (e.message || e), 4000);

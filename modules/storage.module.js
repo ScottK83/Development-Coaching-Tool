@@ -202,6 +202,11 @@
             dirtyStores.delete(key);
             staleStores.add(key);
             unreadableStores.delete(key);
+            // Every other tab of the app still holds the copy from before this
+            // pull. Only a local save used to tell them, so a tab that missed
+            // the pull could save its old weeklyData over the other computer's
+            // upload and send it to the cloud (2026-11-03).
+            announceWriteToOtherTabs(key);
         }
         return ok;
     }
@@ -591,26 +596,47 @@
     // STORAGE HELPERS
     // ============================================
 
+    // Why the last save of each store was refused, so the message can say
+    // what really happened. Every refusal used to be reported as "Storage is
+    // full", including a save stopped because another tab had changed the
+    // data, where the fix is a reload and not a backup (2026-11-03).
+    //   stale        another tab or computer changed it since this page loaded
+    //   unreadable   the stored copy could not be read
+    //   unavailable  the browser's storage could not be opened
+    //   full         the browser is out of room, or the store is over the cap
+    //   error        anything else
+    const lastSaveRefusal = {};
+
+    function refuse(key, reason) {
+        lastSaveRefusal[key] = { reason, at: Date.now() };
+        return false;
+    }
+
+    function getLastSaveRefusal(key) {
+        return lastSaveRefusal[key] || null;
+    }
+
     function saveWithSizeCheck(key, data) {
-        if (refuseBulkWriteWhileUnavailable(key)) return false;
+        if (refuseBulkWriteWhileUnavailable(key)) return refuse(key, 'unavailable');
         if (unreadableStores.has(key)) {
             console.error(`[storage] Refused to save ${key}: the stored copy could not be read, and saving now would replace it with whatever this page rebuilt.`);
             reportBackendProblem('unreadable', key);
-            return false;
+            return refuse(key, 'unreadable');
         }
         if (staleStores.has(key)) {
             console.error(`[storage] Refused to save ${key}: another machine changed it and this page still holds the older copy. Reload first.`);
             staleWriteListeners.forEach((listener) => {
                 try { listener(key); } catch (error) { console.error('[storage] A stale-write listener threw:', error); }
             });
-            return false;
+            return refuse(key, 'stale');
         }
         markStoreDirty(key);
+        delete lastSaveRefusal[key];
 
         // A bulk store on the backend is not subject to the localStorage size
         // cap at all. Escaping that cap is the entire point of moving it.
         if (isBackedByIdb(key)) {
-            return writeThroughToBackend(key, data ?? {});
+            return writeThroughToBackend(key, data ?? {}) || refuse(key, 'error');
         }
 
         try {
@@ -618,7 +644,7 @@
             const sizeMB = new Blob([serialized]).size / (1024 * 1024);
 
             if (sizeMB > LOCALSTORAGE_MAX_SIZE_MB) {
-                return false;
+                return refuse(key, 'full');
             }
 
             localStorage.setItem(STORAGE_PREFIX + key, serialized);
@@ -629,10 +655,10 @@
                 // callers that ignore the return value re-rendered as if the write
                 // landed. Always leave a trace, even for callers that discard it.
                 console.error(`[storage] QUOTA EXCEEDED saving ${key}. The write did NOT happen; the stored value is unchanged and the in-memory copy is now ahead of it.`);
-                return false;
+                return refuse(key, 'full');
             }
             console.error(`Error saving ${key}:`, error);
-            return false;
+            return refuse(key, 'error');
         }
     }
 
@@ -1398,6 +1424,7 @@
         reclaimLocalStorageCopies,
         isStoreDirty,
         markStoreDirty,
+        getLastSaveRefusal,
         clearDirtyStores,
         storeWriteCount,
         onStoreChanged,

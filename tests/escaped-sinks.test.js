@@ -36,3 +36,22 @@ suite('escaping: the fallback escapes too', (t) => {
     t.equal('with shared-utils missing, markup is still escaped',
         escapeHtml('<img src=x onerror="a">\''), '&lt;img src=x onerror=&quot;a&quot;&gt;&#039;');
 });
+
+suite('escaping: the uploaded-file sinks found 2026-11-03', (t) => {
+    const reliability = read('modules/reliability.module.js');
+    t.check('Verint activity cells', reliability.indexOf("escapeHtml(v.activity) + ' ('") > -1);
+    t.check('payroll TRC and task code cells', reliability.indexOf("return escapeHtml(label) + ' ('") > -1);
+    t.check('clock-in times', reliability.indexOf("escapeHtml(p.clockIn)") > -1);
+
+    const onOff = read('modules/on-off-tracker.module.js');
+    t.check('On/Off first names are never inserted raw',
+        !/\+ r\.firstName \+/.test(onOff) && onOff.indexOf('return r.firstName;') === -1);
+
+    const dashboard = read('modules/dashboard.module.js');
+    t.check('a name never sits inside an inline handler',
+        dashboard.indexOf("coachNow(\''") === -1 && dashboard.indexOf('coachNow(this.dataset.coachName)') > -1);
+
+    const tips = read('modules/tips.module.js');
+    t.check('the custom tip box names its category escaped',
+        tips.indexOf('custom coaching tip for ${escapeHtml(displayMetricName)}') > -1);
+});

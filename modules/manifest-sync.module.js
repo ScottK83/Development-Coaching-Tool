@@ -274,6 +274,21 @@
     }
 
     /**
+     * Both machines' periods, one level deep. A period only one side holds is
+     * kept; one both hold is ours. Not unionValues: that recurses into each
+     * period's employee list and would double every row both sides have.
+     * Returns whether any period both sides held differed, so the caller keeps
+     * theirs as a conflict copy too.
+     */
+    function unionPeriods(mine, theirs) {
+        const ours = mine && typeof mine === 'object' && !Array.isArray(mine) ? mine : {};
+        const other = theirs && typeof theirs === 'object' && !Array.isArray(theirs) ? theirs : {};
+        const merged = { ...other, ...ours };
+        const collided = Object.keys(other).some((key) => key in ours && canonicalize(ours[key]) !== canonicalize(other[key]));
+        return { merged, collided };
+    }
+
+    /**
      * Reconciles the shards that moved remotely while we were preparing to
      * write them. Returns a new changed map.
      *
@@ -300,6 +315,25 @@
             if (got.status !== 200) {
                 console.warn(`[v2] could not read the other version of ${name}; keeping ours.`);
                 continue;
+            }
+
+            if (strategy === 'unionByPeriod') {
+                const { merged, collided } = unionPeriods(readStoreValue(name), got.data);
+                const bytes = JSON.stringify(merged);
+                const hash = await sha256Hex(bytes);
+                const put = await callWorker({ mode: 'v2.putBlob', hash, bytes });
+                if (put.status === 200) {
+                    writeStoreValue(name, merged);
+                    next[name] = hash;
+                    if (collided) {
+                        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+                        next[`conflicts/${name}/${stamp}`] = theirHash;
+                    }
+                    console.log(`[v2] kept both machines' periods in ${name}.`);
+                    continue;
+                }
+                // Could not store the merge: fall through to keeping theirs as
+                // a conflict copy, the same as before.
             }
 
             if (strategy === 'unionByEntryHash') {
@@ -613,6 +647,7 @@
         getDeviceId,
         loadSyncState,
         saveSyncState,
-        sha256Hex
+        sha256Hex,
+        unionPeriods
     };
 })();

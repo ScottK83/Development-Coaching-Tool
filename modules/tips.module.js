@@ -903,7 +903,7 @@ async function renderTipsManagement() {
 
         tipsHtml += `
             <div class="card" style="margin-top: 15px; padding: 15px;">
-                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${displayMetricName}..." style="width: 100%; padding: 12px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
+                <textarea id="newTip_${metricKey}" placeholder="Enter a new custom coaching tip for ${escapeHtml(displayMetricName)}..." style="width: 100%; padding: 12px; font-size: 0.95em; resize: vertical; margin-bottom: 10px;" rows="3"></textarea>
                 <button class="addTipBtn btn-primary" data-metric="${metricKey}" style="padding: 10px 20px; font-size: 1em; font-weight: bold;">Add Tip</button>
             </div>
         `;
