@@ -5879,6 +5879,9 @@
         // twice can be asserted rather than reasoned about.
         withNearMiss,
         yearBlockSentThisMonth,
+        // The badge rule, shared with the Year to date page so the two say
+        // the same thing about the same person.
+        getStatusBadge,
         // The team note, shared by the private round and the one-person
         // post, which both write through buildOutreachMessage.
         loadTeamNote,

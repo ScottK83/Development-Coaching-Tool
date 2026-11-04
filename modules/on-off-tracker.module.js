@@ -290,17 +290,30 @@
         return '';
     }
 
-    function buildGapToNextText(score, val, bandConfig) {
+    // "128 seconds", "1.2 points", "2.5 hours": the step in the metric's own
+    // unit, never a bare signed number. "-128.0 to next level" had no unit
+    // and a sign that read backwards (many hats review, 2026-11-03, S7).
+    function gapAmount(metricKey, amount) {
+        var n = Math.abs(Number(amount));
+        if (!isFinite(n)) return '';
+        if (metricKey === 'aht') {
+            var sec = Math.round(n);
+            return sec + (sec === 1 ? ' second' : ' seconds');
+        }
+        var r = Math.round(n * 10) / 10;
+        var text = String(r);
+        if (metricKey === 'reliability') return text + (r === 1 ? ' hour' : ' hours');
+        return text + (r === 1 ? ' point' : ' points');
+    }
+
+    function buildGapToNextText(score, val, bandConfig, metricKey) {
         if (score === null || score === 3 || val === null || !bandConfig) return '';
         var hints = [];
-        if (bandConfig.type === 'min') {
-            if (score === 1) hints.push('+' + (bandConfig.score2.min - val).toFixed(1) + ' to next level');
-            if (score <= 2) hints.push('+' + (bandConfig.score3.min - val).toFixed(1) + ' to top level');
-        } else {
-            if (score === 1) hints.push('-' + (val - bandConfig.score2.max).toFixed(1) + ' to next level');
-            if (score <= 2) hints.push('-' + (val - bandConfig.score3.max).toFixed(1) + ' to top level');
-        }
-        return hints.join(' | ');
+        var next = bandConfig.type === 'min' ? bandConfig.score2.min - val : val - bandConfig.score2.max;
+        var top = bandConfig.type === 'min' ? bandConfig.score3.min - val : val - bandConfig.score3.max;
+        if (score === 1) hints.push(gapAmount(metricKey, next) + ' to the next level');
+        if (score <= 2) hints.push(gapAmount(metricKey, top) + ' to the top level');
+        return hints.join(', ');
     }
 
     function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata) {
@@ -316,7 +329,7 @@
                 goalText: resolveOnOffGoalText(goalSource, bands, 'aht', 'aht', 'aht', reviewYear, periodMetadata),
                 stretchText: buildStretchGoalText(ratingBands.aht, 'aht'),
                 score: result.scores.aht,
-                gapText: buildGapToNextText(result.scores.aht, result.values.aht, ratingBands.aht)
+                gapText: buildGapToNextText(result.scores.aht, result.values.aht, ratingBands.aht, 'aht')
             },
             {
                 label: 'Adherence',
@@ -324,7 +337,7 @@
                 goalText: resolveOnOffGoalText(goalSource, bands, 'scheduleAdherence', 'scheduleAdherence', 'scheduleAdherence', reviewYear, periodMetadata),
                 stretchText: buildStretchGoalText(ratingBands.scheduleAdherence, 'scheduleAdherence'),
                 score: result.scores.adherence,
-                gapText: buildGapToNextText(result.scores.adherence, result.values.adherence, ratingBands.scheduleAdherence)
+                gapText: buildGapToNextText(result.scores.adherence, result.values.adherence, ratingBands.scheduleAdherence, 'scheduleAdherence')
             },
             {
                 label: 'Overall Sentiment',
@@ -332,7 +345,7 @@
                 goalText: resolveOnOffGoalText(goalSource, bands, 'overallSentiment', 'overallSentiment', 'overallSentiment', reviewYear, periodMetadata),
                 stretchText: buildStretchGoalText(ratingBands.overallSentiment, 'overallSentiment'),
                 score: result.scores.sentiment,
-                gapText: buildGapToNextText(result.scores.sentiment, result.values.sentiment, ratingBands.overallSentiment)
+                gapText: buildGapToNextText(result.scores.sentiment, result.values.sentiment, ratingBands.overallSentiment, 'overallSentiment')
             },
             {
                 label: surveyLabel,
@@ -340,7 +353,7 @@
                 goalText: resolveOnOffGoalText(goalSource, bands, 'cxRepOverall', 'cxRepOverall', 'cxRepOverall', reviewYear, periodMetadata),
                 stretchText: buildStretchGoalText(ratingBands.cxRepOverall, 'cxRepOverall'),
                 score: result.scores.associateOverall,
-                gapText: buildGapToNextText(result.scores.associateOverall, result.values.associateOverall, ratingBands.cxRepOverall)
+                gapText: buildGapToNextText(result.scores.associateOverall, result.values.associateOverall, ratingBands.cxRepOverall, 'cxRepOverall')
             },
             {
                 label: 'Reliability',
@@ -348,7 +361,7 @@
                 goalText: resolveOnOffGoalText(goalSource, bands, 'reliability', 'reliability', 'reliability', reviewYear, periodMetadata),
                 stretchText: buildStretchGoalText(ratingBands.reliability, 'reliability'),
                 score: result.scores.reliability,
-                gapText: buildGapToNextText(result.scores.reliability, result.values.reliability, ratingBands.reliability)
+                gapText: buildGapToNextText(result.scores.reliability, result.values.reliability, ratingBands.reliability, 'reliability')
             }
         ];
     }
@@ -1522,6 +1535,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.onOffTracker = {
         parseOnOffMirrorNumber,
+        buildGapToNextText,
         isValidOnOffPercent,
         pickYearEndAssociateOverallValue,
         buildYearEndOnOffValues,

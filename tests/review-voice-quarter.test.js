@@ -247,9 +247,9 @@ suite('review voice: a first dip below goal reads as a dip, with a goal to get b
     const box2 = qr.buildNotes(ctx).box2;
 
     t.check('handle time is a first rise above goal, every number on it',
-        /Average handle time was inside the 426s goal in Q1 and Q2, at 410s and 405s, and rose to 431s in Q3\./.test(box2));
+        /Average handle time was under the 426s goal in Q1 and Q2, at 410s and 405s, and rose to 431s in Q3\./.test(box2));
     t.check('adherence is a dip, not a slide',
-        /Schedule adherence was inside the 93% goal in Q1 and Q2, at 94\.5% and 94\.1%, and dipped to 92\.7% in Q3\./.test(box2));
+        /Schedule adherence was above the 93% goal in Q1 and Q2, at 94\.5% and 94\.1%, and dipped to 92\.7% in Q3\./.test(box2));
     t.check('the close covers both, plainly',
         /Getting handle time back under 426s and adherence back above 93% in Q4 is the focus\./.test(box2));
     t.check('nothing heavy for a 0.3 point miss',

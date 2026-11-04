@@ -114,6 +114,19 @@ function entriesThisYear(entries, year) {
     return (entries || []).filter(function(e) { return entryYear(e) === y; });
 }
 
+/*
+ * Whether anything real about this person's time off is on file for the
+ * year: a balance PDF's figures or a payroll row. With nothing, the balance
+ * was the default allotment shown as "120h remaining" in green for every
+ * associate after the August loss (many hats review, 2026-11-03, S5). A
+ * number with nothing behind it is not shown at all.
+ */
+function hasPtoDataForYear(data, year) {
+    if (!data) return false;
+    if (data.takenHours != null || data.reportedRemaining != null) return true;
+    return entriesThisYear(data.payrollEntries, year).length > 0;
+}
+
 function calculatePtoBalance(store, name) {
     var data = getAssociateData(store, name);
     var carryover = data.carryoverHours || 0;
@@ -133,7 +146,7 @@ function calculatePtoBalance(store, name) {
     var remaining = data.reportedRemaining != null
         ? (Math.round((Number(data.reportedRemaining) || 0) * 100) / 100)
         : (Math.round((carryover + allotment - used) * 100) / 100);
-    return { carryover: carryover, allotment: allotment, used: used, remaining: remaining };
+    return { carryover: carryover, allotment: allotment, used: used, remaining: remaining, hasData: hasPtoDataForYear(data) };
 }
 
 // ============================================
@@ -448,8 +461,9 @@ function renderBalancePanel(employeeName) {
     var data = getAssociateData(store, storeKey);
     var bal = calculatePtoBalance(store, storeKey);
 
-    var remainTone = bal.remaining > 16 ? 'good' : bal.remaining >= 8 ? 'warn' : 'bad';
-    var remainBg = { good: 'var(--green-soft)', warn: 'var(--yellow-soft)', bad: 'var(--red-soft)' }[remainTone];
+    var remainTone = !bal.hasData ? 'muted' : bal.remaining > 16 ? 'good' : bal.remaining >= 8 ? 'warn' : 'bad';
+    var remainBg = { good: 'var(--green-soft)', warn: 'var(--yellow-soft)', bad: 'var(--red-soft)', muted: 'var(--bg-surface-raised)' }[remainTone];
+    var remainText = bal.hasData ? bal.remaining + 'h' : 'Not on file';
 
     // Count unscheduled
     var unschedHours = 0;
@@ -477,12 +491,13 @@ function renderBalancePanel(employeeName) {
                 </div>
                 <div style="flex:0 0 auto;padding:6px 16px;border-radius:8px;background:${remainBg};text-align:center;">
                     <div class="text-secondary" style="font-size:0.75em;">PTO Remaining</div>
-                    <div class="tone-${remainTone}" style="font-size:1.3em;font-weight:700;">${bal.remaining}h</div>
+                    <div class="${bal.hasData ? 'tone-' + remainTone : 'text-secondary'}" style="font-size:1.3em;font-weight:700;">${remainText}</div>
                 </div>
-                <div class="text-secondary" style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;">
+                ${bal.hasData ? `<div class="text-secondary" style="flex:0 0 auto;padding:6px 12px;font-size:0.85em;">
                     Used: <strong>${bal.used}h</strong> of ${bal.carryover + bal.allotment}h
-                </div>
+                </div>` : ''}
             </div>
+            ${bal.hasData ? '' : `<div class="text-secondary" style="font-size:0.85em;">Nothing about this year's time off is on file yet. Upload the payroll export or the PTO balance PDF to see a balance.</div>`}
             ${unschedHours > 0 ? `<div class="callout callout-warn" style="padding:6px 12px;font-size:0.85em;">
                 Unscheduled PTO: <strong>${unschedHours.toFixed(1)}h</strong> across <strong>${unschedDays}</strong> day${unschedDays !== 1 ? 's' : ''}
             </div>` : ''}

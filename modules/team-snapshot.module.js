@@ -293,7 +293,9 @@
         var registry = getRegistry();
         var cells = SNAPSHOT_METRICS.map(function(key) {
             var unit = registry[key]?.unit || '%';
-            var placeholder = unit === 'sec' ? '0' : unit === 'hrs' ? '0.0' : '0.0';
+            // The center has no calls figure to type, so the box is blank
+            // rather than showing a "0.0" that reads as a number (S10).
+            var placeholder = key === 'totalCalls' || key === 'transfersCount' ? '' : unit === 'sec' ? '0' : '0.0';
             return '<td style="padding: 4px;"><input type="text" id="snapCenterAvg_' + key + '" ' +
                 'placeholder="' + placeholder + '" ' +
                 'style="width: 60px; padding: 4px; text-align: center; border: 1px solid var(--border); border-radius: 3px; font-size: 0.85em;" /></td>';
@@ -328,11 +330,16 @@
             managingEmotions: avg.managingEmotions
         };
 
+        // Rounded the way the table prints them: "508", "93.1". The raw
+        // stored average put "507.85" in the box (many hats review, S10).
+        var registry = getRegistry();
         SNAPSHOT_METRICS.forEach(function(key) {
             var input = document.getElementById('snapCenterAvg_' + key);
-            if (input && keyMap[key] !== undefined && keyMap[key] !== null) {
-                input.value = keyMap[key];
-            }
+            var raw = keyMap[key];
+            if (!input || raw === undefined || raw === null || raw === '') return;
+            var num = parseFloat(raw);
+            if (!Number.isFinite(num)) return;
+            input.value = (registry[key]?.unit === 'sec') ? String(Math.round(num)) : String(Math.round(num * 10) / 10);
         });
     }
 
@@ -1218,6 +1225,25 @@
     // INITIALIZATION
     // ============================================
 
+    /*
+     * The newest finished week, which is what the Snapshot is nearly always
+     * opened for. It opened on "-- Select a period (80 available) --" with
+     * nothing picked (many hats review, 2026-11-03, S10).
+     */
+    function defaultPeriodValue(periods, todayIso) {
+        var today = todayIso || (function() {
+            var d = new Date();
+            var pad = function(n) { return String(n).padStart(2, '0'); };
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        })();
+        var list = periods || [];
+        var pick = list.find(function(p) {
+            var end = p.key.split('|')[1] || p.key.split('|')[0] || '';
+            return p.type === 'week' && p.source === 'weekly' && end < today;
+        }) || list.find(function(p) { return p.type === 'week'; }) || list[0];
+        return pick ? pick.key + '|' + pick.source : '';
+    }
+
     function initializeTeamSnapshot() {
         _allPeriods = []; // reset cache on re-init
         populatePeriodDropdown();
@@ -1240,6 +1266,15 @@
                 id: 'snapshotPeriodChips',
                 chipClass: 'ts-period-chip'
             });
+            if (!periodSelect.value) {
+                var initial = defaultPeriodValue(_allPeriods);
+                if (initial) {
+                    periodSelect.value = initial;
+                    // Through the change event, so the chips above follow.
+                    if (typeof Event === 'function') periodSelect.dispatchEvent(new Event('change'));
+                    else onPeriodChange();
+                }
+            }
         }
 
         var generateBtn = document.getElementById('snapshotGenerateBtn');
@@ -1286,6 +1321,7 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.teamSnapshot = {
         initializeTeamSnapshot: initializeTeamSnapshot,
+        defaultPeriodValue: defaultPeriodValue,
         generateSnapshot: generateSnapshot,
         generateScorecard: generateScorecard,
         exportSnapshotAsImage: exportSnapshotAsImage,

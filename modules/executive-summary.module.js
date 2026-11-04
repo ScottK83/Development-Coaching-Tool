@@ -378,6 +378,105 @@
         return metrics;
     }
 
+    /*
+     * The year's own file (many hats review, 2026-11-03, S2).
+     *
+     * The tiles averaged every weekly upload of the year, 44 periods of mixed
+     * shapes, so Rep Sat read 76.3% against 74.3% in the YTD file, FCR 68.4%
+     * against 63.9%, and reliability 3.9 hrs against 3.3. The YTD upload is the
+     * year, so when there is one for the year being shown it is what the tiles
+     * read. Same shape as buildExecutiveSummaryAggregateMetrics, so the
+     * averaging below is shared.
+     */
+    function findYtdForYear(activeYear) {
+        var ytd = getYtdData();
+        var best = null;
+        Object.keys(ytd).forEach(function(key) {
+            var period = ytd[key];
+            if (!period || !Array.isArray(period.employees) || !period.employees.length) return;
+            var meta = period.metadata || {};
+            var end = String(meta.endDate || (key.indexOf('|') !== -1 ? key.split('|')[1] : '') || '');
+            if (parseInt(end.slice(0, 4), 10) !== activeYear) return;
+            if (!best || end > best.endDate) best = { key: key, endDate: end, period: period };
+        });
+        return best;
+    }
+
+    function buildExecutiveSummaryYtdMetrics(ytdEntry, activeYear, selectedAssociate) {
+        selectedAssociate = selectedAssociate || '';
+        var metricKeys = getMetricOrder().map(function(item) { return item.key; });
+        var metrics = {
+            totalWeeks: 0,
+            totalEmployees: new Set(),
+            averagesByMetric: {},
+            weightedSums: {},
+            weightedCounts: {},
+            cumulativeSums: {},
+            activeYear: activeYear,
+            selectedAssociate: selectedAssociate,
+            source: 'ytd',
+            throughDate: ytdEntry.endDate
+        };
+        metricKeys.forEach(function(metricKey) {
+            metrics.averagesByMetric[metricKey] = [];
+            metrics.weightedSums[metricKey] = 0;
+            metrics.weightedCounts[metricKey] = 0;
+            metrics.cumulativeSums[metricKey] = 0;
+        });
+
+        // A YTD file's calls column is the survey count. withYtdCalls swaps in
+        // an estimate where it can; inside one file the survey count is still
+        // a passable relative weight where it cannot.
+        var futures = window.DevCoachModules?.futures;
+        var rows = typeof futures?.withYtdCalls === 'function'
+            ? futures.withYtdCalls(ytdEntry.period, { isYtd: true })
+            : (ytdEntry.period.employees || []);
+        var teamFilterContext = getTeamSelectionContext();
+
+        rows.forEach(function(emp) {
+            if (!emp?.name) return;
+            if (selectedAssociate && emp.name !== selectedAssociate) return;
+            if (!isAssociateIncludedByTeamFilter(emp.name, teamFilterContext)) return;
+            metrics.totalEmployees.add(emp.name);
+
+            var tc = parseInt(emp.totalCalls, 10);
+            var st = parseInt(emp.surveyTotal, 10);
+            var callWeight = Number.isInteger(tc) && tc > 0 ? tc : (Number.isInteger(st) && st > 0 ? st : 1);
+
+            metricKeys.forEach(function(metricKey) {
+                if (emp[metricKey] === '' || emp[metricKey] === null || emp[metricKey] === undefined) return;
+                var value = parseFloat(emp[metricKey]);
+                if (!Number.isFinite(value)) return;
+                metrics.averagesByMetric[metricKey].push(value);
+                if (CUMULATIVE_METRICS[metricKey]) {
+                    metrics.cumulativeSums[metricKey] += value;
+                    return;
+                }
+                var w = callWeight;
+                if (SURVEY_WEIGHTED_METRICS[metricKey]) {
+                    var responses = typeof window.getSurveyWeight === 'function'
+                        ? window.getSurveyWeight(metricKey, emp)
+                        : st;
+                    w = Number.isFinite(responses) && responses > 0 ? responses : 0;
+                }
+                if (w > 0) {
+                    metrics.weightedSums[metricKey] += value * w;
+                    metrics.weightedCounts[metricKey] += w;
+                }
+            });
+        });
+
+        return metrics;
+    }
+
+    // "Nov 1" from an ISO date.
+    function shortDate(iso) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+        if (!m) return '';
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[parseInt(m[2], 10) - 1] + ' ' + parseInt(m[3], 10);
+    }
+
     // ============================================
     // AVERAGES
     // ============================================
@@ -460,18 +559,24 @@
             var averageValue = averages[key];
             var style = getExecutiveSummaryMetricCardStyle(key, averageValue, reviewYear);
 
+            // The metric's own name. "Avg Average Handle Time" said average
+            // twice, and a YTD figure is not an average of anything on screen.
             return {
-                label: 'Avg ' + metricDef.label,
+                label: metricDef.label,
                 value: Number.isFinite(averageValue) ? formatMetricDisplay(key, averageValue) : 'N/A',
                 cardClass: style.cardClass,
                 valueClass: style.valueClass
             };
         }).filter(Boolean);
 
-        return [
-            { label: 'Total Data Periods', value: metrics.totalWeeks },
-            { label: 'Total Employees', value: metrics.totalEmployees.size }
-        ].concat(metricCards).map(function(card) {
+        // "Total Data Periods" counted uploads, which means nothing to a
+        // reader, and "Total Employees 1" with one associate picked said less.
+        // The head count stays for a team, where it is the denominator.
+        var lead = metrics.selectedAssociate
+            ? []
+            : [{ label: 'Team members', value: metrics.totalEmployees.size }];
+
+        return lead.concat(metricCards).map(function(card) {
             return {
                 cardClass: card.cardClass || 'callout',
                 valueClass: card.valueClass || 'text-primary',
@@ -509,14 +614,23 @@
         }
 
         var selectedAssociate = document.getElementById('summaryAssociateSelect')?.value || '';
-        var metrics = buildExecutiveSummaryAggregateMetrics(allWeeks, selectedAssociate);
+        var activeYear = getExecutiveSummaryActiveYear(allWeeks);
+        var ytdEntry = findYtdForYear(activeYear);
+        var metrics = ytdEntry
+            ? buildExecutiveSummaryYtdMetrics(ytdEntry, activeYear, selectedAssociate)
+            : buildExecutiveSummaryAggregateMetrics(allWeeks, selectedAssociate);
         var averages = calculateExecutiveSummaryAverages(metrics);
         var cards = buildExecutiveSummaryCards(metrics, averages);
 
         var html = '<div style="margin-bottom: 30px;">';
+        // Says where the year came from: the YTD file and the day it runs to,
+        // or the weekly uploads when there is no YTD file for the year yet.
+        var source = ytdEntry
+            ? metrics.activeYear + ' year to date, through ' + shortDate(ytdEntry.endDate)
+            : metrics.activeYear + ', from ' + metrics.totalWeeks + ' weekly upload' + (metrics.totalWeeks === 1 ? '' : 's') + ' (no year to date file yet)';
         var scopeLabel = selectedAssociate
-            ? 'Performance Overview: ' + escapeHtml(selectedAssociate) + ' (' + metrics.activeYear + ' YTD)'
-            : 'Performance Overview (' + metrics.activeYear + ' YTD)';
+            ? 'Performance Overview: ' + escapeHtml(selectedAssociate) + ' (' + source + ')'
+            : 'Performance Overview (' + source + ')';
         html += '<h3>' + scopeLabel + '</h3>';
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">';
         html += renderExecutiveSummaryCardsHtml(cards);
@@ -1110,6 +1224,8 @@
         getPreviousPeriodData: getPreviousPeriodData,
         getExecutiveSummaryActiveYear: getExecutiveSummaryActiveYear,
         buildExecutiveSummaryAggregateMetrics: buildExecutiveSummaryAggregateMetrics,
+        findYtdForYear: findYtdForYear,
+        buildExecutiveSummaryYtdMetrics: buildExecutiveSummaryYtdMetrics,
         calculateExecutiveSummaryAverages: calculateExecutiveSummaryAverages,
         getExecutiveSummaryMetricCardStyle: getExecutiveSummaryMetricCardStyle,
         buildExecutiveSummaryCards: buildExecutiveSummaryCards,

@@ -627,7 +627,13 @@
 
         var body = model.rows.map(function (row) {
             var isFocus = model.focus && model.focus.registry === row.registry;
-            var cells = row.cells.map(function (c) { return _placingCell(c, ordinal); }).join('')
+            // Reliability is hours against an allowance, not a race. "Down 29
+            // places" in red for 3.3 hours, well inside 17.9, said a problem
+            // that is not there (many hats review, 2026-11-03, S8).
+            var hours = row.registry === 'reliability';
+            var cells = row.cells.map(function (c) {
+                return _placingCell(hours ? Object.assign({}, c, { climbed: null }) : c, ordinal);
+            }).join('')
                 + (hasYear ? (row.year ? _placingCell(row.year, ordinal, YEAR_STYLE)
                     : '<td class="text-faint" style="padding:8px;text-align:center;' + YEAR_STYLE + '">-</td>') : '');
             return '<tr style="border-bottom:1px solid var(--border);">'
@@ -635,7 +641,7 @@
                 + (isFocus ? ' <span class="pill pill-accent" style="font-size:0.75em;">FOCUS</span>' : '') + '</td>'
                 + cells
                 + '<td class="text-secondary" style="padding:8px;text-align:center;">' + _escape(_placingGoal(row)) + '</td>'
-                + '<td style="padding:8px;text-align:center;">' + _placingMove(row.climbed) + '</td></tr>';
+                + '<td style="padding:8px;text-align:center;">' + (hours ? '<span class="text-faint">-</span>' : _placingMove(row.climbed)) + '</td></tr>';
         }).join('');
 
         return '<div class="card" style="padding:16px;">'

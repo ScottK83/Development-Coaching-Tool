@@ -69,6 +69,7 @@
         var missed = [];
         var metCount = 0;
         var totalMetrics = 0;
+        var scorecard = [];
 
         // Skip survey-backed metrics when employee has no surveys
         var surveyTotal = parseInt(emp.surveyTotal, 10);
@@ -93,6 +94,8 @@
             var meetingTarget = typeof profiles?.valueMeetsTarget === 'function'
                 ? profiles.valueMeetsTarget(key, num, target)
                 : (target.type === 'min' ? num >= target.value : num <= target.value);
+
+            if (SCORECARD_KEYS.indexOf(key) !== -1) scorecard.push({ metricKey: key, meetsTarget: !!meetingTarget });
 
             if (meetingTarget) {
                 metCount++;
@@ -130,9 +133,42 @@
             totalMetrics: totalMetrics,
             totalGap: totalGap,
             worstMetrics: missed.slice(0, 3),
-            meetsAll: missed.length === 0
+            meetsAll: missed.length === 0,
+            status: statusFor(scorecard)
         };
     }
+
+    // The four on the scorecard, the same four the Today page's badge reads.
+    var SCORECARD_KEYS = ['aht', 'scheduleAdherence', 'overallSentiment', 'cxRepOverall'];
+
+    /*
+     * The Today page's split, so the two pages say the same thing about the
+     * same person (many hats review, 2026-11-03, S3). This page used to count
+     * "Meeting All Targets" across every metric on the card, which nobody
+     * hits, so it read "0 Meeting All Targets" and "17 Need Coaching" in red
+     * for a team that was mostly doing fine.
+     */
+    function statusFor(scorecard) {
+        var badge = window.DevCoachModules?.morningPulse?.getStatusBadge;
+        if (typeof badge === 'function') {
+            var b = badge(scorecard);
+            if (b && b.label) return { label: b.label, icon: b.icon, met: b.met, measured: b.measured };
+        }
+        var measured = scorecard.length;
+        var met = scorecard.filter(function(m) { return m.meetsTarget; }).length;
+        var label = measured < 2 ? 'Steady'
+            : met === measured ? 'Crushing It'
+            : (met === 0 || (met === 1 && measured >= 4)) ? 'Needs Support'
+            : met / measured >= 0.6 ? 'Doing Good' : 'Watch';
+        return { label: label, icon: '', met: met, measured: measured };
+    }
+
+    var STATUS_ORDER = [
+        { label: 'Crushing It', icon: '🟢', callout: 'callout callout-good', tone: 'tone-good' },
+        { label: 'Doing Good', icon: '🔵', callout: 'callout callout-info', tone: 'tone-info' },
+        { label: 'Watch', icon: '🟡', callout: 'callout callout-warn', tone: 'tone-warn' },
+        { label: 'Needs Support', icon: '🔴', callout: 'callout callout-bad', tone: 'tone-bad' }
+    ];
 
     function formatMetricPill(m) {
         var format = typeof window.formatMetricDisplay === 'function' ? window.formatMetricDisplay : function (key, v) { return String(v); };
@@ -159,23 +195,30 @@
 
         // Team summary bar
         html += '<div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">';
-        html += '<div style="flex: 1; min-width: 140px; padding: 16px; background: var(--bg-surface-raised); border-radius: 10px; border: 1px solid var(--border); text-align: center;">' +
+        html += '<div style="flex: 1; min-width: 120px; padding: 16px; background: var(--bg-surface-raised); border-radius: 10px; border: 1px solid var(--border); text-align: center;">' +
             '<div class="text-primary" style="font-size: 2em; font-weight: 700;">' + teamStats.total + '</div>' +
-            '<div style="font-size: 0.82em; color: var(--text-secondary);">Team Members</div></div>';
-        html += '<div class="callout callout-good" style="flex: 1; min-width: 140px; padding: 16px; border-radius: 10px; text-align: center;">' +
-            '<div class="tone-good" style="font-size: 2em; font-weight: 700;">' + teamStats.meetingAll + '</div>' +
-            '<div class="tone-good" style="font-size: 0.82em;">Meeting All Targets</div></div>';
-        html += '<div class="callout callout-bad" style="flex: 1; min-width: 140px; padding: 16px; border-radius: 10px; text-align: center;">' +
-            '<div class="tone-bad" style="font-size: 2em; font-weight: 700;">' + teamStats.needCoaching + '</div>' +
-            '<div class="tone-bad" style="font-size: 0.82em;">Need Coaching</div></div>';
+            '<div style="font-size: 0.82em; color: var(--text-secondary);">In this file</div></div>';
+        STATUS_ORDER.forEach(function(st) {
+            var count = (teamStats.byStatus && teamStats.byStatus[st.label]) || 0;
+            html += '<div class="' + st.callout + '" style="flex: 1; min-width: 120px; padding: 16px; border-radius: 10px; text-align: center;">' +
+                '<div class="' + st.tone + '" style="font-size: 2em; font-weight: 700;">' + count + '</div>' +
+                '<div class="' + st.tone + '" style="font-size: 0.82em;">' + st.icon + ' ' + st.label + '</div></div>';
+        });
         html += '</div>';
+        html += '<div class="text-secondary" style="font-size: 0.82em; margin: -14px 0 20px;">Judged on the scorecard four (Adherence, AHT, Sentiment, Rep Sat), the same way as the Today page.</div>';
+
+        // The roster said 18 and this said 17 with nothing to say why.
+        if (teamStats.missing && teamStats.missing.length) {
+            html += '<div class="callout" style="padding: 10px 14px; border-radius: 8px; margin: -8px 0 20px; font-size: 0.86em;">' +
+                'Not in this year to date file: ' + teamStats.missing.map(escapeHtml).join(', ') + '.</div>';
+        }
 
         // The Year-End KPI Scorecard that sat here was a copy of Score Card's
         // team summary (People > Numbers), which is its one home now.
 
         // Coaching priorities
         if (priorities.length > 0) {
-            html += '<h3 style="margin: 0 0 12px 0; font-size: 1.1em; color: var(--text-secondary);">Top Coaching Priorities</h3>';
+            html += '<h3 style="margin: 0 0 12px 0; font-size: 1.1em; color: var(--text-secondary);">Who to coach first</h3>';
 
             for (var i = 0; i < priorities.length; i++) {
                 var p = priorities[i];
@@ -186,7 +229,8 @@
                 // Name row with coach button
                 html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
                 html += '<div><span style="font-weight: 700; font-size: 1.05em; color: var(--text-primary);">' + escapeHtml(p.firstName) + '</span>' +
-                    ' <span style="font-size: 0.8em; color: var(--text-tertiary);">' + p.metCount + '/' + p.totalMetrics + ' targets met</span></div>';
+                    ' <span style="font-size: 0.8em; color: var(--text-tertiary);">' + escapeHtml((p.status && p.status.label) || '') +
+                    (p.status && p.status.measured ? ', ' + p.status.met + ' of ' + p.status.measured + ' on the scorecard' : '') + '</span></div>';
                 // The name rides in a data attribute, not inside the inline
                 // script, so no name can break out of the handler.
                 html += '<button type="button" data-coach-name="' + escapeHtml(p.name) + '" ' +
@@ -243,7 +287,7 @@
 
     function renderStarPerformers(names) {
         if (!names || !names.length) return '';
-        var html = '<h3 style="margin: 20px 0 12px 0; font-size: 1.1em; color: var(--green-text);">Meeting All Targets</h3>';
+        var html = '<h3 style="margin: 20px 0 12px 0; font-size: 1.1em; color: var(--green-text);">Crushing It, every scorecard number on target</h3>';
         html += '<div style="display: flex; flex-wrap: wrap; gap: 6px;">';
         for (var i = 0; i < names.length; i++) {
             html += formatGreenPill('\u2713 ' + names[i]);
@@ -292,22 +336,46 @@
         var year = parseInt(endText.slice(0, 4), 10) || new Date().getFullYear();
         var evaluated = employees.map(function(emp) { return evaluateEmployee(emp, year); });
 
-        // Separate into needs-coaching vs meeting-all
-        var needCoaching = evaluated.filter(function(e) { return !e.meetsAll; });
-        var meetingAll = evaluated.filter(function(e) { return e.meetsAll; });
+        // Who to coach first: Needs Support, then Watch, biggest gap first.
+        var rank = { 'Needs Support': 0, 'Watch': 1 };
+        var needCoaching = evaluated
+            .filter(function(e) { return e.status && rank[e.status.label] !== undefined; })
+            .sort(function(a, b) {
+                return (rank[a.status.label] - rank[b.status.label]) || (b.totalGap - a.totalGap);
+            });
+        var crushing = evaluated.filter(function(e) { return e.status && e.status.label === 'Crushing It'; });
 
-        // Sort by total gap descending (worst first)
-        needCoaching.sort(function(a, b) { return b.totalGap - a.totalGap; });
+        var byStatus = {};
+        evaluated.forEach(function(e) {
+            var label = e.status ? e.status.label : 'Steady';
+            byStatus[label] = (byStatus[label] || 0) + 1;
+        });
 
         var teamStats = {
             total: evaluated.length,
-            meetingAll: meetingAll.length,
-            needCoaching: needCoaching.length,
-            starNames: meetingAll.map(function(e) { return e.firstName; }).sort()
+            byStatus: byStatus,
+            missing: missingFromFile(employees, filterContext),
+            starNames: crushing.map(function(e) { return e.firstName; }).sort()
         };
 
         var weekLabel = 'YTD data through ' + formatWeekLabel(weekKey);
         renderDashboard(container, needCoaching, teamStats, weekLabel);
+    }
+
+    /*
+     * Roster names with no row in the year to date file. The team bar said
+     * "All of my team (18)" beside "17 Team Members" with no reason given.
+     * Only the people in scope: a picked team member, or the whole roster.
+     */
+    function missingFromFile(employees, filterContext) {
+        var roster = window.DevCoachModules?.teamScope?.getMyTeamRoster?.() || [];
+        if (!roster.length) return [];
+        var inFile = {};
+        (employees || []).forEach(function(emp) { if (emp && emp.name) inFile[emp.name] = true; });
+        return roster.filter(function(name) {
+            if (inFile[name]) return false;
+            return !filterContext || !filterContext.isFiltering || isIncludedByTeamFilter(name, filterContext);
+        }).sort();
     }
 
     function coachNow(employeeName) {
@@ -331,6 +399,8 @@
         // Exported so how a person is judged, and how a miss prints, can be
         // checked without a DOM.
         evaluateEmployee: evaluateEmployee,
+        statusFor: statusFor,
+        missingFromFile: missingFromFile,
         formatMetricPill: formatMetricPill
     };
     window.initializeDashboard = initializeDashboard;

@@ -1092,6 +1092,14 @@
             + word + _display(m.metricKey, worst.value) + ' in ' + worst.name;
     }
 
+    /* Which side of the goal "met" is, in plain words. "Inside the 82% goal"
+     * for a goal you clear by going higher read backwards (many hats review,
+     * 2026-11-03, S8). Hours are an allowance, so they stay inside it. */
+    function _metSide(m) {
+        if (m && m.metricKey === 'reliability') return 'inside';
+        return m && m.isReverse ? 'under' : 'above';
+    }
+
     /* The clause that says where the movement left it against goal.
      *
      * Worded differently at each depth on purpose. The same clause repeated
@@ -1105,13 +1113,13 @@
 
         switch (story.shape) {
             case 'always':
-                if (style === 'steady') return ', inside the ' + goal + ' goal';
-                if (style === 'brief') return ', both inside the ' + goal + ' goal';
+                if (style === 'steady') return ', ' + _metSide(m) + ' the ' + goal + ' goal';
+                if (style === 'brief') return ', both ' + _metSide(m) + ' the ' + goal + ' goal';
                 if (style === 'support') {
-                    return _pick([', every quarter of it inside the ' + goal + ' goal',
-                        ', inside the ' + goal + ' goal in every quarter'], m.metricKey + '|' + lastName + '|' + goal + '|' + (last ? last.value : ''));
+                    return _pick([', every quarter of it ' + _metSide(m) + ' the ' + goal + ' goal',
+                        ', ' + _metSide(m) + ' the ' + goal + ' goal in every quarter'], m.metricKey + '|' + lastName + '|' + goal + '|' + (last ? last.value : ''));
                 }
-                return ', and it has stayed inside the ' + goal + ' goal all year';
+                return ', and it has stayed ' + _metSide(m) + ' the ' + goal + ' goal all year';
             case 'never':
                 var off = _movementAmount(m.metricKey, m.gap ? m.gap.size : 0);
                 // "Short of" means below, which is the wrong word entirely for
@@ -1126,10 +1134,10 @@
                 // "Has been inside since Q3" when Q3 is the newest quarter
                 // claims a run that is one reading long.
                 if (style === 'support' && story.at === last) {
-                    return ', and ' + lastName + ' is the first quarter inside the ' + goal + ' goal';
+                    return ', and ' + lastName + ' is the first quarter ' + _metSide(m) + ' the ' + goal + ' goal';
                 }
-                if (style === 'support') return ', and it has been inside the ' + goal + ' goal since ' + story.at.name;
-                return ', which moved it inside the ' + goal + ' goal in ' + story.at.name;
+                if (style === 'support') return ', and it has been ' + _metSide(m) + ' the ' + goal + ' goal since ' + story.at.name;
+                return ', which moved it ' + _metSide(m) + ' the ' + goal + ' goal in ' + story.at.name;
             case 'crossed-down':
                 // "Under the goal" is failure for adherence and success for
                 // handle time. Said of a reverse metric that blew its ceiling
@@ -1144,7 +1152,7 @@
                 if (style === 'brief') return ', ' + past + ' the ' + goal + ' goal since ' + story.at.name;
                 return ', and it has been ' + past + ' the ' + goal + ' goal since ' + story.at.name;
             case 'mixed':
-                if (m.meetsTarget) return ', and it is back inside the ' + goal + ' goal';
+                if (m.meetsTarget) return ', and it is back ' + _metSide(m) + ' the ' + goal + ' goal';
                 return ', and it is ' + _missSide(m) + ' the ' + goal + ' goal';
             default:
                 return '';
@@ -1504,7 +1512,7 @@
             return items.length === 1 ? items[0]
                 : items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
         };
-        return _cap(m.label.toLowerCase()) + ' was inside the ' + _display(m.metricKey, m.target.value)
+        return _cap(m.label.toLowerCase()) + ' was ' + _metSide(m) + ' the ' + _display(m.metricKey, m.target.value)
             + ' goal in ' + join(earlier.map(function (p) { return p.name; }))
             + (earlier.length > 1 ? ', at ' : ' at ')
             + join(earlier.map(function (p) { return _display(m.metricKey, p.value); }))

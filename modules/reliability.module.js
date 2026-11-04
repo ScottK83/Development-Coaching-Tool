@@ -380,6 +380,15 @@
         if (!foundName) return null;
 
         var data = associates[foundName] || {};
+        // Nothing on file for the year is no balance, not the default
+        // allotment shown as hours left (many hats review, 2026-11-03, S5).
+        var thisYear = new Date().getFullYear();
+        var hasYearRows = (data.payrollEntries || []).some(function(e) {
+            var text = String(e?.date || '');
+            var year = /^[0-9]{4}-/.test(text) ? Number(text.slice(0, 4)) : new Date(text).getFullYear();
+            return year === thisYear;
+        });
+        if (data.takenHours == null && data.reportedRemaining == null && !hasYearRows) return null;
         var carryover = round2(Number(data.carryoverHours || 0));
         var earned = round2(Number(data.annualAllotment != null ? data.annualAllotment : (store.defaultAnnualAllotment || 120)));
         // Prefer Taken value from the PTO/Vacation Balance PDF if it was imported
@@ -1468,8 +1477,14 @@
         html += '</div>';
 
         if (names.length === 0) {
+            // The real reason. "No checked team members found in Settings"
+            // was printed when the actual gap was that no attendance files
+            // were loaded at all (many hats review, 2026-11-03, S5).
+            var anyLoaded = Object.keys(employees).length > 0;
             html += '<div class="text-secondary" style="padding:20px; background:var(--bg-surface-raised); border-radius:8px; text-align:center;">';
-            html += 'No checked team members found in Settings for the current period.';
+            html += anyLoaded
+                ? 'The attendance files that are loaded have nobody from the team picked in Settings in them.'
+                : 'No attendance files are loaded yet. Upload the payroll export and the Verint report in the Upload section to fill this page.';
             html += '</div>';
             html += '</div>';
             container.innerHTML = html;

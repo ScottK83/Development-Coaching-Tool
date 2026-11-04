@@ -6710,6 +6710,34 @@ function formatTrackerDelta(metricKey, delta) {
     return `${delta >= 0 ? '+' : '-'}${formatted}`;
 }
 
+// The move in words, "down 31 seconds, from 593s to 562s". A signed delta
+// read "+31.0 sec" under Improving for a handle time that went down, which
+// is the sign flip the many hats review found on this page (S1).
+function formatTrackerMove(item) {
+    if (!item) return '';
+    const words = window.DevCoachModules?.metricMovement?.moveInWords?.(item.metricKey, item.currentValue, item.previousValue);
+    return words || formatTrackerDelta(item.metricKey, item.delta);
+}
+
+/*
+ * A month comparison over months that are no longer the latest. On Nov 4 the
+ * card read "August -> September" with no word that October was missing
+ * (many hats review, 2026-11-03). Says which month is not uploaded yet.
+ */
+function trackerStaleMonthNote(periodType, currentKeys, now) {
+    if (periodType !== 'mom' || !Array.isArray(currentKeys) || !currentKeys.length) return '';
+    const key = String(currentKeys[currentKeys.length - 1] || '');
+    const end = key.includes('|') ? key.split('|')[1] : key;
+    if (!/^\d{4}-\d{2}-\d{2}/.test(end)) return '';
+    const today = now instanceof Date ? now : new Date();
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    const lastMonthIso = `${lastMonthEnd.getFullYear()}-${pad(lastMonthEnd.getMonth() + 1)}-${pad(lastMonthEnd.getDate())}`;
+    if (end.slice(0, 10) >= lastMonthIso.slice(0, 8) + '01') return '';
+    const missing = lastMonthEnd.toLocaleDateString('en-US', { month: 'long' });
+    return `${missing} is not uploaded yet, so this compares older months.`;
+}
+
 function buildTrendCadenceSummary(periodType, selectedEmployee) {
     const keys = getTrendKeysForPeriodType(periodType);
     const buckets = getTrendComparisonBuckets(keys, periodType);
@@ -6735,6 +6763,7 @@ function buildTrendCadenceSummary(periodType, selectedEmployee) {
         descriptor: getTrendPeriodDescriptor(periodType),
         currentLabel: formatTrendBucketLabel(buckets.currentKeys),
         previousLabel: formatTrendBucketLabel(buckets.previousKeys),
+        staleNote: trackerStaleMonthNote(periodType, buckets.currentKeys),
         topImprovement,
         topRisk,
         focusMetric
@@ -6759,11 +6788,12 @@ function buildTrendCadenceTrackerText() {
         }
 
         sections.push(`${summary.previousLabel} -> ${summary.currentLabel}`);
+        if (summary.staleNote) sections.push(summary.staleNote);
         if (summary.topImprovement) {
-            sections.push(`Improving: ${summary.topImprovement.label} ${formatTrackerDelta(summary.topImprovement.metricKey, summary.topImprovement.delta)}`);
+            sections.push(`Improving: ${summary.topImprovement.label} ${formatTrackerMove(summary.topImprovement)}`);
         }
         if (summary.topRisk) {
-            sections.push(`Watch: ${summary.topRisk.label} ${formatTrackerDelta(summary.topRisk.metricKey, summary.topRisk.delta)}`);
+            sections.push(`Watch: ${summary.topRisk.label} ${formatTrackerMove(summary.topRisk)}`);
         }
         if (summary.focusMetric) {
             sections.push(`Current focus: ${summary.focusMetric.label} at ${formatMetricDisplay(summary.focusMetric.metricKey, summary.focusMetric.currentValue)}`);
@@ -6800,10 +6830,10 @@ function renderTrendCadenceTracker() {
         }
 
         const improvingText = summary.topImprovement
-            ? `${summary.topImprovement.label} ${formatTrackerDelta(summary.topImprovement.metricKey, summary.topImprovement.delta)}`
+            ? `${summary.topImprovement.label} ${formatTrackerMove(summary.topImprovement)}`
             : 'No clear improvement yet';
         const riskText = summary.topRisk
-            ? `${summary.topRisk.label} ${formatTrackerDelta(summary.topRisk.metricKey, summary.topRisk.delta)}`
+            ? `${summary.topRisk.label} ${formatTrackerMove(summary.topRisk)}`
             : 'No clear drop yet';
         const focusText = summary.focusMetric
             ? `${summary.focusMetric.label} at ${formatMetricDisplay(summary.focusMetric.metricKey, summary.focusMetric.currentValue)}`
@@ -6814,6 +6844,7 @@ function renderTrendCadenceTracker() {
                 <div class="text-primary" style="font-weight: 700;">${summary.descriptor.label}</div>
                 <div class="text-secondary" style="font-size: 0.82em;">${escapeHtml(summary.previousLabel)} -> ${escapeHtml(summary.currentLabel)}</div>
             </div>
+            ${summary.staleNote ? `<div class="tone-warn" style="font-size: 0.84em; margin-bottom: 8px;">${escapeHtml(summary.staleNote)}</div>` : ''}
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
                 <div class="callout callout-good">
                     <div class="tone-good" style="font-weight: 700; margin-bottom: 4px;">Improving</div>

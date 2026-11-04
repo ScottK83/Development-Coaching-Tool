@@ -640,6 +640,49 @@
     }
 
     /*
+     * The best full week anybody in the center has posted this year, on the
+     * same call floor as bestPeriodValue. An ask past it is one nobody on the
+     * floor has managed even once: Pace asked one associate for a 126s handle
+     * time when the best in the center was 285s (many hats review, 2026-11-03,
+     * S6). Survey metrics need the 3-survey floor too, so one perfect survey
+     * is not "the best in the center".
+     */
+    var _centerBestCache = { sig: '', values: {} };
+    function centerBestPeriodValue(metricKey, yearKeys) {
+        var wData = _getWeeklyData();
+        var sig = (yearKeys || []).join(',') + '#' + (yearKeys || []).length;
+        if (_centerBestCache.sig !== sig) _centerBestCache = { sig: sig, values: {} };
+        if (Object.prototype.hasOwnProperty.call(_centerBestCache.values, metricKey)) return _centerBestCache.values[metricKey];
+
+        var reverse = !!window.METRICS_REGISTRY?.[metricKey]?.isReverse;
+        var floor = window.DevCoachModules?.metricsRegistryHelpers?.MIN_CALLS_TO_JUDGE || 20;
+        var survey = SURVEY_WEIGHTED.has(metricKey);
+        var best = null;
+        (yearKeys || []).forEach(function (key) {
+            (wData[key]?.employees || []).forEach(function (emp) {
+                if (!emp) return;
+                var calls = parseInt(emp.totalCalls, 10);
+                if (!(Number.isFinite(calls) && calls >= floor)) return;
+                if (survey && !(parseInt(emp.surveyTotal, 10) >= 3)) return;
+                if (emp[metricKey] === '' || emp[metricKey] === null || emp[metricKey] === undefined) return;
+                var value = parseFloat(emp[metricKey]);
+                if (!Number.isFinite(value)) return;
+                // A 0s handle time is no calls, never the best week.
+                if (metricKey === 'aht' && value <= 0) return;
+                if (best === null || (reverse ? value < best : value > best)) best = value;
+            });
+        });
+        _centerBestCache.values[metricKey] = best;
+        return best;
+    }
+
+    function isBeyondCenterBest(metricKey, required, centerBest) {
+        if (required === null || required === undefined || centerBest === null || centerBest === undefined) return false;
+        var reverse = !!window.METRICS_REGISTRY?.[metricKey]?.isReverse;
+        return reverse ? required < centerBest : required > centerBest;
+    }
+
+    /*
      * A required average that is both possible arithmetic and a real ask.
      *
      * Weighted honestly, 559s of handle time over 38 weeks leaves the rest of
@@ -812,6 +855,7 @@
                 var meetPossible = null;
                 var exceedPossible = null;
                 var bestSoFar = null;
+                var centerBest = null;
                 var currentlyMeeting, currentlyExceeding;
                 var budgetRemaining = null;
                 var exceedBudgetRemaining = null;
@@ -839,6 +883,7 @@
                     meetPossible = requiredToMeet !== null ? isAchievable(metricKey, requiredToMeet) : null;
                     exceedPossible = requiredToExceed !== null ? isAchievable(metricKey, requiredToExceed) : null;
                     bestSoFar = bestPeriodValue(empName, metricKey, weekInfo.yearKeys);
+                    centerBest = centerBestPeriodValue(metricKey, weekInfo.yearKeys);
                 }
 
                 empResult.metrics[metricKey] = {
@@ -852,6 +897,7 @@
                     meetPossible: meetPossible,
                     exceedPossible: exceedPossible,
                     bestSoFar: bestSoFar,
+                    centerBest: centerBest,
                     currentlyMeeting: currentlyMeeting,
                     currentlyExceeding: currentlyExceeding,
                     isReverse: isReverse,
@@ -884,9 +930,16 @@
      * coaching to. Only a target the arithmetic rules out (over 100%, under
      * zero) says Not possible.
      */
-    function _outOfReachCell(metricKey, required, possible, bestSoFar, tfSuffix) {
+    function _outOfReachCell(metricKey, required, possible, bestSoFar, tfSuffix, centerBest) {
         if (possible === false) {
             return '<span class="tone-bad" style="font-size: 0.85em;">Not possible</span>';
+        }
+        // Past the best week anybody in the center has posted: still shows the
+        // number, but says plainly it is not a this-year ask (S6).
+        if (isBeyondCenterBest(metricKey, required, centerBest)) {
+            return '<span class="tone-bad" style="font-size: 0.85em; font-weight: bold;">Out of reach this year</span>' +
+                '<br><span class="text-faint" style="font-size: 0.8em;">Needs ' + _formatMetricDisplay(metricKey, required) + tfSuffix +
+                '. The best week in the center is ' + _formatMetricDisplay(metricKey, centerBest) + '.</span>';
         }
         var best = (bestSoFar !== null && bestSoFar !== undefined)
             ? 'Stretch: best so far ' + _formatMetricDisplay(metricKey, bestSoFar)
@@ -1086,7 +1139,7 @@
                 } else if (m.requiredToMeet !== null && m.meetAchievable) {
                     html += '<span class="tone-warn" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToMeet) + tfSuffix + '</span>';
                 } else if (m.requiredToMeet !== null && !m.meetAchievable) {
-                    html += _outOfReachCell(metricKey, m.requiredToMeet, m.meetPossible, m.bestSoFar, tfSuffix);
+                    html += _outOfReachCell(metricKey, m.requiredToMeet, m.meetPossible, m.bestSoFar, tfSuffix, m.centerBest);
                 } else {
                     html += '<span class="text-faint">N/A</span>';
                 }
@@ -1108,7 +1161,7 @@
                 } else if (m.requiredToExceed !== null && m.exceedAchievable) {
                     html += '<span class="tone-info" style="font-weight: bold;">' + _formatMetricDisplay(metricKey, m.requiredToExceed) + tfSuffix + '</span>';
                 } else if (m.requiredToExceed !== null && !m.exceedAchievable) {
-                    html += _outOfReachCell(metricKey, m.requiredToExceed, m.exceedPossible, m.bestSoFar, tfSuffix);
+                    html += _outOfReachCell(metricKey, m.requiredToExceed, m.exceedPossible, m.bestSoFar, tfSuffix, m.centerBest);
                 } else {
                     html += '<span class="text-faint">N/A</span>';
                 }
@@ -1133,7 +1186,7 @@
                 else {
                     belowCount++;
                     if (!mm.isCumulative && mm.requiredToMeet !== null && !mm.meetAchievable) {
-                        if (mm.meetPossible === false) notPossibleCount++;
+                        if (mm.meetPossible === false || isBeyondCenterBest(mk, mm.requiredToMeet, mm.centerBest)) notPossibleCount++;
                         else stretchCount++;
                     }
                 }
@@ -1153,7 +1206,7 @@
                 html += '<span class="pill pill-warn" style="padding: 4px 12px;">' + stretchCount + ' Stretch</span>';
             }
             if (notPossibleCount > 0) {
-                html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + notPossibleCount + ' Not possible</span>';
+                html += '<span class="pill pill-bad" style="padding: 4px 12px;">' + notPossibleCount + ' Out of reach this year</span>';
             }
             html += '</div>';
 
@@ -1234,6 +1287,8 @@
         calculateRequiredAverage: calculateRequiredAverage,
         isWithinReach: isWithinReach,
         bestPeriodValue: bestPeriodValue,
+        centerBestPeriodValue: centerBestPeriodValue,
+        isBeyondCenterBest: isBeyondCenterBest,
         estimateYtdCalls: estimateYtdCalls,
         withYtdCalls: withYtdCalls,
         // Exported so the table's order and KPI marking can be read back.

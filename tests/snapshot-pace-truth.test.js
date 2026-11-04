@@ -181,7 +181,29 @@ suite('pace truth: a stretch shows its number and the best so far', (t) => {
     futures.renderFuturesTable(christiData(rateMetric({ requiredToMeet: 127.3, meetPossible: false, bestSoFar: 90 })), 'Christi Martinez', 'weekly');
     html = els.futuresTableContainer.innerHTML;
     t.check('over 100% is not possible, and says so', /Not possible/.test(html));
-    t.check('the summary counts it as not possible', /1 Not possible/.test(html));
+    // The summary pill groups the arithmetic's "not possible" with asks past
+    // the best week in the center: neither is a this-year ask (S6, 2026-11-03).
+    t.check('the summary counts it as out of reach', /1 Out of reach this year/.test(html));
+});
+
+suite('pace truth: an ask past the best week in the center says out of reach', (t) => {
+    t.installFakeBrowser();
+    global.window.METRICS_REGISTRY = { aht: { key: 'aht', label: 'Average Handle Time', unit: 'sec', isReverse: true } };
+    const futures = t.loadModule('modules/futures.module.js').futures;
+    global.weeklyData = {
+        '2026-10-19|2026-10-25': { metadata: { periodType: 'week', endDate: '2026-10-25' }, employees: [
+            { name: 'Quick One', totalCalls: 150, aht: 285 },
+            { name: 'Thin Week', totalCalls: 4, aht: 120 },
+            { name: 'No Calls', totalCalls: 60, aht: 0 },
+            { name: 'Steady', totalCalls: 140, aht: 450 }
+        ] }
+    };
+    global.window.DevCoachModules.storage = { loadWeeklyData: () => global.weeklyData, loadYtdData: () => ({}) };
+    const keys = Object.keys(global.weeklyData);
+    t.equal('the best week on the floor, past the call floor and a 0s', futures.centerBestPeriodValue('aht', keys), 285);
+    t.check('126s is past it', futures.isBeyondCenterBest('aht', 126, 285));
+    t.check('300s is not', !futures.isBeyondCenterBest('aht', 300, 285));
+    t.check('nothing to compare is not out of reach', !futures.isBeyondCenterBest('aht', 126, null));
 });
 
 suite('pace truth: buildFuturesData carries whether a target is possible and the best so far', (t) => {

@@ -1239,6 +1239,12 @@
             // decision it was explaining.
             var rank = ctx.displayRankByMetric?.[metricKey]?.[name] || row.metricRanks?.[metricKey];
             if (!rank) return;
+            // The table ranks a survey metric only on three or more surveys.
+            // "#12 in Rep Satisfaction, but 0 is still short" was 0% on one
+            // survey (many hats review, 2026-11-03, S9).
+            var registryKey = METRIC_RANK_LABELS[metricKey].registry;
+            var surveys = parseFloat(row.surveyTotal);
+            if (SURVEY_METRIC_KEYS.indexOf(registryKey) !== -1 && Number.isFinite(surveys) && surveys < 3) return;
 
             var value = getRankedValue(row, metricKey);
             var hasValue = value !== null && value !== undefined;
@@ -1305,8 +1311,9 @@
                 + ', which clears the bar. Worth a look, because nothing in the numbers says why that is not a shout-out.';
         }
         if (info.reason === 'belowTarget') {
+            // Formatted like the table: "0%", "593s", never a bare 0.
             return who + ' ranks #' + info.best.rank + ' in ' + info.best.label
-                + ', but ' + info.best.value + ' is still short of target, so it is not a shout-out.';
+                + ', but ' + formatMetricValue(info.best.metricKey, info.best.value) + ' is still short of target, so it is not a shout-out.';
         }
         if (info.reason === 'valueWithheld') {
             return who + ' ranks #' + info.best.rank + ' in ' + info.best.label

@@ -160,7 +160,7 @@ suite('quarter review: a slipping metric is named plainly', (t) => {
     // "slipped in each quarter" read as a slide for a first miss).
     const notes = qr.buildNotes(ctx);
     t.check('and it lands in the focus box, as a first dip',
-        /Rep satisfaction was inside the 82% goal in Q1 and Q2, at 86% and 83\.5%, and dipped to 81% in Q3\./.test(notes.box2));
+        /Rep satisfaction was above the 82% goal in Q1 and Q2, at 86% and 83\.5%, and dipped to 81% in Q3\./.test(notes.box2));
     t.check('not in the strengths box', !/slipped|dipped/.test(notes.box1));
 });
 
@@ -936,7 +936,7 @@ suite('quarter review: "finished close to where it started" only when it did', (
         'Came Back', 'cxRepOverall', 'lead').text;
     t.check('a real return keeps the swing note', /finished close to where the year started, after a dip to 54.5% in Q2/.test(back));
     t.check('the dip is not credited with the recovery', !/which moved it inside/.test(back));
-    t.check('the crossing is said plainly', /Q3 is the first quarter inside the 82% goal/.test(back));
+    t.check('the crossing is said plainly', /Q3 is the first quarter above the 82% goal/.test(back));
 });
 
 suite('quarter review: a run one quarter long is not "since"', (t) => {
@@ -944,7 +944,7 @@ suite('quarter review: a run one quarter long is not "since"', (t) => {
     const text = sentenceFor(t, threeQuarters('Just Made It', { fcr: 57.1 }, { fcr: 70 }, { fcr: 75 }),
         'Just Made It', 'fcr', 'support').text;
     t.check('not "inside since Q3"', !/since Q3/.test(text));
-    t.check('the first quarter inside', /Q3 is the first quarter inside the 73% goal/.test(text));
+    t.check('the first quarter inside', /Q3 is the first quarter above the 73% goal/.test(text));
 });
 
 suite('quarter review: a net move inside the noise band is not progress', (t) => {
@@ -953,7 +953,7 @@ suite('quarter review: a net move inside the noise band is not progress', (t) =>
         'Wandered', 'overallSentiment', 'lead').text;
     t.check('every reading is shown', /91.8% in Q1, 93.6% in Q2, and 92.3% in Q3/.test(text));
     t.check('half a point is not called better', !/better than where/.test(text));
-    t.check('the standing is still said', /every quarter of it inside the 88% goal|inside the 88% goal in every quarter/.test(text));
+    t.check('the standing is still said', /every quarter of it above the 88% goal|above the 88% goal in every quarter/.test(text));
 });
 
 suite('quarter review: a steady metric is not given one reading for the year', (t) => {
