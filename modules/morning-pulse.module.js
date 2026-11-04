@@ -1609,14 +1609,23 @@
     // arithmetic needs to know how much of the year that upload covers, and a
     // second walk of ytdData to go and find that date is the near-copy this
     // comment is already warning about.
+    //
+    // This calendar year's only. On January 5, 2027 the newest file was 2026's,
+    // and the messages called it "the year" with "11 months left" under it.
+    // Until the first file of the new year arrives there is no year to talk
+    // about, so the year lines are left out rather than borrowed.
     function latestYtdPeriod() {
         const ytd = typeof ytdData !== 'undefined' ? ytdData : {};
+        const thisYear = new Date().getFullYear();
         return Object.keys(ytd)
             .map(k => {
                 const endText = ytd[k]?.metadata?.endDate || (k.includes('|') ? k.split('|')[1] : '');
-                return { key: k, endText: String(endText || ''), end: new Date(endText) };
+                // A bare date read as local midnight. As UTC, Arizona put a
+                // file ending January 1 in the year before.
+                const text = String(endText || '');
+                return { key: k, endText: text, end: new Date(/^\d{4}-\d{2}-\d{2}$/.test(text) ? text + 'T00:00:00' : text) };
             })
-            .filter(x => !isNaN(x.end))
+            .filter(x => !isNaN(x.end) && x.end.getFullYear() === thisYear)
             .sort((a, b) => b.end - a.end)[0] || null;
     }
 
@@ -5766,6 +5775,8 @@
     window.DevCoachModules = window.DevCoachModules || {};
     window.DevCoachModules.morningPulse = {
         resolveCheckinPeriods,
+        // The YTD upload "the year" lines read, this calendar year's only.
+        latestYtdKey,
         // The status cards and the day-file table, drawn on My Team over the
         // window the page is showing.
         buildTeamPulseHtml,

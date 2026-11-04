@@ -99,6 +99,21 @@ function getAssociateData(store, name) {
     return data;
 }
 
+// The calendar year an entry falls in. A year's allotment is measured
+// against that year's time off only; summing every stored year against it
+// had January starting with last year's hours already used (2026-11-03).
+function entryYear(e) {
+    var text = String((e && e.date) || '');
+    if (/^\d{4}-/.test(text)) return Number(text.slice(0, 4));
+    var parsed = new Date(text);
+    return isNaN(parsed.getTime()) ? NaN : parsed.getFullYear();
+}
+
+function entriesThisYear(entries, year) {
+    var y = Number.isInteger(year) ? year : new Date().getFullYear();
+    return (entries || []).filter(function(e) { return entryYear(e) === y; });
+}
+
 function calculatePtoBalance(store, name) {
     var data = getAssociateData(store, name);
     var carryover = data.carryoverHours || 0;
@@ -108,7 +123,7 @@ function calculatePtoBalance(store, name) {
         used = Number(data.takenHours) || 0;
     } else {
         used = 0;
-        (data.payrollEntries || []).forEach(function(e) {
+        entriesThisYear(data.payrollEntries).forEach(function(e) {
             if (PTO_BALANCE_TRCS.indexOf(e.trc) >= 0) {
                 used += (e.hours || 0);
             }
@@ -440,7 +455,7 @@ function renderBalancePanel(employeeName) {
     var unschedHours = 0;
     var unschedDays = 0;
     var unschedDates = {};
-    (data.payrollEntries || []).forEach(function(e) {
+    entriesThisYear(data.payrollEntries).forEach(function(e) {
         if (e.unscheduled) {
             unschedHours += (e.hours || 0);
             if (e.date && !unschedDates[e.date]) { unschedDays++; unschedDates[e.date] = true; }

@@ -203,17 +203,25 @@
         });
     }
 
+    function endYear(data, key) {
+        const end = data[key]?.metadata?.endDate || (key.includes('|') ? key.split('|')[1] : key);
+        return parseInt(String(end || '').slice(0, 4), 10);
+    }
+
     /**
      * Ranks for one associate at two points in the year, from whichever two
-     * YTD uploads are furthest apart. Returns null when there is only one
-     * upload, because a single point is a position, not a direction.
+     * of this calendar year's YTD uploads are furthest apart. Returns null
+     * when there is only one, because a single point is a position, not a
+     * direction. Last year's files never count: in January the furthest two
+     * apart would have been September 2026 and January 2027.
      */
-    function gatherYearMovement(employeeName) {
+    function gatherYearMovement(employeeName, now) {
         const ranking = window.DevCoachModules?.centerRanking;
         if (!ranking?.buildRankingsForPeriod) return null;
 
         const ytd = window.DevCoachModules?.storage?.loadYtdData?.() || {};
-        const keys = sortedKeysByEnd(ytd);
+        const thisYear = (now instanceof Date ? now : new Date()).getFullYear();
+        const keys = sortedKeysByEnd(ytd).filter(key => endYear(ytd, key) === thisYear);
         if (keys.length < 2) return null;
 
         const rowFor = (key) => {

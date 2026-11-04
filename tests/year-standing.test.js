@@ -130,3 +130,46 @@ suite('year standing: the urgency is real, not invented', (t) => {
     t.check('an 82% target', an.indexOf('against an 82% target') > -1);
     t.check('no emoji on the heading', an.indexOf('Where the year stands') === 0);
 });
+
+suite('year standing: only this calendar year moves the year', (t) => {
+    const ys = load(t);
+    const seen = [];
+    global.window.DevCoachModules.centerRanking = {
+        buildRankingsForPeriod: (key) => {
+            seen.push(key);
+            return { rankings: [{ name: 'Ana', metricRanks: { aht: 10 } }], totalEmployees: 100 };
+        }
+    };
+    global.window.DevCoachModules.storage = { loadYtdData: () => ({
+        '2026-01-01|2026-09-20': { metadata: { endDate: '2026-09-20' }, employees: [] },
+        '2026-01-01|2026-12-27': { metadata: { endDate: '2026-12-27' }, employees: [] },
+        '2027-01-01|2027-01-10': { metadata: { endDate: '2027-01-10' }, employees: [] }
+    }) };
+
+    // In January the two furthest apart were September 2026 and January
+    // 2027, and the message called that "this year".
+    t.check('one file of the new year is no direction yet',
+        ys.gatherYearMovement('Ana', new Date(2027, 0, 12)) === null);
+    const dec = ys.gatherYearMovement('Ana', new Date(2026, 11, 29));
+    t.equal('December compares the year\'s own files',
+        dec && `${dec.earlierKey} > ${dec.currentKey}`, '2026-01-01|2026-09-20 > 2026-01-01|2026-12-27');
+    t.check('and never reads the next year\'s', seen.indexOf('2027-01-01|2027-01-10') === -1);
+});
+
+suite('year standing: the messages read this year\'s YTD only', (t) => {
+    t.installFakeBrowser();
+    global.weeklyData = {};
+    global.ytdData = {
+        '2026-01-01|2026-12-27': { metadata: { endDate: '2026-12-27', periodType: 'ytd' }, employees: [] },
+        '2027-01-01|2027-01-01': { metadata: { endDate: '2027-01-01', periodType: 'ytd' }, employees: [] }
+    };
+    t.pinClock('2027-01-05');
+    const pulse = t.loadModule('modules/morning-pulse.module.js').morningPulse;
+    // Read as a local date: as UTC, January 1 lands in the year before in
+    // Arizona.
+    t.equal('January reads the new year\'s file', pulse.latestYtdKey(), '2027-01-01|2027-01-01');
+    delete global.ytdData['2027-01-01|2027-01-01'];
+    t.equal('and with none yet there is no year to talk about', pulse.latestYtdKey(), null);
+    t.pinClock('2026-12-29');
+    t.equal('December still reads its own', pulse.latestYtdKey(), '2026-01-01|2026-12-27');
+});

@@ -755,8 +755,14 @@
             }
         }
 
-        var targets = window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR?.[currentYear] || {};
-        var ratingBands = window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[currentYear] || {};
+        // The year's own targets, or last year's until the new ones are in.
+        var profiles = window.DevCoachModules?.metricProfiles;
+        var targets = (profiles?.getTargetsForYear
+            ? profiles.getTargetsForYear(currentYear)
+            : profiles?.TARGETS_BY_YEAR?.[currentYear]) || {};
+        var ratingBands = (profiles?.getRatingBandsForYear
+            ? profiles.getRatingBandsForYear(currentYear)
+            : profiles?.RATING_BANDS_BY_YEAR?.[currentYear]) || {};
 
         // Read once for the whole team rather than per employee per metric.
         var volumeRates = weeklyVolumeRates(weekInfo.yearKeys);

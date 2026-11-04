@@ -298,7 +298,7 @@
     }
 
     function buildOnOffScoreRows(result, goalSource, bands, reviewYear, periodMetadata) {
-        var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+        var ratingBands = window.DevCoachModules?.metricProfiles?.getRatingBandsForYear?.(reviewYear) || {};
         var surveyLabel = 'Associate Overall (Surveys)';
         if (result.surveyCount !== null && result.surveyCount !== undefined) {
             surveyLabel = 'Associate Overall (' + result.surveyCount + ' survey' + (result.surveyCount !== 1 ? 's' : '') + ')';
@@ -452,11 +452,17 @@
 
     function getOnOffTrackerLegendBandsByYear(reviewYear) {
         const yearNum = parseInt(reviewYear, 10);
-        const moduleBands = window?.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR?.[yearNum];
-        if (moduleBands) {
+        const profiles = window?.DevCoachModules?.metricProfiles;
+        const moduleBands = profiles?.getRatingBandsForYear?.(yearNum);
+        const usedYear = profiles?.profileYearFor?.(yearNum);
+        if (moduleBands && Object.keys(moduleBands).length) {
+            // Last year's bands stand until the new year's are entered, and
+            // the legend says so rather than labelling them as this year's.
             return {
                 bands: moduleBands,
-                sourceLabel: `${yearNum} rating profile`,
+                sourceLabel: usedYear && usedYear !== yearNum
+                    ? `${usedYear} rating profile (${yearNum} not entered yet)`
+                    : `${yearNum} rating profile`,
                 usingFallback: false
             };
         }
@@ -762,7 +768,7 @@
         var result = calculateYearEndOnOffMirror(latestPeriod.employeeRecord, reviewYear);
         var firstName = (typeof window.getEmployeeNickname === 'function' ? window.getEmployeeNickname(employeeName) : '') || employeeName.split(' ')[0] || employeeName;
         var registry = window.METRICS_REGISTRY || {};
-        var ratingBands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+        var ratingBands = window.DevCoachModules?.metricProfiles?.getRatingBandsForYear?.(reviewYear) || {};
 
         // Build metrics context. Labels are the registry's, so the prompt names
         // a measure the way every other screen does.
@@ -786,7 +792,7 @@
         var belowGoal = [];
         var metCount = 0;
         var totalScored = 0;
-        var yearTargets = (window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+        var yearTargets = window.DevCoachModules?.metricProfiles?.getTargetsForYear?.(reviewYear) || {};
 
         Object.keys(metricMap).forEach(function(k) {
             var m = metricMap[k];
@@ -1279,7 +1285,7 @@
             var scores = r.result.scores || {};
             var values = r.result.values || {};
 
-            var bands = (window.DevCoachModules?.metricProfiles?.RATING_BANDS_BY_YEAR || {})[parseInt(reviewYear, 10)] || {};
+            var bands = window.DevCoachModules?.metricProfiles?.getRatingBandsForYear?.(reviewYear) || {};
 
             function formatVal(val, unit) {
                 if (val === null || val === undefined) return '--';

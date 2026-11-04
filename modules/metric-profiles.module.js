@@ -124,6 +124,23 @@
         return tableForYear(TARGETS_BY_YEAR, year)?.[metricKey] || null;
     }
 
+    // The bands the same way: the year's own, or the newest year before it.
+    // Pace and the On/Off tracker read the table by its exact year, so on
+    // January 1 they went blank until someone added the new year.
+    function getRatingBandsForYear(year) {
+        return tableForYear(RATING_BANDS_BY_YEAR, year) || {};
+    }
+
+    // Which year's figures actually stand for this one, so a screen can say
+    // "2026 targets" honestly while 2027's are not entered yet.
+    function profileYearFor(year) {
+        const yearNum = parseInt(year, 10);
+        if (!Number.isInteger(yearNum)) return null;
+        if (TARGETS_BY_YEAR[yearNum]) return yearNum;
+        const earlier = Object.keys(TARGETS_BY_YEAR).map(Number).filter((y) => y < yearNum).sort((a, b) => a - b);
+        return earlier.length ? earlier[earlier.length - 1] : null;
+    }
+
     /* Round a value the way it will be printed, before judging it.
 
        Percentages are displayed to one decimal, so 92.96 prints as "92.96 ->
@@ -212,6 +229,8 @@
         RATING_BANDS_BY_YEAR,
         getYearTarget,
         getTargetsForYear,
+        getRatingBandsForYear,
+        profileYearFor,
         roundToDisplayPrecision,
         valueMeetsTarget,
         meetsYearTarget,

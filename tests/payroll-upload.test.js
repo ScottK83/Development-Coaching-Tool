@@ -93,3 +93,15 @@ suite('pto: one person however the file writes the name', (t) => {
     t.equal('case and spacing do not matter', key('  ROBERT   berrelleza '), key('Robert Berrelleza'));
     t.check('different people stay different', key('Robert Berrelleza') !== key('Roberta Berrelleza'));
 });
+
+suite('payroll: the PTOST running total is the calendar year\'s', (t) => {
+    const api = load(t);
+    const day = (date, qty) => ({ date, trc: 'PTOST', quantity: qty, taskCode: 'PHONE', clockIn: '', clockOut: '' });
+    const entries = [day('2026-11-02', 8), day('2026-12-10', 8), day('2027-01-04', 4)];
+    // The 40 hour allowance is a year's. Walked as one, January opened on
+    // December's total already spent (2026-11-03).
+    t.equal('January counts only January', api.reconcileEmployee(null, entries, 2027).ptostHoursUsed, 4);
+    t.equal('and has the year\'s allowance left', api.reconcileEmployee(null, entries, 2027).ptostBufferRemaining, 36);
+    t.equal('2026 keeps its own', api.reconcileEmployee(null, entries, 2026).ptostHoursUsed, 16);
+    t.equal('with no year given it is this year (the suite runs in 2026)', api.reconcileEmployee(null, entries).ptostHoursUsed, 16);
+});

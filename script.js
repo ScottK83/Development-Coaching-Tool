@@ -1903,50 +1903,54 @@ function bindUploadAndPasteHandlers() {
     // Dropdown-driven upload wizard — owns period type and date selection.
     window.DevCoachModules?.uploadWizard?.bind?.();
 
-    // Two year-end year inputs live on different pages but should agree:
-    //   #uploadYearEndProfile (Upload page select: auto/2025/2026)
-    //   #yearEndReviewYear    (Review Prep > Year-End: number input)
+    // The upload's target year and the year being reviewed are kept apart.
     bindYearEndProfileSync();
 }
 
 const YEAR_END_PROFILE_STORAGE_KEY = STORAGE_PREFIX + 'selectedYearEndYear';
 
+/*
+ * Two different questions that used to be wired together:
+ *   #uploadYearEndProfile  which year's targets an upload is judged by
+ *   #yearEndReviewYear     which year a year-end review is written about
+ *
+ * Typing 2026 in Review Year also set the upload select to 2026 and saved it,
+ * so every upload after that, January's included, was stamped as 2026 and the
+ * review picker then took the newest file (2026-11-03). The review year is
+ * remembered on its own; the upload select opens on "Auto from end date"
+ * every time and is never saved, so a one-off choice can't outlive the
+ * upload it was made for. Its year options come from the target table, so a
+ * new year shows up the day its targets are added.
+ */
 function bindYearEndProfileSync() {
     const profileSelect = document.getElementById('uploadYearEndProfile');
     const reviewYearInput = document.getElementById('yearEndReviewYear');
-    if (!profileSelect && !reviewYearInput) return;
-
-    // Restore last-set year on load. 'auto' means "infer from end date" and
-    // is not a value we persist for the year input.
-    let stored = '';
-    try { stored = localStorage.getItem(YEAR_END_PROFILE_STORAGE_KEY) || ''; } catch (_e) {}
-    if (stored && /^\d{4}$/.test(stored)) {
-        if (profileSelect && Array.from(profileSelect.options).some(o => o.value === stored)) {
-            profileSelect.value = stored;
-        }
-        if (reviewYearInput && !reviewYearInput.value) {
-            reviewYearInput.value = stored;
-        }
-    }
 
     if (profileSelect) {
-        profileSelect.addEventListener('change', () => {
-            const val = (profileSelect.value || '').trim();
-            if (val === 'auto') return; // don't overwrite a user-typed review year
-            if (reviewYearInput) reviewYearInput.value = val;
-            try { localStorage.setItem(YEAR_END_PROFILE_STORAGE_KEY, val); } catch (_e) {}
+        const years = Object.keys(window.DevCoachModules?.metricProfiles?.TARGETS_BY_YEAR || {})
+            .filter(y => /^\d{4}$/.test(y))
+            .sort();
+        const known = new Set(Array.from(profileSelect.options).map(o => o.value));
+        years.filter(y => !known.has(y)).forEach(y => {
+            const option = document.createElement('option');
+            option.value = y;
+            option.textContent = `${y} goals`;
+            profileSelect.appendChild(option);
         });
+        profileSelect.value = 'auto';
     }
-    if (reviewYearInput) {
-        reviewYearInput.addEventListener('change', () => {
-            const val = (reviewYearInput.value || '').trim();
-            if (!/^\d{4}$/.test(val)) return;
-            if (profileSelect && Array.from(profileSelect.options).some(o => o.value === val)) {
-                profileSelect.value = val;
-            }
-            try { localStorage.setItem(YEAR_END_PROFILE_STORAGE_KEY, val); } catch (_e) {}
-        });
+
+    if (!reviewYearInput) return;
+    let stored = '';
+    try { stored = localStorage.getItem(YEAR_END_PROFILE_STORAGE_KEY) || ''; } catch (_e) {}
+    if (stored && /^\d{4}$/.test(stored) && !reviewYearInput.value) {
+        reviewYearInput.value = stored;
     }
+    reviewYearInput.addEventListener('change', () => {
+        const val = (reviewYearInput.value || '').trim();
+        if (!/^\d{4}$/.test(val)) return;
+        try { localStorage.setItem(YEAR_END_PROFILE_STORAGE_KEY, val); } catch (_e) {}
+    });
 }
 
 function initializeDashboard() {
@@ -5029,14 +5033,20 @@ function getYearEndTargetConfig(metricKey, reviewYear, periodMetadata) {
     const profileModule = getMetricProfilesModule();
     const targetsByYear = profileModule?.TARGETS_BY_YEAR || YEAR_END_TARGETS_BY_YEAR;
 
+    // A year with no table yet borrows the newest one before it, the same
+    // rule metric-profiles uses everywhere else, rather than dropping to the
+    // year-less registry target on January 1.
+    const forYear = (year) => (Number.isInteger(year)
+        ? (profileModule?.getTargetsForYear ? profileModule.getTargetsForYear(year) : targetsByYear[year])
+        : null);
     const parsedYear = parseInt(reviewYear, 10);
-    const customTargets = Number.isInteger(parsedYear) ? targetsByYear[parsedYear] : null;
+    const customTargets = forYear(parsedYear);
     const metadataProfile = periodMetadata?.yearEndTargetProfile;
     const metadataYear = parseInt(periodMetadata?.yearEndReviewYear, 10);
     const profileYear = Number.isInteger(parsedYear)
         ? parsedYear
         : (metadataProfile === 'auto' ? metadataYear : parseInt(metadataProfile, 10));
-    const profileTargets = Number.isInteger(profileYear) ? targetsByYear[profileYear] : null;
+    const profileTargets = forYear(profileYear);
 
     if (customTargets && customTargets[metricKey]) return { ...customTargets[metricKey], profileYear: parsedYear };
     if (profileTargets && profileTargets[metricKey]) return { ...profileTargets[metricKey], profileYear: profileYear };
@@ -6756,7 +6766,7 @@ function buildTrendGoalsSummaryHtml() {
 
     return `
         <div class="card" style="margin: 0 0 12px 0;">
-            <div class="card-title">2026 Goals Snapshot</div>
+            <div class="card-title">${new Date().getFullYear()} Goals Snapshot</div>
             <ul class="text-secondary" style="margin: 0; padding-left: 18px; columns: 2; column-gap: 24px;">${itemsHtml}</ul>
         </div>
     `;

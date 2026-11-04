@@ -862,7 +862,12 @@
         return 'other';
     }
 
-    function reconcileEmployee(verintData, payrollEntries) {
+    // `year` is the calendar year the running totals cover, this one unless
+    // a caller says otherwise. The 40 hour PTOST allowance is a year's, and
+    // with every stored year walked in one pass January opened on December's
+    // total already spent (2026-11-03).
+    function reconcileEmployee(verintData, payrollEntries, year) {
+        var yearText = String(Number.isInteger(year) ? year : new Date().getFullYear());
         var result = {
             ptostHoursUsed: 0,
             ptostBufferRemaining: PTOST_BUFFER_LIMIT,
@@ -897,7 +902,8 @@
             if (!d) return null;
             d = parseSpreadsheetDate(d);
             if (!d) return null;
-            return d.toISOString().slice(0, 10);
+            var iso = d.toISOString().slice(0, 10);
+            return iso.slice(0, 4) === yearText ? iso : null;
         }
 
         // Add Verint events
