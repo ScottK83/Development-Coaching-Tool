@@ -700,6 +700,10 @@
                 `<div class="card-title" style="margin-bottom:4px;">High five round</div>` +
                 `<div class="text-secondary" style="font-size:0.86em;">One high five per associate, written in a single pass. Copy them one at a time.</div>` +
             `</button>` +
+            `<button type="button" id="myTeamCheckinRound" style="text-align:left; padding:16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-surface); cursor:pointer;">` +
+                `<div class="card-title" style="margin-bottom:4px;">Mental health check-in</div>` +
+                `<div class="text-secondary" style="font-size:0.86em;">Write one message about how they are doing, no numbers. Each copy opens with their first name.</div>` +
+            `</button>` +
         `</div>` +
         `<div id="myTeamShoutOutSlot" style="margin-top:14px;"></div>`;
 
@@ -727,6 +731,7 @@
 
         container.querySelector('#myTeamShoutOut')?.addEventListener('click', () => renderShoutOut());
         container.querySelector('#myTeamHighFiveAll')?.addEventListener('click', () => renderHighFiveRound());
+        container.querySelector('#myTeamCheckinRound')?.addEventListener('click', () => renderCheckinRound());
     }
 
     /**
@@ -932,6 +937,20 @@
         slot.querySelector('#myTeamHighFiveRerun')?.addEventListener('click', () => renderHighFiveRound());
     }
 
+    // The mental health check-in. Not tied to the window: how someone is
+    // doing has no period, so a window change leaves it where it is.
+    function renderCheckinRound() {
+        const slot = document.getElementById('myTeamShoutOutSlot');
+        if (!slot) return;
+        openSlot = 'checkin';
+        const round = mods().checkinRound;
+        if (!round?.render) {
+            slot.innerHTML = highFiveNotice('The check-in module is not loaded. Reload the page and try again.');
+            return;
+        }
+        round.render(slot);
+    }
+
     /**
      * The public post. Built from the same target-gated celebrations the day
      * page already shows underneath, so what goes in the channel and what you
@@ -1043,6 +1062,7 @@
 
         if (openSlot === 'shoutout') renderShoutOut();
         else if (openSlot === 'highfive') await renderHighFiveRound();
+        else if (openSlot === 'checkin') renderCheckinRound();
     }
 
     /**

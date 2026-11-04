@@ -224,6 +224,8 @@
         STORAGE_PREFIX + 'deletedServerTips',
         // The private messages' team note. Hand-typed; nothing can rebuild it.
         STORAGE_PREFIX + 'teamNote',
+        // The mental health check-in's words. Hand-typed too.
+        STORAGE_PREFIX + 'checkinRound',
         // The Year-End speech's opening, one per review year. Hand-typed too.
         STORAGE_PREFIX + 'yearEndOpening'
         // dailyData is deliberately absent: dailies are ephemeral and would
