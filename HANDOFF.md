@@ -1,8 +1,18 @@
 # Handoff
 
-Last updated 2026-11-04, version 2026.11.04.3, suite at 10244 passing.
+Last updated 2026-11-09, suite at 10297 passing.
 
 ## Where things stand
+- **PA Down Payment card (Scott, 2026-11-09), built 11/09.**
+  - **Where:** People > Follow Up > PA Down Payment (`modules/pa-down-payment.module.js`; `red-flag.module.js` switches the tab).
+  - **How it works:**
+    - Scott pastes his rows from the weekly PA Down Payment Coaching sheet, Required Coaching tab, columns A to H, with or without the heading row.
+    - One card per advisor shows the four figures. Generate email opens an Outlook draft to the advisor; Copy email and Copy leader note copy.
+    - The email is his sample word for word, with no praise opener (his call for development opportunities). A preferred name wins in "Hi".
+    - The leader note starts with today's date. Its wording is a draft he hasn't confirmed.
+    - A paste with more than one leader shows no cards until a leader is picked.
+  - **Nothing is saved or synced:** the rows live in the module's variables. The suite checks the file makes no store or network call except reading the roster.
+  - **Tests:** `tests/pa-down-payment.test.js` (53 checks) on made-up rows, `tests/fixtures/pa-down-payment-rows.txt`. The panel was also clicked through in headless Chrome on those rows (not the whole app, and not the real sheet).
 - **Mental health check-in (Scott, 2026-11-04: "a message where I copy and paste to each of them"), live in v2026.11.04.1.**
   - **Where:** Today > Day with the whole team picked, the fourth card (`modules/checkin-round.module.js`).
   - **How it works:**

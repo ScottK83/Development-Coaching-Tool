@@ -1,0 +1,10 @@
+Report Date	Leader	Advisor	Avg % Accepted	Accounts on report	Count of 1X PA Contact	% of usage	# with 0% Down Accepted	Date Coached	Leader Notes
+11/09/2026	Pat Leader	Jamie Doe	41.5%	22	9	41%	3
+11/9/2026	Pat Leader	Rivera, Sam	50.0%	1	1	100%	0
+11/9/2026	Pat Leader	Alex Stone	0.325	12	4	0.33	1
+
+		Previous Weeks Outstanding:
+		*Will have to open the corresponding week's report
+		Report Date*	Leader	Count
+		10/26/2026	Pat Leader	4
+		11/2/2026	Robin Other	6

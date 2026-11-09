@@ -1593,6 +1593,7 @@ Box 2 - Future Improvement Areas:
                         <button type="button" id="showFollowUpPanelBtn" class="btn-secondary is-active" aria-selected="true">Follow-Up</button>
                         <button type="button" id="showSurveyFeedbackPanelBtn" class="btn-secondary">Survey Feedback</button>
                         <button type="button" id="showQaCoachingPanelBtn" class="btn-secondary">QA Coaching</button>
+                        <button type="button" id="showPaDownPaymentPanelBtn" class="btn-secondary">PA Down Payment</button>
                         <button type="button" id="showRedFlagPanelBtn" class="btn-secondary">Red Flag Coaching</button>
                     </div>
 
@@ -1715,6 +1716,25 @@ Box 2 - Future Improvement Areas:
                             <h3 class="card-title">Sent <span id="qaCoachingHistoryCount" class="text-faint" style="font-size: 0.8em;"></span></h3>
                             <div id="qaCoachingHistoryList" style="max-height: 400px; overflow-y: auto;"></div>
                         </div>
+                    </div>
+
+                    <!-- Rendered and wired by modules/pa-down-payment.module.js. Nothing pasted here is saved. -->
+                    <div id="paDownPaymentPanel" style="display: none; margin-bottom: 20px;">
+                        <div class="card">
+                            <h3 class="card-title">PA Down Payment</h3>
+                            <p class="text-secondary" style="margin-top: 0;">On the Required Coaching tab of the PA Down Payment Coaching sheet, copy your rows (columns A to H) and paste them here. Each advisor gets a card.</p>
+                            <label for="paDownPaymentPaste" class="text-primary" style="font-weight: bold; display: block; margin-bottom: 5px;">Paste your rows:</label>
+                            <textarea id="paDownPaymentPaste" placeholder="Copy your rows in Excel and paste them here, with or without the heading row. It reads itself." style="width: 100%; min-height: 110px; box-sizing: border-box; resize: vertical;"></textarea>
+                            <div id="paDownPaymentStatus" class="text-faint" style="font-size: 0.85em; margin-top: 4px;"></div>
+                            <div id="paDownPaymentLeaderWrap" style="display: none; margin-top: 10px;">
+                                <label for="paDownPaymentLeader" class="text-primary" style="font-weight: bold; display: block; margin-bottom: 5px;">Leader:</label>
+                                <select id="paDownPaymentLeader" style="width: 100%; max-width: 320px; box-sizing: border-box;"></select>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <button type="button" id="paDownPaymentClearBtn" class="btn-ghost">Clear</button>
+                            </div>
+                        </div>
+                        <div id="paDownPaymentCards"></div>
                     </div>
 
                     <div id="redFlagPanel" style="display: none;">
@@ -1899,6 +1919,8 @@ Box 2 - Future Improvement Areas:
                 'modules/red-flag.module.js',
                 // Follow Up > QA Coaching; red-flag's tab switch opens it.
                 'modules/qa-coaching.module.js',
+                // Follow Up > PA Down Payment; opened the same way. Saves nothing.
+                'modules/pa-down-payment.module.js',
                 // Infrastructure Modules
                 'modules/navigation.module.js',
                 // Builds the sidebar and drives the nav buttons above; navigation

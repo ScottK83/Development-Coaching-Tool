@@ -1,6 +1,15 @@
 # Tasks
 
 ## Open
+- **PA Down Payment coaching emails (Scott, 2026-11-09: "build the PA Down Payment card"), built 11/09.** People > Follow Up >
+  PA Down Payment (`modules/pa-down-payment.module.js`). He pastes his rows from the weekly sheet's Required Coaching tab,
+  and each advisor gets a card: Generate email, Copy email, Copy leader note, a Done tick. Nothing is saved or synced.
+  Still owed:
+  - Scott to try it at work on the real sheet, and say whether the leader note's wording is right (it is a draft).
+  - The email's five reminders start with "- ", because a mailto draft is plain text and has no bullets.
+  - Later: the same email and note as a Power Automate flow (`Desktop\Projects\Coaching Tools\HANDOFF.md`).
+  - Ideas, not built: show his "Previous Weeks Outstanding" counts; red flags, manual redirect and deposit waiver sheets.
+  - Never put the sheet, its emails or screenshots in this public repo. The test rows are made up.
 - **Many hats review (2026-11-03), approved by Scott the same day ("Do the plans. No need to lock the site yet."):** `audit/2026-11-03-many-hats.md`. Five phases:
   1. Wording and small bugs. **Done 11/03** (A1, A5, A6, A7, S1, S4, S11, FCR icon, Copilot spelling, X4, X2).
   2. The year turnover. **Done 11/03** (Y1, Y2, X3, X5, X6). Checked on the real data with the clock on Nov 3, Dec 29, Jan 5 and Jan 12. Still owed:
