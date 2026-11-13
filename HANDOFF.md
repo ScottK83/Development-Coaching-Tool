@@ -1,17 +1,23 @@
 # Handoff
 
-Last updated 2026-11-13, suite at 10386 passing.
+Last updated 2026-11-13, suite at 10417 passing.
 
 ## Where things stand
 - **Team Performance page (Scott, 2026-11-13: "a working Team Performance page I can use to write my year-end self-review"), built 11/13.**
   - **Where:** sidebar Center > Team Performance (`modules/team-performance.module.js`, `subSectionTaTeamPerformance`).
   - **The five KPIs:** the five with year-end rating bands in metric-profiles (AHT, Adherence, Sentiment, Rep Sat, Reliability). Not choosable, since the app already names those five.
-  - **Periods:** opens on the first complete month of the review year against the latest complete month. Both periods have a preset (months, quarters) and editable start and end dates; edited dates are saved on this computer (`teamPerformanceView`, device only). Reset to defaults clears them.
-  - **Same math as the rest of the app:** uploads picked by quarter-trend's rule (one grain, best coverage, an upload belongs where it ends, at most 6 days early), associates by `periodCompare.aggregateEmployeesFrom`, the team by the Teams page rule (rates by calls, Rep Sat by responses, reliability a plain average per associate, labelled). Missing stays missing. Gaps of 7+ days are named.
+  - **Coverage rework (Scott, 2026-11-13, second pass, "the selected dates and the dates actually represented in the figures need to be clear"):**
+    - Reports for a period (`resolveRange`): weekly store (weeks, months, quarters, partial ranges) plus daily files (`dailyData` and `dailyArchive`). Reports inside the dates are taken longest first, never two that share a day (so a month report beats its weeks; no double count). An edge report that runs past the dates is taken only if most of its days are inside and the dailies don't already cover its weekdays.
+    - Graded per period: Exact (every day, nothing outside), Approximate (days outside listed with their report, or days "not counted" because they sit only in a report mostly outside / overlapping one already used, or weekend days with no file), Has gaps (a weekday stretch in no report at all), In progress, No data.
+    - This departs on purpose from period-compare's month (weeks ENDING in the month). From weekly reports, January 2026 is Dec 29 to Feb 1 and graded Approximate.
+    - Defaults: earliest and latest Exact months; else earliest and latest Exact-or-Approximate; else any with numbers. The reason line says which, and points to an earlier approximate month when Exact months start later.
+    - Shown beside each period's dates (pill, "Figures cover", reports used, outside/not-counted/gap callouts), in the table headers, and in the clipboard (selected vs covered dates per period, "Figures compare X with Y" under Results, the draft opens "Comparing January 2026 (figures cover ...) with ...").
+  - **Periods:** both periods have a preset (months, quarters, each labelled with its grade) and editable start and end dates; edited dates are saved on this computer (`teamPerformanceView`, device only). Reset to defaults clears them.
+  - **Same math as the rest of the app:** associates by `periodCompare.aggregateEmployeesFrom`, the team by the Teams page rule (rates by calls, Rep Sat by responses, reliability a plain average per associate, labelled). Missing stays missing.
   - **Reliability** is not judged on a month (the goal is hours for the year); the row gives the newest YTD upload's team average and how many are within 17.9.
   - **Typed official figures:** `teamPerformanceFigures` (synced through repo-sync like the other hand-typed stores), keyed team + exact dates. A typed figure replaces the upload figure for that KPI.
   - **Copy year-end summary:** dates and uploads used, who was counted, results strongest improvement first (noise steps), the method, documented coaching from the coaching log kept apart and never called a cause, then a first-person draft.
-  - **Checked:** `tests/team-performance.test.js` (84 checks), and in headless Chrome on made-up data through the sidebar: every cell matched an independent calculation, the clipboard equals the preview, custom dates, a gap, no data, typed figures, Whole center.
+  - **Checked:** `tests/team-performance.test.js` (117 checks), and in headless Chrome. Second pass: defaults Sep vs Oct (the only Exact months) with the January pointer; January, Apr 15 to May 31 with dailies, Jun 17 to Jul 31 spilling weeks, March's gap, October against its own weeks, each figure equal to a separate calculation from the reports listed. First pass, also in headless Chrome on made-up data through the sidebar: every cell matched an independent calculation, the clipboard equals the preview, custom dates, a gap, no data, typed figures, Whole center.
   - **Not checked on Scott's real data.** Not built: a chart (idea in TASKS).
   - **Review ZIP:** `OneDrive\Desktop\Coaching Tool review screens 2026-11-13.zip`, 29 screens on synthetic data with `00-INDEX.md`. The capture server swapped the built-in `SUPERVISOR_ROSTER`, `DEFAULT_TEAM_MEMBERS` and `EXCLUDED_ASSOCIATES` for made-up ones at serve time (they hold real names, and the roster is an allowlist, so made-up people vanish from Rankings and Teams without it). A rankings upload needs 30+ people.
 - **PA Down Payment card (Scott, 2026-11-09), built 11/09.**

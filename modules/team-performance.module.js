@@ -10,13 +10,21 @@
      * the result in each, the change, the goal, and whether the team met it.
      * A copy button writes the results and a first-person draft as plain text.
      *
-     * Nothing here is a new way of counting:
-     *  - Which uploads make up a period is quarter-trend's rule. One
-     *    granularity (quarter, month or week uploads), the one covering the
-     *    most of the dates; an upload belongs where its END date falls;
-     *    overlapping copies are dropped. So "January" is the weeks ending in
-     *    January, the same January period-compare and the Teams page show.
-     *  - Each associate's figure across those uploads is period-compare's
+     * Which reports make up a period is decided here, and said out loud
+     * (Scott, 2026-11-13: "the selected dates and the dates actually
+     * represented in the figures need to be clear"). Reports inside the dates
+     * come first, longest first, never two that share a day; a weekly report
+     * that runs past the dates is used only when most of its days are inside
+     * them and the daily files cannot cover those days exactly, and its
+     * outside days are listed. So "January" from weekly reports is the five
+     * weeks with most of their days in January, shown as Dec 29 to Feb 1 and
+     * graded Approximate, never called complete. The rest of the app's month
+     * (period-compare) is the weeks ENDING in the month, which can leave six
+     * January days out without saying so; for a self-review the calendar
+     * month is the question, so the nearest cover is used and labelled.
+     *
+     * The math is the app's own:
+     *  - Each associate's figure across those reports is period-compare's
      *    aggregateEmployeesFrom: rates by calls, Rep Sat by its own responses,
      *    missed hours summed.
      *  - The team figure is the Teams page's (matchup, Team Snapshot): rates by
@@ -38,12 +46,6 @@
     // The dates and team picked on this computer. View state, never synced.
     var VIEW_KEY = PREFIX + 'teamPerformanceView';
 
-    // An upload may start up to six days before a period's first day, the way
-    // a month rebuilt from weeks takes the week that ends on its 4th.
-    var LEAD_IN_DAYS = 6;
-    // A stretch this long with no upload is a gap worth saying out loud. Six
-    // days at the end of a month is only the week that ends next month.
-    var GAP_DAYS = 7;
     // Reliability's goal is hours for the year. A period this long is judged
     // against it; anything shorter is not.
     var FULL_YEAR_DAYS = 300;
@@ -298,11 +300,51 @@
         return new Set(team.names.map(norm).filter(Boolean));
     }
 
-    /* ── Which uploads make up a period ── */
+    /* ── Which reports make up a period ── */
 
+    // Days covered by p that fall inside [start, end], and outside it.
+    function overlapDays(p, start, end) {
+        var s = p.startDate > start ? p.startDate : start;
+        var e = p.endDate < end ? p.endDate : end;
+        return e >= s ? dayCount(s, e) : 0;
+    }
+
+    function overlaps(a, b) {
+        return a.startDate <= b.endDate && a.endDate >= b.startDate;
+    }
+
+    function isWeekend(iso) {
+        var d = parseIso(iso);
+        return !!d && (d.getDay() === 0 || d.getDay() === 6);
+    }
+
+    // Every stored report as an interval: the weekly store's weeks, months,
+    // quarters and partial ranges (quarter-trend reads those, year-to-date
+    // rows left out), plus the daily files, live and archived. The same dates
+    // filed twice keep the newer copy, so a re-upload never counts twice.
     function describeAll(store) {
         var qt = mods().quarterTrend;
-        return qt && qt.describePeriods ? qt.describePeriods(store || _weeklyData()) : [];
+        var out = qt && qt.describePeriods ? qt.describePeriods(store || _weeklyData()) : [];
+        if (!store) {
+            var archive = typeof getDailyArchive === 'function' ? (getDailyArchive() || {}) : {};
+            var live = typeof dailyData !== 'undefined' ? (dailyData || {}) : {};
+            [archive, live].forEach(function (daily) {
+                (qt && qt.describePeriods ? qt.describePeriods(daily) : []).forEach(function (p) {
+                    p.type = 'daily';
+                    out.push(p);
+                });
+            });
+        }
+        var bySpan = {};
+        out.forEach(function (p, i) {
+            p.order = i;
+            p.uploadedAt = String((p.entry && p.entry.metadata && p.entry.metadata.uploadedAt) || '');
+            p.days = dayCount(p.startDate, p.endDate);
+            var span = p.startDate + '|' + p.endDate;
+            var held = bySpan[span];
+            if (!held || p.uploadedAt >= held.uploadedAt) bySpan[span] = p;
+        });
+        return Object.keys(bySpan).map(function (k) { return bySpan[k]; });
     }
 
     function hasRosterMember(entry, rosterSet) {
@@ -312,88 +354,181 @@
         });
     }
 
-    // Stretches inside [start, end] that no kept upload covers, GAP_DAYS or
-    // longer. Days after today are not missing, they have not happened.
-    function findGaps(kept, start, end) {
-        var stop = end < todayIso() ? end : addDays(todayIso(), -1);
-        var gaps = [];
-        if (!stop || stop < start) return gaps;
-        var cursor = start;
-        var push = function (from, to) {
-            if (to >= from && dayCount(from, to) >= GAP_DAYS) gaps.push({ start: from, end: to });
-        };
-        kept.slice().sort(function (a, b) { return a.startDate.localeCompare(b.startDate); }).forEach(function (p) {
-            if (p.startDate > cursor) push(cursor, addDays(p.startDate, -1) > stop ? stop : addDays(p.startDate, -1));
-            var next = addDays(p.endDate, 1);
-            if (next > cursor) cursor = next;
-        });
-        if (cursor <= stop) push(cursor, stop);
-        return gaps;
+    // Runs of consecutive dates for which test(date) is true, inside [from, to].
+    function runsOf(from, to, test) {
+        var runs = [];
+        if (!from || !to || to < from) return runs;
+        var open = null;
+        for (var d = from; d <= to; d = addDays(d, 1)) {
+            if (test(d)) {
+                if (!open) open = { start: d, end: d };
+                else open.end = d;
+            } else if (open) {
+                runs.push(open);
+                open = null;
+            }
+        }
+        if (open) runs.push(open);
+        return runs;
+    }
+
+    function reportNoun(type, n) {
+        var noun = type === 'quarter' ? 'quarterly report'
+            : (type === 'month' ? 'monthly report'
+                : (type === 'month-to-date' ? 'month-to-date report'
+                    : (type === 'daily' ? 'daily report'
+                        : (type === 'week-in-progress' ? 'week-in-progress report'
+                            : (type === 'custom' ? 'custom-range report' : 'weekly report')))));
+        return n + ' ' + noun + (n === 1 ? '' : 's');
     }
 
     /**
-     * The uploads that make up [start, end], by quarter-trend's rule: one
-     * granularity, the one that covers the most of the dates, ties going to
-     * the coarser one because its edges line up with the calendar.
+     * The reports that make up [start, end], as close to those exact dates as
+     * the stored reports allow, never two that share a day.
      *
-     * options.periods  describePeriods output, to avoid re-reading the store
-     * options.rosterSet  only uploads with someone from the team in them
+     *  1. Reports that sit inside the dates, longest first. A month report
+     *     beats the weeks inside it, a week beats the daily files inside it,
+     *     and nothing that overlaps a report already taken is added, so weeks
+     *     and months covering the same days are never counted twice.
+     *  2. At each edge, a report that runs past the dates is taken only when
+     *     most of its days are inside them, and only when the daily files do
+     *     not already cover every weekday it would add. Its outside days are
+     *     listed, so the figures never quietly describe a wider stretch.
+     *
+     * Coverage comes back graded: exact (every day, nothing outside),
+     * approximate (whole reports run past the dates, or weekend days have no
+     * file), gaps (a weekday has no report), in progress, or none.
+     *
+     * options.periods    describeAll output, to avoid re-reading the stores
+     * options.rosterSet  only reports with someone from the team in them
      */
     function resolveRange(start, end, options) {
         var opts = options || {};
         var out = {
-            start: start, end: end, ok: false, periods: [], granularity: null, sourceLabel: '',
-            spanStart: null, spanEnd: null, coveredDays: 0, rangeDays: 0, gaps: [], partial: false
+            start: start, end: end, ok: false, periods: [], spanStart: null, spanEnd: null,
+            rangeDays: 0, coveredDays: 0, spill: [], leftOut: [], gaps: [], weekendHoles: [], future: null,
+            tier: 'none', partial: false, counts: {}
         };
-        var s = parseIso(start), e = parseIso(end);
-        var qt = mods().quarterTrend;
-        if (!s || !e || e < s || !qt) return out;
+        if (!parseIso(start) || !parseIso(end) || end < start) return out;
         out.rangeDays = dayCount(start, end);
 
-        var periods = opts.periods || describeAll(opts.store);
-        var leadIn = addDays(start, -LEAD_IN_DAYS);
-        var inRange = periods.filter(function (p) {
-            return p.endDate >= start && p.endDate <= end && p.startDate >= leadIn;
+        var today = todayIso();
+        var all = opts.periods || describeAll(opts.store);
+        var near = all.filter(function (p) {
+            return p.endDate >= start && p.startDate <= end && hasRosterMember(p.entry, opts.rosterSet || null);
+        });
+        var byLength = function (a, b) {
+            return (b.days - a.days) || b.uploadedAt.localeCompare(a.uploadedAt) || (b.order - a.order);
+        };
+
+        var chosen = [];
+        near.filter(function (p) { return p.startDate >= start && p.endDate <= end; }).sort(byLength).forEach(function (p) {
+            if (!chosen.some(function (c) { return overlaps(c, p); })) chosen.push(p);
         });
 
-        var startMs = s.getTime(), endMs = e.getTime();
-        var candidates = qt.GRANULARITIES.map(function (g) {
-            var mine = inRange.filter(function (p) {
-                return g.types.indexOf(p.type) >= 0 && hasRosterMember(p.entry, opts.rosterSet || null);
+        near.filter(function (p) { return p.startDate < start || p.endDate > end; })
+            .sort(function (a, b) { return overlapDays(b, start, end) - overlapDays(a, start, end) || byLength(a, b); })
+            .forEach(function (p) {
+                var inside = overlapDays(p, start, end);
+                if (inside * 2 <= p.days) return;
+                var clash = chosen.filter(function (c) { return overlaps(c, p); });
+                if (clash.length) {
+                    // Only daily files give way, and only when they leave a
+                    // weekday this report would cover with no figure at all.
+                    if (clash.some(function (c) { return c.type !== 'daily'; })) return;
+                    var from = p.startDate > start ? p.startDate : start;
+                    var to = p.endDate < end ? p.endDate : end;
+                    var missing = runsOf(from, to, function (d) {
+                        return !isWeekend(d) && !clash.some(function (c) { return d >= c.startDate && d <= c.endDate; });
+                    });
+                    if (!missing.length) return;
+                    chosen = chosen.filter(function (c) { return clash.indexOf(c) === -1; });
+                }
+                chosen.push(p);
             });
-            if (!mine.length) return null;
-            var kept = qt.dropContained(mine);
-            return { granularity: g.id, sourceLabel: g.label, periods: kept, covered: qt.coveredDays(kept, startMs, endMs) };
-        }).filter(Boolean);
-        if (!candidates.length) {
-            out.gaps = findGaps([], start, end);
-            return out;
-        }
 
-        // A day of slack, as quarter-trend gives it, so months missing one
-        // boundary day do not lose to weeks reaching one day further.
-        var best = candidates[0];
-        candidates.forEach(function (c) { if (c.covered > best.covered + 1) best = c; });
+        chosen.sort(function (a, b) { return a.startDate.localeCompare(b.startDate); });
+        var covered = function (d) { return chosen.some(function (c) { return d >= c.startDate && d <= c.endDate; }); };
+        var lastDay = end < today ? end : addDays(today, -1);
 
-        out.ok = true;
-        out.periods = best.periods;
-        out.granularity = best.granularity;
-        out.sourceLabel = best.sourceLabel;
-        out.coveredDays = best.covered;
-        out.spanStart = best.periods.reduce(function (m, p) { return !m || p.startDate < m ? p.startDate : m; }, null);
-        out.spanEnd = best.periods.reduce(function (m, p) { return !m || p.endDate > m ? p.endDate : m; }, null);
-        out.gaps = findGaps(best.periods, start, end);
-        out.partial = best.periods.some(function (p) { return PARTIAL_TYPES.indexOf(p.type) >= 0; });
+        out.periods = chosen;
+        out.ok = chosen.length > 0;
+        chosen.forEach(function (p) { out.counts[p.type] = (out.counts[p.type] || 0) + 1; });
+        out.spanStart = chosen.length ? chosen[0].startDate : null;
+        out.spanEnd = chosen.reduce(function (m, p) { return !m || p.endDate > m ? p.endDate : m; }, null);
+        out.coveredDays = chosen.reduce(function (n, p) { return n + overlapDays(p, start, end); }, 0);
+        chosen.forEach(function (p) {
+            if (p.startDate < start) out.spill.push({ start: p.startDate, end: addDays(start, -1), from: p });
+            if (p.endDate > end) out.spill.push({ start: addDays(end, 1), end: p.endDate, from: p });
+        });
+        // Days the figures leave out come in two kinds. Some are in a report
+        // that was not used, because most of it falls outside the dates or it
+        // overlaps a report already counted: those are named with the report
+        // that holds them, and keep the period approximate. The rest are in no
+        // report at all: a stretch of those taking in a weekday is a gap, and
+        // weekend days alone are listed apart, since a run of daily files may
+        // simply have no weekend file.
+        var holder = function (d) {
+            return near.filter(function (p) { return d >= p.startDate && d <= p.endDate; }).sort(byLength)[0] || null;
+        };
+        runsOf(start, lastDay, function (d) { return !covered(d) && holder(d); }).forEach(function (run) {
+            // One entry per report, so each stretch says where its days are.
+            var from = run.start;
+            for (var d = run.start; d <= run.end; d = addDays(d, 1)) {
+                var next = addDays(d, 1);
+                if (next > run.end || holder(next) !== holder(d)) {
+                    var p = holder(d);
+                    out.leftOut.push({ start: from, end: d, from: p, reason: overlapDays(p, start, end) * 2 <= p.days ? 'outside' : 'overlap' });
+                    from = next;
+                }
+            }
+        });
+        var holes = runsOf(start, lastDay, function (d) { return !covered(d) && !holder(d); });
+        var weekdayIn = function (run) { return runsOf(run.start, run.end, function (d) { return !isWeekend(d); }).length > 0; };
+        out.gaps = holes.filter(weekdayIn);
+        out.weekendHoles = holes.filter(function (run) { return !weekdayIn(run); });
+        if (end >= today) out.future = { start: today > start ? today : start, end: end };
+        out.partial = chosen.some(function (p) { return PARTIAL_TYPES.indexOf(p.type) >= 0; })
+            || chosen.some(function (p) { return p.type === 'daily' && p.endDate >= today; });
+
+        if (!out.ok) out.tier = 'none';
+        else if (out.future || out.partial) out.tier = 'progress';
+        else if (out.gaps.length) out.tier = 'gaps';
+        else if (out.spill.length || out.leftOut.length || out.weekendHoles.length) out.tier = 'approximate';
+        else out.tier = 'exact';
         return out;
     }
 
-    // "4 weekly uploads", "1 monthly upload".
+    var TIER_LABEL = { exact: 'Exact', approximate: 'Approximate', gaps: 'Has gaps', progress: 'In progress', none: 'No data' };
+
+    // "5 weekly reports", "1 monthly report and 3 daily reports".
     function describeSource(range) {
-        if (!range || !range.ok) return 'No upload covers these dates';
-        var n = range.periods.length;
-        var noun = range.granularity === 'quarter' ? 'quarterly upload'
-            : (range.granularity === 'month' ? 'monthly upload' : 'weekly upload');
-        return n + ' ' + noun + (n === 1 ? '' : 's');
+        if (!range || !range.ok) return 'No report covers these dates';
+        var order = ['quarter', 'month', 'month-to-date', 'week', 'week-in-progress', 'custom', 'daily'];
+        var parts = order.filter(function (t) { return range.counts[t]; }).map(function (t) { return reportNoun(t, range.counts[t]); });
+        return joinWords(parts);
+    }
+
+    // The days outside the selection, in words, with the report each came from.
+    function spillInWords(range) {
+        return range.spill.map(function (s) {
+            return (s.start === s.end ? fmtDate(s.start) : fmtRange(s.start, s.end))
+                + ' (from the ' + fmtRange(s.from.startDate, s.from.endDate) + ' report)';
+        }).join('; ');
+    }
+
+    // Days left out, with the report that holds each stretch and why it
+    // was not used.
+    function leftOutInWords(range) {
+        return range.leftOut.map(function (x) {
+            return (x.start === x.end ? fmtDate(x.start) : fmtRange(x.start, x.end)) + ' (only in the '
+                + fmtRange(x.from.startDate, x.from.endDate) + ' report, '
+                + (x.reason === 'outside' ? 'which is mostly outside your dates' : 'which overlaps a report already counted') + ')';
+        }).join('; ');
+    }
+
+    function runsInWords(runs) {
+        return runs.map(function (r) { return r.start === r.end ? fmtDate(r.start) : fmtRange(r.start, r.end); }).join('; ');
     }
 
     /* ── The team's figure for one period ── */
@@ -671,6 +806,7 @@
         return newest || now;
     }
 
+    // Each month of the year, graded by how well the reports cover it.
     function monthOptions(year, team, periods) {
         var today = todayIso();
         var all = periods || describeAll();
@@ -682,40 +818,52 @@
             var range = resolveRange(r.start, r.end, { periods: all, rosterSet: rosterSet });
             var result = range.ok ? buildTeamResult(range, team) : null;
             var hasData = !!(result && result.members.length);
-            var ended = r.end < today;
             out.push({
                 key: r.start.slice(0, 7), label: MONTHS_LONG[m] + ' ' + year, start: r.start, end: r.end,
-                hasData: hasData, ended: ended,
-                complete: hasData && ended && !range.partial && range.gaps.length === 0
+                hasData: hasData, ended: r.end < today, tier: hasData ? range.tier : 'none',
+                spanStart: range.spanStart, spanEnd: range.spanEnd
             });
         }
         return out;
     }
 
+    function tierWords(tier) {
+        return { exact: 'covered exactly', approximate: 'covered only approximately', gaps: 'missing some days',
+            progress: 'still in progress', none: 'not covered by any report' }[tier] || '';
+    }
+
     /**
-     * First complete month of the year against the latest complete one. Less
-     * than two complete months falls back to the first and latest months with
-     * any numbers; none at all gives January against the last month that has
-     * ended, ready for typed figures.
+     * The earliest and latest months of the year that the reports cover
+     * exactly. Without two of those, the earliest and latest that are covered
+     * approximately; then any months with numbers, gaps and all. A month still
+     * running is never a default while a finished one will do. Each step down
+     * is named on the page, so an approximate month is never passed off as a
+     * complete one.
      */
     function defaultPeriods(year, team, periods) {
         var months = monthOptions(year, team, periods);
-        var complete = months.filter(function (m) { return m.complete; });
-        var withData = months.filter(function (m) { return m.hasData; });
-        var pick = function (m, fallback) { return m ? { start: m.start, end: m.end } : fallback; };
-        if (complete.length >= 2) {
-            return { baseline: pick(complete[0]), comparison: pick(complete[complete.length - 1]), reason: 'complete' };
+        var pick = function (m) { return { start: m.start, end: m.end }; };
+        var firstLast = function (list, reason, note) {
+            return { baseline: pick(list[0]), comparison: pick(list[list.length - 1]), reason: reason, note: note || '' };
+        };
+        var finished = months.filter(function (m) { return m.hasData && m.ended; });
+        var exact = finished.filter(function (m) { return m.tier === 'exact'; });
+        if (exact.length >= 2) {
+            var earlier = finished.filter(function (m) { return m.start < exact[0].start; });
+            var note = earlier.length
+                ? earlier[0].label + ' has numbers too, ' + tierWords(earlier[0].tier) + '. Pick it above to start from earlier in the year.'
+                : '';
+            return firstLast(exact, 'exact', note);
         }
-        if (withData.length >= 2) {
-            var base = complete[0] || withData[0];
-            var later = withData.filter(function (m) { return m.start > base.start; });
-            var comp = later.filter(function (m) { return m.complete; }).pop() || later[later.length - 1];
-            return { baseline: pick(base), comparison: pick(comp), reason: 'partial' };
-        }
+        var near = finished.filter(function (m) { return m.tier === 'exact' || m.tier === 'approximate'; });
+        if (near.length >= 2) return firstLast(near, 'approximate');
+        if (finished.length >= 2) return firstLast(finished, 'gaps');
+        var any = months.filter(function (m) { return m.hasData; });
+        if (any.length >= 2) return firstLast(any, 'gaps');
         var ended = months.filter(function (m) { return m.ended; });
         var first = monthRange(year, 0);
         var last = ended.length ? ended[ended.length - 1] : (months[months.length - 1] || first);
-        return { baseline: pick(months[0], first), comparison: pick(last), reason: 'none' };
+        return { baseline: months[0] ? pick(months[0]) : first, comparison: pick(last), reason: 'none', note: '' };
     }
 
     /* ── The whole comparison ── */
@@ -735,7 +883,7 @@
             return {
                 start: dates.start, end: dates.end, name: periodName(dates.start, dates.end),
                 days: dayCount(dates.start, dates.end), range: range, result: result, figures: figures,
-                inProgress: dates.end >= todayIso() || range.partial
+                inProgress: range.tier === 'progress' || dates.end >= todayIso()
             };
         }
 
@@ -763,6 +911,50 @@
                 && parseIso(view.comparison.end) && view.baseline.start <= view.baseline.end
                 && view.comparison.start <= view.comparison.end)
         };
+    }
+
+    /* ── Coverage, in words ── */
+
+    function typedKpis(side) {
+        if (!side.figures || !side.figures.values) return [];
+        return KPIS.filter(function (k) { return Number.isFinite(side.figures.values[k.key]); });
+    }
+
+    // The dates the figures really describe: the reports' span, or the
+    // selected dates when every figure was typed in for them.
+    function actualDates(side) {
+        if (side.range.ok) return fmtRange(side.range.spanStart, side.range.spanEnd);
+        if (typedKpis(side).length) return fmtRange(side.start, side.end) + ' (official figures)';
+        return fmtRange(side.start, side.end) + ' (no reports)';
+    }
+
+    // "January 2026", or "January 2026 (figures cover Dec 29, 2025 to Feb 1,
+    // 2026)" when the reports do not match the selected dates exactly.
+    function periodWithDates(side) {
+        var exact = side.range.ok && side.range.spanStart === side.start && side.range.spanEnd === side.end;
+        if (exact || !side.range.ok) return side.name;
+        return side.name + ' (figures cover ' + fmtRange(side.range.spanStart, side.range.spanEnd) + ')';
+    }
+
+    // The coverage of one period as plain sentences, for the clipboard.
+    function coverageLines(side) {
+        var r = side.range, out = [];
+        if (r.ok) {
+            out.push('Figures cover ' + fmtRange(r.spanStart, r.spanEnd) + ', from ' + describeSource(r)
+                + '. Coverage: ' + TIER_LABEL[r.tier].toLowerCase() + '.');
+        } else {
+            out.push('No report covers these dates.');
+        }
+        if (r.spill.length) out.push('Outside the selected dates: ' + spillInWords(r) + '.');
+        if (r.leftOut.length) out.push('Not counted: ' + leftOutInWords(r) + '.');
+        if (r.gaps.length) out.push('No report covers: ' + runsInWords(r.gaps) + '.');
+        if (r.weekendHoles.length) out.push('Weekend days with no report: ' + runsInWords(r.weekendHoles) + '.');
+        if (r.future) out.push('Not finished: ' + (r.future.start === r.future.end ? fmtDate(r.future.start) : fmtRange(r.future.start, r.future.end))
+            + ' still to come, so these figures can change.');
+        else if (r.partial) out.push('Uses a report for a period still in progress, so these figures can change.');
+        var typed = typedKpis(side);
+        if (typed.length) out.push('Official figures typed in for: ' + typed.map(function (k) { return k.label; }).join(', ') + '.');
+        return out;
     }
 
     /* ── The copied summary ── */
@@ -846,8 +1038,8 @@
             return sentences.join(' ');
         }
 
-        sentences.push('From ' + b.name + ' to ' + c.name + ', ' + who + ' improved on ' + improved.length + ' of the '
-            + compared.length + ' scorecard KPIs we can compare.');
+        sentences.push('Comparing ' + periodWithDates(b) + ' with ' + periodWithDates(c) + ', ' + who + ' improved on '
+            + improved.length + ' of the ' + compared.length + ' scorecard KPIs we can compare.');
 
         var named = improved.slice(0, 3);
         named.forEach(function (r) {
@@ -893,18 +1085,8 @@
         var lines = [];
         lines.push('Team Performance: ' + model.team.label);
         [['Baseline', b], ['Comparison', c]].forEach(function (pair) {
-            var p = pair[1];
-            var used = p.range.ok
-                ? describeSource(p.range) + ', ' + fmtRange(p.range.spanStart, p.range.spanEnd)
-                : 'no upload covers these dates';
-            var typed = p.figures ? '; official figures typed in for ' + KPIS.filter(function (k) {
-                return Number.isFinite(p.figures.values[k.key]);
-            }).map(function (k) { return k.label; }).join(', ') : '';
-            lines.push(pair[0] + ': ' + p.name + ' (' + fmtRange(p.start, p.end) + '). Data used: ' + used + typed + '.');
-            p.range.gaps.forEach(function (g) {
-                lines.push('  Not covered by any upload: ' + fmtRange(g.start, g.end) + '.');
-            });
-            if (p.inProgress) lines.push('  This period is not finished yet, so its figures can still change.');
+            lines.push(pair[0] + ': ' + pair[1].name + ', selected ' + fmtRange(pair[1].start, pair[1].end) + '.');
+            coverageLines(pair[1]).forEach(function (line) { lines.push('  ' + line); });
         });
 
         var ros = model.roster;
@@ -919,6 +1101,7 @@
 
         lines.push('');
         lines.push('Results (strongest improvements first)');
+        lines.push('Figures compare ' + actualDates(b) + ' with ' + actualDates(c) + '.');
         orderForSummary(model.rows).forEach(function (row) { lines.push(resultLine(row, model)); });
 
         lines.push('');
@@ -966,23 +1149,89 @@
         var team = list.filter(function (t) { return t.id === teamId; })[0] || list[0];
         var y = year || defaultYear();
         var d = defaultPeriods(y, team, periods);
-        return { teamId: team.id, year: y, baseline: d.baseline, comparison: d.comparison, reason: d.reason, edited: false };
+        return { teamId: team.id, year: y, baseline: d.baseline, comparison: d.comparison, reason: d.reason, note: d.note, edited: false };
     }
 
     /* ── The page ── */
 
-    function presetOptions(year, months) {
+    var TIER_PILL = { exact: 'pill pill-good', approximate: 'pill pill-warn', gaps: 'pill pill-bad', progress: 'pill pill-info', none: 'pill' };
+    var TIER_SUFFIX = { exact: ' (exact)', approximate: ' (approximate)', gaps: ' (has gaps)', progress: ' (in progress)', none: ' (no reports)' };
+
+    // Months, then quarters, each labelled with how well the reports cover it.
+    function presetOptions(year, months, grade) {
         var today = todayIso();
         var opts = months.map(function (m) {
-            var note = !m.hasData ? ' (no uploads)' : (!m.ended ? ' (in progress)' : (!m.complete ? ' (incomplete)' : ''));
-            return { value: m.start + '|' + m.end, label: m.label + note };
+            return { value: m.start + '|' + m.end, label: m.label + TIER_SUFFIX[m.tier] };
         });
         for (var q = 1; q <= 4; q += 1) {
             var r = quarterRange(year, q);
             if (r.start > today) break;
-            opts.push({ value: r.start + '|' + r.end, label: 'Q' + q + ' ' + year + (r.end >= today ? ' (in progress)' : '') });
+            opts.push({ value: r.start + '|' + r.end, label: 'Q' + q + ' ' + year + TIER_SUFFIX[grade(r.start, r.end)] });
         }
         return opts;
+    }
+
+    // "Dec 29 to Jan 4", or "Apr 15" for a single day.
+    function fmtShort(start, end) {
+        return start === end ? fmtDate(start, false) : fmtDate(start, false) + ' to ' + fmtDate(end, false);
+    }
+
+    function reportListHtml(range) {
+        if (!range.ok) return '';
+        var mixed = Object.keys(range.counts).length > 1;
+        var items = range.periods.map(function (p) {
+            var kind = mixed ? ' <span class="text-faint">(' + escapeHtml(reportNoun(p.type, 1).replace(/^1 /, '')) + ')</span>' : '';
+            return '<li>' + escapeHtml(fmtShort(p.startDate, p.endDate)) + kind + '</li>';
+        }).join('');
+        var list = '<ul style="margin:4px 0 0 18px; padding:0;">' + items + '</ul>';
+        var label = 'Reports used: ' + escapeHtml(describeSource(range));
+        if (range.periods.length <= 6) {
+            return '<div class="text-secondary" style="margin-top:6px; font-size:0.85em;">' + label + list + '</div>';
+        }
+        return '<details class="text-secondary" style="margin-top:6px; font-size:0.85em;"><summary style="cursor:pointer;">' + label + '</summary>' + list + '</details>';
+    }
+
+    // The coverage beside the period's controls: what the figures really
+    // cover, the reports behind them, and anything that differs from the
+    // selected dates.
+    function coverageHtml(side) {
+        var r = side.range;
+        var out = '<div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">'
+            + '<span class="' + TIER_PILL[r.tier] + '" data-tp-tier="' + r.tier + '">' + TIER_LABEL[r.tier] + '</span>'
+            + '<span class="text-primary" style="font-size:0.9em;">'
+            + (r.ok ? 'Figures cover ' + escapeHtml(fmtRange(r.spanStart, r.spanEnd)) : 'No report covers these dates for this team')
+            + '</span></div>';
+        out += reportListHtml(r);
+        if (r.spill.length) {
+            var days = r.spill.reduce(function (n, x) { return n + dayCount(x.start, x.end); }, 0);
+            out += '<div class="callout callout-warn" style="margin-top:6px; font-size:0.86em;" data-tp-spill="1">'
+                + days + (days === 1 ? ' day' : ' days') + ' outside your dates: ' + escapeHtml(spillInWords(r)) + '.</div>';
+        }
+        if (r.leftOut.length) {
+            var missed = r.leftOut.reduce(function (n, x) { return n + dayCount(x.start, x.end); }, 0);
+            out += '<div class="callout callout-warn" style="margin-top:6px; font-size:0.86em;" data-tp-leftout="1">'
+                + missed + (missed === 1 ? ' day' : ' days') + ' of your dates not counted: ' + escapeHtml(leftOutInWords(r)) + '.</div>';
+        }
+        if (r.gaps.length) {
+            out += '<div class="callout callout-bad" style="margin-top:6px; font-size:0.86em;" data-tp-gap="1">No report covers '
+                + escapeHtml(runsInWords(r.gaps)) + '.</div>';
+        }
+        if (r.weekendHoles.length) {
+            out += '<div class="text-secondary" style="margin-top:6px; font-size:0.85em;">Weekend days with no report: '
+                + escapeHtml(runsInWords(r.weekendHoles)) + '.</div>';
+        }
+        if (r.future) {
+            out += '<div class="callout callout-info" style="margin-top:6px; font-size:0.86em;">Not finished: '
+                + escapeHtml(fmtShort(r.future.start, r.future.end)) + ' still to come, so these figures can change.</div>';
+        } else if (r.partial) {
+            out += '<div class="callout callout-info" style="margin-top:6px; font-size:0.86em;">Uses a report for a period still in progress, so these figures can change.</div>';
+        }
+        var typed = typedKpis(side);
+        if (typed.length) {
+            out += '<div class="text-secondary" style="margin-top:6px; font-size:0.86em;">Official figures typed in for these dates: '
+                + escapeHtml(typed.map(function (k) { return k.label; }).join(', ')) + '.</div>';
+        }
+        return out;
     }
 
     function periodControlsHtml(prefix, title, side, presets) {
@@ -992,20 +1241,7 @@
             return '<option value="' + escapeHtml(p.value) + '"' + (p.value === current ? ' selected' : '') + '>' + escapeHtml(p.label) + '</option>';
         }).join('') + '<option value="custom"' + (matched ? '' : ' selected') + '>Custom dates</option>';
 
-        var used = side.range.ok
-            ? escapeHtml(describeSource(side.range)) + ', ' + escapeHtml(fmtRange(side.range.spanStart, side.range.spanEnd))
-            : 'No upload covers these dates for this team';
-        var notes = side.range.gaps.map(function (g) {
-            return '<div class="callout callout-warn" style="margin-top:6px; font-size:0.86em;">No upload covers ' + escapeHtml(fmtRange(g.start, g.end)) + '.</div>';
-        }).join('');
-        if (side.inProgress) {
-            notes += '<div class="callout callout-info" style="margin-top:6px; font-size:0.86em;">Not finished yet, so these figures can still change.</div>';
-        }
-        if (side.figures) {
-            notes += '<div class="text-secondary" style="margin-top:6px; font-size:0.86em;">Official figures typed in for these dates are used where entered.</div>';
-        }
-
-        return '<div class="card-sunken" style="flex:1 1 300px; min-width:280px;">'
+        return '<div class="card-sunken" style="flex:1 1 300px; min-width:280px;" id="' + prefix + 'Card">'
             + '<div class="eyebrow" style="margin-bottom:6px;">' + escapeHtml(title) + '</div>'
             + '<label class="text-secondary" style="display:block; font-size:0.85em; margin-bottom:4px;" for="' + prefix + 'Preset">Period</label>'
             + '<select id="' + prefix + 'Preset" data-tp-preset="' + prefix + '" style="width:100%; margin-bottom:8px;">' + options + '</select>'
@@ -1013,8 +1249,7 @@
             + '<label style="flex:1 1 120px; font-size:0.85em;" class="text-secondary">Start<input type="date" id="' + prefix + 'Start" data-tp-date="' + prefix + '" value="' + escapeHtml(side.start) + '" style="display:block; width:100%; margin-top:4px;"></label>'
             + '<label style="flex:1 1 120px; font-size:0.85em;" class="text-secondary">End<input type="date" id="' + prefix + 'End" data-tp-date="' + prefix + '" value="' + escapeHtml(side.end) + '" style="display:block; width:100%; margin-top:4px;"></label>'
             + '</div>'
-            + '<div class="text-secondary" style="margin-top:8px; font-size:0.86em;">Data used: ' + used + '</div>'
-            + notes
+            + coverageHtml(side)
             + '</div>';
     }
 
@@ -1060,6 +1295,16 @@
         return '<td>' + main + (before ? '<div class="text-faint" style="font-size:12px; margin-top:4px;">' + before + '</div>' : '') + '</td>';
     }
 
+    // The selected period's name, the dates the figures really cover, and
+    // its coverage, for a column heading.
+    function headerDatesHtml(side) {
+        var r = side.range;
+        var dates = r.ok ? 'Figures: ' + fmtRange(r.spanStart, r.spanEnd) : (typedKpis(side).length ? 'Official figures' : 'No reports');
+        return '<div class="text-primary" style="font-weight:600;">' + escapeHtml(side.name) + '</div>'
+            + '<div class="text-faint" style="font-weight:400;">' + escapeHtml(dates) + '</div>'
+            + '<div style="margin-top:3px;"><span class="' + TIER_PILL[r.tier] + '">' + TIER_LABEL[r.tier] + '</span></div>';
+    }
+
     function tableHtml(model) {
         var b = model.baseline, c = model.comparison;
         var body = model.rows.map(function (row) {
@@ -1076,8 +1321,8 @@
         }).join('');
         return '<div style="overflow-x:auto;"><table class="data-table" id="tpTable">'
             + '<thead><tr><th>KPI</th>'
-            + '<th>Baseline<div class="text-faint" style="font-weight:400;">' + escapeHtml(b.name) + '</div></th>'
-            + '<th>Comparison<div class="text-faint" style="font-weight:400;">' + escapeHtml(c.name) + '</div></th>'
+            + '<th>Baseline' + headerDatesHtml(b) + '</th>'
+            + '<th>Comparison' + headerDatesHtml(c) + '</th>'
             + '<th>Change</th><th>Goal (' + escapeHtml(String(model.comparison.end).slice(0, 4)) + ')</th><th>Met goal in comparison?</th></tr></thead>'
             + '<tbody>' + body + '</tbody></table></div>';
     }
@@ -1165,7 +1410,7 @@
         if (model.rows.every(function (r) { return r.baselineValue === null; })) empty.push(model.baseline.name);
         if (model.rows.every(function (r) { return r.comparisonValue === null; })) empty.push(model.comparison.name);
         if (!empty.length) return '';
-        return '<div class="callout callout-info" style="margin-top:12px;">No uploaded numbers cover ' + escapeHtml(empty.join(' or '))
+        return '<div class="callout callout-info" style="margin-top:12px;">No reports cover ' + escapeHtml(empty.join(' or '))
             + ' for this team. Pick other dates, or type the official team figures in the box below and the comparison and the copy button will use them.</div>';
     }
 
@@ -1183,7 +1428,11 @@
         var team = model.team;
         var years = yearsOnFile();
         var months = monthOptions(view.year, team, periods);
-        var presets = presetOptions(view.year, months);
+        var rosterSet = rosterSetOf(team);
+        var presets = presetOptions(view.year, months, function (start, end) {
+            var r = resolveRange(start, end, { periods: periods, rosterSet: rosterSet });
+            return r.ok ? r.tier : 'none';
+        });
 
         var teamOptions = teams.map(function (t) {
             return '<option value="' + escapeHtml(t.id) + '"' + (t.id === team.id ? ' selected' : '') + '>' + escapeHtml(t.label) + '</option>';
@@ -1192,9 +1441,12 @@
             return '<option value="' + y + '"' + (y === view.year ? ' selected' : '') + '>' + y + '</option>';
         }).join('');
         var reason = view.edited ? 'Your dates, saved on this computer.'
-            : (view.reason === 'complete' ? 'Showing the first complete month of ' + view.year + ' against the latest complete month.'
-                : (view.reason === 'partial' ? 'Fewer than two complete months are uploaded for ' + view.year + ', so this shows the first and latest months with numbers.'
-                    : 'No monthly numbers are uploaded for ' + view.year + ' yet.'));
+            : ({
+                exact: 'Showing the earliest and latest months of ' + view.year + ' that the reports cover exactly.',
+                approximate: 'No two months of ' + view.year + ' are covered exactly, so this shows the earliest and latest that are covered approximately. The dates the figures really cover are beside each period.',
+                gaps: 'No two months of ' + view.year + ' are covered without gaps, so this shows the first and latest months with numbers. The gaps are listed beside each period.',
+                none: 'No reports with this team\'s numbers are on file for ' + view.year + ' yet.'
+            }[view.reason] || '') + (view.note ? ' ' + view.note : '');
 
         var summary = model.valid ? buildSummaryText(model) : '';
 
@@ -1221,7 +1473,7 @@
             + (model.valid ? tableHtml(model) + emptyStateHtml(model) : '')
             + '<div class="text-faint" style="font-size:0.86em; margin-top:10px;">Improved and met goal are separate: a KPI can improve and still be short of its goal. '
             + 'AHT, Adherence and Sentiment are weighted by calls and Rep Satisfaction by survey responses, the way the Teams page builds a team figure. '
-            + 'Reliability is a plain average of hours missed per associate. Data comes from your weekly and monthly uploads unless a figure is typed in below.</div>'
+            + 'Reliability is a plain average of hours missed per associate. Figures come from your monthly, weekly and daily reports, matched to the selected dates as closely as the reports allow (beside each period), unless a figure is typed in below.</div>'
             + '</div>'
             + (model.valid ? rosterHtml(model) + coachingHtml(model) : '')
             + figuresHtml(model)

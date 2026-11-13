@@ -31,7 +31,7 @@ function row(name, over) {
 
 // January: Pat and Dana (Lee has not joined). Pat misses 2 hours in one week.
 function januaryWeeks() {
-    const weeks = [['2025-12-29', '2026-01-04'], ['2026-01-05', '2026-01-11'], ['2026-01-12', '2026-01-18'], ['2026-01-19', '2026-01-25']];
+    const weeks = [['2025-12-29', '2026-01-04'], ['2026-01-05', '2026-01-11'], ['2026-01-12', '2026-01-18'], ['2026-01-19', '2026-01-25'], ['2026-01-26', '2026-02-01']];
     return Object.assign({}, ...weeks.map(([s, e], i) => week(s, e, [
         row('Pat Rivers', { totalCalls: 100, aht: 500, scheduleAdherence: 95, overallSentiment: 90, cxRepOverall: 80, repSurveyTotal: 5, surveyTotal: 5, reliability: i === 1 ? 2 : 0 }),
         row('Dana Cole', { totalCalls: 300, aht: 460, scheduleAdherence: 91, overallSentiment: 86, cxRepOverall: '', repSurveyTotal: 0, surveyTotal: 0 }),
@@ -87,6 +87,8 @@ function load(t, opts) {
     global.weeklyData = o.weekly || fixture();
     global.ytdData = o.ytd === undefined ? YTD : o.ytd;
     global.coachingHistory = o.coaching === undefined ? COACHING : o.coaching;
+    global.dailyData = o.daily || {};
+    global.getDailyArchive = () => o.archive || {};
     t.loadModule('modules/metrics-registry.module.js');
     t.loadModule('modules/metric-profiles.module.js');
     t.loadModule('modules/period-compare.module.js');
@@ -125,21 +127,39 @@ suite('team performance: the five KPIs are the year-end scorecard', (t) => {
 suite('team performance: which uploads make up a period', (t) => {
     const tp = load(t);
     const jan = tp.resolveRange(...JAN);
-    t.equal('January is the weeks ending in January, the way the rest of the app counts it', jan.periods.length, 4);
-    t.equal('and says the dates it really covers', tp.fmtRange(jan.spanStart, jan.spanEnd), 'Dec 29, 2025 to Jan 25, 2026');
-    t.equal('the six days that belong to a week ending in February are not a gap', jan.gaps.length, 0);
+    t.equal('January from weekly reports is the five weeks with most of their days in it', jan.periods.length, 5);
+    t.equal('and says the dates the figures really cover', tp.fmtRange(jan.spanStart, jan.spanEnd), 'Dec 29, 2025 to Feb 1, 2026');
+    t.equal('the days outside January are listed, one stretch at each end',
+        jan.spill.map((x) => tp.fmtRange(x.start, x.end)).join(';'), 'Dec 29 to Dec 31, 2025;Feb 1 to Feb 1, 2026');
+    t.equal('so it is approximate, never called complete', jan.tier, 'approximate');
 
     const oct = tp.resolveRange(...OCT);
-    t.equal('a monthly upload covering the month beats two weeks of it', oct.granularity, 'month');
-    t.equal('and is described as one', tp.describeSource(oct), '1 monthly upload');
+    t.equal('a monthly report covering the month is used alone', oct.periods.map((p) => p.type).join(','), 'month');
+    t.equal('and is described as one', tp.describeSource(oct), '1 monthly report');
+    t.equal('and is exact', oct.tier, 'exact');
 
     const feb = tp.resolveRange(...FEB);
-    t.equal('a missing week is reported as a gap', feb.gaps.map((g) => tp.fmtRange(g.start, g.end)).join(';'), 'Feb 9 to Feb 15, 2026');
+    t.equal('missing weeks are reported as gaps, the week that ran into February left with January',
+        feb.gaps.map((g) => tp.fmtRange(g.start, g.end)).join(';'), 'Feb 9 to Feb 15, 2026;Feb 23 to Feb 28, 2026');
+    t.equal('Feb 1 sits in a week that is mostly January, so it is named as not counted, not as a gap',
+        feb.leftOut.map((x) => `${x.start} ${x.from.startDate}`).join(';'), '2026-02-01 2026-01-26');
 
-    // A coaching start on a Wednesday: the week it falls in ends inside the
-    // dates, so it counts, the same way a month takes its first week.
+    // The last two days of a month in a week that is mostly next month are
+    // in a report, just not one that belongs to this month. Not a gap.
+    const marTail = load(t, { weekly: Object.assign(fixture(),
+        week('2026-03-16', '2026-03-22', [row('Pat Rivers')]), week('2026-03-23', '2026-03-29', [row('Pat Rivers')]),
+        week('2026-03-30', '2026-04-05', [row('Pat Rivers')])) }).resolveRange('2026-03-16', '2026-03-31');
+    t.equal('days only in a report that is mostly outside are not counted, and say which report',
+        marTail.leftOut.map((x) => `${x.start} ${x.end} ${x.reason}`).join(';'), '2026-03-30 2026-03-31 outside');
+    t.check('and are not called a gap', marTail.gaps.length === 0 && marTail.tier === 'approximate');
+    t.equal('and the month has gaps', feb.tier, 'gaps');
+
+    // A coaching start on a Wednesday. The week it falls in has five of its
+    // seven days inside the dates, so it is used, and its two days before
+    // the start are named.
     const custom = tp.resolveRange('2026-01-14', '2026-01-31');
-    t.equal('custom dates take the uploads that end inside them', tp.fmtRange(custom.spanStart, custom.spanEnd), 'Jan 12 to Jan 25, 2026');
+    t.equal('custom dates take each edge week with most of its days inside', tp.fmtRange(custom.spanStart, custom.spanEnd), 'Jan 12 to Feb 1, 2026');
+    t.equal('and name the days outside', custom.spill.map((x) => tp.fmtRange(x.start, x.end)).join(';'), 'Jan 12 to Jan 13, 2026;Feb 1 to Feb 1, 2026');
 
     const none = tp.resolveRange('2026-05-01', '2026-05-31');
     t.check('no upload at all is said, not filled', !none.ok && none.periods.length === 0);
@@ -225,14 +245,13 @@ suite('team performance: the default periods', (t) => {
     const tp = load(t);
     const team = tp.listTeams()[0];
     const d = tp.defaultPeriods(2026, team);
-    t.equal('first complete month of the year', `${d.baseline.start} ${d.baseline.end}`, '2026-01-01 2026-01-31');
-    t.equal('against the latest complete month (November is still running)', `${d.comparison.start} ${d.comparison.end}`, '2026-10-01 2026-10-31');
-    t.equal('and says why', d.reason, 'complete');
+    t.equal('only October is exact, so the earliest approximate month is the baseline', `${d.baseline.start} ${d.baseline.end}`, '2026-01-01 2026-01-31');
+    t.equal('against the latest finished month (November is still running)', `${d.comparison.start} ${d.comparison.end}`, '2026-10-01 2026-10-31');
+    t.equal('and it says the comparison is approximate', d.reason, 'approximate');
 
     const months = tp.monthOptions(2026, team);
-    t.check('February has numbers but a missing week, so it is not complete',
-        months[1].hasData && !months[1].complete);
-    t.check('November is in progress', months[10].hasData && !months[10].ended);
+    t.equal('each month is graded', [0, 1, 9, 10].map((i) => months[i].tier).join(','), 'approximate,gaps,exact,progress');
+    t.check('November is not finished', months[10].hasData && !months[10].ended);
     t.equal('the review year is the newest with uploads', tp.defaultYear(), 2026);
 
     const bare = load(t, { weekly: {} });
@@ -281,13 +300,16 @@ suite('team performance: the copied year-end summary', (t) => {
     const lines = text.split('\n');
 
     t.check('it names the team', lines[0] === 'Team Performance: My team (Knight)');
-    t.check('it carries the actual dates and the uploads behind each period',
-        text.includes('Baseline: January 2026 (Jan 1 to Jan 31, 2026). Data used: 4 weekly uploads, Dec 29, 2025 to Jan 25, 2026.')
-        && text.includes('Comparison: October 2026 (Oct 1 to Oct 31, 2026). Data used: 1 monthly upload, Oct 1 to Oct 31, 2026.'));
+    t.check('it gives the selected dates and the dates the figures really cover',
+        text.includes('Baseline: January 2026, selected Jan 1 to Jan 31, 2026.\n  Figures cover Dec 29, 2025 to Feb 1, 2026, from 5 weekly reports. Coverage: approximate.')
+        && text.includes('Comparison: October 2026, selected Oct 1 to Oct 31, 2026.\n  Figures cover Oct 1 to Oct 31, 2026, from 1 monthly report. Coverage: exact.'));
+    t.check('it names the days outside the selection and the report each came from',
+        text.includes('  Outside the selected dates: Dec 29 to Dec 31, 2025 (from the Dec 29, 2025 to Jan 4, 2026 report); Feb 1, 2026 (from the Jan 26 to Feb 1, 2026 report).'));
+    t.check('the results carry the actual dates', text.includes('Figures compare Dec 29, 2025 to Feb 1, 2026 with Oct 1 to Oct 31, 2026.'));
     t.check('it says who was counted', text.includes('2 had numbers in January 2026 and 3 in October 2026') && text.includes('1 appears only in October 2026'));
 
     const from = lines.indexOf('Results (strongest improvements first)') + 1;
-    const results = lines.slice(from, lines.indexOf('', from));
+    const results = lines.slice(from, lines.indexOf('', from)).filter((l) => l.startsWith('- '));
     t.equal('strongest improvement first, measured in noise steps', results.map((l) => l.slice(2).split(':')[0]).join(','),
         'Rep Satisfaction,Overall Sentiment,Average Handle Time,Schedule Adherence,Reliability (average hours missed per associate)');
     t.check('an improvement that missed its goal says both',
@@ -301,7 +323,7 @@ suite('team performance: the copied year-end summary', (t) => {
 
     const draft = lines[lines.length - 1];
     t.check('the draft is first person and leads with what improved',
-        draft.startsWith('From January 2026 to October 2026, my team improved on 4 of the 5 scorecard KPIs we can compare. Rep Satisfaction moved from 80.0% to 86.4%, up 6.4 points, and it meets the goal of 82% or higher.'));
+        draft.startsWith('Comparing January 2026 (figures cover Dec 29, 2025 to Feb 1, 2026) with October 2026, my team improved on 4 of the 5 scorecard KPIs we can compare. Rep Satisfaction moved from 80.0% to 86.4%, up 6.4 points, and it meets the goal of 82% or higher.'));
     t.check('it names what is still being worked on', draft.includes('We are still working on Schedule Adherence (92.8% against a goal of 93% or higher)'));
     t.check('the coaching sentence states what was logged, not what it did',
         draft.includes('I documented 3 coaching conversations in our coaching tool, most often on average handle time and schedule adherence.')
@@ -312,9 +334,115 @@ suite('team performance: the copied year-end summary', (t) => {
     const missing = tp.buildSummaryText(tp.buildModel(view('mine', FEB, OCT)));
     t.check('a missing baseline is said plainly',
         missing.includes('- Rep Satisfaction: no data for February 2026, so there is no change to report. October 2026: 86.4%.'));
-    t.check('and the gap in the uploads is named', missing.includes('Not covered by any upload: Feb 9 to Feb 15, 2026.'));
+    t.check('and the gaps in the reports are named', missing.includes('  No report covers: Feb 9 to Feb 15, 2026; Feb 23 to Feb 28, 2026.'));
 
     const noCoaching = load(t, { coaching: {} });
     const plain = noCoaching.buildSummaryText(noCoaching.buildModel(view('mine', JAN, OCT)));
     t.check('with nothing logged, coaching is left out entirely', !plain.includes('coaching'));
+});
+
+/* ── Coverage: the selected dates against the dates the figures cover ── */
+
+function aprilMayWeeks() {
+    const out = {};
+    for (let s = '2026-04-13'; s <= '2026-05-25';) {
+        const d = new Date(s + 'T00:00:00Z');
+        const e = new Date(d); e.setUTCDate(e.getUTCDate() + 6);
+        const end = e.toISOString().slice(0, 10);
+        Object.assign(out, week(s, end, [
+            row('Pat Rivers', { totalCalls: 100, aht: 450 }),
+            row('Dana Cole', { totalCalls: 300, aht: 430 })
+        ]));
+        const n = new Date(d); n.setUTCDate(n.getUTCDate() + 7);
+        s = n.toISOString().slice(0, 10);
+    }
+    return out;
+}
+
+function day(date, employees) {
+    return { [`${date}|${date}`]: { employees, metadata: { startDate: date, endDate: date, periodType: 'daily', uploadedAt: `${date}T22:00:00Z` } } };
+}
+
+function dailies(dates) {
+    return Object.assign({}, ...dates.map((d) => day(d, [
+        row('Pat Rivers', { totalCalls: 20, aht: 300 }),
+        row('Dana Cole', { totalCalls: 60, aht: 300 })
+    ])));
+}
+
+const INITIATIVE = ['2026-04-15', '2026-05-31'];
+
+suite('team performance coverage: a weekly report past the selected dates is used and named', (t) => {
+    const tp = load(t, { weekly: Object.assign(fixture(), aprilMayWeeks()) });
+    const r = tp.resolveRange(...INITIATIVE);
+    t.equal('the week the start falls in has five of its days inside, so it is used', r.periods[0].startDate, '2026-04-13');
+    t.equal('its two days before the start are named', r.spill.map((x) => `${x.start} ${x.end}`).join(';'), '2026-04-13 2026-04-14');
+    t.equal('so the dates are approximate', r.tier, 'approximate');
+    const model = tp.buildModel(view('mine', INITIATIVE, OCT));
+    t.equal('the figure uses all seven weeks: (450x700 + 430x2100) / 2800', rowOf(model, 'aht').baselineValue, 435);
+    const text = tp.buildSummaryText(model);
+    t.check('the clipboard names the days outside and the report they came from',
+        text.includes('  Outside the selected dates: Apr 13 to Apr 14, 2026 (from the Apr 13 to Apr 19, 2026 report).'));
+    t.check('and the period as the selection, with what the figures really cover',
+        text.includes('Baseline: Apr 15 to May 31, 2026, selected Apr 15 to May 31, 2026.\n  Figures cover Apr 13 to May 31, 2026, from 7 weekly reports. Coverage: approximate.'));
+});
+
+suite('team performance coverage: daily files give the exact dates when they cover the weekdays', (t) => {
+    const archive = dailies(['2026-04-15', '2026-04-16', '2026-04-17']);
+    const tp = load(t, { weekly: Object.assign(fixture(), aprilMayWeeks()), archive });
+    const r = tp.resolveRange(...INITIATIVE);
+    t.equal('the three weekday files replace the week that ran past the start', tp.describeSource(r), '6 weekly reports and 3 daily reports');
+    t.equal('so nothing outside the dates is counted', r.spill.length, 0);
+    t.equal('the weekend, only in the week the dailies replaced, is named as not counted',
+        r.leftOut.map((x) => `${x.start} ${x.end} ${x.reason}`).join(';'), '2026-04-18 2026-04-19 overlap');
+    t.equal('and keeps it approximate rather than exact', r.tier, 'approximate');
+    const model = tp.buildModel(view('mine', INITIATIVE, OCT));
+    t.equal('the figure uses the dailies, not the week as well: (450x600 + 300x60 + 430x1800 + 300x180) / 2640',
+        rowOf(model, 'aht').baselineValue, 423);
+
+    const weekend = load(t, { weekly: Object.assign(fixture(), aprilMayWeeks()), archive: dailies(['2026-04-15', '2026-04-16', '2026-04-17', '2026-04-18', '2026-04-19']) });
+    t.equal('with the weekend files too, the dates are exact', weekend.resolveRange(...INITIATIVE).tier, 'exact');
+
+    const thin = load(t, { weekly: Object.assign(fixture(), aprilMayWeeks()), daily: dailies(['2026-04-15', '2026-04-16']) });
+    const t2 = thin.resolveRange(...INITIATIVE);
+    t.equal('with a weekday missing from the dailies, the whole week is used instead', t2.periods[0].startDate, '2026-04-13');
+    t.equal('and its days outside are named', t2.spill.length, 1);
+});
+
+suite('team performance coverage: weekly and monthly reports never count the same day twice', (t) => {
+    const tp = load(t);
+    const oct = tp.buildModel(view('mine', OCT, OCT));
+    // The two October weeks carry 999 second handle times. Counted beside
+    // the month, they would pull the figure far off 440.
+    t.equal('the month alone stands for October', rowOf(oct, 'aht').comparisonValue, 440);
+
+    const mid = tp.resolveRange('2026-10-05', '2026-10-18');
+    t.equal('dates inside the month take the weeks, not the month that runs past them', mid.periods.map((p) => p.type).join(','), 'week,week');
+    t.equal('and are exact', mid.tier, 'exact');
+
+    const again = Object.assign(fixture(),
+        week('2026-10-06', '2026-10-11', [row('Pat Rivers', { aht: 100 })]),
+        week('2026-10-05', '2026-10-11', [row('Pat Rivers', { aht: 999 })]));
+    const twice = load(t, { weekly: again }).resolveRange('2026-10-05', '2026-10-18');
+    t.equal('a week uploaded twice with different dates is used once', twice.periods.length, 2);
+});
+
+suite('team performance coverage: two exactly covered months make the default', (t) => {
+    const weekly = Object.assign(fixture(), week('2026-09-01', '2026-09-30', [
+        row('Pat Rivers', { aht: 450 }), row('Dana Cole', { aht: 445 })
+    ], 'month'));
+    const tp = load(t, { weekly });
+    const d = tp.defaultPeriods(2026, tp.listTeams()[0]);
+    t.equal('the earliest and latest exact months', `${d.baseline.start} ${d.comparison.start}`, '2026-09-01 2026-10-01');
+    t.equal('said as exact', d.reason, 'exact');
+    t.check('and the earlier, approximate January is pointed out rather than hidden',
+        d.note.startsWith('January 2026 has numbers too, covered only approximately.'));
+});
+
+suite('team performance coverage: weekend days no report covers are listed, not called gaps', (t) => {
+    const tp = load(t, { archive: dailies(['2026-04-15', '2026-04-16', '2026-04-17']) });
+    const r = tp.resolveRange('2026-04-15', '2026-04-19');
+    t.equal('three daily files', tp.describeSource(r), '3 daily reports');
+    t.equal('the weekend is listed apart', r.weekendHoles.map((x) => `${x.start} ${x.end}`).join(';'), '2026-04-18 2026-04-19');
+    t.check('not as a gap, and the dates are approximate', r.gaps.length === 0 && r.tier === 'approximate');
 });

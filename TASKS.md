@@ -2,7 +2,8 @@
 
 ## Open
 - **Team Performance page (Scott, 2026-11-13), built 11/13.** Center > Team Performance. Still owed:
-  - Scott to open it on his real data and check the January and latest-month figures against the reports he has. If January's weekly uploads are incomplete, pick other dates or type the official team figures in the page's "Official team figures" box.
+  - Scott to open it on his real data and check the figures against the reports he has. Without monthly uploads, months come out Approximate (weekly reports run a few days past each month); the page says so beside each period. For exact months, upload the monthly report or type the official team figures in the page's "Official team figures" box.
+  - Scott's 11/13 second message cut off after Priority 1's coverage bullets ("...carry the actual dates into the results and clipboard"). The rest of Priority 1 and the broader usability work are waiting on the full text.
   - Send the review ZIP (`OneDrive\Desktop\Coaching Tool review screens 2026-11-13.zip`) to the reviewers; act on their feedback in a separate pass.
   - Ideas, not built: a small chart of each KPI by month; choosing other KPIs than the scorecard five; counting 1:1s and QA coachings alongside the coaching log.
 - **PA Down Payment coaching emails (Scott, 2026-11-09: "build the PA Down Payment card"), built 11/09.** People > Follow Up >
