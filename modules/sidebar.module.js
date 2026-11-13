@@ -53,6 +53,7 @@
             items: [
                 { label: 'Rankings', sub: 'subNavTaRankings', icon: 'medal' },
                 { label: 'Teams', sub: 'subNavTaMatchup', icon: 'users' },
+                { label: 'Team Performance', sub: 'subNavTaTeamPerformance', icon: 'chart' },
                 { label: 'Pace', sub: 'subNavTaFutures', icon: 'gauge' },
                 { label: 'Trends', sub: 'subNavTaMetricCharts', icon: 'trend' },
                 { label: 'Intelligence', sub: 'subNavTaIntelligence', icon: 'bulb' }

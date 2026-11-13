@@ -739,7 +739,7 @@ const NON_RESTORABLE_STORE_SUFFIXES = new Set(
         'callListeningSyncConfig', 'v2SyncState', 'v2DeviceId', 'idbMigrated_v1',
         'theme', 'selectedYearEndYear', 'lastTrendPeriod', 'celebrationsThreshold',
         'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'reliabilityBlankIsZero_v2', 'lastUploadUndo',
-        'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage'
+        'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage', 'teamPerformanceView'
     ]
 );
 
@@ -2147,6 +2147,18 @@ function bindNavigationHandlers() {
         showTrendsSubSection('subSectionTaMatchup', 'subNavTaMatchup');
         var matchupMod = window.DevCoachModules?.matchup;
         if (matchupMod?.renderMatchup) matchupMod.renderMatchup();
+    });
+    // The team's five KPIs, one period against another, for the year-end
+    // self-review (modules/team-performance.module.js).
+    document.getElementById('subNavTaTeamPerformance')?.addEventListener('click', () => {
+        showTrendsSubSection('subSectionTaTeamPerformance', 'subNavTaTeamPerformance');
+        const container = document.getElementById('subSectionTaTeamPerformance');
+        try {
+            window.DevCoachModules?.teamPerformance?.render?.(container);
+        } catch (error) {
+            logAppError('Team Performance failed to render', error);
+            if (container) container.innerHTML = '<p class="text-secondary">Could not build this page. The diagnostics have the detail.</p>';
+        }
     });
     document.getElementById('subNavTaFutures')?.addEventListener('click', () => {
         showTrendsSubSection('subSectionTaFutures', 'subNavTaFutures');

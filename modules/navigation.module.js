@@ -160,11 +160,12 @@
 
     // --- Center (the old Trends section) ---
 
-    var TRENDS_SUB_SECTIONS = ['subSectionTaCenterRanking', 'subSectionTaMatchup', 'subSectionTaFutures', 'subSectionTaTrendsGroup', 'subSectionTaTrendIntelligence'];
-    var TRENDS_NAV_BUTTONS = ['subNavTaRankings', 'subNavTaMatchup', 'subNavTaFutures', 'subNavTaMetricCharts', 'subNavTaIntelligence'];
+    var TRENDS_SUB_SECTIONS = ['subSectionTaCenterRanking', 'subSectionTaMatchup', 'subSectionTaTeamPerformance', 'subSectionTaFutures', 'subSectionTaTrendsGroup', 'subSectionTaTrendIntelligence'];
+    var TRENDS_NAV_BUTTONS = ['subNavTaRankings', 'subNavTaMatchup', 'subNavTaTeamPerformance', 'subNavTaFutures', 'subNavTaMetricCharts', 'subNavTaIntelligence'];
     var TRENDS_SUB_TO_BTN = {
         subSectionTaCenterRanking: 'subNavTaRankings',
         subSectionTaMatchup: 'subNavTaMatchup',
+        subSectionTaTeamPerformance: 'subNavTaTeamPerformance',
         subSectionTaFutures: 'subNavTaFutures',
         subSectionTaTrendsGroup: 'subNavTaMetricCharts',
         subSectionTaTrendIntelligence: 'subNavTaIntelligence'

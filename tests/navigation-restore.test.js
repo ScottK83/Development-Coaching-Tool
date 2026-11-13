@@ -43,6 +43,7 @@ const REVIEWS = {
 const CENTER = {
     subNavTaRankings: 'subSectionTaCenterRanking',
     subNavTaMatchup: 'subSectionTaMatchup',
+    subNavTaTeamPerformance: 'subSectionTaTeamPerformance',
     subNavTaFutures: 'subSectionTaFutures',
     subNavTaMetricCharts: 'subSectionTaTrendsGroup',
     subNavTaIntelligence: 'subSectionTaTrendIntelligence'

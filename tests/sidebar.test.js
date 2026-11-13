@@ -49,12 +49,12 @@ suite('sidebar: every page under its group, Upload and Settings at the foot', (t
     t.equal('the three groups, in order', sidebar.NAV_GROUPS.map((g) => g.label).join(','), 'Today,People,Center');
     t.equal('Today\'s pages', sidebar.NAV_GROUPS[0].items.map((i) => i.label).join(','), 'Day,Year to date,Snapshot,Contest');
     t.equal('People\'s pages', sidebar.NAV_GROUPS[1].items.map((i) => i.label).join(','), 'Numbers,Coach,Calls,Attendance,Follow Up,Reviews');
-    t.equal('Center\'s pages', sidebar.NAV_GROUPS[2].items.map((i) => i.label).join(','), 'Rankings,Teams,Pace,Trends,Intelligence');
+    t.equal('Center\'s pages', sidebar.NAV_GROUPS[2].items.map((i) => i.label).join(','), 'Rankings,Teams,Team Performance,Pace,Trends,Intelligence');
     t.equal('the foot', sidebar.FOOT_ITEMS.map((i) => i.label).join(','), 'Upload,Settings,Shortcuts');
 
     const html = sidebar.buildSidebarHtml();
     t.check('the markup names every page', ['Day', 'Calls', 'Rankings', 'Upload', 'Settings'].every((l) => html.includes(`>${l}</span>`)));
-    t.check('with a line icon on each', (html.match(/<svg class="sidebar-icon"/g) || []).length === 19);
+    t.check('with a line icon on each', (html.match(/<svg class="sidebar-icon"/g) || []).length === 20);
     t.check('no emoji in it', !/\p{Extended_Pictographic}/u.test(html));
     t.check('no em dash in it', !/[—–]/.test(html));
 });

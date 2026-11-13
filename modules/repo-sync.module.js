@@ -227,7 +227,9 @@
         // The mental health check-in's words. Hand-typed too.
         STORAGE_PREFIX + 'checkinRound',
         // The Year-End speech's opening, one per review year. Hand-typed too.
-        STORAGE_PREFIX + 'yearEndOpening'
+        STORAGE_PREFIX + 'yearEndOpening',
+        // Official team figures typed on Center > Team Performance.
+        STORAGE_PREFIX + 'teamPerformanceFigures'
         // dailyData is deliberately absent: dailies are ephemeral and would
         // churn the queue. It still rides along in verbatimStores, so it has a
         // backup without driving a push of its own.
@@ -935,7 +937,7 @@
         'callListeningSyncConfig', 'v2SyncState', 'v2DeviceId', 'idbMigrated_v1',
         'theme', 'selectedYearEndYear', 'lastTrendPeriod', 'celebrationsThreshold',
         'dataHealthReviewed', 'reliabilityBlankIsZero_v1', 'reliabilityBlankIsZero_v2', 'lastUploadUndo',
-        'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage'
+        'lastUploadHeaderFingerprint', 'lastUploadMetricCoverage', 'teamPerformanceView'
     ]);
 
     // Device state that is keyed rather than named: smartDefault_*, and the

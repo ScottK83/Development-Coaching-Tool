@@ -1,6 +1,10 @@
 # Tasks
 
 ## Open
+- **Team Performance page (Scott, 2026-11-13), built 11/13.** Center > Team Performance. Still owed:
+  - Scott to open it on his real data and check the January and latest-month figures against the reports he has. If January's weekly uploads are incomplete, pick other dates or type the official team figures in the page's "Official team figures" box.
+  - Send the review ZIP (`OneDrive\Desktop\Coaching Tool review screens 2026-11-13.zip`) to the reviewers; act on their feedback in a separate pass.
+  - Ideas, not built: a small chart of each KPI by month; choosing other KPIs than the scorecard five; counting 1:1s and QA coachings alongside the coaching log.
 - **PA Down Payment coaching emails (Scott, 2026-11-09: "build the PA Down Payment card"), built 11/09.** People > Follow Up >
   PA Down Payment (`modules/pa-down-payment.module.js`). He pastes his rows from the weekly sheet's Required Coaching tab,
   and each advisor gets a card: Generate email, Copy email, Copy leader note, a Done tick. Nothing is saved or synced.

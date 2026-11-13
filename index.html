@@ -818,12 +818,15 @@ Box 2 - Future Improvement Areas:
                     <div class="sub-nav">
                         <button type="button" id="subNavTaRankings" class="btn-secondary" style="font-size: 0.9em; padding: 8px 16px;">Rankings</button>
                         <button type="button" id="subNavTaMatchup" class="btn-secondary" style="font-size: 0.9em; padding: 8px 16px;">Teams</button>
+                        <button type="button" id="subNavTaTeamPerformance" class="btn-secondary" style="font-size: 0.9em; padding: 8px 16px;">Team Performance</button>
                         <button type="button" id="subNavTaFutures" class="btn-secondary" style="font-size: 0.9em; padding: 8px 16px;">Pace</button>
                         <button type="button" id="subNavTaMetricCharts" class="btn-secondary" style="font-size: 0.9em; padding: 8px 16px;">Trends</button>
                         <button type="button" id="subNavTaIntelligence" class="btn-secondary" style="font-size: 0.9em; padding: 8px 16px;">Intelligence</button>
                     </div>
                     <div id="subSectionTaCenterRanking" style="display: block;"></div>
                     <div id="subSectionTaMatchup" style="display: none;"></div>
+                    <!-- Rendered by modules/team-performance.module.js -->
+                    <div id="subSectionTaTeamPerformance" style="display: none;"></div>
                     <div id="subSectionTaFutures" style="display: none;"></div>
                     <!-- Trends groups the four views that used to be tabs of their own -->
                     <div id="subSectionTaTrendsGroup" style="display: none;">
@@ -1992,6 +1995,9 @@ Box 2 - Future Improvement Areas:
                 // The Quarterly tab itself, so it loads after all three.
                 'modules/quarter-review-ui.module.js',
                 'modules/matchup.module.js',
+                // A team's five KPIs in two periods, for the year-end self-review.
+                // Uses quarter-trend's period rule and period-compare's weighting.
+                'modules/team-performance.module.js',
                 'modules/yoy-comparison.module.js',
                 'modules/futures.module.js',
                 'modules/cheerleading.module.js',

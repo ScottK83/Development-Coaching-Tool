@@ -138,6 +138,8 @@
         { name: 'v2SyncState', tier: 'device', backend: 'local' },
         { name: 'selectedYearEndYear', tier: 'device', backend: 'local' },
         { name: 'lastTrendPeriod', tier: 'device', backend: 'local' },
+        // The team and dates picked on Center > Team Performance.
+        { name: 'teamPerformanceView', tier: 'device', backend: 'local' },
 
         // --- Rebuildable from the data above. ---
         { name: 'lastUploadUndo', tier: 'derived', backend: 'local', merge: 'recompute' },
