@@ -1,0 +1,40 @@
+Made-up rows in the shape of Verint's Coaching Sessions list, then one made-up session page. No real names.
+
+	10011	Doe, Jamie	Coach, Casey	Coach	11/02/2026 4:30 PM	11/06/2026	-	Evaluator, Pat	Process Accuracy QA (Priority Coaching)	Process Accuracy - There was an opportunity for FCR - customer was advise to callback after making $60 pymt when she could have completed PA process and reset PA and set $60 as the down payment. - Reminder to include: All pertinent information, including specific balances and dates discussed	 	Meeting Scheduled	 
+Awaiting user action	10012	Rivera, Sam	Coach, Casey	Coach	11/03/2026 2:00 PM	11/07/2026	-	Evaluator, Pat	Process Accuracy QA (Priority Coaching)	Process Accuracy - The $50 credit is not suppose to be used as a substitute for down payment - Incorrect contact type - Correct contact type should be 1x PA Exception since we set PA for $0 down.	 	Meeting Scheduled	 
+Awaiting user action	10013	Lee, Morgan	Coach, Casey	Coach	11/06/2026 12:40 PM	11/10/2026	-	Evaluator, Pat	Process Accuracy QA (Priority Coaching)	Process Accuracy - There was an opportunity for FCR - customer stated that he could make pymt same day but needed time; PA could have been set for quoted amount of $140 and TONP would take place once customer made pymt, which would eliminate the need for customer to call back to set longer installments - Did not receive TL approval for $0 down payment	 	Meeting Scheduled	 
+
+
+Manage Coaching Session:
+
+
+ Properties	 
+Session ID	 10011
+ Employee(s)	
+Doe, Jamie
+Organization Name	ENG Residential
+Creation Date	11/02/2026
+Assigned By	Evaluator, Pat
+Topic	
+
+Reason	
+Process Accuracy - There was an opportunity for FCR - customer was advise to callback after making $60 pymt when she could have completed PA process and reset PA and set $60 as the down payment.
+- Reminder to include: All pertinent information, including specific balances and dates discussed 
+Coaching Session Type	Process Accuracy QA (Priority Coaching)
+Coach	Coach, Casey
+Status	Meeting Scheduled (Coach or Manager have scheduled a Coaching meeting between the Coach and Employee(s))
+Due Date	
+11/06/2026
+Select Date
+Result	
+
+Completion Date	
+
+ Attachments	 
+Evaluation	Evaluation	Date: 11/02/2026 
+Evaluator Name: Evaluator, Pat 
+Form Name: APS Process Accuracy Evaluation 
+Score: 60.00 	 	View	Delete
+
+ Meeting Summary	 
+Meeting Summary	

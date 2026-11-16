@@ -1,8 +1,18 @@
 # Handoff
 
-Last updated 2026-11-13, suite at 10417 passing.
+Last updated 2026-11-16, suite at 10466 passing.
 
 ## Where things stand
+- **Priority Coachings in the QA Coaching tab (Scott, 2026-11-16: "Need a section for development, and to include emails based on this stuff. There's 3 in there.")**
+  - **Where:** the existing People > Follow Up > QA Coaching tab, not a new section, because it already turns a Verint coaching session into the email, Copilot prompt, Copy For Verint and Sent/Read tracking.
+  - **What changed in `modules/qa-coaching.module.js`:**
+    - The paste can be rows of Verint's Coaching Sessions list (tab separated, with or without the "Awaiting user action" cell), session pages, or both. A session in both is merged, and the page's details win. Columns are read by content, not position. The list has no evaluation date, so the email says "one of your recent calls" and the session button shows the due date instead.
+    - New reasons: `pa-payment-as-down` (the customer could pay now or the same day and was sent away to call back) and `pa-credit-down-payment` (a credit used in place of the down payment).
+    - New add-on `POINTS`: a note's extra points each add a step after the reason's own (credit, TONP, 1X PA Exception contact type, plain contact type, $0 down needs TL approval, balances and dates in notes). `stepsFor(reasonKey, note)` builds the list. The steps box follows edits to the note until Scott types over the steps.
+    - The PA wording follows Scott's PA Down Payment reminders. The QA email keeps its praise-first voice, unlike the PA Down Payment email.
+    - QA's note is tidied: a dash before a new capitalised point becomes a full stop, ". - " loses the dash, "pymt" is spelled out, and "was advise to", "to callback" and "not suppose to" are corrected.
+  - **Checked:** `tests/qa-coaching.test.js` (47 new checks) on the made-up `tests/fixtures/qa-coaching-list.txt`. Also clicked through in headless Chrome on that fixture (paste, three buttons, switching, note edits, Copy Email logged as Sent). Scott's real paste read all three sessions correctly from a scratch copy, which was deleted afterwards.
+  - **The leak again:** Scott committed the real paste as `Critical Coachings` to main (b3e683af). It was removed in 0acb835f and pushed in v2026.11.16.1. It is still in Git history and in that commit's own Pages deploy (see TASKS).
 - **Team Performance page (Scott, 2026-11-13: "a working Team Performance page I can use to write my year-end self-review"), built 11/13.**
   - **Where:** sidebar Center > Team Performance (`modules/team-performance.module.js`, `subSectionTaTeamPerformance`).
   - **The five KPIs:** the five with year-end rating bands in metric-profiles (AHT, Adherence, Sentiment, Rep Sat, Reliability). Not choosable, since the app already names those five.

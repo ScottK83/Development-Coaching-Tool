@@ -1,6 +1,12 @@
 # Tasks
 
 ## Open
+- **Real Priority Coaching notes went public again (Scott, 2026-11-16).** He committed them as `Critical Coachings` (b3e683af). The file was taken off main in 0acb835f (v2026.11.16.1). Scott still needs to:
+  - Delete that commit's Cloudflare Pages deploy (dashboard: the `supervisor-dashboard` project, then Deployments, then the deploy for b3e683af, then Delete), the same as `5944fe50` below.
+  - Cloudflare's edge cache may serve `/Critical%20Coachings` for up to 7 days. Don't fetch it to check, since a fetch can put it in the cache.
+  - Optional: rewrite history to drop b3e683af and 9d9977a, and force-push. Not asked for.
+  - From now on, paste Verint sessions into the QA Coaching tab. They are never needed in the repo.
+- **QA Coaching reads Priority Coachings (2026-11-16).** Still owed: Scott to paste his real list at work and send the three emails (due 11/16 to 11/18). Ideas, not built: log QA coachings in the coaching log; an Outlook draft for each session in one click.
 - **Team Performance page (Scott, 2026-11-13), built 11/13.** Center > Team Performance. Still owed:
   - Scott to open it on his real data and check the figures against the reports he has. Without monthly uploads, months come out Approximate (weekly reports run a few days past each month); the page says so beside each period. For exact months, upload the monthly report or type the official team figures in the page's "Official team figures" box.
   - Scott's 11/13 second message cut off after Priority 1's coverage bullets ("...carry the actual dates into the results and clipboard"). The rest of Priority 1 and the broader usability work are waiting on the full text.
@@ -75,6 +81,7 @@
   This deploy carries the 9/23 secret change and the 11/03 empty-store guard. See memory: project_worker_auth_deploy.
 
 ## Done recently
+- 2026-11-16: QA Coaching reads Verint's Coaching Sessions list and the PA Priority Coachings (two reasons, six add-on points). 47 new checks; the suite is at 10466.
 - 2026-11-04: mental health check-in round (v2026.11.04.1), many hats Phase 4 message shape (.2) and Phase 5 supervisor pages (.3). Suite at 10244 passing. Checked in headless Chrome on made-up data.
 - 2026-10-27: QA Coaching tab under People > Follow Up. It reads a Verint paste and gives the email (no score), a Copilot prompt, Copy For Verint, and Sent/Read tracking. 60 new checks; the suite is at 9990.
 - 2026-10-26: deep dive plan, all six phases, from v2026.10.26.2 to .8. Tests at 9918 passing.

@@ -125,6 +125,98 @@ suite('QA coaching: Copy For Verint says what was coached and when it was read',
     t.check('and when it was read', qa.buildVerintSummary(input, read).includes('Read: confirmed on Oct 27.'));
 });
 
+// Scott, 2026-11-16: three Priority Coachings on payment arrangements, copied
+// as rows of Verint's Coaching Sessions list plus one session page. The
+// fixture is made up in the same shape (tests/fixtures/qa-coaching-list.txt).
+const LIST = fs.readFileSync(path.join(ROOT, 'tests/fixtures/qa-coaching-list.txt'), 'utf8');
+
+suite('QA coaching: rows of the Coaching Sessions list read, and merge with a session page', async (t) => {
+    const { qa } = load(t);
+    const sessions = qa.parseSessions(LIST);
+    t.equal('three sessions, the page and its row counted once', sessions.length, 3);
+    t.equal('in list order', sessions.map(s => s.associateName).join(', '), 'Jamie Doe, Sam Rivera, Morgan Lee');
+
+    const [jamie, sam, morgan] = sessions;
+    t.equal('a row with no action cell still reads', jamie.sessionId, '10011');
+    t.equal('the page fills in the evaluation date', jamie.evalDate, '2026-11-02');
+    t.equal('and the form', jamie.formName, 'APS Process Accuracy Evaluation');
+    t.equal('the list keeps the meeting time', jamie.meetingAt, '11/02/2026 4:30 PM');
+    t.check('the page\'s two reason lines joined', /down payment\. Reminder to include/.test(jamie.qaNote));
+
+    t.equal('a list row\'s session id', sam.sessionId, '10012');
+    t.equal('its due date is the date-only cell', sam.dueDate, '2026-11-07');
+    t.equal('the session type', sam.sessionType, 'Process Accuracy QA (Priority Coaching)');
+    t.equal('assigned by is the name after the coach', sam.assignedBy, 'Evaluator, Pat');
+    t.equal('no evaluation date in the list', sam.evalDate, '');
+    t.equal('the category comes off', sam.category, 'Process Accuracy');
+    t.check('no score anywhere in what was read', !JSON.stringify(sessions).includes('60.00'));
+
+    t.equal('the list alone reads all three', qa.parseSessions(LIST.split('Manage Coaching Session')[0]).length, 3);
+    t.equal('the page alone reads one', qa.parseSessions('Manage Coaching Session' + LIST.split('Manage Coaching Session')[1]).length, 1);
+    t.equal('the old pages still read two', qa.parseSessions(PASTE).length, 2);
+    t.equal('an id and a name with no reason is no row', qa.parseSessions('\t10011\tDoe, Jamie\tCoach, Casey\tCoach').length, 0);
+    t.equal('other tab lines are no row', qa.parseSessions('Score: 60.00 \t \tView\tDelete\nCoach\tCoach, Casey').length, 0);
+});
+
+suite('QA coaching: payment arrangement reasons and the points after them', async (t) => {
+    const { qa } = load(t);
+    const [jamie, sam, morgan] = qa.parseSessions(LIST);
+
+    t.equal('a payment they could make now, sent to call back', jamie.reasonKey, 'pa-payment-as-down');
+    t.equal('paying later the same day', morgan.reasonKey, 'pa-payment-as-down');
+    t.equal('a credit in place of the down payment', sam.reasonKey, 'pa-credit-down-payment');
+    t.equal('the October one stays a PA that would break',
+        qa.parseSessions(PASTE)[1].reasonKey, 'fcr-payment-arrangement');
+
+    const jamieSteps = qa.stepsFor(jamie.reasonKey, jamie.qaNote);
+    t.check('sets the arrangement on the call', /use that payment as the down payment/.test(jamieSteps[0]));
+    t.check('the notes reminder becomes a step', jamieSteps.some(step => /balances, amounts and dates/.test(step)));
+    t.check('nothing about approval she was not coached on', !jamieSteps.some(step => /Team Lead/.test(step)));
+
+    const samSteps = qa.stepsFor(sam.reasonKey, sam.qaNote);
+    t.equal('credit, contact type, then $0 down approval', samSteps.length, 3);
+    t.check('the credit step leads', /does not take the place of the down payment/.test(samSteps[0]));
+    t.check('the 1X PA Exception contact type', /1X PA Exception contact type/.test(samSteps[1]));
+    t.check('$0 down needs Team Lead approval', /Team Lead approval/.test(samSteps[2]));
+
+    const morganSteps = qa.stepsFor(morgan.reasonKey, morgan.qaNote);
+    t.check('TONP explained', morganSteps.some(step => /TONP goes through once their payment is made/.test(step)));
+    t.equal('approval once, though the note says TL and $0 down',
+        morganSteps.filter(step => /Team Lead approval/.test(step)).length, 1);
+
+    t.check('a contact type with no PA gets the plain step',
+        qa.stepsFor('other', 'Incorrect contact type on the move').includes('Pick the contact type that matches what you did on the call.'));
+    t.equal('a note with no points keeps the reason\'s steps',
+        qa.stepsFor('rate-plan-wrong', 'Incorrect rate plan').join('|'), stepsFor(qa, 'rate-plan-wrong').join('|'));
+});
+
+suite('QA coaching: QA\'s shorthand and typos tidied for the associate', async (t) => {
+    const { qa } = load(t);
+    t.equal('a dash after a full stop goes',
+        qa.cleanQaNote('Set it as the down payment. - Reminder to include balances'),
+        'Set it as the down payment. Reminder to include balances');
+    t.equal('a dash before a new capitalised point is a full stop',
+        qa.cleanQaNote('to set longer installments - Did not receive TL approval'),
+        'To set longer installments. Did not receive TL approval');
+    t.equal('pymt spelled out', qa.cleanQaNote('after making $60 pymt'), 'After making $60 payment');
+    t.equal('advise to callback', qa.cleanQaNote('customer was advise to callback later'), 'Customer was advised to call back later');
+    t.equal('suppose to', qa.cleanQaNote('The credit is not suppose to be used'), 'The credit is not supposed to be used');
+});
+
+suite('QA coaching: a list-only session\'s email', async (t) => {
+    const { qa } = load(t);
+    const sam = qa.parseSessions(LIST)[1];
+    const email = qa.buildEmail(Object.assign({}, sam, { steps: qa.stepsFor(sam.reasonKey, sam.qaNote) }));
+    t.check('greets by first name', email.body.startsWith('Hey Sam,'));
+    t.check('praise first', email.body.split('\n')[2] === 'Thank you for the care you put into your calls.');
+    t.check('no evaluation date, so a recent call', email.body.includes('QA reviewed one of your recent calls,'));
+    t.check('QA\'s note, tidied', email.body.includes('What QA noticed:\nThe $50 credit is not supposed to be used as a substitute for down payment. Incorrect contact type.'));
+    t.check('the steps', email.body.includes('For next time:\n- A credit on the account'));
+    t.equal('subject', email.subject, 'QA feedback: Down payments on payment arrangements');
+    t.check('no em or en dashes', !/[–—]/.test(email.body + email.subject));
+    t.check('no score', !/score|60\.00/i.test(email.body));
+});
+
 suite('QA coaching: one record per coaching, Sent until marked Read', async (t) => {
     t.pinClock('2026-10-27');
     const { qa, history } = load(t);

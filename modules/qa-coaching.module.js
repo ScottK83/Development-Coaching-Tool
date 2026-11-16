@@ -10,11 +10,23 @@
  *
  * The QA score is read by nobody: Scott asked for it to stay out of the email
  * (10/27), and Verint already holds it.
+ *
+ * Scott, 2026-11-16, three Priority Coachings on payment arrangements: "Need a
+ * section for development, and to include emails based on this stuff". The
+ * paste can now be rows of Verint's Coaching Sessions list as well as the
+ * session pages, and QA's note can raise more than one point (contact type,
+ * $0 down approval, notes detail), each adding its own step.
  */
 (function () {
     'use strict';
 
     window.DevCoachModules = window.DevCoachModules || {};
+
+    // Steps shared by a reason and the add-on points below, so a note that
+    // trips both shows the step once. The PA wording follows Scott's own PA
+    // Down Payment reminders (pa-down-payment.module.js).
+    const CREDIT_STEP = 'A credit on the account does not take the place of the down payment. Start with the required down payment and work with the customer on what they can pay.';
+    const ZERO_DOWN_STEP = '$0 down needs Team Lead approval before you set it. Note the approval, and who gave it, on the account.';
 
     // The reasons QA has sent so far, in the order they are tried. "Wrong
     // plan" goes before "not reviewed" because a note about the wrong plan
@@ -44,6 +56,23 @@
             ]
         },
         {
+            // Scott's 11/16 Priority Coachings: the customer could pay
+            // something now (or later that day), and was sent away to call
+            // back instead of having the arrangement set with that payment as
+            // the down payment.
+            key: 'pa-payment-as-down',
+            label: 'Payment arrangement could have been set on the call',
+            subject: 'Setting the payment arrangement on the first call',
+            match: text => /\bFCR\b|first call resol/i.test(text)
+                && /\bPA\b|payment arrangement/i.test(text)
+                && /down ?payment|call ?back|same day|\btoday\b/i.test(text),
+            note: 'There was a chance to set the payment arrangement on this call.',
+            steps: [
+                'When a customer can make a payment today, set up or reset the arrangement on this call and use that payment as the down payment.',
+                'Tell them what happens next, so they do not need to call back to finish it.'
+            ]
+        },
+        {
             key: 'fcr-payment-arrangement',
             label: 'Missed first call resolution on a payment arrangement',
             subject: 'Payment arrangements on the first call',
@@ -54,6 +83,14 @@
                 'If it will, cancel it and set up a new arrangement on what is due now.',
                 'Let the customer know when their next bill will generate, so it does not catch them off guard.'
             ]
+        },
+        {
+            key: 'pa-credit-down-payment',
+            label: 'Credit used in place of a down payment',
+            subject: 'Down payments on payment arrangements',
+            match: /\bcredit\b[^.]*\b(substitute|in place of|instead of)\b|\b(substitute|in place of|instead of)\b[^.]*\bcredit\b/i,
+            note: 'A credit on the account was used in place of the down payment.',
+            steps: [CREDIT_STEP]
         },
         {
             key: 'fcr',
@@ -75,6 +112,61 @@
             steps: []
         }
     ];
+
+    // QA's notes often carry a second or third point after the main reason
+    // ("- Incorrect contact type", "- Did not receive TL approval for $0
+    // down"). Each point that matches adds its step after the reason's own,
+    // in this order, and a step already there is not repeated.
+    const POINTS = [
+        {
+            key: 'pa-credit',
+            match: /\bcredit\b[^.]*\b(substitute|in place of|instead of)\b|\b(substitute|in place of|instead of)\b[^.]*\bcredit\b/i,
+            step: CREDIT_STEP
+        },
+        {
+            key: 'tonp',
+            match: /\bTONP\b/,
+            step: 'If the service is off, let the customer know the TONP goes through once their payment is made.'
+        },
+        {
+            key: 'pa-contact-type',
+            match: text => /contact type/i.test(text) && /PA Exception/i.test(text),
+            step: 'When an arrangement goes outside the normal guidelines, like $0 down, use the 1X PA Exception contact type and note the customer\'s circumstances that support it.'
+        },
+        {
+            key: 'contact-type',
+            match: text => /contact type/i.test(text) && !/PA Exception/i.test(text),
+            step: 'Pick the contact type that matches what you did on the call.'
+        },
+        {
+            key: 'zero-down',
+            match: /\$\s?0\s*(down|dp)\b|\bzero down\b|\b(TL|team lead)\b[^.]*\bapprov|\bapprov\w*[^.]*\b(TL|team lead)\b/i,
+            step: ZERO_DOWN_STEP
+        },
+        {
+            key: 'notes-detail',
+            match: /pertinent information|specific balances|balances and dates|dates discussed/i,
+            step: 'In your notes, include the balances, amounts and dates you went over with the customer.'
+        }
+    ];
+
+    function matches(pattern, text) {
+        if (!pattern) return false;
+        return typeof pattern === 'function' ? Boolean(pattern(text)) : pattern.test(text);
+    }
+
+    /**
+     * The "For next time" steps for a reason and QA's note: the reason's own
+     * steps, then one for each other point the note raises.
+     */
+    function stepsFor(reasonKey, noteText) {
+        const note = String(noteText || '');
+        const steps = reasonFor(reasonKey).steps.slice();
+        POINTS.forEach(point => {
+            if (matches(point.match, note) && !steps.includes(point.step)) steps.push(point.step);
+        });
+        return steps;
+    }
 
     const DEFAULT_PRAISE = 'Thank you for the care you put into your calls.';
     const REPLY_ASK = 'Please reply with a quick "Got it" once you have read this, so I know it reached you.';
@@ -155,14 +247,22 @@
 
     /**
      * QA's note as the associate should read it: Verint's category prefix
-     * comes off, dashes become commas, and "w/" is spelled out. QA's own
-     * words are otherwise kept.
+     * comes off, dashes become commas (or a full stop when a new point starts
+     * with a capital, "installments - Did not receive"), and "w/" and "pymt"
+     * are spelled out. QA's own words are otherwise kept.
      */
     function cleanQaNote(text) {
         let note = String(text || '').replace(/\r\n?/g, '\n').replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
         const prefix = CATEGORY_PREFIX.exec(note);
         if (prefix) note = note.slice(prefix[0].length);
         note = note
+            .replace(/([.!?;:])\s*[-–—―]+\s+/g, '$1 ')
+            .replace(/\s+[-–—―]+\s+(?=[A-Z])/g, '. ')
+            .replace(/\bpymts\b/gi, 'payments')
+            .replace(/\bpymt\b/gi, 'payment')
+            .replace(/\b(is|are|was|were) not suppose to\b/gi, '$1 not supposed to')
+            .replace(/\b(was|were) advise to\b/gi, '$1 advised to')
+            .replace(/\bto callback\b/gi, 'to call back')
             .replace(SPACED_DASH, ', ')
             .replace(LONG_DASH, ', ')
             .replace(/\bw\/\s*/gi, 'with ')
@@ -182,21 +282,101 @@
 
     function classifyReason(text) {
         const value = String(text || '');
-        const hit = REASONS.find(reason => reason.match && reason.match.test(value));
+        const hit = REASONS.find(reason => matches(reason.match, value));
         return hit ? hit.key : 'other';
     }
 
+    // A row of Verint's Coaching Sessions list, copied from the grid: tab
+    // separated, the session id and then the employee ("Doe, Jamie"). The
+    // action cell in front ("Awaiting user action") may or may not be there.
+    const LIST_ID = /^\d{4,9}$/;
+    const VERINT_NAME = /^[A-Za-z'.-]+(?: [A-Za-z'.-]+){0,3}, ?[A-Za-z'.-]+(?: [A-Za-z'.-]+){0,3}$/;
+    const DATE_ONLY = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+    const DATE_TIME = /^\d{1,2}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}/;
+
     /**
-     * Reads one or several pasted "Manage Coaching Session" pages.
-     *
-     * Each value sits after its label, either on the same line after a tab or
-     * on the lines below it, up to the next label. A session with two
-     * associates in it comes back as one session each.
+     * The list's columns are read by what they hold, not where they sit, so
+     * a list with its columns moved still reads: the reason is the longest
+     * cell, the due date the cell that is only a date, the session type the
+     * short one that names QA or coaching, and the names after the employee
+     * are the coach and then whoever assigned it. The list carries no
+     * evaluation date, so the email says "one of your recent calls".
+     */
+    function parseListRows(text) {
+        const rows = [];
+        text.split('\n').forEach(line => {
+            if (!line.includes('\t')) return;
+            const cells = line.split('\t').map(cell => cell.replace(/\s+/g, ' ').trim());
+            const at = cells.findIndex((cell, i) => LIST_ID.test(cell) && VERINT_NAME.test(cells[i + 1] || ''));
+            if (at < 0) return;
+            const rest = cells.slice(at + 2).filter(cell => cell && cell !== '-');
+            const reasonText = rest.reduce((longest, cell) => (cell.length > longest.length ? cell : longest), '');
+            if (reasonText.length < 20) return;
+            const others = rest.filter(cell => cell !== reasonText);
+            const names = others.filter(cell => VERINT_NAME.test(cell) && cell.length <= 40);
+            const employee = cells[at + 1];
+            rows.push({
+                sessionId: cells[at],
+                sessionType: others.find(cell => /\bQA\b|coaching/i.test(cell) && cell.length <= 80) || '',
+                assignedBy: names[1] || '',
+                createdOn: '',
+                dueDate: toIsoDate(others.find(cell => DATE_ONLY.test(cell))),
+                meetingAt: others.find(cell => DATE_TIME.test(cell)) || '',
+                evalDate: '',
+                evaluator: '',
+                formName: '',
+                category: categoryOf(reasonText),
+                reasonText,
+                qaNote: cleanQaNote(reasonText),
+                reasonKey: classifyReason(reasonText),
+                verintName: employee,
+                associateName: toDisplayName(employee)
+            });
+        });
+        return rows;
+    }
+
+    /**
+     * Reads one or several pasted "Manage Coaching Session" pages, Verint's
+     * Coaching Sessions list, or both. A session in the list and on a page is
+     * one session, with the page's details (the evaluation date, the whole
+     * reason) winning.
      */
     function parseSessions(raw) {
         const text = String(raw || '').replace(/\r\n?/g, '\n');
         if (!text.trim()) return [];
 
+        const pages = parsePages(text);
+        const keyOf = session => `${session.sessionId}|${nameKey(session.associateName)}`;
+        const listed = parseListRows(text);
+        const listedKeys = new Set(listed.map(keyOf));
+        const merged = listed.map(row => {
+            const page = pages.find(session => keyOf(session) === keyOf(row));
+            if (!page) return row;
+            const filled = Object.assign({}, row);
+            Object.keys(page).forEach(key => {
+                if (page[key]) filled[key] = page[key];
+            });
+            return filled;
+        });
+        const seen = new Set();
+        return merged.concat(pages.filter(session => !listedKeys.has(keyOf(session))))
+            .filter(session => {
+                const key = keyOf(session);
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+    }
+
+    /**
+     * The "Manage Coaching Session" pages in a paste.
+     *
+     * Each value sits after its label, either on the same line after a tab or
+     * on the lines below it, up to the next label. A session with two
+     * associates in it comes back as one session each.
+     */
+    function parsePages(text) {
         const chunks = /Manage Coaching Session/i.test(text)
             ? text.split(/Manage Coaching Session:?/i)
             : [text];
@@ -606,16 +786,23 @@
     // unless Scott has typed over them.
     function applyReason(force) {
         const reason = reasonFor(el('qaCoachingReason')?.value);
-        const stepsBox = el('qaCoachingSteps');
         const notesBox = el('qaCoachingNotes');
-        const autoSteps = reason.steps.join('\n');
-        if (stepsBox && (force || !stepsBox.value.trim() || stepsBox.value === lastAutoSteps)) {
-            stepsBox.value = autoSteps;
-            lastAutoSteps = autoSteps;
-        }
         if (notesBox && (!notesBox.value.trim() || notesBox.value === lastAutoNote)) {
             notesBox.value = reason.note;
             lastAutoNote = reason.note;
+        }
+        refreshAutoSteps(force);
+    }
+
+    // The steps follow the reason and the points in QA's note, until Scott
+    // types over them.
+    function refreshAutoSteps(force) {
+        const stepsBox = el('qaCoachingSteps');
+        if (!stepsBox) return;
+        const autoSteps = stepsFor(el('qaCoachingReason')?.value, el('qaCoachingNotes')?.value).join('\n');
+        if (force || !stepsBox.value.trim() || stepsBox.value === lastAutoSteps) {
+            stepsBox.value = autoSteps;
+            lastAutoSteps = autoSteps;
         }
     }
 
@@ -648,7 +835,10 @@
         list.innerHTML = parsedSessions.map((session, index) => {
             const record = findRecord(session);
             const status = record ? (record.status === 'resolved' ? 'Read' : 'Sent') : '';
-            const label = [toDisplayName(session.associateName), shortDate(session.evalDate), reasonFor(session.reasonKey).label]
+            const when = session.evalDate
+                ? shortDate(session.evalDate)
+                : (session.dueDate ? `due ${shortDate(session.dueDate)}` : '');
+            const label = [toDisplayName(session.associateName), when, reasonFor(session.reasonKey).label]
                 .filter(Boolean).join(' · ');
             return `<button type="button" class="btn-secondary btn-sm${index === activeIndex ? ' is-active' : ''}" data-qa-session="${index}">${escapeHtml(label)}${status ? ` <span class="pill ${status === 'Read' ? 'pill-good' : 'pill-warn'}">${status}</span>` : ''}</button>`;
         }).join('');
@@ -836,7 +1026,8 @@
         el('qaCoachingSessions')?.addEventListener('click', onSessionClick);
         el('qaCoachingReason')?.addEventListener('change', () => { applyReason(true); refreshPreview(); });
         el('qaCoachingAssociate')?.addEventListener('change', refreshPreview);
-        ['qaCoachingNotes', 'qaCoachingSteps', 'qaCoachingPraise'].forEach(id => el(id)?.addEventListener('input', refreshPreview));
+        el('qaCoachingNotes')?.addEventListener('input', () => { refreshAutoSteps(false); refreshPreview(); });
+        ['qaCoachingSteps', 'qaCoachingPraise'].forEach(id => el(id)?.addEventListener('input', refreshPreview));
         el('qaCoachingEmailBtn')?.addEventListener('click', openEmailDraft);
         el('qaCoachingCopyEmailBtn')?.addEventListener('click', copyEmail);
         el('qaCoachingCopilotBtn')?.addEventListener('click', copyCopilotPrompt);
@@ -859,8 +1050,10 @@
 
     window.DevCoachModules.qaCoaching = {
         REASONS,
+        POINTS,
         parseSessions,
         classifyReason,
+        stepsFor,
         cleanQaNote,
         toDisplayName,
         matchAssociate,
