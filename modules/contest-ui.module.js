@@ -65,6 +65,18 @@
         loadedMonth = monthKey;
         loadedData = (data.data && typeof data.data === 'object') ? data.data : { days: {} };
         if (!loadedData.days) loadedData.days = {};
+
+        // Someone who moved departments earns nothing from the day they left
+        // (window.isDepartedOn, script.js). The cleaned month is saved straight
+        // back, so the /raffle page, which reads the saved month and has no
+        // roster, agrees. Awaited, so it cannot land after a save of a day.
+        const departed = typeof window.isDepartedOn === 'function' ? window.isDepartedOn : null;
+        const cleaned = departed && contest()?.withoutRows ? contest().withoutRows(loadedData, departed) : null;
+        if (cleaned && cleaned.removed) {
+            loadedData = cleaned.month;
+            try { await pushMonth(monthKey, loadedData); }
+            catch (error) { console.warn('[contest] Could not save the month without departed rows:', error?.message || error); }
+        }
         return loadedData;
     }
 

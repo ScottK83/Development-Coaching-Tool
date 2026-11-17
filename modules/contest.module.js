@@ -228,6 +228,27 @@
         return out;
     }
 
+    /**
+     * The month with every row shouldDrop(name, date) picks taken out, and how
+     * many went. The month handed in is returned as is when nothing goes, so a
+     * caller can tell "nothing to save" from the count alone.
+     */
+    function withoutRows(monthData, shouldDrop) {
+        const days = (monthData && monthData.days) || {};
+        const out = Object.assign({}, monthData, { days: {} });
+        let removed = 0;
+        Object.keys(days).forEach((date) => {
+            const people = days[date] || {};
+            const kept = {};
+            Object.keys(people).forEach((name) => {
+                if (shouldDrop(name, date)) removed += 1;
+                else kept[name] = people[name];
+            });
+            out.days[date] = kept;
+        });
+        return { month: removed ? out : monthData, removed };
+    }
+
     /** Entries per person, most first, with the reasons kept. */
     function buildLeaderboard(monthData, options) {
         const entries = computeEntries(monthData, options);
@@ -2221,6 +2242,7 @@
         weekStartOf,
         monthOf,
         computeEntries,
+        withoutRows,
         buildLeaderboard,
         buildAdherenceSummary,
         drawWinner,

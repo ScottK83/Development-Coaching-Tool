@@ -1317,6 +1317,29 @@ const ROSTER_NAME_INDEX = SUPERVISOR_ROSTER.reduce(function(acc, team) {
 
 const EXCLUDED_NAME_INDEX = EXCLUDED_ASSOCIATES.map(normalizeRosterName);
 
+// The day each person who moved departments left. From that day on their numbers
+// come out of what is stored (dropDepartedFromUploads) and out of the contest
+// month; before it they stay, because they worked those days. Each name here must
+// also be on EXCLUDED_ASSOCIATES, so new uploads skip them.
+const DEPARTED_SINCE = {
+    'Robert Berrelleza': '2026-11-01'   // Scott, 2026-11-17: "erase him for November going forward"
+};
+const DEPARTED_INDEX = Object.keys(DEPARTED_SINCE).map(function(name) {
+    return { norm: normalizeRosterName(name), since: DEPARTED_SINCE[name] };
+});
+const EARLIEST_DEPARTURE = DEPARTED_INDEX.reduce(function(min, d) {
+    return !min || d.since < min ? d.since : min;
+}, '');
+
+// True when this person had left by this ISO date. Any spelling an upload uses.
+function isDepartedOn(name, isoDate) {
+    const day = String(isoDate || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !EARLIEST_DEPARTURE || day < EARLIEST_DEPARTURE) return false;
+    const norm = normalizeRosterName(name);
+    return DEPARTED_INDEX.some(function(d) { return d.norm === norm && day >= d.since; });
+}
+window.isDepartedOn = isDepartedOn;
+
 // The roster is an ALLOWLIST, not a denylist. Uploads carry everyone the report was
 // run for — departed reps, other orgs, team leads, and the Spanish-ranked pool — and
 // historically all of them accumulated in weeklyData forever, which is how 127 real
@@ -1400,6 +1423,53 @@ function dropExcludedFromTeamStores() {
     } catch (_e) { console.warn('[dropExcluded] Could not clean myTeamMembers:', _e.message); }
 
     return Object.keys(removed).sort();
+}
+
+// A departed person's row comes out of every stored upload that ends on or after
+// the day they left: a week by the day it ends (its "Week ending" label), a YTD
+// file through any later day, a daily by its day. That matches what new uploads
+// do, since they skip the person outright. Every load, for the same reason as
+// above: a sync or a restore can bring an old copy back. Returns rows removed.
+function dropDepartedFromUploads() {
+    const storage = window.DevCoachModules?.storage;
+    let removed = 0;
+    if (!EARLIEST_DEPARTURE) return removed;
+
+    const isoEnd = function(periodKey, period) {
+        const candidates = [period?.metadata?.endDate, String(periodKey || '').split('|')[1]];
+        for (let i = 0; i < candidates.length; i++) {
+            const day = String(candidates[i] || '').slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(day)) return day;
+        }
+        return '';
+    };
+
+    ['weeklyData', 'ytdData', 'dailyData', 'dailyArchive'].forEach(function(storeKey) {
+        let store;
+        try { store = storage?.readStore?.(storeKey); }
+        catch (_e) { console.warn('[dropDeparted] Could not read ' + storeKey + ':', _e.message); return; }
+        if (!store || typeof store !== 'object') return;
+
+        let touched = false;
+        Object.keys(store).forEach(function(periodKey) {
+            const period = store[periodKey];
+            if (!period || !Array.isArray(period.employees)) return;
+            const endDate = isoEnd(periodKey, period);
+            if (!endDate || endDate < EARLIEST_DEPARTURE) return;
+            const kept = period.employees.filter(function(emp) { return !isDepartedOn(emp?.name, endDate); });
+            if (kept.length !== period.employees.length) {
+                removed += period.employees.length - kept.length;
+                period.employees = kept;
+                touched = true;
+            }
+        });
+
+        if (touched && !storage?.saveWithSizeCheck?.(storeKey, store)) {
+            console.warn('[dropDeparted] Could not save ' + storeKey);
+        }
+    });
+
+    return removed;
 }
 
 // Strips everyone off the roster out of stored period data. Historical rows are
@@ -1532,6 +1602,8 @@ window.backfillBlankReliability = backfillBlankReliability;
 // Before the seeding below reads the supervisor map, so a departed rep is never
 // re-saved with their old team.
 dropExcludedFromTeamStores();
+// Before startup reads the stores into weeklyData, ytdData and dailyData.
+dropDepartedFromUploads();
 
 (function seedSupervisorTeams() {
     let existing = {};
