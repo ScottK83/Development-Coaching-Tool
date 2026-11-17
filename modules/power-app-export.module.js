@@ -219,8 +219,12 @@
 
         var cc = src.cc();
         if (cc) out.settings.push({ key: 'CcEmail', value: cc });
+        // Stored as { text, updatedAt } per year (year-end-comments). A year
+        // with nothing saved reads the default there, so nothing goes over.
         var openings = src.store('yearEndOpening') || {};
-        if (openings[y]) out.settings.push({ key: 'YearEndOpening:' + y, value: String(openings[y]) });
+        var opening = openings[y];
+        var openingText = String((opening && typeof opening === 'object' ? opening.text : opening) || '').trim();
+        if (openingText) out.settings.push({ key: 'YearEndOpening:' + y, value: openingText });
         return out;
     }
 
@@ -310,19 +314,25 @@
             });
         });
 
+        // Intelligence keeps these on its Year-to-Date Summary row, keyed
+        // 'ytd-summary', with no date or year of their own. They go over under
+        // the year being copied: dated today for this year, December 31 for a
+        // past one. A key that is a week (start|end) is dated by its last day.
+        var now = src.now();
+        var summaryDate = now.getFullYear() === y ? isoDate(now) : y + '-12-31';
         var exec = src.store('executiveSummaryNotes') || {};
         Object.keys(exec).forEach(function (name) {
             var person = find(name);
             var weeks = exec[name] || {};
             Object.keys(weeks).forEach(function (weekKey) {
                 var note = weeks[weekKey] || {};
-                var d = isoDate(String(weekKey).split('|').sort().pop());
+                var d = isoDate(String(weekKey).split('|').sort().pop()) || summaryDate;
                 if (note.redFlags && String(note.redFlags).trim()) {
-                    push(person, { key: 'old:redflag:' + (person && person.email) + ':' + weekKey, date: d,
+                    push(person, { key: 'old:redflag:' + (person && person.email) + ':' + y + ':' + weekKey, date: d,
                         kind: 'Red flag', subject: 'Red flag', message: note.redFlags });
                 }
                 if (note.phishing && String(note.phishing).trim()) {
-                    push(person, { key: 'old:phishing:' + (person && person.email) + ':' + weekKey, date: d,
+                    push(person, { key: 'old:phishing:' + (person && person.email) + ':' + y + ':' + weekKey, date: d,
                         kind: 'Note', subject: 'Phishing', message: note.phishing });
                 }
             });

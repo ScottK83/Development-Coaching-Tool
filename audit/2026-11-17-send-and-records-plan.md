@@ -29,9 +29,21 @@ All of these are standard connectors. There is no Premium licence, no Dataverse 
 
 ## The size, plainly
 
-- The website is 46 modules with over 10,000 checks. A full rebuild is a months-long job, so it is done in phases.
-- The website keeps running for whatever hasn't moved yet, and is retired in the last phase.
-- Phase 1 is the part needed for reviews.
+- **Definition of done (Scott, 2026-11-17: "I want the full app to function the exact same way, mind you"):** every page,
+  feature, calculation, message rule and saved record of the website works the same way in the Power App. Phases are
+  only the order of work. The website is retired only when the parity checklist (in the app project,
+  `docs/parity-checklist.md`) is ticked off page by page.
+- **"The same" is checked, not assumed:**
+  - Made-up data is run through the website's own code to produce golden answers (figures, rankings, every message's
+    wording).
+  - The app must give the same answers on the same data before a page counts as done.
+- **Where a canvas app can't do the identical thing, the closest equivalent is used and listed:**
+  - **Excel uploads:** a canvas app can't read a file by itself. The upload goes through a flow that reads it with an
+    Office Script (standard licence, if APS allows Office Scripts), with paste from Excel as the fallback.
+  - **Picture copies** (Snapshot, Contest graphic, Rankings picture): a canvas app can't put a picture on the
+    clipboard. The picture is sent or posted directly instead.
+- **Size:** the website is 46 modules with over 10,000 checks. A full rebuild is a months-long job.
+- **The website keeps running** for whatever hasn't moved yet. Phase 1 (reviews) comes first.
 
 ## Phase 1: reviews, sending and records (built together)
 

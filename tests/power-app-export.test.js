@@ -42,7 +42,9 @@ function stores() {
                 emailedAt: '2026-11-04T18:00:00Z', readAt: '2026-11-05T18:00:00Z', reasonKey: 'pa-payment-as-down' }
         ] },
         oneOnOneMeetings: { 'Zed Ames': [{ date: '2026-09-15', notes: 'Talked goals.' }] },
-        executiveSummaryNotes: { 'Ann Cole': { '2026-04-04|2026-04-10': { redFlags: 'Opened the account before verifying.', phishing: '' } } },
+        // The real shape: Intelligence keeps one note per associate on its
+        // Year-to-Date Summary row (executive-summary data-week="ytd-summary").
+        executiveSummaryNotes: { 'Ann Cole': { 'ytd-summary': { redFlags: 'Opened the account before verifying.', phishing: '1 click in March' } } },
         dailyOutreachSent: { 'highfive|2026-11-09|Ann Cole': { at: '2026-11-10T14:00:00Z', plan: 'highfive', employee: 'Ann Cole' } },
         quarterRecapEmails: { 'Zed Ames|2026|Q3': [{ event: 'drafted', at: '2026-10-05T12:00:00Z' },
             { event: 'sent', at: '2026-10-05T12:05:00Z', subject: 'Your Q3 recap' }] },
@@ -52,7 +54,8 @@ function stores() {
         yearEndAnnualGoals: { '2026::Ann Cole': { redFlagViolations: { status: 'met', note: '' } } },
         midYearMeta: { 'Zed Ames|2026': { notes: 'Mid note.', statusOverride: 'auto', posted: true } },
         quarterReviewNotes: { 'Ann Cole|2026|Q2': 'Q2 note.' },
-        yearEndOpening: { 2026: '{name}, as we close out {year}, thank you.' }
+        // The store's real shape (year-end-comments saveYearEndOpening).
+        yearEndOpening: { 2026: { text: '{name}, as we close out {year}, thank you.', updatedAt: '2026-11-01T12:00:00Z' } }
     };
 }
 
@@ -121,7 +124,7 @@ suite('power app export: the coaching log', async (t) => {
     const kinds = exp.log.map(r => r.kind).sort();
 
     t.equal('one row per record, of each kind',
-        kinds.join(','), '1:1,Call listening,Coaching email,Follow up,High five,QA coaching,Quarterly recap,Red flag');
+        kinds.join(','), '1:1,Call listening,Coaching email,Follow up,High five,Note,QA coaching,Quarterly recap,Red flag');
     const coach = exp.log.find(r => r.kind === 'Coaching email');
     t.equal('metrics coached go over by name', coach.metrics, 'Average Handle Time, Hold Time');
     t.equal('the coaching tip is the message', coach.message, 'Use hold only when needed.');
@@ -131,7 +134,10 @@ suite('power app export: the coaching log', async (t) => {
     const qa = exp.log.find(r => r.kind === 'QA coaching');
     t.equal('a QA coaching read by the associate says Read', qa.status, 'Read');
     t.equal('the red flag note is filed as a red flag', exp.log.find(r => r.kind === 'Red flag').message, 'Opened the account before verifying.');
-    t.equal('the red flag is dated by its week\'s last day', exp.log.find(r => r.kind === 'Red flag').date, '2026-04-10');
+    t.equal('a year-summary red flag is dated the day of the copy', exp.log.find(r => r.kind === 'Red flag').date, '2026-11-17');
+    t.equal('a phishing note goes over as a note', exp.log.find(r => r.subject === 'Phishing').message, '1 click in March');
+    const lastYear = pa.buildExport(2025, sources());
+    t.equal('copying a past year dates it the last day of that year', lastYear.log.find(r => r.kind === 'Red flag').date, '2025-12-31');
     t.equal('a sent quarterly recap says Sent', exp.log.find(r => r.kind === 'Quarterly recap').status, 'Sent');
     t.equal('a high five went by Teams chat', exp.log.find(r => r.kind === 'High five').channel, 'Teams chat');
 });
