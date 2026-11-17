@@ -855,7 +855,7 @@ function setTeamMembersForWeek(weekKey, memberNames) {
 }
 // Default team roster — used when no per-week selection exists
 var DEFAULT_TEAM_MEMBERS = [
-    'Robert Berrelleza', 'Kamella Dash', 'Alyssa Dimes', 'Desiree Clark',
+    'Kamella Dash', 'Alyssa Dimes', 'Desiree Clark',
     'Sabrina Gage', 'Angelina Fierro', 'Esperanza Palomera', 'Matrece Muldrow',
     'Destiny Cervantez', 'Esther Ramos', 'Jadyn Flowers', 'Kristin Villela',
     'Erica Kallestewa', 'Betty Yanez', 'Oceane Ingram', 'James Garcia',
@@ -1244,7 +1244,7 @@ const SUPERVISOR_ROSTER = [
     { supervisor: 'Sarah Gregory', agents: ['Magarsa Ali', 'Solomon Arrona', 'Ekiecha Brabham', 'Brittney Carroll', 'Darryn Coley', 'Armida Flores', 'Erika Garrett', 'Kim Gugora', 'Keshay Guidry', 'Marietta Henderson', 'Aldo Hernandez', 'Sophie Holland', 'Holly Lomatska', 'John Montoya', 'Pamela Muhammad', 'Eilene Parrish', 'Briana Zambrano'] },
     { supervisor: 'Schnelle Howard', agents: ['Sarah Camacho', 'Stephanie Carbajal-Saiz', 'Alexis Carroll', 'Caylie Chirumbolo', 'Caitlyn Fidler', 'Jenifer Henson', 'Kimmy Hong', 'Monica Madden', 'Crystal Nez', 'Scoticia Osborne', 'Seth Pinyerd', 'Tracy Rucker', 'Michelle Weibrecht', 'Rachael Wilson'] },
     { supervisor: 'Nicole Pazienza', agents: ['Amy Armenta', 'Jessica Barbosa', 'Richard Biehl', 'Imelda Bustos', 'Jacob Chernov', 'Bruce Cram', 'Nikayla Cruz', 'Wisdom Curry', 'Cecily Daniels', 'Tanya Davis', 'Geralene Dixon', 'Dawanda Kizee-Daniel', 'Shawn Leigh', 'Ashley Robinson', 'Cindy Robledo', 'Ebany Soto', 'Monica Stringer', 'Brayden Thielbar', 'Jereca Whiteman'] },
-    { supervisor: 'Scott', agents: ['Robert Berrelleza', 'Destiny Cervantez', 'Desiree Clark', 'Kamella Dash', 'Alyssa Dimes', 'Angelina Fierro', 'Jadyn Flowers', 'Sabrina Gage', 'James Garcia', 'Oceane Ingram', 'Erica Kallestewa', 'Christi Martinez-Sharp', 'Matrece Muldrow', 'Johnathan Padilla', 'Esperanza Palomera', 'Esther Ramos', 'Kristin Villela', 'Betty Yanez'] }
+    { supervisor: 'Scott', agents: ['Destiny Cervantez', 'Desiree Clark', 'Kamella Dash', 'Alyssa Dimes', 'Angelina Fierro', 'Jadyn Flowers', 'Sabrina Gage', 'James Garcia', 'Oceane Ingram', 'Erica Kallestewa', 'Christi Martinez-Sharp', 'Matrece Muldrow', 'Johnathan Padilla', 'Esperanza Palomera', 'Esther Ramos', 'Kristin Villela', 'Betty Yanez'] }
 ];
 
 // Known non-associates, kept as a named record so nobody re-adds them to the roster
@@ -1261,6 +1261,10 @@ const SUPERVISOR_ROSTER = [
 //                     Spellings ARE verified from the source report.
 //   Not residential — Christine Ellis's team was in the roster by mistake. It is a
 //                     different org and never belonged in these numbers.
+//   Moved departments: off the roster, and listed here so a loose upload
+//                     spelling can never match them back in. Their stored
+//                     supervisor and team ticks come off on every load
+//                     (dropExcludedFromTeamStores).
 const EXCLUDED_ASSOCIATES = [
     // Team leads
     'Lashray Concho', 'Austin Hadlock', 'Wendy Cervantes', 'Lynette Gomez',
@@ -1273,7 +1277,9 @@ const EXCLUDED_ASSOCIATES = [
     'Margarita Gastello', 'Debbie Hernandez', 'Dolores Hernandez', 'Lily Hanahi',
     'Carla Canuri', 'Maria Lopez', 'Nancy McCarthy', 'Stephanie McNair', 'Lisa Oust',
     'Raquel Perez', 'John Ruiz', 'Sherry Rycraft', 'Christina Sanchez',
-    'Michael Vaughan', 'Alexia Zeniga'
+    'Michael Vaughan', 'Alexia Zeniga',
+    // Moved departments (Scott, 2026-11-17)
+    'Robert Berrelleza'
 ];
 
 // "Last, First" -> "first last", lowercased, punctuation stripped, spaces collapsed.
@@ -1353,6 +1359,48 @@ window.isRosteredAssociate = isRosteredAssociate;
 // Read at click time, so the load order between modules and script.js does not
 // matter.
 window.SUPERVISOR_ROSTER = SUPERVISOR_ROSTER;
+
+// Anyone on EXCLUDED_ASSOCIATES comes off the stored team lists. Coming off the
+// roster alone left them on a team: "my team" is read from employeeSupervisors,
+// and seedSupervisorTeams only writes the people still on the roster, so a rep
+// who moved departments kept their stored supervisor for good. Runs on every
+// load, not once, because both stores sync last-writer-wins and another computer
+// can hand the old list back. Their past numbers in weeklyData and ytdData stay:
+// they did work those weeks, and new uploads skip them.
+function dropExcludedFromTeamStores() {
+    const storage = window.DevCoachModules?.storage;
+    const removed = {};
+    const isExcluded = function(name) {
+        if (EXCLUDED_NAME_INDEX.indexOf(normalizeRosterName(name)) === -1) return false;
+        removed[name] = true;
+        return true;
+    };
+
+    try {
+        const map = storage?.readStore?.('employeeSupervisors') || {};
+        let touched = false;
+        Object.keys(map).forEach(function(name) {
+            if (isExcluded(name)) { delete map[name]; touched = true; }
+        });
+        if (touched) storage?.saveWithSizeCheck?.('employeeSupervisors', map);
+    } catch (_e) { console.warn('[dropExcluded] Could not clean employeeSupervisors:', _e.message); }
+
+    try {
+        const byWeek = storage?.readStore?.('myTeamMembers') || {};
+        if (byWeek && typeof byWeek === 'object' && !Array.isArray(byWeek)) {
+            let touched = false;
+            Object.keys(byWeek).forEach(function(weekKey) {
+                const names = byWeek[weekKey];
+                if (!Array.isArray(names)) return;
+                const kept = names.filter(function(name) { return !isExcluded(name); });
+                if (kept.length !== names.length) { byWeek[weekKey] = kept; touched = true; }
+            });
+            if (touched) storage?.saveWithSizeCheck?.('myTeamMembers', byWeek);
+        }
+    } catch (_e) { console.warn('[dropExcluded] Could not clean myTeamMembers:', _e.message); }
+
+    return Object.keys(removed).sort();
+}
 
 // Strips everyone off the roster out of stored period data. Historical rows are
 // rewritten, so past center averages shift — that is the point, those numbers were
@@ -1480,6 +1528,10 @@ window.backfillBlankReliability = backfillBlankReliability;
     if (filled) console.info('[backfillReliability] Set ' + filled + ' blank reliability value(s) to 0.');
     localStorage.setItem(STORAGE_PREFIX + 'reliabilityBlankIsZero_v2', '1');
 })();
+
+// Before the seeding below reads the supervisor map, so a departed rep is never
+// re-saved with their old team.
+dropExcludedFromTeamStores();
 
 (function seedSupervisorTeams() {
     let existing = {};
