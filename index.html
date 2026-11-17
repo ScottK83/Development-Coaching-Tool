@@ -1258,6 +1258,21 @@ Box 2 - Future Improvement Areas:
                         <div id="snapshotStatus" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
                     </div>
 
+                    <!-- Copy for the Power App (Scott, 2026-11-17). One year of
+                         the team's records and figures as JSON for the
+                         Development Coaching Power App's Import screen. The
+                         clipboard is the only way out; no file is written. -->
+                    <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-surface); border-radius: 8px; border: 1px solid var(--border);">
+                        <h3 style="margin-top: 0;">Copy for the Power App</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 15px;">Copies the year's coaching records, reviews and figures for the people on your team, for the Import screen of the Development Coaching Power App. Paste it there. Pasting again later updates the same rows.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <label for="powerAppExportYear" style="font-weight: bold; color: var(--text-primary);">Year:</label>
+                            <input type="number" id="powerAppExportYear" min="2024" max="2100" style="width: 90px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text-primary);">
+                            <button type="button" id="powerAppExportBtn" class="btn-primary">Copy for the Power App</button>
+                        </div>
+                        <div id="powerAppExportResult" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);"></div>
+                    </div>
+
                     </div>
                     <!-- End Sync & Backup Sub-section -->
 
@@ -1868,7 +1883,7 @@ Box 2 - Future Improvement Areas:
     <script>
         (function loadAllScriptsWithCacheBust() {
             // See tests/cache-busting.test.js
-            var APP_BUILD = '2026.11.17.3'; // APP_BUILD
+            var APP_BUILD = '2026.11.17.4'; // APP_BUILD
             var bust = /^\d{4}\.\d{2}\.\d{2}\.\d+$/.test(APP_BUILD) ? APP_BUILD : Date.now();
             var scripts = [
                 // Foundation Layer (No Dependencies)
@@ -2009,6 +2024,9 @@ Box 2 - Future Improvement Areas:
                 'modules/whats-working.module.js',
                 'modules/contest.module.js',
                 'modules/contest-ui.module.js',
+                // Copy for the Power App: reads the year-end, quarter and
+                // record stores when its button is clicked.
+                'modules/power-app-export.module.js',
                 // Main Application
                 'script.js'
             ];
