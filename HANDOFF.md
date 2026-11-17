@@ -1,8 +1,14 @@
 # Handoff
 
-Last updated 2026-11-16, suite at 10466 passing.
+Last updated 2026-11-17, suite at 10484 passing.
 
 ## Where things stand
+- **Robert Berrelleza dropped from Scott's team (Scott, 2026-11-17: "He has since moved departments."), live in v2026.11.17.1.**
+  - Off `SUPERVISOR_ROSTER` and `DEFAULT_TEAM_MEMBERS`; on `EXCLUDED_ASSOCIATES` under "Moved departments". Scott's team is now 17, the roster 126.
+  - New `dropExcludedFromTeamStores()` in `script.js` runs on every load, before `seedSupervisorTeams`, and takes excluded names out of `employeeSupervisors` and the `myTeamMembers` tick lists. Without it his stored "Scott" would have kept him on the team.
+  - His past numbers in `weeklyData`/`ytdData` were kept on purpose: center figures for weeks he worked stay right, and new uploads skip him. Team membership isn't dated, so Team Performance now leaves him out of past months of Scott's team too.
+  - **To drop someone else who leaves:** take them off the roster and the default team, and add them to the "Moved departments" group. Nothing else is needed.
+  - Tests: `tests/roster-departed.test.js` (18 checks).
 - **Priority Coachings in the QA Coaching tab (Scott, 2026-11-16: "Need a section for development, and to include emails based on this stuff. There's 3 in there.")**
   - **Where:** the existing People > Follow Up > QA Coaching tab, not a new section, because it already turns a Verint coaching session into the email, Copilot prompt, Copy For Verint and Sent/Read tracking.
   - **What changed in `modules/qa-coaching.module.js`:**
