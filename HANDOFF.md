@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated 2026-11-17, suite at 10512 passing.
+Last updated 2026-11-23, suite at 10588 passing.
 
 ## Where things stand
 - **Robert Berrelleza dropped from Scott's team (Scott, 2026-11-17: "He has since moved departments."), live in v2026.11.17.1.**
@@ -45,6 +45,13 @@ Last updated 2026-11-17, suite at 10512 passing.
     - The email is his sample word for word, with no praise opener (his call for development opportunities). A preferred name wins in "Hi".
     - The leader note starts with today's date. Its wording is a draft he hasn't confirmed.
     - A paste with more than one leader shows no cards until a leader is picked.
+  - **$0 down accounts in the email (Scott, 2026-11-23: "I want the email to the associates to include the date of the 0 down, and the account number"):**
+    - The sheet's rows carry only a count, so each card with a $0 down count has a box, "$0 down accounts for the email". One account per line: the date of the $0 down and the account number, either order, read by content (`parseAccounts`), so a row copied from a sheet works too. A line's first date is taken; a number is 6 or more digits.
+    - The email lists them between "Your results" and the reminders ("- 11/3/2026, account 1000000001"), then one line: "Team Lead approval needs to be documented in the notes on every one of these accounts." The heading and that line are Claude's wording, not confirmed by Scott. With no accounts typed, the email is as before.
+    - Under the box: how many were read, and a warning when that differs from the report's count. The leader note is unchanged (no account numbers in it).
+    - Decision: a box per card, not one paste for everyone, because the layout of the sheet's account-level tab is not known. If Scott gives its column headings, one paste could fill every card.
+    - Account numbers are customer data: memory only (`accountText`), cleared by Clear or closing the page. Never commit real ones; the test numbers are made up.
+    - Checked: 13 new checks in `tests/pa-down-payment.test.js` (66 in the file), and the real module driven in headless Edge on the made-up rows (type in the box, count, preview, Done tick keeps the text). Not checked: the whole app, or the real sheet.
   - **Nothing is saved or synced:** the rows live in the module's variables. The suite checks the file makes no store or network call except reading the roster.
   - **Tests:** `tests/pa-down-payment.test.js` (53 checks) on made-up rows, `tests/fixtures/pa-down-payment-rows.txt`. The panel was also clicked through in headless Chrome on those rows (not the whole app, and not the real sheet).
 - **Mental health check-in (Scott, 2026-11-04: "a message where I copy and paste to each of them"), live in v2026.11.04.1.**

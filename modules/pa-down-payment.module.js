@@ -11,6 +11,12 @@
  * until the page closes or Clear is pressed, and tests/pa-down-payment.test.js
  * checks that this file never writes to a store.
  *
+ * Scott, 2026-11-23: these are accounts where $0 down was accepted without
+ * approval, so the email also lists each one: the date of the $0 down and the
+ * account number. The sheet's rows only carry a count, so he types or pastes
+ * the accounts into a box on the advisor's card. They are customer account
+ * numbers: held in memory like the rest, never stored.
+ *
  * The email is a development opportunity, so it has no praise opener (Scott:
  * "I guess praise can't be added for development opportunities"). The words
  * are his sample's, kept as he wrote them.
@@ -32,6 +38,9 @@
 
     const GOAL = 'The goal isn\'t to avoid helping our customers. We absolutely want to work with customers experiencing hardship. We just need to make sure we are negotiating first, following the PA process, and clearly documenting any exception we provide.';
     const REPLY_ASK = 'Please reply acknowledging you\'ve reviewed this. If you have questions or want to go over any of the accounts together, let me know.';
+
+    const ACCOUNTS_HEAD = '$0 down accounts on this report (date of the $0 down, account number):';
+    const ACCOUNTS_ASK = 'Team Lead approval needs to be documented in the notes on every one of these accounts.';
 
     const NOTE_TAIL = 'Reviewed starting from the required down payment, documenting exceptions, $0 down needs TL approval. Asked for a reply.';
 
@@ -106,6 +115,38 @@
         return rows;
     }
 
+    const SLASH_DATE = /(?:^|[^\d\/])(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?![\d\/])/;
+    const ISO_DATE = /(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/;
+    const ACCOUNT_NUMBER = /\d(?:-?\d){5,}/;
+
+    /**
+     * The $0 down accounts typed or pasted for one advisor, one per line:
+     * the date of the $0 down and the account number, in either order, with
+     * a tab, comma or spaces between. Read by content, so extra cells copied
+     * along from a sheet are ignored. A line with no account number is not
+     * an account. A line with no date keeps its account and an empty date.
+     */
+    function parseAccounts(raw) {
+        const accounts = [];
+        String(raw || '').split(/\r?\n/).forEach(line => {
+            let text = clean(line);
+            let date = '';
+            const iso = ISO_DATE.exec(text);
+            const slash = SLASH_DATE.exec(text);
+            if (iso) {
+                date = `${Number(iso[2])}/${Number(iso[3])}/${iso[1]}`;
+                text = text.replace(iso[0], ' ');
+            } else if (slash) {
+                date = `${Number(slash[1])}/${Number(slash[2])}${slash[3] ? `/${slash[3]}` : ''}`;
+                text = text.replace(slash[0], ' ');
+            }
+            const number = ACCOUNT_NUMBER.exec(text);
+            if (!number) return;
+            accounts.push({ date, account: number[0] });
+        });
+        return accounts;
+    }
+
     function leadersOf(rows) {
         return Array.from(new Set((rows || []).map(row => row.leader).filter(Boolean)));
     }
@@ -145,10 +186,15 @@
             `Average down payment accepted: ${data.avgAccepted}`,
             `1X PA Exception contacts used: ${data.exceptionCount} (${data.usage})`,
             `$0 down arrangements: ${data.zeroDown}`,
-            '',
-            'A few reminders going forward:',
             ''
         ];
+        const accounts = Array.isArray(data.zeroDownAccounts) ? data.zeroDownAccounts : [];
+        if (accounts.length) {
+            lines.push(ACCOUNTS_HEAD, '');
+            accounts.forEach(item => lines.push(item.date ? `- ${item.date}, account ${item.account}` : `- Account ${item.account}`));
+            lines.push('', ACCOUNTS_ASK, '');
+        }
+        lines.push('A few reminders going forward:', '');
         REMINDERS.forEach(reminder => lines.push(`- ${reminder}`));
         lines.push('', GOAL, '', REPLY_ASK, '', 'Thanks,');
         return { subject: SUBJECT, body: lines.join('\n') };
@@ -176,6 +222,8 @@
     let rows = [];
     let chosenLeader = '';
     const done = new Set();
+    // What he typed in each card's accounts box, by rowKey. Memory only.
+    const accountText = new Map();
 
     function el(id) {
         return document.getElementById(id);
@@ -208,7 +256,8 @@
     function withGreeting(row) {
         const rosterName = rosterNameFor(row.advisor);
         const nickname = typeof getEmployeeNickname === 'function' ? getEmployeeNickname(rosterName) : '';
-        return Object.assign({}, row, { rosterName, greetingName: nickname || '' });
+        const zeroDownAccounts = parseAccounts(accountText.get(rowKey(row)));
+        return Object.assign({}, row, { rosterName, greetingName: nickname || '', zeroDownAccounts });
     }
 
     function addressFor(row) {
@@ -255,10 +304,36 @@
         status.textContent = `${plural(shown.length, 'advisor', 'advisors')} read from the ${dates.join(' and ')} report. Nothing is saved: closing the page clears it.`;
     }
 
+    function previewText(full) {
+        const email = buildEmail(full);
+        return `To: ${addressFor(full)}\nSubject: ${email.subject}\n\n${email.body}`;
+    }
+
+    // Under the accounts box: how many were read, and whether that matches
+    // the report's own count.
+    function accountsStatus(row, accounts) {
+        const expected = Number(row.zeroDown) || 0;
+        if (!accounts.length) {
+            return `One per line: the date of the $0 down and the account number. The report counts ${expected}. They are added to the email and are not saved.`;
+        }
+        const undated = accounts.filter(item => !item.date).length;
+        let text = `${plural(accounts.length, 'account', 'accounts')} read`;
+        if (accounts.length !== expected) text += `, but the report counts ${expected}`;
+        if (undated) text += `. ${undated} with no date`;
+        return `${text}.`;
+    }
+
+    function accountsBoxHtml(row, full, index) {
+        if (!(Number(row.zeroDown) > 0) && !accountText.get(rowKey(row))) return '';
+        return `<div style="margin: 0 0 12px 0;">`
+            + `<label class="text-primary" style="font-weight: bold; display: block; margin-bottom: 5px;">$0 down accounts for the email:</label>`
+            + `<textarea data-pa-accounts="${index}" placeholder="11/3/2026  1234567890" style="width: 100%; min-height: 70px; box-sizing: border-box; resize: vertical;">${escapeHtml(accountText.get(rowKey(row)) || '')}</textarea>`
+            + `<div class="text-faint" data-pa-accounts-status style="font-size: 0.85em; margin-top: 4px;">${escapeHtml(accountsStatus(row, full.zeroDownAccounts))}</div>`
+            + `</div>`;
+    }
+
     function cardHtml(row, index) {
         const full = withGreeting(row);
-        const email = buildEmail(full);
-        const to = addressFor(full);
         const isDone = done.has(rowKey(row));
         const figure = (label, value) => `<div><div class="text-faint" style="font-size: 0.8em;">${label}</div><div class="text-primary" style="font-weight: bold; font-size: 1.15em;">${escapeHtml(value)}</div></div>`;
         return `<div class="card" data-pa-card="${index}" style="${isDone ? 'opacity: 0.6;' : ''}">`
@@ -272,13 +347,14 @@
             + figure('1X PA Exception contacts used', `${row.exceptionCount} (${row.usage})`)
             + figure('$0 down arrangements', row.zeroDown)
             + `</div>`
+            + accountsBoxHtml(row, full, index)
             + `<div style="display: flex; gap: 10px; flex-wrap: wrap;">`
             + `<button type="button" class="btn-primary" data-pa-action="email" data-pa-index="${index}" style="flex: 1; min-width: 150px;">Generate email</button>`
             + `<button type="button" class="btn-secondary" data-pa-action="copy-email" data-pa-index="${index}" style="flex: 1; min-width: 150px;">Copy email</button>`
             + `<button type="button" class="btn-secondary" data-pa-action="copy-note" data-pa-index="${index}" style="flex: 1; min-width: 150px;">Copy leader note</button>`
             + `</div>`
             + `<details style="margin-top: 10px;"><summary class="text-secondary" style="cursor: pointer;">Show the email and the note</summary>`
-            + `<div class="card-sunken text-primary" style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; font-family: Arial, sans-serif; margin-top: 8px;">${escapeHtml(`To: ${to}\nSubject: ${email.subject}\n\n${email.body}`)}</div>`
+            + `<div class="card-sunken text-primary" data-pa-preview style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; font-family: Arial, sans-serif; margin-top: 8px;">${escapeHtml(previewText(full))}</div>`
             + `<div class="text-faint" style="font-size: 0.85em; margin-top: 8px;">Leader note:</div>`
             + `<div class="card-sunken text-primary" style="white-space: pre-wrap; word-wrap: break-word; margin-top: 4px;">${escapeHtml(buildLeaderNote(row))}</div>`
             + `</details>`
@@ -341,10 +417,27 @@
         }
     }
 
+    // Typing in an accounts box updates that card's count and preview in
+    // place, so the box keeps its cursor.
+    function onAccountsInput(event) {
+        const box = event.target;
+        if (!box?.hasAttribute?.('data-pa-accounts')) return;
+        const row = rowAt(box.getAttribute('data-pa-accounts'));
+        if (!row) return;
+        accountText.set(rowKey(row), box.value);
+        const full = withGreeting(row);
+        const card = box.closest('[data-pa-card]');
+        const status = card?.querySelector('[data-pa-accounts-status]');
+        if (status) status.textContent = accountsStatus(row, full.zeroDownAccounts);
+        const preview = card?.querySelector('[data-pa-preview]');
+        if (preview) preview.textContent = previewText(full);
+    }
+
     function clearAll() {
         rows = [];
         chosenLeader = '';
         done.clear();
+        accountText.clear();
         const box = el('paDownPaymentPaste');
         if (box) box.value = '';
         render();
@@ -361,6 +454,7 @@
             render();
         });
         el('paDownPaymentCards')?.addEventListener('click', onCardsClick);
+        el('paDownPaymentCards')?.addEventListener('input', onAccountsInput);
         el('paDownPaymentClearBtn')?.addEventListener('click', clearAll);
         render();
     }
@@ -376,6 +470,7 @@
         SUBJECT,
         REMINDERS,
         parseRows,
+        parseAccounts,
         leadersOf,
         shortReportDate,
         buildEmail,

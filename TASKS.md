@@ -18,6 +18,7 @@
   and each advisor gets a card: Generate email, Copy email, Copy leader note, a Done tick. Nothing is saved or synced.
   Still owed:
   - Scott to try it at work on the real sheet, and say whether the leader note's wording is right (it is a draft).
+  - 2026-11-23: each card now has a "$0 down accounts for the email" box (date of the $0 down and account number, one per line); the email lists them. Scott to confirm the two new lines of wording, and to say what the sheet's account-level tab looks like (column headings) if he wants one paste to fill every card.
   - The email's five reminders start with "- ", because a mailto draft is plain text and has no bullets.
   - Later: the same email and note as a Power Automate flow (`Desktop\Projects\Coaching Tools\HANDOFF.md`).
   - Ideas, not built: show his "Previous Weeks Outstanding" counts; red flags, manual redirect and deposit waiver sheets.

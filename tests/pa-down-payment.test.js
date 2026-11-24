@@ -80,6 +80,48 @@ suite('PA down payment: the email is his sample, filled in', (t) => {
     t.equal('a preferred name wins', pa.buildEmail(Object.assign({}, jamie, { greetingName: 'Jay' })).body.split('\n')[0], 'Hi Jay,');
 });
 
+suite('PA down payment: the $0 down accounts go in the email', (t) => {
+    // Scott, 2026-11-23: the email names each account, with the date of the
+    // $0 down. The numbers here are made up.
+    const pa = load(t);
+    const [jamie] = pa.parseRows(PASTE);
+
+    const accounts = pa.parseAccounts([
+        '11/03/2026\t1000000001',
+        '1000000002  11/4/2026',
+        '2026-11-05, 100-000-0003',
+        '11/6 1000000004',
+        'Doe, Jamie\t11/7/2026 2:15:00 PM\t1000000005\t0%',
+        '1000000006',
+        '',
+        'no account on this line 11/8/2026'
+    ].join('\r\n'));
+    t.equal('six accounts; the blank line and the line with no number are skipped', accounts.length, 6);
+    t.equal('date then account, leading zero off', JSON.stringify(accounts[0]), '{"date":"11/3/2026","account":"1000000001"}');
+    t.equal('account then date', JSON.stringify(accounts[1]), '{"date":"11/4/2026","account":"1000000002"}');
+    t.equal('a year-first date, and dashes in the number are kept', JSON.stringify(accounts[2]), '{"date":"11/5/2026","account":"100-000-0003"}');
+    t.equal('a date with no year stays that way', accounts[3].date, '11/6');
+    t.equal('a row copied from a sheet: the date and the number are found', JSON.stringify(accounts[4]), '{"date":"11/7/2026","account":"1000000005"}');
+    t.equal('no date typed: the account is kept', JSON.stringify(accounts[5]), '{"date":"","account":"1000000006"}');
+    t.equal('nothing typed, no accounts', pa.parseAccounts('').length, 0);
+
+    const email = pa.buildEmail(Object.assign({}, jamie, { zeroDownAccounts: accounts.slice(0, 2).concat(accounts[5]) }));
+    t.check('the list sits between the results and the reminders', email.body.includes(
+        '\n$0 down arrangements: 3\n\n'
+        + '$0 down accounts on this report (date of the $0 down, account number):\n\n'
+        + '- 11/3/2026, account 1000000001\n'
+        + '- 11/4/2026, account 1000000002\n'
+        + '- Account 1000000006\n\n'
+        + 'Team Lead approval needs to be documented in the notes on every one of these accounts.\n\n'
+        + 'A few reminders going forward:\n\n- '));
+    t.check('still ends on Thanks,', email.body.endsWith('\n\nThanks,'));
+    t.check('no placeholder left', !/\[[^\]]*\]|undefined|null/.test(email.body));
+    t.check('no em or en dash', !/[\u2013\u2014\u2015]/.test(email.body));
+
+    const plain = pa.buildEmail(jamie).body;
+    t.check('with no accounts typed the email is as before', plain.includes('\n$0 down arrangements: 3\n\nA few reminders going forward:\n\n- ') && !plain.includes('account number'));
+});
+
 suite('PA down payment: the leader note', (t) => {
     t.pinClock('2026-11-10');
     const pa = load(t);
