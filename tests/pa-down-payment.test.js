@@ -122,6 +122,48 @@ suite('PA down payment: the $0 down accounts go in the email', (t) => {
     t.check('with no accounts typed the email is as before', plain.includes('\n$0 down arrangements: 3\n\nA few reminders going forward:\n\n- ') && !plain.includes('account number'));
 });
 
+suite('PA down payment: the account rows read themselves', (t) => {
+    // Scott, 2026-11-23: the sheet's account rows, one per account. The 0%
+    // rows are the $0 down accounts, and the PA date is the date of the $0
+    // down. Made-up rows (tests/fixtures/pa-down-payment-accounts.txt).
+    const pa = load(t);
+    const ACCOUNTS = fs.readFileSync(path.join(ROOT, 'tests/fixtures/pa-down-payment-accounts.txt'), 'utf8');
+    const details = pa.parseDetailRows(ACCOUNTS);
+
+    t.equal('six account rows', details.length, 6);
+    t.equal('advisor', details[0].advisor, 'Jamie Doe');
+    t.equal('leader', details[0].leader, 'Pat Leader');
+    t.equal('report date, leading zero off', details[0].reportDate, '11/9/2026');
+    t.equal('the account number keeps its leading zero', details[0].account, '0100000001');
+    t.equal('PA date, leading zero off', details[0].paDate, '11/3/2026');
+    t.equal('percent accepted', details[1].accepted, 45);
+    t.equal('a bare fraction is a percent', details[4].accepted, 50);
+    t.equal('no PA date while it waits on the down payment', details[2].paDate, '');
+    t.equal('#N/A is not a 1X PA contact', details[0].usedException, false);
+    t.equal('an ID is', details[1].usedException, true);
+    t.equal('Required Coaching rows are not account rows', pa.parseDetailRows(PASTE).length, 0);
+    t.equal('and account rows are not Required Coaching rows', pa.parseRows(ACCOUNTS).length, 0);
+    t.equal('Windows line endings', pa.parseDetailRows(ACCOUNTS.replace(/\n/g, '\r\n')).length, 6);
+
+    const [jamie, casey, morgan] = pa.summariseDetails(details);
+    t.equal('three advisors', pa.summariseDetails(details).length, 3);
+    t.equal('accounts counted', jamie.accounts, '3');
+    t.equal('plain average of percent accepted', jamie.avgAccepted, '15.0%');
+    t.equal('1X PA contacts counted', jamie.exceptionCount, '2');
+    t.equal('usage', jamie.usage, '67%');
+    t.equal('$0 down counted', jamie.zeroDown, '2');
+    t.equal('the $0 down accounts, with the PA date',
+        JSON.stringify(jamie.zeroDownAccounts),
+        '[{"date":"11/3/2026","account":"0100000001"},{"date":"","account":"1000000003"}]');
+    t.equal('an unformatted 0 is $0 down too', JSON.stringify(casey.zeroDownAccounts), '[{"date":"11/5/2026","account":"1000000004"}]');
+    t.equal('nobody at 0%, no accounts listed', morgan.zeroDownAccounts.length, 0);
+
+    const email = pa.buildEmail(jamie);
+    t.check('the email lists them', email.body.includes('- 11/3/2026, account 0100000001\n- Account 1000000003\n'));
+    t.check('and only them', !email.body.includes('1000000002'));
+    t.check('the note takes the counted figures', pa.buildLeaderNote(jamie).includes('3 accounts, avg 15.0% accepted, 2 1X PA contacts (67%), 2 at $0 down.'));
+});
+
 suite('PA down payment: the leader note', (t) => {
     t.pinClock('2026-11-10');
     const pa = load(t);

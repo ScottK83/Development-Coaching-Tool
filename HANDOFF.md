@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated 2026-11-23, suite at 10588 passing.
+Last updated 2026-11-23, suite at 10614 passing.
 
 ## Where things stand
 - **Robert Berrelleza dropped from Scott's team (Scott, 2026-11-17: "He has since moved departments."), live in v2026.11.17.1.**
@@ -52,6 +52,11 @@ Last updated 2026-11-23, suite at 10588 passing.
     - Decision: a box per card, not one paste for everyone, because the layout of the sheet's account-level tab is not known. If Scott gives its column headings, one paste could fill every card.
     - Account numbers are customer data: memory only (`accountText`), cleared by Clear or closing the page. Never commit real ones; the test numbers are made up.
     - Checked: 13 new checks in `tests/pa-down-payment.test.js` (66 in the file), and the real module driven in headless Edge on the made-up rows (type in the box, count, preview, Done tick keeps the text). Not checked: the whole app, or the real sheet.
+  - **Account rows can be pasted (Scott, 2026-11-23, after he showed the sheet's account rows: "I think you have the columns wrong"):**
+    - The main paste box also reads the sheet's account rows, one per account, no heading row needed. Columns A to Q as seen in his file: category, Report Date, Leader, advisor ID, Advisor, % accepted, account number (10 digits, leading zeros kept), status (GRANTED / WAIT-DOWNPAY), PA date (blank while waiting), balance, required down payment, last payment date, last payment, rate, the rule, an ID or #N/A, TRUE/FALSE/#N/A. He gave no headings: the names for the last two (the ID on the 1X PA contact, and whether it is the advisor's) are Claude's guess.
+    - `parseDetailRows` reads them; `summariseDetails` makes one row per advisor and report. Rows at 0% accepted are the $0 down accounts and fill the card's accounts box, with the PA date as the date of the $0 down (no date if the PA date is blank).
+    - Pasted with the Required Coaching rows, the cards keep the sheet's own figures. Pasted alone, the figures are counted from the account rows (accounts, plain average of % accepted, rows with an ID in column P as 1X PA contacts, rows at 0%), and the status line says to check them against the sheet. Whether the plain average and the column P count match the sheet's own figures is not known.
+    - Checked: 26 new checks on made-up rows (`tests/fixtures/pa-down-payment-accounts.txt`), the paste in headless Edge, and his real 96 rows through the module in node (all 96 read; 5 advisors; 13 accounts at 0%). Not checked against the sheet's own summary figures.
   - **Nothing is saved or synced:** the rows live in the module's variables. The suite checks the file makes no store or network call except reading the roster.
   - **Tests:** `tests/pa-down-payment.test.js` (53 checks) on made-up rows, `tests/fixtures/pa-down-payment-rows.txt`. The panel was also clicked through in headless Chrome on those rows (not the whole app, and not the real sheet).
 - **Mental health check-in (Scott, 2026-11-04: "a message where I copy and paste to each of them"), live in v2026.11.04.1.**

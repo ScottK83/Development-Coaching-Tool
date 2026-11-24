@@ -17,6 +17,13 @@
  * the accounts into a box on the advisor's card. They are customer account
  * numbers: held in memory like the rest, never stored.
  *
+ * Scott, 2026-11-23, later the same day: the sheet's account rows can be
+ * pasted into the main box too (one row per account: category, Report Date,
+ * Leader, advisor ID, Advisor, % accepted, account number, status, PA date,
+ * and on). The rows at 0% fill each advisor's accounts box by themselves,
+ * with the PA date as the date of the $0 down. Pasted without the Required
+ * Coaching rows, the cards' figures are counted from the account rows.
+ *
  * The email is a development opportunity, so it has no praise opener (Scott:
  * "I guess praise can't be added for development opportunities"). The words
  * are his sample's, kept as he wrote them.
@@ -145,6 +152,79 @@
             accounts.push({ date, account: number[0] });
         });
         return accounts;
+    }
+
+    const ACCOUNT_CELL = /^\d{8,12}$/;
+
+    // "45%" is 45. A cell with the percent format taken off (0.45) is 45 too.
+    function percentNumber(cell) {
+        const value = clean(cell);
+        const number = parseFloat(value.replace('%', ''));
+        if (!value || !Number.isFinite(number)) return null;
+        return value.includes('%') ? number : number * 100;
+    }
+
+    /**
+     * The sheet's account rows, one per account. Columns A to Q: category,
+     * Report Date, Leader, advisor ID, Advisor, % accepted, account number,
+     * status, PA date, balance, required down payment, last payment date,
+     * last payment, rate, the rule, the ID on the 1X PA contact (or #N/A),
+     * and whether that ID is the advisor's. A Required Coaching row starts
+     * with a date, so it is never taken for one of these.
+     */
+    function parseDetailRows(raw) {
+        const details = [];
+        String(raw || '').split(/\r?\n/).forEach(line => {
+            const cells = line.split('\t').map(clean);
+            if (cells.length < 9) return;
+            if (!DATE_CELL.test(cells[1]) || !cells[4] || !ACCOUNT_CELL.test(cells[6])) return;
+            const accepted = percentNumber(cells[5]);
+            if (accepted === null) return;
+            const contact = cells[15] || '';
+            details.push({
+                reportDate: fullReportDate(cells[1]),
+                leader: cells[2],
+                advisor: toDisplayName(cells[4]),
+                accepted,
+                account: cells[6],
+                paDate: DATE_CELL.test(cells[8]) ? fullReportDate(cells[8]) : '',
+                usedException: Boolean(contact) && !contact.startsWith('#')
+            });
+        });
+        return details;
+    }
+
+    /**
+     * One row per advisor and report from the account rows, shaped like a
+     * Required Coaching row, with the 0% accounts listed. The figures are
+     * counted here: accounts, the plain average of % accepted, how many
+     * carry a 1X PA contact ID, and how many are at 0%.
+     */
+    function summariseDetails(details) {
+        const groups = new Map();
+        (details || []).forEach(detail => {
+            const key = `${detail.reportDate}|${nameKey(detail.advisor)}`;
+            if (!groups.has(key)) groups.set(key, { first: detail, items: [] });
+            groups.get(key).items.push(detail);
+        });
+        return Array.from(groups.values()).map(({ first, items }) => {
+            const count = items.length;
+            const average = items.reduce((sum, item) => sum + item.accepted, 0) / count;
+            const exceptions = items.filter(item => item.usedException).length;
+            const zero = items.filter(item => item.accepted === 0);
+            return {
+                reportDate: first.reportDate,
+                leader: first.leader,
+                advisor: first.advisor,
+                avgAccepted: `${(Math.round(average * 10) / 10).toFixed(1)}%`,
+                accounts: String(count),
+                exceptionCount: String(exceptions),
+                usage: `${Math.round((exceptions / count) * 100)}%`,
+                zeroDown: String(zero.length),
+                fromAccounts: true,
+                zeroDownAccounts: zero.map(item => ({ date: item.paDate, account: item.account }))
+            };
+        });
     }
 
     function leadersOf(rows) {
@@ -291,7 +371,7 @@
         const pasted = Boolean(el('paDownPaymentPaste')?.value?.trim());
         if (!rows.length) {
             status.textContent = pasted
-                ? 'No rows found. Copy columns A to H of your rows on the Required Coaching tab (Report Date across to # with 0% Down Accepted) and paste again.'
+                ? 'No rows found. Copy your rows on the Required Coaching tab (columns A to H), your account rows, or both, and paste again.'
                 : '';
             return;
         }
@@ -301,7 +381,8 @@
             status.textContent = `${rows.length} rows read, for more than one leader. Choose the leader to see the cards.`;
             return;
         }
-        status.textContent = `${plural(shown.length, 'advisor', 'advisors')} read from the ${dates.join(' and ')} report. Nothing is saved: closing the page clears it.`;
+        const counted = shown.some(row => row.fromAccounts) ? ' Figures counted from the account rows: check them against the sheet.' : '';
+        status.textContent = `${plural(shown.length, 'advisor', 'advisors')} read from the ${dates.join(' and ')} report.${counted} Nothing is saved: closing the page clears it.`;
     }
 
     function previewText(full) {
@@ -374,7 +455,17 @@
     }
 
     function handlePaste() {
-        rows = parseRows(el('paDownPaymentPaste')?.value || '');
+        const pasted = el('paDownPaymentPaste')?.value || '';
+        rows = parseRows(pasted);
+        // Account rows: an advisor with no Required Coaching row gets a card
+        // from them, and the 0% accounts fill the card's accounts box.
+        summariseDetails(parseDetailRows(pasted)).forEach(group => {
+            const key = rowKey(group);
+            if (!rows.some(row => rowKey(row) === key)) rows.push(group);
+            if (group.zeroDownAccounts.length) {
+                accountText.set(key, group.zeroDownAccounts.map(item => `${item.date}\t${item.account}`.trim()).join('\n'));
+            }
+        });
         const leaders = leadersOf(rows);
         if (!leaders.includes(chosenLeader)) chosenLeader = '';
         render();
@@ -471,6 +562,8 @@
         REMINDERS,
         parseRows,
         parseAccounts,
+        parseDetailRows,
+        summariseDetails,
         leadersOf,
         shortReportDate,
         buildEmail,
